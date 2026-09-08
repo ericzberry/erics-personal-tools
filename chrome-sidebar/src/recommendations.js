@@ -115,12 +115,20 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   if(!session)result.warnings.push('Pre-draft baseline. Draft position and player availability are not connected.');
   const unmatched=picks.filter(p=>!index.has(playerKey(p)));
   if(unmatched.length)result.warnings.push(`${unmatched.length} drafted player(s) are outside your overall ranking list; their positions still count toward roster needs.`);
-  const needed=fit(roster,req);const slotsLeft=config.roster.size-roster.length;
+  const needed=fit(roster,req);
+  const draftPicksLeft=result.turn.nextPick&&session?.rounds?session.rounds-Math.ceil(result.turn.nextPick/config.league.teamCount)+1:Infinity;
+  const slotsLeft=Math.min(config.roster.size-roster.length,draftPicksLeft);
+  const specialists=['D/ST','K'];
+  const specialistsLeft=specialists.reduce((n,pos)=>n+needed[pos],0);
+  const specialistsDue=specialistsLeft>0&&slotsLeft<=specialistsLeft;
   const startersLeft=Object.values(needed).reduce((a,b)=>a+b,0);
   const isStarter=pos=>needed[pos]>0||(['RB','WR','TE'].includes(pos)&&needed.FLEX>0);
   const maxima=Object.fromEntries(config.roster.positions.filter(p=>typeof p.maximum==='number').map(p=>[p.code,p.maximum]));
   const available=players.filter(p=>!drafted.has(p.key));
-  const eligible=available.filter(p=>!p.identityUnverified&&(!maxima[p.position]||count(roster,p.position)<maxima[p.position])&&(slotsLeft>startersLeft||isStarter(p.position)));
+  const eligible=available.filter(p=>!p.identityUnverified&&(!maxima[p.position]||count(roster,p.position)<maxima[p.position])&&
+    (!specialists.includes(p.position)||needed[p.position]>0)&&
+    (!specialistsDue||(specialists.includes(p.position)&&needed[p.position]>0))&&
+    (slotsLeft>startersLeft||isStarter(p.position)));
   if(!eligible.length)return {...result,blocked:'No eligible players remain in the imported rankings.'};
   const rankCeiling = Math.max(...players.map(p=>p.rank))+1;
   // Linear rank-slot values are ordinal proxies, never projected fantasy points.
@@ -138,7 +146,9 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   const baseline=Math.min(...pool.map(p=>p.rank));
   const bestTier=Math.min(...pool.map(p=>p.tier??Infinity));
   const roundNumber=session?Math.ceil((result.turn.nextPick||session.onClock||((roster.length)*config.league.teamCount+1))/config.league.teamCount):1;
-  const priorities=new Map(pool.map(p=>[p.key,earlyRosterPriority(roster,roundNumber,p,bestTier)]));
+  const priorities=new Map(pool.map(p=>[p.key,specialistsDue?
+    {priority:3,bonus:0,reason:`Use ${slotsLeft===1?'your last pick':`one of your final ${slotsLeft} picks`} for your starting ${p.position==='D/ST'?'defense':'kicker'}.`}:
+    earlyRosterPriority(roster,roundNumber,p,bestTier)]));
   const shortlist=pool.filter(p=>p.rank<=baseline+w.rankWindow||p.tier===bestTier||priorities.get(p.key).priority>0);
   result.targetRound=roundNumber;
   const horizon=result.turn.followingPick;
@@ -178,6 +188,6 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
     const outlook=nextText+'.'+followingText;
     return {...p,shortWhy,outlook,nextAvailability,followingAvailability,laterOption:later?.name??null,targetPriority:target.priority,score:round(-p.rank+bonus+target.bonus),rankAdvantage:par===null?null:round(par),lineupRankGain:gain===null?null:round(gain),waitCost:waitCost===null?null:round(waitCost),starter,alternativesAtPosition:samePos,reasons};
   }).sort((a,b)=>b.targetPriority-a.targetPriority||(a.tier??0)-(b.tier??0)||b.score-a.score||a.rank-b.rank).slice(0,2);
-  if(result.candidates[0]?.rank!==baseline)result.candidates[0].reasons.push(`Moves ahead of your highest eligible available rank (#${baseline}) because of tier, early roster targets, and the roster/waiting adjustments above.`);
+  if(result.candidates[0]?.rank!==baseline)result.candidates[0].reasons.push(`Moves ahead of your highest eligible available rank (#${baseline}) because of tier, roster targets, and the roster/waiting adjustments above.`);
   return result;
 }

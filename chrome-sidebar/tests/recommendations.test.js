@@ -194,3 +194,40 @@ test('broad tiers and uncertainty alone do not trigger urgent scarcity',()=>{
 test('only the most urgent position gets a warning',()=>{
  const a=scarcityRun({owned:[1,3]});assert.equal(a.rosterAlerts.length,1);assert.equal(a.rosterAlerts[0].position,'RB');
 });
+
+const specialistBoard={players:[
+ {rank:1,tier:1,name:'Depth Receiver',position:'WR',nflTeam:'BUF',adp:1},
+ {rank:100,tier:8,name:'Top Defense',position:'D/ST',nflTeam:'DEN',adp:100},
+ {rank:101,tier:8,name:'Next Defense',position:'D/ST',nflTeam:'SEA',adp:101},
+ {rank:150,tier:11,name:'Top Kicker',position:'K',nflTeam:'DAL',adp:150},
+ {rank:151,tier:11,name:'Next Kicker',position:'K',nflTeam:'BUF',adp:151}
+]};
+const fullOffense=['QB','RB','RB','WR','WR','TE','RB','QB','QB','RB','RB','WR','WR','WR'];
+function specialistRun(positions,{onClock=1,upcomingOwnPicks=[],manualMode=true,...rest}={}){
+ const session={...current(),manualMode,onClock,upcomingOwnPicks,picks:positions.map((position,i)=>({player:`Owned starter ${i}`,position,nflTeam:'FA',teamId:8,overall:null})),...rest};
+ return run({rankings:specialistBoard,session});
+}
+test('final two roster spots reserve a defense and kicker instead of higher-tier bench depth',()=>{
+ const a=specialistRun(fullOffense);assert.ok(a.candidates.length);
+ assert.ok(a.candidates.every(p=>['D/ST','K'].includes(p.position)));
+ assert.match(a.candidates[0].shortWhy,/final 2 picks.*starting defense/);
+ for(const [owned,expected] of [['DST','K'],['K','D/ST']]){
+  const b=specialistRun([...fullOffense,owned]);assert.ok(b.candidates.length);assert.ok(b.candidates.every(p=>p.position===expected));assert.match(b.candidates[0].shortWhy,/last pick/);
+ }
+});
+test('already owned defense and kicker never produce duplicate specialist recommendations',()=>{
+ const a=specialistRun(['DST','K'],{onClock:141,upcomingOwnPicks:[141]});
+ assert.deepEqual(a.candidates.map(p=>p.position),['WR']);
+});
+test('remaining snake turns reserve specialists even when recorded roster has spare spots',()=>{
+ for(const manualMode of [true,false]){
+  const a=specialistRun(['QB','RB','WR'],{manualMode,onClock:140,upcomingOwnPicks:[145]});
+  assert.ok(a.candidates.length);assert.ok(a.candidates.every(p=>p.position==='D/ST'||p.position==='K'));
+  const b=specialistRun(['QB','RB','WR','DST'],{manualMode,onClock:160,upcomingOwnPicks:[160]});
+  assert.ok(b.candidates.length);assert.ok(b.candidates.every(p=>p.position==='K'));
+ }
+});
+test('three picks remaining allow one more offensive player before reserving the last two',()=>{
+ const a=specialistRun(fullOffense.slice(0,13),{onClock:131,upcomingOwnPicks:[131]});
+ assert.equal(a.candidates[0].position,'WR');
+});

@@ -149,3 +149,6 @@ Version 0.6.21 removes the highlight-status line, connection card and links, dra
 
 
 Version 0.6.22 keeps draft progress and both pick countdowns in the sticky roster section. Players taken by other teams now fold into Taken by others starting in Tier 4; your players remain visible until the whole tier is exhausted.
+
+
+Version 0.6.23 reserves the final available selections for a missing starting defense and kicker. It uses the smaller of open roster slots and known remaining snake-draft turns, so advancing a manual board cannot spend those final picks on depth. Once a defense or kicker starting slot is filled, the advisor excludes backups at that position. Earlier picks still follow the board and existing roster priorities. Required last-pick choices explain the defense/kicker need.
