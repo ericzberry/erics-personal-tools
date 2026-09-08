@@ -64,5 +64,13 @@ var EspnRecommendationHighlights = (() => {
     }).length:null;
     return {recommended,currentTier,painted};
   }
-  return {decorate};
+  function diagnostics(document){
+    const describe=element=>{
+      const rect=element.getBoundingClientRect?.();
+      return {tag:element.tagName,className:element.getAttribute('class'),text:(element.textContent||'').trim().slice(0,250),href:element.getAttribute('href'),background:document.defaultView?.getComputedStyle?.(element).backgroundColor,rect:rect?{x:rect.x,y:rect.y,width:rect.width,height:rect.height}:null};
+    };
+    const nodes=[...document.querySelectorAll('a, .playerinfo__playername, .player-column__athlete')].filter(el=>!el.closest('.pick-message__container')&&(el.closest('tr,[role="row"],.Table__TR,.player-row,.player-column')||/player/i.test(el.getAttribute('class')||''))).slice(0,35);
+    return nodes.map(el=>{const ancestors=[];let parent=el.parentElement;for(let i=0;parent&&i<5;i++,parent=parent.parentElement)ancestors.push({...describe(parent),children:[...parent.children].slice(0,12).map(describe)});return {node:describe(el),ancestors};});
+  }
+  return {decorate,diagnostics};
 })();

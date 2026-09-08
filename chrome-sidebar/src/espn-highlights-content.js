@@ -13,7 +13,9 @@ var EspnPageHighlights = (() => {
     return refresh();
   }
   chrome.runtime.onMessage.addListener((next,sender,respond)=>{
-    if(sender.id!==chrome.runtime.id||next?.type!=='DRAFT_RECOMMENDATIONS')return;
+    if(sender.id!==chrome.runtime.id)return;
+    if(next?.type==='ESPN_HIGHLIGHT_DIAGNOSTICS'){respond({version:chrome.runtime.getManifest().version,url:location.href,status:refresh(),advice:message,rows:EspnRecommendationHighlights.diagnostics(document)});return;}
+    if(next?.type!=='DRAFT_RECOMMENDATIONS')return;
     const result=receive(next);respond?.(result);
   });
   // Reapply after ESPN replaces virtualized player rows, and expire closed-panel advice.

@@ -115,3 +115,5 @@ Version 0.6.10 adds capture-response highlight delivery, so the page can update 
 Version 0.6.10 removes on-page badges and borders, including obsolete injected styles. Browser fixture checks confirm identical row dimensions and text before and after highlighting.
 
 Version 0.6.11 paints row and cell backgrounds directly through CSSOM, so highlighting does not depend on ESPN accepting an injected stylesheet. Clearing advice restores previous inline background colors. A browser fixture with restrictive style CSP verifies blue/amber colors and unchanged row dimensions; the live ESPN tab remains unavailable to the connected browser.
+
+Version 0.6.12 adds Settings → Download ESPN diagnostics and persistent highlight counts. The locally downloaded JSON includes extension versions, draft URL, advice, and bounded player-row DOM descriptions with computed colors and dimensions. This diagnostic release does not claim to resolve the live-page highlighting failure.

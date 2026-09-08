@@ -14,6 +14,7 @@ export function DraftView() {
 }
 export function DraftSettings() {
   return Disclosure('Settings',[
+    Button('Download ESPN diagnostics',{id:'download-espn-diagnostics'}),
     UI.Toggle({id:'capture-picks',label:'ESPN is capturing picks',checked:true,descriptionId:'capture-help'}),
     Note('On: use ESPN picks. Off: mark players on the board.',{id:'capture-help'}),
     Stack([

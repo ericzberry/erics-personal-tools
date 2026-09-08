@@ -88,3 +88,12 @@ test('clearing highlights restores preexisting row colors and preserves geometry
  decorate(document,[candidate]);assert.equal(row.style.backgroundColor,'#d5e6ff');
  decorate(document,[]);assert.equal(row.style.backgroundColor,'red');assert.equal(row.style.height,'48px');
 });
+
+test('diagnostics report page version, advice and row structure without modifying content',()=>{
+ const {document,context}=setup();let listener;
+ Object.assign(context,{URL,location:{href:'https://fantasy.espn.com/football/draft?leagueId=123&seasonId=2026&teamId=8'},EspnDraftReader:{read:()=>({state:'drafting',onClock:7})},chrome:{runtime:{id:'ours',getManifest:()=>({version:'0.6.12'}),onMessage:{addListener:fn=>listener=fn}}},setInterval:()=>{}});
+ vm.runInContext(controller,context);const before=document.body.textContent;let result;
+ listener({type:'ESPN_HIGHLIGHT_DIAGNOSTICS'},{id:'other'},value=>result=value);assert.equal(result,undefined);
+ listener({type:'ESPN_HIGHLIGHT_DIAGNOSTICS'},{id:'ours'},value=>result=value);
+ assert.equal(result.version,'0.6.12');assert.equal(result.rows[0].node.text,'Jahmyr Gibbs');assert.equal(result.rows[0].ancestors[0].tag,'TD');assert.equal(document.body.textContent,before);
+});
