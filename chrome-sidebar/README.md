@@ -74,7 +74,7 @@ Shared upload components remain available for future tools, but the draft featur
 
 ## Private release
 
-Version 0.6.6 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.6.7 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 
@@ -103,3 +103,5 @@ While the sidebar is open, the same two recommendations are sent only to the cap
 Recommended visible ESPN player rows receive a blue border, blue background and numbered blue badge. Other available players in the highest remaining spreadsheet tier receive an amber background and tier badge. Blue takes precedence when both apply. Current tier means the lowest tier number with an untaken verified player, not the tier of a lower-ranked recommendation. Both highlight groups share draft/identity validation and expiry, and clear when advice is blocked. The highlight component leaves ESPN's Draft button state unchanged, including between your turns.
 
 A prominent roster strip immediately below recommendations shows RB, WR, QB, TE, D/ST and K totals from the effective live or manual board, including players outside the spreadsheet. Counts stay visible when a captured session disconnects; unknown sessions show dashes.
+
+Version 0.6.7 expands ESPN matching to ordinary player links and ARIA rows, without requiring pick-feed name classes or a native Draft button. The page acknowledges matching counts; the sidebar reports disconnected scripts, changed draft clocks, and no visible matching rows instead of silently swallowing failures. Live DOM verification remains pending because the user's ESPN tab is not exposed to the connected browser.

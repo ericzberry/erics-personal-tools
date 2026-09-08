@@ -41,3 +41,16 @@ test('current-tier rows use a separate highlight and recommendations take preced
  assert.equal(document.querySelector('[data-eric-tier]').getAttribute('data-eric-tier'),'Tier 1');
  decorate(document,[],[]);assert.equal(document.querySelectorAll('[data-eric-tier],.eric-current-tier-row,.eric-recommended-row').length,0);
 });
+
+test('player listing links work without pick-feed classes or native Draft buttons',()=>{
+ const {document}=parseHTML('<html><body><table><tr><td><a href="/nfl/player/_/id/4429795/jahmyr-gibbs">Jahmyr Gibbs</a><span>DET</span><span>RB</span></td><td><div role="button">DRAFT</div></td></tr></table></body></html>');
+ const context=vm.createContext({document});vm.runInContext(component,context);
+ const result=context.EspnRecommendationHighlights.decorate(document,[candidate]);assert.equal(result.recommended,1);
+ document.querySelector('a').removeAttribute('href');
+ assert.equal(context.EspnRecommendationHighlights.decorate(document,[candidate]).recommended,1);
+});
+test('ARIA player rows support tier highlights and report matches',()=>{
+ const {document}=parseHTML('<html><body><div role="row"><div role="cell"><a href="/nfl/player/_/id/4429795/jahmyr-gibbs">Jahmyr Gibbs</a></div></div></body></html>');
+ const context=vm.createContext({document});vm.runInContext(component,context);
+ const result=context.EspnRecommendationHighlights.decorate(document,[],[{...candidate,tier:1}]);assert.equal(result.currentTier,1);assert.equal(result.recommended,0);
+});

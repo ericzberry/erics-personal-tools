@@ -65,13 +65,17 @@ function renderAdvice(session) {
   if(signature!==lastAdviceSignature){lastAdviceSignature=signature;$('recommendations').replaceChildren(...candidates.map((p,i)=>RecommendationCard(p,{primary:i===0,compact:true})));}
 }
 
-function sendHighlights(session,candidates,tierPlayers){
+async function sendHighlights(session,candidates,tierPlayers){
   if(!globalThis.chrome?.tabs?.sendMessage)return;
   const tab=session?.tabId;
   if(highlightedTab!==undefined&&highlightedTab!==tab)chrome.tabs.sendMessage(highlightedTab,{type:'DRAFT_RECOMMENDATIONS',clear:true}).catch(()=>{});
   highlightedTab=tab;
   if(tab===undefined)return;
-  chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,tierPlayers:tierPlayers.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam,tier:p.tier})),candidates:candidates.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam})),expiresAt:Date.now()+12000}).catch(()=>{});
+  try {const response=await chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,tierPlayers:tierPlayers.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam,tier:p.tier})),candidates:candidates.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam})),expiresAt:Date.now()+12000});
+    if(highlightedTab!==tab)return;
+    $('espn-highlight-status').textContent=!candidates.length?'':!response?.ok?'Reload the ESPN draft tab to enable page highlights.':!response.active?'ESPN highlights are waiting for the draft feed to catch up.':response.recommended+response.currentTier===0?'No matching players visible on ESPN. Open Players or clear its filters.':'';
+  }catch {if(highlightedTab===tab)$('espn-highlight-status').textContent=candidates.length?'Reload the ESPN draft tab to reconnect page highlights.':'';}
+
 }
 
 function renderManual(updateFields=false) {
