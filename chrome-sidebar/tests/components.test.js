@@ -110,17 +110,24 @@ test('all exhausted tiers share one expandable archive and reopen when a pick is
  assert.equal([...board.children].find(el=>el.getAttribute('aria-label')==='Tier 1').open,true);
 });
 
-test('late tiers fold other owners while keeping available and own picks visible',async()=>{
- const {TieredRankings,Stack}=await import('../src/components/ui.js');setup();
+test('late tiers archive on the final pick even with own players, and reopen on undo',async()=>{
+ const {TieredRankings,Stack}=await import('../src/components/ui.js');const doc=setup();const states=new Map();
  const players=[{key:'a',rank:60,tier:5,name:'Available'},{key:'m',rank:61,tier:5,name:'Mine'},{key:'o',rank:62,tier:5,name:'Other'}];
  const picks=new Map([['m',{teamId:8}],['o',{teamId:2}]]);
- let board=Stack(TieredRankings(players,picks,8,{confirmed:true}));let group=board.querySelector('.tier-group');
+ const render=()=>Stack(TieredRankings(players,picks,8,{confirmed:true,tierStates:states}));
+ let board=render();let group=board.querySelector('.tier-group');
  assert.equal(group.open,true);assert.equal(group.querySelector('details').open,false);
  assert.equal(group.querySelector('details').querySelector('.ranked-player').textContent.includes('Other'),true);
  assert.equal(group.querySelectorAll('.ranked-player--mine').length,1);
- picks.set('a',{teamId:2});board=Stack(TieredRankings(players,picks,8,{confirmed:true}));
- assert.equal(board.querySelector('.completed-tiers'),null);assert.equal(board.querySelector('.tier-group').open,true);
- assert.equal(board.querySelectorAll('details details .ranked-player').length,2);
+ picks.set('a',{teamId:2});board=render();
+ const archive=board.querySelector('.completed-tiers');group=archive.querySelector('.tier-group');
+ assert.equal(archive.open,false);assert.equal(group.open,false);assert.equal(board.children.length,1);
+ assert.equal(group.querySelectorAll('.ranked-player--mine').length,1);
+ assert.equal(group.querySelectorAll('.ranked-player--taken').length,2);
+ group.open=true;group.dispatchEvent(new doc.defaultView.Event('toggle'));
+ assert.equal(render().querySelector('.tier-group').open,true);
+ picks.delete('a');board=render();assert.equal(board.querySelector('.completed-tiers'),null);assert.equal(board.querySelector('.tier-group').open,true);
+ picks.set('a',{teamId:8});board=render();assert.equal(board.querySelector('.completed-tiers').open,false);assert.equal(board.querySelector('.tier-group').open,false);
 });
 
 test('scarcity highlights roster needs and available players without obscuring ownership',async()=>{

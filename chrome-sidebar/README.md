@@ -134,3 +134,6 @@ Quality means a verified ranked player above the existing starter-replacement be
 Only the most urgent position gets a short roster note and small muted badges. Player rows keep their ownership colors and recommendations keep their blue ESPN backgrounds. Other affected ESPN players receive a soft amber highlight. Hover over a note or badge for context. Alerts recalculate with live/manual changes and clear for unknown order or blocked/stale feeds. ADP availability remains an estimate.
 
 Regression checks cover the empty first-pick screenshot, normal early roster building, depleted tiers, missing ADP, uncertainty, recommendation colors and one-warning limits.
+
+
+Version 0.6.18 collapses every fully taken tier into All taken, including late tiers containing your picks. Expand the archive to review your players; undoing a pick returns the tier to the active board.

@@ -106,8 +106,7 @@ export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommen
   const sections=[...groups].map(([tier,entries])=>{
     const taken=entries.filter(p=>picks.has(p.key)).length,full=taken===entries.length;
     const compact=Number(tier)>=5;
-    const hasMine=entries.some(p=>picks.has(p.key)&&picks.get(p.key).teamId===ownTeamId);
-    const archived=full&&!(compact&&hasMine);
+    const archived=full;
     const previous=tierStates.get(tier);
     const open=previous&&previous.full===full&&previous.archived===archived?previous.open:!archived;
     tierStates.set(tier,{full,archived,open});
