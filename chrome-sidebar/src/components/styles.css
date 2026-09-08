@@ -234,3 +234,11 @@ th, td { padding: 8px 11px; }
 .toggle-field input:checked::before { transform: translateX(14px); }
 .toggle-field input:disabled { opacity: .5; cursor: wait; }
 .settings-panel label:not(.toggle-field) { margin-top: 9px; }
+
+.roster-count-card { padding: 11px 10px; margin: 10px 0; border: 1px solid #b7c9b5; border-radius: 9px; background: #e3eddf; }
+.roster-count-card > .eyebrow { display: block; margin: 0 0 8px; color: var(--forest); }
+.roster-count-grid { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 3px; }
+.roster-count-grid > div { text-align: center; border-right: 1px solid #c1d1bc; }
+.roster-count-grid > div:last-child { border-right: 0; }
+.roster-count-grid strong { display: block; font-size: 25px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.roster-count-grid span { display: block; font-size: 10px; font-weight: 600; margin-top: 5px; }

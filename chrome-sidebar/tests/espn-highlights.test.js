@@ -12,7 +12,7 @@ test('ESPN decoration uses exact IDs, adds no draft actions, and clears old reco
  const {document,decorate}=setup();const before=document.body.textContent;
  decorate(document,[candidate]);assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);assert.equal(document.querySelector('[data-eric-recommendation]').getAttribute('data-eric-recommendation'),'Eric’s pick 1');
  assert.equal(document.body.textContent,before);assert.equal(document.querySelectorAll('button').length,3);
- decorate(document,[{...candidate,espnId:222}]);assert.equal(document.querySelectorAll('.eric-recommended-row').length,0);
+ decorate(document,[{...candidate,espnId:222}]);assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);assert.equal(document.querySelectorAll('button[disabled]').length,1);
  decorate(document,[candidate]);decorate(document,[]);assert.equal(document.querySelectorAll('[data-eric-recommendation]').length,0);
 });
 test('ESPN fallback requires name, position AND team when no ID link is visible',()=>{
@@ -31,4 +31,13 @@ test('ESPN content expires advice and rejects other sessions, senders and change
  snapshot={state:'drafting',onClock:7};listener({...message,leagueId:456},{id:'ours'});assert.equal(document.querySelectorAll('.eric-recommended-row').length,0);
  listener({...message,expiresAt:Date.now()-1},{id:'ours'});assert.equal(document.querySelectorAll('.eric-recommended-row').length,0);
  listener(message,{id:'ours'});listener({type:'DRAFT_RECOMMENDATIONS',clear:true},{id:'ours'});assert.equal(document.querySelectorAll('.eric-recommended-row').length,0);
+});
+
+test('current-tier rows use a separate highlight and recommendations take precedence',()=>{
+ const {document,decorate}=setup();const other={...candidate,espnId:111,tier:1};
+ decorate(document,[candidate],[{...candidate,tier:1},other]);
+ assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);assert.equal(document.querySelectorAll('.eric-current-tier-row').length,1);
+ assert.equal(document.querySelector('.eric-recommended-row').classList.contains('eric-current-tier-row'),false);
+ assert.equal(document.querySelector('[data-eric-tier]').getAttribute('data-eric-tier'),'Tier 1');
+ decorate(document,[],[]);assert.equal(document.querySelectorAll('[data-eric-tier],.eric-current-tier-row,.eric-recommended-row').length,0);
 });

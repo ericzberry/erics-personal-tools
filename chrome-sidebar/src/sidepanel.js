@@ -1,7 +1,8 @@
+import {rosterCounts,currentTierPlayers} from './draft-presentation.js';
 import {fetchEspnCatalog, reconcileRankings, reconcileSession, correctionPlayers} from './espn-catalog.js';
 import {createManualDraft, applyManualDraft, setManualPick, setManualProgress} from './manual-draft.js';
 import {playerKey} from './player-identity.js';
-import {Disclosure, DataTable, RecommendationCard, TieredRankings, SelectionRow} from './components/ui.js';
+import {Disclosure, DataTable, RosterCounts, RecommendationCard, TieredRankings, SelectionRow} from './components/ui.js';
 import {selectSession} from './session-selection.js';
 import {sessionKey} from './draft-state.js';
 import {recommend} from './recommendations.js';
@@ -9,7 +10,7 @@ const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.storage?.local;
 let config, rankings, sourceRankings, catalog, catalogPlayers=[], syncMessage='', sessions = {}, selected = 'auto', manualDrafts = {};
 let manualWrites=Promise.resolve();
-let lastBoardSignature, lastAdviceSignature, lastTierSession, highlightedTab;
+let lastBoardSignature, lastAdviceSignature, lastTierSession, highlightedTab, lastRosterSignature;
 let recommendedKeys=[];
 const tierStates=new Map();
 const liveSession=()=>reconcileSession(selectSession(sessions,selected),catalog);
@@ -35,6 +36,8 @@ function renderDraft() {
   $('pick-count').textContent=s?.picks.length || 0;
   $('round').textContent=s?.onClock ? Math.ceil(s.onClock/s.teams.length) : s?.picks.at(-1)?.round || '—';
   $('my-count').textContent=s?.picks.filter(p=>p.teamId===s.teamId).length || 0;
+  const counts=rosterCounts(s),countSignature=JSON.stringify([counts,!!s]);
+  if(countSignature!==lastRosterSignature){lastRosterSignature=countSignature;$('roster-counts').replaceChildren(RosterCounts(counts,{known:!!s}));}
   const warning=s?.missing?.length?`${s.missing.length} earlier pick(s) missing. Open ESPN’s Pick History or reload the draft room to recover available history.`:s?.rejected?'Some ESPN pick entries could not be read. Check ESPN’s pick history.':'';
   $('coverage').hidden=!warning;$('coverage').textContent=warning;
   renderAdvice(s);
@@ -57,18 +60,18 @@ function renderAdvice(session) {
   $('next-pick-chip').classList.toggle('has-pick', !!top);
   const candidates=session?advice.candidates:[];
   recommendedKeys=candidates.map(playerKey);
-  sendHighlights(session,candidates);
+  sendHighlights(session,candidates,session&&!advice.blocked?currentTierPlayers(rankings.players,session):[]);
   const signature=JSON.stringify(candidates);
   if(signature!==lastAdviceSignature){lastAdviceSignature=signature;$('recommendations').replaceChildren(...candidates.map((p,i)=>RecommendationCard(p,{primary:i===0,compact:true})));}
 }
 
-function sendHighlights(session,candidates){
+function sendHighlights(session,candidates,tierPlayers){
   if(!globalThis.chrome?.tabs?.sendMessage)return;
   const tab=session?.tabId;
   if(highlightedTab!==undefined&&highlightedTab!==tab)chrome.tabs.sendMessage(highlightedTab,{type:'DRAFT_RECOMMENDATIONS',clear:true}).catch(()=>{});
   highlightedTab=tab;
   if(tab===undefined)return;
-  chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,candidates:candidates.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam})),expiresAt:Date.now()+12000}).catch(()=>{});
+  chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,tierPlayers:tierPlayers.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam,tier:p.tier})),candidates:candidates.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam})),expiresAt:Date.now()+12000}).catch(()=>{});
 }
 
 function renderManual(updateFields=false) {

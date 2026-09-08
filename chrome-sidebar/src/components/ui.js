@@ -123,3 +123,7 @@ export function Toggle({id,label,checked=false,descriptionId}) {
   const input=element('input',{id,type:'checkbox',role:'switch','aria-describedby':descriptionId});input.checked=checked;
   return element('label',{className:'toggle-field',for:id},[Label(label),input]);
 }
+
+export function RosterCounts(counts,{known=true}={}) {
+  return Section([Label('YOUR ROSTER',{className:'eyebrow'}),Stack(Object.entries(counts).map(([position,count])=>Stack([Strong(known?count:'—'),Label(position)],{'aria-label':`${position}: ${known?count:'unknown'}`})),{className:'roster-count-grid'})],{className:'roster-count-card','aria-label':'Your roster by position'});
+}

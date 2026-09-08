@@ -74,7 +74,7 @@ Shared upload components remain available for future tools, but the draft featur
 
 ## Private release
 
-Version 0.6.5 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.6.6 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 
@@ -97,3 +97,9 @@ Early preferences target one RB by round 2, two RBs by round 4, and one TE by ro
 The top panel shows up to two recommendations; expand **Why this pick** for explanations. The tier board replaces Pick history and the session dropdown. Available, Yours, and Taken have stronger, labeled colors. Recommended players also have a contrasting border and numbered NEXT PICK badge. Fully taken tiers collapse automatically and remain expandable. Expansion choices survive unchanged feed updates; a newly exhausted tier collapses. Disconnected/incomplete feeds mark uncaptured availability Unconfirmed.
 
 While the sidebar is open, the same two recommendations are sent only to the captured ESPN draft tab. A reusable content component outlines visible draftable player rows and adds a numbered label, matching ESPN IDs or exact normalized name/position/team. It never selects or drafts players. Highlights clear on draft change, stale/blocked advice, session changes, or within 12 seconds after sidebar updates stop. Refreshing ESPN is required after reloading the extension. Unit tests cover matching, expiry, wrong-session protection and clock changes. Live ESPN verification remains pending.
+
+### ESPN tier colors and roster counts
+
+Recommended visible ESPN player rows receive a blue border, blue background and numbered blue badge. Other available players in the highest remaining spreadsheet tier receive an amber background and tier badge. Blue takes precedence when both apply. Current tier means the lowest tier number with an untaken verified player, not the tier of a lower-ranked recommendation. Both highlight groups share draft/identity validation and expiry, and clear when advice is blocked. The highlight component leaves ESPN's Draft button state unchanged, including between your turns.
+
+A prominent roster strip immediately below recommendations shows RB, WR, QB, TE, D/ST and K totals from the effective live or manual board, including players outside the spreadsheet. Counts stay visible when a captured session disconnects; unknown sessions show dashes.
