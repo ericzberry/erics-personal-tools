@@ -118,3 +118,8 @@ export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommen
     return section;
   });
 }
+
+export function Toggle({id,label,checked=false,descriptionId}) {
+  const input=element('input',{id,type:'checkbox',role:'switch','aria-describedby':descriptionId});input.checked=checked;
+  return element('label',{className:'toggle-field',for:id},[Label(label),input]);
+}

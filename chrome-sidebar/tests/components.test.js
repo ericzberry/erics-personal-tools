@@ -83,3 +83,15 @@ test('taken tiers collapse, remain expandable, and recommendation marks follow o
  board.querySelector('[aria-label="Test: taken by me"]').click();assert.deepEqual(selected,['a','me']);
  const taken=Stack(TieredRankings([p],picks,8,{tierStates:states,recommended:[]}));assert.equal(taken.querySelector('.tier-group').open,false);assert.equal(taken.querySelectorAll('.ranked-player--recommended').length,0);
 });
+
+test('settings use one accessible capture toggle and no duplicate default player list',()=>{
+ const doc=setup();mountApp(doc.getElementById('app'));
+ const toggle=doc.getElementById('capture-picks');assert.equal(toggle.getAttribute('role'),'switch');assert.equal(toggle.checked,true);
+ assert.equal(doc.getElementById('manual-settings').hidden,true);assert.equal(doc.getElementById('manual-players').children.length,0);
+ for(const id of ['board-tools','enable-manual','disable-manual'])assert.equal(doc.getElementById(id),null);
+});
+test('tier board omits manual controls unless an edit handler is explicitly enabled',async()=>{
+ const {TieredRankings,Stack}=await import('../src/components/ui.js');setup();const players=[{rank:1,tier:1,key:'a',name:'Player'}];
+ const live=Stack(TieredRankings(players,new Map(),8,{confirmed:true}));assert.equal(live.querySelectorAll('button').length,0);
+ const manual=Stack(TieredRankings(players,new Map(),8,{confirmed:true,onSelect:()=>{}}));assert.equal(manual.querySelectorAll('button').length,2);
+});

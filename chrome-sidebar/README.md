@@ -74,7 +74,7 @@ Shared upload components remain available for future tools, but the draft featur
 
 ## Private release
 
-Version 0.6.4 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.6.5 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 
@@ -82,7 +82,7 @@ The sidebar uses the [Eric’s Personal Tools design system](../docs/DESIGN.md).
 
 ### Manual draft fallback
 
-Use **Me** or **Someone else** directly on a player in the tier board. **Undo** restores captured ownership or removes a manual addition. The first correction starts a manual board from that draft's captured picks. **Board tools** contains the current pick, your assigned draft position, **Use live feed**, and a searchable ESPN catalog for players outside the spreadsheet. Update current pick as the manual draft progresses. Practice and real draft corrections remain separate; the visible draft is selected automatically.
+In **Settings**, turn **ESPN is capturing picks** off to enable **Me** or **Someone else** directly on the tier board. Turn it on to resume live capture and hide all manual controls. The choice is saved per draft. **Undo** restores captured ownership or removes a manual addition. Switching capture off starts a manual board from captured picks (or resumes saved manual corrections). Settings shows current pick and assigned draft position only in manual mode. Its optional search only returns players outside the spreadsheet after you type, so the ranked list is never duplicated. Update current pick as the manual draft progresses. Practice and real draft corrections remain separate; the visible draft is selected automatically.
 
 All 177 Combined Ranks players are reconciled to ESPN IDs, with canonical names, positions and NFL teams displayed. The bundled public ESPN catalog includes 4,552 entries at this league's positions, including free agents and historical records. **Sync ESPN players** refreshes it without cookies or league data. Ambiguous identities are disabled; unmatched captured picks block advice. Manual corrections and catalogs stay in local extension storage.
 
@@ -96,4 +96,4 @@ Early preferences target one RB by round 2, two RBs by round 4, and one TE by ro
 
 The top panel shows up to two recommendations; expand **Why this pick** for explanations. The tier board replaces Pick history and the session dropdown. Available, Yours, and Taken have stronger, labeled colors. Recommended players also have a contrasting border and numbered NEXT PICK badge. Fully taken tiers collapse automatically and remain expandable. Expansion choices survive unchanged feed updates; a newly exhausted tier collapses. Disconnected/incomplete feeds mark uncaptured availability Unconfirmed.
 
-While the sidebar is open, the same two recommendations are sent only to the captured ESPN draft tab. A reusable content component outlines visible draftable player rows and adds a numbered label, matching ESPN IDs or exact normalized name/position/team. It never selects or drafts players. Highlights clear on draft change, stale/blocked advice, session changes, or within 12 seconds after sidebar updates stop. Refreshing ESPN is required after reloading the extension. Unit tests cover matching, expiry, wrong-session protection and clock changes; no live draft was open during 0.6.4 verification.
+While the sidebar is open, the same two recommendations are sent only to the captured ESPN draft tab. A reusable content component outlines visible draftable player rows and adds a numbered label, matching ESPN IDs or exact normalized name/position/team. It never selects or drafts players. Highlights clear on draft change, stale/blocked advice, session changes, or within 12 seconds after sidebar updates stop. Refreshing ESPN is required after reloading the extension. Unit tests cover matching, expiry, wrong-session protection and clock changes. Live ESPN verification remains pending.

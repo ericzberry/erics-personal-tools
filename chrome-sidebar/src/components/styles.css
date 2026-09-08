@@ -225,3 +225,12 @@ th, td { padding: 8px 11px; }
 .tier-group > summary { background: #e4eadc; color: #34492c; font-weight: 600; font-size: 11px; padding: 9px; }
 .tier-group--complete > summary { background: #e5e1dc; color: #665e55; }
 .tier-group .ranked-list { padding: 5px; }
+
+.settings-panel > :not(summary) { margin-left: 12px; margin-right: 12px; }
+.toggle-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px; color: var(--ink); font-size: 12px; font-weight: 600; }
+.toggle-field input { appearance: none; flex: 0 0 34px; width: 34px; height: 20px; padding: 2px; margin: 0; border-radius: 20px; border: 1px solid #8d9687; background: #b3b8ac; cursor: pointer; }
+.toggle-field input::before { content: ''; display: block; width: 14px; height: 14px; border-radius: 50%; background: white; }
+.toggle-field input:checked { background: var(--forest); border-color: var(--forest); }
+.toggle-field input:checked::before { transform: translateX(14px); }
+.toggle-field input:disabled { opacity: .5; cursor: wait; }
+.settings-panel label:not(.toggle-field) { margin-top: 9px; }

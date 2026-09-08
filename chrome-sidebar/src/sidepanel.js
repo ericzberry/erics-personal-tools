@@ -41,9 +41,9 @@ function renderDraft() {
   const confirmed=!!s&&(s.manualMode||(live&&!s.missing?.length&&!s.rejected&&!s.identityIssues));
   $('spreadsheet-context').textContent=!s?'Connect a draft to confirm availability.':s.manualMode?'Status from your manual board.':confirmed?'Status from captured ESPN picks.':'Saved picks shown; remaining availability is unconfirmed.';
   const key=currentKey();if(key!==lastTierSession){tierStates.clear();lastTierSession=key;}
-  const boardSignature=JSON.stringify([key,rankings?.players,s?.picks,s?.teamId,confirmed,recommendedKeys,manualDrafts[key]?.overrides]);
-  if(boardSignature!==lastBoardSignature&&rankings){lastBoardSignature=boardSignature;$('spreadsheet-players').replaceChildren(...TieredRankings(rankings.players.map(p=>({...p,key:playerKey(p)})),new Map((s?.picks||[]).map(p=>[playerKey(p),p])),s?.teamId,{confirmed,recommended:recommendedKeys,overrides:manualDrafts[key]?.overrides,tierStates,onSelect:markPlayer}));}
-  if($('board-tools').open)renderManual();
+  const boardSignature=JSON.stringify([key,rankings?.players,s?.picks,s?.teamId,confirmed,recommendedKeys,!!manualDrafts[key]?.active,manualDrafts[key]?.overrides]);
+  if(boardSignature!==lastBoardSignature&&rankings){lastBoardSignature=boardSignature;$('spreadsheet-players').replaceChildren(...TieredRankings(rankings.players.map(p=>({...p,key:playerKey(p)})),new Map((s?.picks||[]).map(p=>[playerKey(p),p])),s?.teamId,{confirmed,recommended:recommendedKeys,overrides:manualDrafts[key]?.overrides,tierStates,onSelect:manualDrafts[key]?.active?markPlayer:null}));}
+  renderManual();
 }
 function renderAdvice(session) {
   if (!rankings) return;
@@ -74,15 +74,14 @@ function sendHighlights(session,candidates){
 function renderManual(updateFields=false) {
   if(!rankings)return;
   const record=manualDrafts[currentKey()],s=effectiveSession();
-  $('manual-session-label').textContent=`${currentKey().startsWith('practice:')?'Practice draft':'2026 league draft'} · ${s?.picks.length||0} taken`;
-  $('manual-mode-note').textContent=record?.active?'Manual board active. Your corrections drive recommendations; live updates are kept separate.':'Using live feed. Mark a player to start a manual board from the captured picks.';
-  $('enable-manual').disabled=!!record?.active;$('disable-manual').disabled=!record?.active;
+  $('capture-picks').checked=!record?.active;
+  $('manual-settings').hidden=!record?.active;
   if(updateFields){$('manual-clock').value=record?.onClock??s?.onClock??'';$('manual-slot').value=record?.slot??'';}
   const taken=new Map((s?.picks||[]).map(p=>[playerKey(p),p]));
   const query=$('manual-search').value.toLowerCase().trim();
-  const matches=catalogPlayers.filter(p=>`${p.name} ${p.spreadsheetName||''} ${p.position} ${p.nflTeam} ${p.espnId}`.toLowerCase().includes(query));
+  const matches=query&&record?.active?catalogPlayers.filter(p=>!p.rank&&`${p.name} ${p.spreadsheetName||''} ${p.position} ${p.nflTeam} ${p.espnId}`.toLowerCase().includes(query)):[];
   const players=matches.slice(0,40);
-  $('manual-result-count').textContent=`Showing ${players.length} of ${matches.length} · Search to narrow the list`;
+  $('manual-result-count').textContent=query&&record?.active?(matches.length?`Showing ${players.length} of ${matches.length}`:'No players outside your spreadsheet match.'):'';
   $('espn-sync-status').textContent=syncMessage||`${catalog.players.length.toLocaleString()} ESPN entries · ${rankings.players.filter(p=>!p.identityUnverified).length}/${rankings.players.length} ranks matched · ${new Date(catalog.fetchedAt).toLocaleDateString()}`;
   $('manual-players').replaceChildren(...players.map(p=>{
     const pick=taken.get(playerKey(p)),owner=pick?(pick.teamId===s.teamId?'me':'other'):null;
@@ -103,8 +102,13 @@ function changeManual(update,message='Saved.') {
   });
   return manualWrites;
 }
-function markPlayer(player,value){return changeManual(r=>setManualPick(r,player,value),`${player.name}: ${value==='undo'?'correction undone':value==='me'?'taken by you':'taken by someone else'}.`);}
-$('board-tools').addEventListener('toggle',()=>{if($('board-tools').open)renderManual(true);});
+function markPlayer(player,value){if(!manualDrafts[currentKey()]?.active)return;return changeManual(r=>setManualPick(r,player,value),`${player.name}: ${value==='undo'?'correction undone':value==='me'?'taken by you':'taken by someone else'}.`);}
+$('draft-settings').addEventListener('toggle',()=>{if($('draft-settings').open)renderManual(true);});
+$('capture-picks').addEventListener('change',async()=>{
+  const active=!$('capture-picks').checked;$('capture-picks').disabled=true;
+  try{await changeManual(r=>({...r,active}),active?'Manual picks enabled. Mark players on the board.':'Using ESPN picks. Manual buttons hidden.');}
+  finally{$('capture-picks').disabled=false;renderManual();}
+});
 function useCatalog(next){catalog=next;rankings=reconcileRankings(sourceRankings,catalog);catalogPlayers=correctionPlayers(rankings,catalog);}
 $('sync-espn-players').addEventListener('click',async()=>{
   $('sync-espn-players').disabled=true;syncMessage='Syncing ESPN players…';renderManual();
@@ -113,8 +117,6 @@ $('sync-espn-players').addEventListener('click',async()=>{
   finally{$('sync-espn-players').disabled=false;renderManual();}
 });
 $('manual-search').addEventListener('input',()=>renderManual());
-$('enable-manual').addEventListener('click',()=>changeManual(r=>({...r,active:true}),'Manual board active.'));
-$('disable-manual').addEventListener('click',()=>changeManual(r=>({...r,active:false}),'Using live feed. Corrections remain saved.'));
 $('save-manual-progress').addEventListener('click',()=>{
   const clock=$('manual-clock').value.trim(),slot=$('manual-slot').value;
   changeManual(r=>setManualProgress(r,clock?Number(clock):null,slot?Number(slot):null),'Draft progress saved.');
