@@ -66,11 +66,11 @@ Stale, incomplete, disconnected and completed drafts suppress live recommendatio
 
 Your supplied Combined Ranks are already loaded. Optionally open **Update draft board** and drag a `.xlsx` workbook or rankings `.json` onto the upload surface, or click it to browse. XLSX imports read only the `Combined Ranks` sheet and the original B–F rank/name/position/team/ADP columns. The first row is the header. JSON uses the bundled rankings schema. Imports validate sequential unique ranks, player identities, positions and ADP before replacing the board. The original board can be restored. Nothing is uploaded to a server.
 
-The shared `src/file-drop.js` component gives future file inputs the same drop, browse, validation and feedback behavior. The Excel parser is bundled locally by the build; no CDN scripts are loaded.
+The shared `src/components/file-drop.js` component gives future file inputs the same drop, browse, validation and feedback behavior. The Excel parser is bundled locally by the build; no CDN scripts are loaded.
 
 ## Private release
 
-Version 0.5.0 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.5.1 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 

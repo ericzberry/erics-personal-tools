@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
-import {attachFileDrop} from '../src/file-drop.js';
+import {attachFileDrop} from '../src/components/file-drop.js';
 import {rankingsFromRows,validateRankings} from '../src/ranking-import.js';
 const rows=[['','Rank','Name','Pos','Team','ADP'],[null,1,'Player One','RB','BUF',3],[null,2,'Player Two','DST','NE',null]];
 test('Combined Ranks rows preserve overall order, position and ADP',()=>{

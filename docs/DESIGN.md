@@ -23,7 +23,7 @@ Use 4px spacing increments, 14px sidebar gutters, 9px field corners and 14px car
 
 A 42px header pairs the Eric’s tools signature with the current function. The active browser tab selects the function automatically; do not add function tabs. Each tool has a compact heading. Put secondary information such as league rules behind a disclosure. Use forest for the primary action, a text button for secondary actions, and one dominant recommendation at a time. Keep supporting explanations behind disclosure controls. Empty states explain one next step; they never pretend to show live data.
 
-The implementation tokens live in chrome-sidebar/sidepanel.css. Reuse these names and values in future subprojects. No external fonts, tracking, or third-party UI assets are needed.
+The implementation tokens live in chrome-sidebar/src/components/styles.css. Reuse these names and values in future subprojects. No external fonts, tracking, or third-party UI assets are needed.
 
 ## Writing
 
@@ -32,3 +32,5 @@ Short, specific, calm. Lead with the result. One sentence of context is usually 
 The next draft recommendation gets a small highlighted card at the top. Keep the name and position immediately readable; reasoning belongs below. Gmail shows the current subject, two action buttons, and editable results without a large hero or introduction.
 
 File inputs use the reusable file-drop component: a quiet dashed surface, drag highlight, click/keyboard browsing, and inline status. Keep the native input hidden. Use concise copy and put optional board maintenance behind a disclosure. The draft source gets one short line rather than a large explanatory card.
+
+All extension UI must be composed from the [shared component library](../chrome-sidebar/src/components/README.md). The rule is recorded in chrome-sidebar/AGENTS.md and enforced by architecture tests. Feature controllers supply state and actions; they do not create markup or styles.

@@ -1,40 +1,13 @@
 <!doctype html>
 <html lang="en">
-<head><base href="../"><script src="tests/ui-harness.js"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eric's Personal Tools</title><link rel="stylesheet" href="sidepanel.css"></head>
+<head><base href="../"><script src="tests/ui-harness.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Eric's Personal Tools</title>
+  <link rel="stylesheet" href="src/components/styles.css">
+</head>
 <body>
-<header class="app-header"><img class="mark" src="icons/icon-32.png" width="24" height="24" alt=""><span class="compact-brand">Eric’s tools</span><strong id="current-function">Draft advisor</strong></header>
-<section id="football-tool">
-<div class="tool-heading"><h1>Bedford Bridges</h1><span class="subtitle">10 teams · Half-PPR</span></div>
-<main>
-<section id="draft-view"><div id="next-pick-chip" class="next-pick-chip" role="status"><span>RECOMMENDED NEXT PICK</span><strong id="next-pick-name">Waiting for live draft</strong></div>
-<div class="status-card"><div class="status-label"><span id="dot" class="dot"></span><strong id="connection">Waiting for ESPN</strong></div><p id="status-detail">Open your ESPN draft room to start capturing picks.</p><a href="https://fantasy.espn.com/football/team?leagueId=182527585&teamId=8&seasonId=2026" target="_blank" rel="noreferrer">Open league ↗</a><a href="https://fantasy.espn.com/football/mockdraftlobby" target="_blank" rel="noreferrer">Practice draft ↗</a></div>
-<label for="session">Draft session</label><select id="session"><option value="league:2026:182527585">2026 league draft</option></select>
-<div class="metrics"><div><strong id="pick-count">0</strong><span>PICKS CAPTURED</span></div><div><strong id="round">—</strong><span>ROUND</span></div><div><strong id="my-count">0</strong><span>YOUR PICKS</span></div></div>
-<p id="coverage" class="notice" hidden></p>
-<section class="advisor" aria-label="Draft advisor">
-<div class="section-title"><h2>Draft insight</h2><span id="advice-mode" class="pill">YOUR BOARD</span></div>
-<p id="advice-context" class="footnote"></p><p id="advice-status" class="notice"></p><div id="recommendations"></div>
-<div class="board-note"><span class="board-dot" aria-hidden="true"></span><div><strong>Combined Ranks</strong><p>Your order, adjusted for roster needs and positional scarcity.</p></div></div>
-<details class="ranking-settings"><summary>Update draft board</summary><div class="upload-panel"><button id="rankings-drop" class="file-drop" type="button" aria-describedby="ranking-upload-status"><span class="upload-symbol" aria-hidden="true">↑</span><strong>Drop your rankings here</strong><span>Excel or JSON <span aria-hidden="true">·</span> or browse files</span></button><input id="rankings-file" type="file" accept=".xlsx,.json" hidden><p id="ranking-upload-status" class="upload-status" role="status">Using your saved Combined Ranks.</p><button id="reset-rankings" class="quiet" hidden>Use original board</button></div></details>
-</section>
-<div class="section-title"><h2>Pick history</h2><button id="export" class="quiet" disabled>Export</button></div>
-<div class="filters"><label class="sr-only" for="team">Filter by team</label><select id="team"><option value="all">All teams</option></select><label class="sr-only" for="search-picks">Search picks</label><input id="search-picks" type="search" placeholder="Find a player…"></div>
-<p id="empty" class="empty">Your draft board starts here.<br><span>Picks will appear as ESPN announces them.</span></p><ol id="picks"></ol>
-<p class="footnote">Saved on this device · Keep ESPN open.</p>
-</section>
-<details id="rules-view"><summary>League rules</summary><div class="section-title"><h2>The rulebook</h2><span class="pill">SAVED RULES</span></div><p class="footnote">Saved September 8, 2026 · Settings won’t update automatically.</p><label class="sr-only" for="search-rules">Search rules</label><input id="search-rules" type="search" placeholder="Search scoring, waivers, roster…"><div id="rules"></div><p id="no-rules" hidden>No matching rules.</p></details>
-<p id="error" role="alert" hidden></p>
-</main></section>
-<section id="gmail-tool" class="gmail-page" hidden>
-  <div class="section-title"><h1>Current email</h1><button id="refresh-email" class="quiet">Refresh</button></div>
-  <h2 id="email-subject">Open an email in Gmail</h2><p id="email-from" class="footnote"></p>
-  <p id="email-read-status" class="footnote" role="status"></p>
-  <div class="email-actions"><button id="summarize-email" disabled>Summarize</button><button id="reply-email" disabled>Generate reply</button></div>
-  <p id="email-action-status" class="footnote" role="status"></p>
-  <section id="email-result" hidden><div class="section-title"><h2 id="email-result-title">Summary</h2><button id="copy-email-output" class="quiet">Copy</button></div><label class="sr-only" for="email-output">Generated text — editable</label><textarea id="email-output" rows="9"></textarea></section>
-  <details id="email-source" hidden><summary>Email text</summary><p id="email-preview"></p></details>
-</section>
-<section id="home-tool" class="gmail-page" hidden><h1>Ready when you are.</h1><p class="footnote">Open Gmail or an ESPN draft. The sidebar follows your current tab.</p><a href="https://mail.google.com/" target="_blank" rel="noreferrer">Open Gmail ↗</a></section>
-<script type="module" src="src/sidepanel.js"></script>
-<script type="module" src="src/context-panel.js"></script>
-</body></html>
+  <div id="app"></div>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

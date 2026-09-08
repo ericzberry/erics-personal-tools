@@ -7,7 +7,7 @@ export function attachFileDrop({zone,input,status,onFile,accept=['.xlsx','.json'
       if(files.length!==1)throw Error('Drop one file at a time.');
       const file=files[0];
       if(!accept.some(ext=>file.name.toLowerCase().endsWith(ext)))throw Error(`Use ${accept.join(' or ')}.`);
-      if(file.size>maxBytes)throw Error('File is too large (5 MB maximum).');
+      if(file.size>maxBytes)throw Error(`File is too large (${maxBytes/1000000} MB maximum).`);
       busy=true;zone.setAttribute('aria-busy','true');status.textContent='Reading file…';status.dataset.state='';
       const message=await onFile(file);status.textContent=message||'Imported.';status.dataset.state='success';
     } catch(error) {status.textContent=error.message;status.dataset.state='error';}

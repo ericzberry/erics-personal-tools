@@ -1,4 +1,5 @@
-import {attachFileDrop} from './file-drop.js';
+import {Option, Disclosure, DataTable, PickRow, RecommendationCard, downloadFile} from './components/ui.js';
+import {attachFileDrop} from './components/file-drop.js';
 import {validateRankings, rankingsFromRows} from './ranking-import.js';
 import {selectSession} from './session-selection.js';
 import {sessionKey} from './draft-state.js';
@@ -6,17 +7,11 @@ import {recommend} from './recommendations.js';
 const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.storage?.local;
 let config, rankings, originalRankings, sessions = {}, selected = 'auto';
-const node = (tag, text, className) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; };
 const human = text => text.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 const nullLabels = {seasonAcquisitionLimit:'No limit',limit:'No limit',matchupTiebreaker:'None',homeFieldAdvantage:'None'};
 const valueLabel = (key,v) => v === null ? (nullLabels[key] || 'Not set') : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : typeof v === 'string' && key === 'deadline' ? new Date(v).toLocaleString('en-US',{timeZone:'America/New_York',dateStyle:'medium',timeStyle:'short'})+' ET' : typeof v === 'string' ? human(v) : String(v);
-function table(headers,rows) {
-  const t = node('table'), head = node('thead'), tr = node('tr');
-  headers.forEach(s=>tr.append(node('th',s))); head.append(tr); t.append(head);
-  const body = node('tbody'); rows.forEach(row=>{const r=node('tr');row.forEach(v=>r.append(node('td',String(v))));body.append(r);});t.append(body);return t;
-}
 function group(title, headers, rows) {
-  const details = node('details'); details.append(node('summary',title),table(headers,rows)); $('rules').append(details);
+  $('rules').append(Disclosure(title,[DataTable(headers,rows)]));
 }
 function renderRules() {
   group('Roster positions',['Position','Slots','Maximum'],config.roster.positions.map(p=>[p.label,p.slots,p.maximum]));
@@ -25,8 +20,8 @@ function renderRules() {
     group(title,['Rule','Setting'],Object.entries(config[key]).filter(([,v])=>!Array.isArray(v)).map(([k,v])=>[human(k),valueLabel(k,v)]));
 }
 function refreshSessionMenu() {
-  const menu=$('session');menu.replaceChildren();const auto=node('option','Auto · follow live draft');auto.value='auto';menu.append(auto);const base=node('option','2026 league draft');base.value='league:2026:182527585';menu.append(base);
-  for(const s of Object.values(sessions).filter(s=>s.mode==='practice').sort((a,b)=>b.lastSeenAt-a.lastSeenAt)) { const o=node('option',`Practice · ${new Date(s.lastSeenAt).toLocaleDateString()} · ${s.leagueId}`);o.value=sessionKey(s);menu.append(o); }
+  const menu=$('session');menu.replaceChildren();const auto=Option('Auto · follow live draft');auto.value='auto';menu.append(auto);const base=Option('2026 league draft');base.value='league:2026:182527585';menu.append(base);
+  for(const s of Object.values(sessions).filter(s=>s.mode==='practice').sort((a,b)=>b.lastSeenAt-a.lastSeenAt)) { const o=Option(`Practice · ${new Date(s.lastSeenAt).toLocaleDateString()} · ${s.leagueId}`);o.value=sessionKey(s);menu.append(o); }
   if (![...menu.options].some(o=>o.value===selected)) selected='auto';
   menu.value=selected;
 }
@@ -40,13 +35,13 @@ function renderDraft() {
   $('my-count').textContent=s?.picks.filter(p=>p.teamId===s.teamId).length || 0;
   const warning=s?.missing.length?`${s.missing.length} earlier pick(s) missing. Open ESPN’s Pick History or reload the draft room to recover available history.`:s?.rejected?'Some ESPN pick entries could not be read. Check ESPN’s pick history.':'';
   $('coverage').hidden=!warning;$('coverage').textContent=warning;
-  const oldTeam=$('team').value;$('team').replaceChildren();const all=node('option','All teams');all.value='all';$('team').append(all);
-  for (const team of s?.teams || []) {const option=node('option',team.name);option.value=String(team.id);$('team').append(option);}
+  const oldTeam=$('team').value;$('team').replaceChildren();const all=Option('All teams');all.value='all';$('team').append(all);
+  for (const team of s?.teams || []) {const option=Option(team.name);option.value=String(team.id);$('team').append(option);}
   $('team').value=[...$('team').options].some(o=>o.value===oldTeam)?oldTeam:'all';
   const search=$('search-picks').value.toLowerCase();
   const picks=(s?.picks || []).filter(p=>($('team').value==='all'||String(p.teamId)===$('team').value)&&`${p.player} ${p.team} ${p.position}`.toLowerCase().includes(search)).toReversed();
   $('picks').replaceChildren();
-  for(const p of picks){const row=node('li',undefined,`pick${p.teamId===s.teamId?' mine':''}`);const detail=node('div');detail.append(node('div',p.player,'pick-name'),node('div',`R${p.round} · P${p.pickInRound} · ${p.nflTeam}`,'pick-meta'),node('div',p.team,'pick-meta'));row.append(node('span',p.overall,'pick-number'),detail,node('span',p.position,'position'));$('picks').append(row);}
+  $('picks').append(...picks.map(p=>PickRow(p,s.teamId)));
   $('empty').hidden=picks.length>0;
   if(s?.picks.length && !picks.length)$('empty').textContent='No picks match your filters.';
   else $('empty').textContent='Picks will appear as ESPN announces them.';
@@ -64,19 +59,7 @@ function renderAdvice(session) {
   $('next-pick-name').textContent = top ? `${top.name} · ${top.position}` : session?.state === 'complete' ? 'Draft complete' : 'Waiting for live draft';
   $('next-pick-chip').classList.toggle('has-pick', !!top);
   $('recommendations').replaceChildren();
-  (session ? advice.candidates : []).forEach((p,i) => {
-    const card = node('article', undefined, 'recommendation');
-    card.append(node('p', i === 0 ? 'PICK NEXT' : 'ALTERNATIVE', 'eyebrow'),node('h3', `${p.name} · ${p.position}`));
-    card.append(node('p', `Rank #${p.rank} · ADP ${p.adp ?? '—'}`, 'pick-meta'));
-    if (i === 0) {
-      const why = p.reasons.find(r => !r.startsWith('Your overall rank'));
-      if (why) card.append(node('p', why, 'pick-meta'));
-      const details = node('details'); details.append(node('summary','Why this pick'));
-      const reasons = node('ul'); p.reasons.forEach(reason => reasons.append(node('li', reason)));
-      details.append(reasons); card.append(details);
-    }
-    $('recommendations').append(card);
-  });
+  $('recommendations').append(...(session ? advice.candidates : []).map((p,i)=>RecommendationCard(p,{primary:i===0})));
 }
 attachFileDrop({zone:$('rankings-drop'),input:$('rankings-file'),status:$('ranking-upload-status'),onFile:async file=>{
   let data;
@@ -95,7 +78,7 @@ $('reset-rankings').addEventListener('click',async()=>{
 $('session').addEventListener('change',()=>{selected=$('session').value;$('team').value='all';renderDraft();});
 $('team').addEventListener('change',renderDraft);$('search-picks').addEventListener('input',renderDraft);
 $('search-rules').addEventListener('input',()=>{const query=$('search-rules').value.toLowerCase();let matches=0;for(const d of $('rules').children){const match=d.textContent.toLowerCase().includes(query);d.hidden=!match;if(query)d.open=match;if(match)matches++;}$('no-rules').hidden=matches>0;});
-$('export').addEventListener('click',()=>{const s=selectSession(sessions,selected);if(!s)return;const {tabId,connected,...data}=s;const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=node('a');a.href=url;a.download=`espn-${s.mode}-${s.seasonId}-${s.leagueId}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('export').addEventListener('click',()=>{const s=selectSession(sessions,selected);if(!s)return;const {tabId,connected,...data}=s;const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));downloadFile({url,filename:`espn-${s.mode}-${s.seasonId}-${s.leagueId}.json`});setTimeout(()=>URL.revokeObjectURL(url),1000);});
 try {
   const response=await fetch('./config/espn-league-2026.json');if(!response.ok)throw Error('League rules could not be loaded.');config=await response.json();renderRules();
   const ranksResponse=await fetch('./config/rankings-2026.json');if(!ranksResponse.ok)throw Error('Rankings could not be loaded.');rankings=await ranksResponse.json();originalRankings=rankings;
