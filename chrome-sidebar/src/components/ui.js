@@ -46,7 +46,7 @@ export function DataTable(headers,rows) {
   return element('table',{},[element('thead',{},[element('tr',{},headers.map(text=>element('th',{text})))]),element('tbody',{},rows.map(row=>element('tr',{},row.map(text=>element('td',{text:String(text)}))))) ]);
 }
 export function PickRow(p,ownTeamId) {
-  return element('li',{className:`pick pick--compact${p.teamId===ownTeamId?' mine':''}`},[Label(p.overall,{className:'pick-number'}),Stack([Strong(p.player,{className:'pick-name'}),Text(`R${p.round} · P${p.pickInRound} · ${p.nflTeam} · ${p.team}`,{className:'pick-meta'})]),Label(p.position,{className:'position'})]);
+  return element('li',{className:`pick pick--compact${p.teamId===ownTeamId?' mine':''}`},[Label(p.overall??'—',{className:'pick-number'}),Stack([Strong(p.player,{className:'pick-name'}),Text(`${p.manual?'Manual':`R${p.round} · P${p.pickInRound}`} · ${p.nflTeam} · ${p.team}`,{className:'pick-meta'})]),Label(p.position,{className:'position'})]);
 }
 export function RecommendationCard(p,{primary=false}={}) {
   const children=[Text(primary?'PICK NEXT':'ALTERNATIVE',{className:'eyebrow'}),Heading(`${p.name} · ${p.position}`,3),Text(`Rank #${p.rank} · ADP ${p.adp ?? '—'}`,{className:'pick-meta'})];
@@ -61,3 +61,13 @@ export function EditableResult({id,titleId,copyId,fieldId,title='Summary',label=
 export function downloadFile({url,filename}) {const link=Link('',url,{download:filename});link.removeAttribute('target');link.click();}
 
 export const ActionGroup=children=>Stack(children,{className:'action-group'});
+
+export function SelectionRow(player,{owner=null,corrected=false,onSelect}) {
+  const actions=ActionGroup(['me','other'].map(value=>{
+    const button=Button(value==='me'?'Me':'Someone else',{variant:owner===value?'primary':'secondary',disabled:!!player.identityUnverified,'aria-label':`${player.name}: ${value==='me'?'taken by me':'taken by someone else'}`,'aria-pressed':String(owner===value)});
+    button.addEventListener('click',()=>onSelect(value));return button;
+  }));
+  if(corrected){const undo=Button('Undo',{'aria-label':`Undo correction for ${player.name}`});undo.addEventListener('click',()=>onSelect('undo'));actions.append(undo);}
+  return Stack([Stack([Strong(player.name,{className:'pick-name'}),Note(`${player.position} · ${player.nflTeam} · ${player.rank?`Rank #${player.rank}`:'Not in your ranks'} · ${player.espnId!==undefined?`ESPN ${player.espnId}`:'Unmatched — refresh ESPN'}${owner?` · ${owner==='me'?'Yours':'Taken'}`:''}`)]),actions],{className:'selection-row'});
+}
+export const SubPage=({id,title,backId,children=[]})=>Section([SectionTitle(title,Button('← Back',{id:backId}),{level:1}),...children],{id,hidden:true,className:'sub-page'});

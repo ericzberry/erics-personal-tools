@@ -5,6 +5,7 @@ export function nameKey(name) {
   return key==='kennygainwell'?'kennethgainwell':key;
 }
 export function playerKey(p) {
+  if(Number.isInteger(p.espnId))return `espn:${p.espnId}`;
   const pos=positionKey(p.position), team=teamKey(p.nflTeam);
   return `${pos}:${team}:${pos==='D/ST'?'defense':nameKey(p.name ?? p.player)}`;
 }

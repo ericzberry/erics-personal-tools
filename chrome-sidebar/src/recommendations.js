@@ -11,7 +11,7 @@ function fit(roster,req){
 }
 // Infer a snake slot only from an actual own pick or ESPN's displayed upcoming own picks.
 export function turns(session,teamCount){
-  const own=session?.picks?.find(p=>p.teamId===session.teamId);
+  const own=session?.manualMode?null:session?.picks?.find(p=>p.teamId===session.teamId&&Number.isInteger(p.overall));
   const evidence=own?.overall || session?.upcomingOwnPicks?.[0];
   if(!evidence || !session?.onClock)return {slot:null,nextPick:null,followingPick:null};
   const r=Math.ceil(evidence/teamCount), local=(evidence-1)%teamCount+1;
@@ -56,11 +56,12 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   const index=new Map(players.map(p=>[p.key,p]));const picks=session?.picks||[];
   const drafted=new Set(picks.map(playerKey));
   const roster=picks.filter(p=>p.teamId===session?.teamId).map(p=>index.get(playerKey(p))||{...p,name:p.player,position:positionKey(p.position),key:playerKey(p)});
-  const result={mode:'rank-proxy',warnings:[],candidates:[],turn:turns(session,config.league.teamCount),roster:roster.map(p=>({name:p.name,position:p.position})),replacement:{},throughPick:picks.at(-1)?.overall||0};
+  const result={mode:'rank-proxy',warnings:[],candidates:[],turn:turns(session,config.league.teamCount),roster:roster.map(p=>({name:p.name,position:p.position})),replacement:{},throughPick:Math.max(0,...picks.map(p=>p.overall||0))};
   if(session && (session.mode==='league'&&session.leagueId!==config.leagueId || session.seasonId!==config.seasonId || session.teams.length!==config.league.teamCount))return {...result,blocked:'This draft does not match the configured season and 10-team league.'};
+  if(session?.identityIssues)return {...result,blocked:'A captured player could not be matched to ESPN. Refresh the player list before using advice.'};
   if(session?.state==='complete')return {...result,blocked:'Draft complete.'};
   if(session?.state==='unknown')return {...result,blocked:'ESPN draft status is unavailable. Wait for a readable draft feed.'};
-  if(session && (!session.connected||now-session.lastSeenAt>15000))return {...result,blocked:'Draft paused · reload ESPN to reconnect.'};
+  if(session && !session.manualMode && (!session.connected||now-session.lastSeenAt>15000))return {...result,blocked:'Draft paused · reload ESPN to reconnect.'};
   if(session?.missing?.length||session?.rejected)return {...result,blocked:'Draft history is incomplete. Recover missing picks before using a recommendation.'};
   if(session&&!session.teamId)return {...result,blocked:'Your team could not be identified in the draft.'};
   if(roster.length>=config.roster.size)return {...result,blocked:'Your roster is full.'};
@@ -72,7 +73,7 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   const isStarter=pos=>needed[pos]>0||(['RB','WR','TE'].includes(pos)&&needed.FLEX>0);
   const maxima=Object.fromEntries(config.roster.positions.filter(p=>typeof p.maximum==='number').map(p=>[p.code,p.maximum]));
   const available=players.filter(p=>!drafted.has(p.key));
-  const eligible=available.filter(p=>(!maxima[p.position]||count(roster,p.position)<maxima[p.position])&&(slotsLeft>startersLeft||isStarter(p.position)));
+  const eligible=available.filter(p=>!p.identityUnverified&&(!maxima[p.position]||count(roster,p.position)<maxima[p.position])&&(slotsLeft>startersLeft||isStarter(p.position)));
   if(!eligible.length)return {...result,blocked:'No eligible players remain in the imported rankings.'};
   const rankCeiling = Math.max(...players.map(p=>p.rank))+1;
   // Linear rank-slot values are ordinal proxies, never projected fantasy points.

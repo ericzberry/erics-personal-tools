@@ -1,5 +1,5 @@
 import * as UI from './ui.js';
-const {ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
+const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
 export function DraftView() {
   const advisor=Section([
     SectionTitle('Draft insight',Badge('YOUR BOARD',{id:'advice-mode',className:'pill badge-subtle'})),Note('',{id:'advice-context',className:'footnote context-note'}),Notice('',{id:'advice-status',className:'notice notice-subtle'}),Stack([],{id:'recommendations'}),
@@ -8,13 +8,30 @@ export function DraftView() {
   const draft=Section([
     Highlight({id:'next-pick-chip',valueId:'next-pick-name',label:'RECOMMENDED NEXT PICK',value:'Waiting for live draft'}),
     StatusCard({statusId:'connection',detailId:'status-detail',dotId:'dot',status:'Waiting for ESPN',detail:'Open your ESPN draft room to start capturing picks.',links:[{text:'Open league ↗',href:'https://fantasy.espn.com/football/team?leagueId=182527585&teamId=8&seasonId=2026'},{text:'Practice draft ↗',href:'https://fantasy.espn.com/football/mockdraftlobby'}]}),
+    Button('Correct draft picks',{id:'open-corrections'}),
     ...Field({id:'session',label:'Draft session',kind:'select',options:[{text:'2026 league draft',value:'league:2026:182527585'}]}),
     Metrics([{id:'pick-count',value:0,label:'PICKS CAPTURED'},{id:'round',value:'—',label:'ROUND'},{id:'my-count',value:0,label:'YOUR PICKS'}]),Notice('',{id:'coverage',hidden:true}),advisor,
     SectionTitle('Pick history',Button('Export',{id:'export',disabled:true})),
     Stack([...Field({id:'team',label:'Filter by team',kind:'select',hiddenLabel:true,options:[{text:'All teams',value:'all'}]}),...Field({id:'search-picks',label:'Search picks',placeholder:'Find a player…',hiddenLabel:true})],{className:'filters'}),
     Text('Picks will appear as ESPN announces them.',{id:'empty',className:'empty'}),List([],{id:'picks',className:'pick-list'}),Note('Saved on this device · Keep ESPN open.')
   ],{id:'draft-view'});
-  return Section([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Main([draft,RulesView(),Notice('',{id:'error',role:'alert',hidden:true})])],{id:'football-tool'});
+  return Section([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Main([draft,RulesView(),CorrectionsView(),Notice('',{id:'error',role:'alert',hidden:true})])],{id:'football-tool'});
+}
+export function CorrectionsView() {
+  return SubPage({id:'corrections-view',title:'Correct draft picks',backId:'close-corrections',children:[
+    Note('',{id:'manual-session-label'}),
+    SectionTitle('ESPN players',Button('Sync ESPN players',{id:'sync-espn-players'})),Note('',{id:'espn-sync-status',role:'status'}),
+    Notice('Mark players below to use a manually maintained board. Live capture keeps running separately.',{id:'manual-mode-note'}),
+    ActionGroup([Button('Use manual board',{id:'enable-manual',variant:'primary'}),Button('Use live feed',{id:'disable-manual',variant:'secondary'})]),
+    Disclosure('Draft progress',[
+      ...Field({id:'manual-clock',label:'Current overall pick',kind:'number',placeholder:'Unknown'}),
+      ...Field({id:'manual-slot',label:'Your draft position',kind:'select',options:[{text:'Unknown',value:''},...Array.from({length:10},(_,i)=>({text:String(i+1),value:String(i+1)}))]}),
+      Button('Save progress',{id:'save-manual-progress'})
+    ]),
+    Note('If the feed stops, update the current pick here. Leave your position unknown until ESPN assigns it.'),
+    ...Field({id:'manual-search',label:'Find a player',placeholder:'Search name or position…'}),
+    Note('',{id:'manual-result-count'}),Notice('',{id:'manual-feedback',hidden:true}),Stack([],{id:'manual-players'})
+  ]});
 }
 export function RulesView() {
   return Disclosure('League rules',[SectionTitle('The rulebook',Badge('SAVED RULES')),Note('Saved September 8, 2026 · Settings won’t update automatically.'),...Field({id:'search-rules',label:'Search rules',placeholder:'Search scoring, waivers, roster…',hiddenLabel:true}),Stack([],{id:'rules'}),Text('No matching rules.',{id:'no-rules',hidden:true})],{id:'rules-view'});

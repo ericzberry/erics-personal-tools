@@ -172,3 +172,11 @@ th, td { padding: 8px 11px; }
 .pick--compact .position { padding: 3px 5px; font-size: 8px; }
 .recommendation-why { font-size: 12px; line-height: 1.45; margin: 8px 0 0; color: var(--ink); }
 .recommendation-outlook { font-size: 10px; line-height: 1.5; margin: 6px 0 0; color: var(--muted); }
+
+.sub-page h1 { font-size: 22px; letter-spacing: -.5px; }
+.sub-page > .section-title { margin-top: 0; }
+.sub-page details > label, .sub-page details > input, .sub-page details > select { margin: 8px 12px; width: calc(100% - 24px); }
+.selection-row { padding: 9px 0; border-bottom: 1px solid var(--line); }
+.selection-row .footnote { margin: 3px 0; font-size: 10px; }
+.selection-row .action-group { margin: 6px 0 0; }
+.selection-row .action-group > button { font-size: 10px; padding: 6px 8px; }
