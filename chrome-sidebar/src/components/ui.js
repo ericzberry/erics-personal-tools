@@ -104,17 +104,30 @@ export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommen
   }
   const sections=[...groups].map(([tier,entries])=>{
     const taken=entries.filter(p=>picks.has(p.key)).length,full=taken===entries.length;
+    const compact=Number(tier)>=5;
+    const hasMine=entries.some(p=>picks.has(p.key)&&picks.get(p.key).teamId===ownTeamId);
+    const archived=full&&!(compact&&hasMine);
     const previous=tierStates.get(tier);
-    const open=previous&&previous.full===full?previous.open:!full;
-    tierStates.set(tier,{full,open});
-    const rows=entries.map(player=>{
+    const open=previous&&previous.full===full&&previous.archived===archived?previous.open:!archived;
+    tierStates.set(tier,{full,archived,open});
+    const rows=[],hiddenRows=[];
+    for(const player of entries){
       const pick=picks.get(player.key),owner=pick?(pick.teamId===ownTeamId?'me':'other'):null;
       const status=pick?(owner==='me'?'mine':'taken'):confirmed?'available':'unknown';
-      return RankedPlayerRow(player,status,{recommendation:recommended.indexOf(player.key)+1,owner,corrected:!!overrides[player.key],onSelect:onSelect?value=>onSelect(player,value):null});
-    });
-    const section=Disclosure(`Tier ${tier} · ${full?'All taken':`${entries.length-taken} remaining`}`, [List(rows,{className:'ranked-list'})],{className:`tier-group${full?' tier-group--complete':''}`,'aria-label':`Tier ${tier}`});
+      const row=RankedPlayerRow(player,status,{recommendation:recommended.indexOf(player.key)+1,owner,corrected:!!overrides[player.key],onSelect:onSelect?value=>onSelect(player,value):null});
+      (compact&&owner==='other'?hiddenRows:rows).push(row);
+    }
+    const contents=[List(rows,{className:'ranked-list'})];
+    if(hiddenRows.length){
+      const key=`taken:${tier}`,saved=tierStates.get(key);
+      const disclosure=Disclosure(`Taken by others · ${hiddenRows.length}`,[List(hiddenRows,{className:'ranked-list'})],{'aria-label':`Tier ${tier} taken by others`});
+      disclosure.open=saved?.open??false;
+      disclosure.addEventListener('toggle',()=>tierStates.set(key,{open:disclosure.open}));
+      contents.push(disclosure);
+    }
+    const section=Disclosure(`Tier ${tier} · ${full?'All taken':`${entries.length-taken} remaining`}`, contents,{className:`tier-group${archived?' tier-group--complete':''}`,'aria-label':`Tier ${tier}`});
     section.open=open;
-    section.addEventListener('toggle',()=>tierStates.set(tier,{full,open:section.open}));
+    section.addEventListener('toggle',()=>tierStates.set(tier,{full,archived,open:section.open}));
     return section;
   });
   const completed=sections.filter(section=>section.classList.contains('tier-group--complete'));

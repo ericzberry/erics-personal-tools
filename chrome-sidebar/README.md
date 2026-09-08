@@ -121,3 +121,5 @@ Version 0.6.12 adds Settings → Download ESPN diagnostics and persistent highli
 Version 0.6.13 supports ESPN’s nested fixedDataTable row and cell layers, identified in a user-provided diagnostic. Both frozen and scrolling cells receive background-only colors. The painted count checks the visible surface at the player name, rather than a wrapper background. Browser fixtures verify nested cell colors and unchanged row heights. The private diagnostic itself is not bundled.
 
 Version 0.6.14 uses native data-player-id identities observed in a live practice draft, updates recycled rows on DOM changes, and preserves unchanged background colors between refreshes. Draft capture is isolated from rendering failures. Regression tests include three actual ESPN row fragments and recycled player IDs. Live verification of the installed update requires reloading the extension in Chrome; automated access to extension management is blocked.
+
+Version 0.6.15 collapses players taken by others within tiers 5 and higher into an expandable disclosure. Available players and your picks remain outside it, including your picks in otherwise exhausted late tiers.

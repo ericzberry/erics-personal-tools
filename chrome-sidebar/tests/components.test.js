@@ -109,3 +109,16 @@ test('all exhausted tiers share one expandable archive and reopen when a pick is
  picks.delete('a');board=Stack(TieredRankings(players,picks,8,{tierStates:states}));assert.equal(board.querySelector('.completed-tiers').querySelectorAll('.tier-group').length,1);
  assert.equal([...board.children].find(el=>el.getAttribute('aria-label')==='Tier 1').open,true);
 });
+
+test('late tiers fold other owners while keeping available and own picks visible',async()=>{
+ const {TieredRankings,Stack}=await import('../src/components/ui.js');setup();
+ const players=[{key:'a',rank:60,tier:5,name:'Available'},{key:'m',rank:61,tier:5,name:'Mine'},{key:'o',rank:62,tier:5,name:'Other'}];
+ const picks=new Map([['m',{teamId:8}],['o',{teamId:2}]]);
+ let board=Stack(TieredRankings(players,picks,8,{confirmed:true}));let group=board.querySelector('.tier-group');
+ assert.equal(group.open,true);assert.equal(group.querySelector('details').open,false);
+ assert.equal(group.querySelector('details').querySelector('.ranked-player').textContent.includes('Other'),true);
+ assert.equal(group.querySelectorAll('.ranked-player--mine').length,1);
+ picks.set('a',{teamId:2});board=Stack(TieredRankings(players,picks,8,{confirmed:true}));
+ assert.equal(board.querySelector('.completed-tiers'),null);assert.equal(board.querySelector('.tier-group').open,true);
+ assert.equal(board.querySelectorAll('details details .ranked-player').length,2);
+});
