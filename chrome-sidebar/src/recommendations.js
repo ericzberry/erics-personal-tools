@@ -50,6 +50,22 @@ export function availabilityAt(available, onClock, targetPick, ownPicksBefore=0)
   ordered.forEach((p,index)=>outlook.set(p.key??playerKey(p),!known?'unknown':opponents===0?'available':index<opponents-band?'unlikely':index<opponents+band?'uncertain':'likely'));
   return outlook;
 }
+// Roster targets are preferences, not league eligibility rules. RB deadlines take
+// precedence; TE can cross at most one tier to avoid a large early-round reach.
+export function earlyRosterPriority(roster,roundNumber,player,bestTier){
+  const rb=count(roster,'RB'),te=count(roster,'TE');
+  if(roundNumber>4)return {priority:0,bonus:0,reason:''};
+  const rbDue=(roundNumber>=2&&rb<1)||(roundNumber>=3&&rb===0)||(roundNumber>=4&&rb<2);
+  if(rbDue&&player.position==='RB')return {priority:2,bonus:0,reason:rb<1?'Secure your first RB by round 2.':'Secure your second RB by round 4.'};
+  const slotsToFourth=5-roundNumber,missing=Math.max(0,2-rb)+(te<1?1:0);
+  const planDue=missing>=slotsToFourth;
+  if(planDue&&rb<2&&player.position==='RB')return {priority:1,bonus:0,reason:'Take an RB now to leave room for two RBs and a TE by round 4.'};
+  if(te===0&&player.position==='TE'&&(roundNumber>=4||planDue)&&player.tier<=bestTier+1)
+    return {priority:1,bonus:0,reason:'Fill TE by round 4 while a nearby-tier option remains.'};
+  if(player.position==='RB'&&rb<(roundNumber<=2?1:2))return {priority:0,bonus:4,reason:roundNumber<=2?'Build toward your first RB by round 2.':'Build toward your second RB by round 4.'};
+  if(player.position==='TE'&&te===0&&roundNumber>=3)return {priority:0,bonus:3,reason:'Build toward a TE by round 4.'};
+  return {priority:0,bonus:0,reason:''};
+}
 export function recommend({rankings,config,session=null,now=Date.now(),weights={}}){
   const w={...defaults,...weights},req=requirements(config);
   const players=rankings.players.map(p=>({...p,position:positionKey(p.position),key:playerKey(p)}));
@@ -88,7 +104,11 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   // If every legal choice is at risk, still show a conditional option rather than no advice.
   const pool=plausible.length?plausible:eligible;
   const baseline=Math.min(...pool.map(p=>p.rank));
-  const shortlist=pool.filter(p=>p.rank<=baseline+w.rankWindow);
+  const bestTier=Math.min(...pool.map(p=>p.tier??Infinity));
+  const roundNumber=session?Math.ceil((result.turn.nextPick||session.onClock||((roster.length)*config.league.teamCount+1))/config.league.teamCount):1;
+  const priorities=new Map(pool.map(p=>[p.key,earlyRosterPriority(roster,roundNumber,p,bestTier)]));
+  const shortlist=pool.filter(p=>p.rank<=baseline+w.rankWindow||p.tier===bestTier||priorities.get(p.key).priority>0);
+  result.targetRound=roundNumber;
   const horizon=result.turn.followingPick;
   result.candidates=shortlist.map(p=>{
     const starter=isStarter(p.position),benchDepth=Math.max(0,count(roster,p.position)-(req[p.position]||0));
@@ -117,12 +137,15 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
     if(!horizon)reasons.push('Next-turn availability is unknown until the actual draft order is visible.');
     const fitWhy=starter?`fills your open ${needed[p.position]>0?p.position:'FLEX'} slot`:`adds ${p.position} depth`;
     const scarcity=par>0?`; ${round(par)} rank slots above replacement`:'';
-    const shortWhy=`#${p.rank} on your board; ${fitWhy}${scarcity}.`;
+    const target=priorities.get(p.key);
+    if(target.reason)reasons.push(target.reason);
+    if(p.tier)reasons.push(`Spreadsheet tier ${p.tier}; prefer higher tiers before moving down.`);
+    const shortWhy=`${p.tier?`Tier ${p.tier} · `:''}#${p.rank}; ${fitWhy}${scarcity}.${target.reason?` ${target.reason}`:''}`;
     const nextText=nextAvailability==='available'?'Available now':nextAvailability==='likely'?`Likely there at #${result.turn.nextPick}`:nextAvailability==='uncertain'?`Could go before #${result.turn.nextPick}`:nextAvailability==='unlikely'?`If still there at #${result.turn.nextPick}`:'Your draft position is not known yet';
     const followingText=!horizon?'':atRisk?` May not last to #${horizon}.${later?` ${later.name} may be a later ${p.position} option.`:''}`:` May last to #${horizon}.`;
     const outlook=nextText+'.'+followingText;
-    return {...p,shortWhy,outlook,nextAvailability,followingAvailability,laterOption:later?.name??null,score:round(-p.rank+bonus),rankAdvantage:par===null?null:round(par),lineupRankGain:gain===null?null:round(gain),waitCost:waitCost===null?null:round(waitCost),starter,alternativesAtPosition:samePos,reasons};
-  }).sort((a,b)=>b.score-a.score||a.rank-b.rank).slice(0,2);
-  if(result.candidates[0]?.rank!==baseline)result.candidates[0].reasons.push(`Moves ahead of your highest eligible available rank (#${baseline}) because of the roster and waiting-cost adjustments above.`);
+    return {...p,shortWhy,outlook,nextAvailability,followingAvailability,laterOption:later?.name??null,targetPriority:target.priority,score:round(-p.rank+bonus+target.bonus),rankAdvantage:par===null?null:round(par),lineupRankGain:gain===null?null:round(gain),waitCost:waitCost===null?null:round(waitCost),starter,alternativesAtPosition:samePos,reasons};
+  }).sort((a,b)=>b.targetPriority-a.targetPriority||(a.tier??0)-(b.tier??0)||b.score-a.score||a.rank-b.rank).slice(0,2);
+  if(result.candidates[0]?.rank!==baseline)result.candidates[0].reasons.push(`Moves ahead of your highest eligible available rank (#${baseline}) because of tier, early roster targets, and the roster/waiting adjustments above.`);
   return result;
 }

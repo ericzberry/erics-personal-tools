@@ -81,3 +81,39 @@ test('recommendation offers at most two explained options and responds to distan
 test('recommendations never mutate the fixed source board',()=>{
   const before=JSON.stringify(rankings);run({session:{...current(),upcomingOwnPicks:[10,11]}});assert.equal(JSON.stringify(rankings),before);
 });
+
+test('all border-defined tiers match the supplied screenshots, including both sides of every break',()=>{
+ const ends=[8,16,24,41,59,79,98,124,141,154,177];let start=1;
+ ends.forEach((end,i)=>{for(let rank=start;rank<=end;rank++)assert.equal(rankings.players[rank-1].tier,i+1,`rank ${rank}`);start=end+1;});
+});
+const tierBoard={players:[
+ {rank:1,tier:1,name:'Top WR',position:'WR',nflTeam:'BUF',adp:1},
+ {rank:2,tier:2,name:'Best RB',position:'RB',nflTeam:'DET',adp:2},
+ {rank:3,tier:2,name:'Best TE',position:'TE',nflTeam:'KC',adp:3},
+ {rank:4,tier:2,name:'Next RB',position:'RB',nflTeam:'NYJ',adp:4},
+ {rank:5,tier:4,name:'Deep TE',position:'TE',nflTeam:'BAL',adp:5}
+]};
+const withRoster=(positions,round)=>({...current(),onClock:(round-1)*10+1,upcomingOwnPicks:[(round-1)*10+1],picks:positions.map((position,i)=>({player:`Owned ${i}`,position,nflTeam:'FA',teamId:8,overall:null}))});
+test('a higher tier wins over an ordinary roster-fit bonus',()=>{
+ const a=run({rankings:tierBoard,session:withRoster([],1)});assert.equal(a.candidates[0].name,'Top WR');assert.match(a.candidates[0].shortWhy,/Tier 1/);
+});
+test('first RB takes priority at round 2 even over a higher-tier WR',()=>{
+ const a=run({rankings:tierBoard,session:withRoster(['WR'],2)});assert.equal(a.candidates[0].name,'Best RB');assert.match(a.candidates[0].shortWhy,/first RB by round 2/);
+});
+test('second RB takes priority at round 4, and taking it switches priority to TE',()=>{
+ let a=run({rankings:tierBoard,session:withRoster(['WR','RB','QB'],4)});assert.equal(a.candidates[0].name,'Best RB');assert.match(a.candidates[0].shortWhy,/second RB by round 4/);
+ a=run({rankings:tierBoard,session:withRoster(['RB','RB','WR'],4)});assert.equal(a.candidates[0].name,'Best TE');assert.match(a.candidates[0].shortWhy,/Fill TE by round 4/);
+});
+test('round 3 reserves remaining choices for RB and TE, and satisfied targets stop bonuses',()=>{
+ const a=run({rankings:tierBoard,session:withRoster(['WR','RB'],3)});assert.ok(['RB','TE'].includes(a.candidates[0].position));
+ const b=run({rankings:tierBoard,session:withRoster(['RB','RB','TE'],4)});assert.equal(b.candidates[0].name,'Top WR');assert.equal(b.candidates[0].targetPriority,0);
+});
+test('TE target avoids a multi-tier reach and deadline pressure stops after round 4',()=>{
+ const board={players:tierBoard.players.filter(p=>p.name!=='Best TE')};
+ const a=run({rankings:board,session:withRoster(['RB','RB','WR'],4)});assert.equal(a.candidates[0].name,'Top WR');
+ const b=run({rankings:tierBoard,session:withRoster(['WR','WR','QB','TE'],5)});assert.equal(b.candidates[0].name,'Top WR');assert.equal(b.candidates[0].targetPriority,0);
+});
+test('target deadlines use the next own pick round rather than the current opponent round',()=>{
+ const session={...withRoster(['WR'],1),onClock:10,upcomingOwnPicks:[12,29]};
+ const a=run({rankings:tierBoard,session});assert.equal(a.targetRound,2);assert.equal(a.candidates[0].position,'RB');
+});

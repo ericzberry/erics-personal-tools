@@ -1,12 +1,13 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "seasonId": 2026,
   "scoring": "half-ppr",
   "source": "2026 Half PPR Ranks - Final (1).xlsx",
   "sha256": "dd9295df7c2693f287a5cb4a37d3ef1f5a92dea0a073d98313094a9d05269fc3",
-  "priority": "Combined Ranks is authoritative. ADP is market context. Highlight meaning is unspecified.",
+  "priority": "Combined Ranks tiers (dark horizontal borders), then overall order, are authoritative. ADP is market context. Highlight meaning is unspecified.",
   "players": [
     {
+      "tier": 1,
       "rank": 1,
       "name": "Jahmyr Gibbs",
       "position": "RB",
@@ -15,6 +16,7 @@
       "highlighted": false
     },
     {
+      "tier": 1,
       "rank": 2,
       "name": "Bijan Robinson",
       "position": "RB",
@@ -23,6 +25,7 @@
       "highlighted": false
     },
     {
+      "tier": 1,
       "rank": 3,
       "name": "Jonathan Taylor",
       "position": "RB",
@@ -31,6 +34,7 @@
       "highlighted": false
     },
     {
+      "tier": 1,
       "rank": 4,
       "name": "Ja'Marr Chase",
       "position": "WR",
@@ -39,6 +43,7 @@
       "highlighted": false
     },
     {
+      "tier": 1,
       "rank": 5,
       "name": "Jaxon Smith-Njigba",
       "position": "WR",
@@ -47,6 +52,7 @@
       "highlighted": false
     },
     {
+      "tier": 1,
       "rank": 6,
       "name": "Puka Nacua",
       "position": "WR",
@@ -55,6 +61,7 @@
       "highlighted": false
     },
     {
+      "tier": 1,
       "rank": 7,
       "name": "Christian McCaffrey",
       "position": "RB",
@@ -63,6 +70,7 @@
       "highlighted": false
     },
     {
+      "tier": 1,
       "rank": 8,
       "name": "Amon-Ra St. Brown",
       "position": "WR",
@@ -71,6 +79,7 @@
       "highlighted": false
     },
     {
+      "tier": 2,
       "rank": 9,
       "name": "James Cook",
       "position": "RB",
@@ -79,6 +88,7 @@
       "highlighted": false
     },
     {
+      "tier": 2,
       "rank": 10,
       "name": "Saquon Barkley",
       "position": "RB",
@@ -87,6 +97,7 @@
       "highlighted": false
     },
     {
+      "tier": 2,
       "rank": 11,
       "name": "Kenneth Walker",
       "position": "RB",
@@ -95,6 +106,7 @@
       "highlighted": false
     },
     {
+      "tier": 2,
       "rank": 12,
       "name": "Chase Brown",
       "position": "RB",
@@ -103,6 +115,7 @@
       "highlighted": false
     },
     {
+      "tier": 2,
       "rank": 13,
       "name": "De'Von Achane",
       "position": "RB",
@@ -111,6 +124,7 @@
       "highlighted": false
     },
     {
+      "tier": 2,
       "rank": 14,
       "name": "Justin Jefferson",
       "position": "WR",
@@ -119,6 +133,7 @@
       "highlighted": false
     },
     {
+      "tier": 2,
       "rank": 15,
       "name": "A.J. Brown",
       "position": "WR",
@@ -127,6 +142,7 @@
       "highlighted": false
     },
     {
+      "tier": 2,
       "rank": 16,
       "name": "CeeDee Lamb",
       "position": "WR",
@@ -135,6 +151,7 @@
       "highlighted": false
     },
     {
+      "tier": 3,
       "rank": 17,
       "name": "Derrick Henry",
       "position": "RB",
@@ -143,6 +160,7 @@
       "highlighted": false
     },
     {
+      "tier": 3,
       "rank": 18,
       "name": "Brock Bowers",
       "position": "TE",
@@ -151,6 +169,7 @@
       "highlighted": false
     },
     {
+      "tier": 3,
       "rank": 19,
       "name": "Omarion Hampton",
       "position": "RB",
@@ -159,6 +178,7 @@
       "highlighted": false
     },
     {
+      "tier": 3,
       "rank": 20,
       "name": "Ashton Jeanty",
       "position": "RB",
@@ -167,6 +187,7 @@
       "highlighted": false
     },
     {
+      "tier": 3,
       "rank": 21,
       "name": "George Pickens",
       "position": "WR",
@@ -175,6 +196,7 @@
       "highlighted": false
     },
     {
+      "tier": 3,
       "rank": 22,
       "name": "Nico Collins",
       "position": "WR",
@@ -183,6 +205,7 @@
       "highlighted": false
     },
     {
+      "tier": 3,
       "rank": 23,
       "name": "Drake London",
       "position": "WR",
@@ -191,6 +214,7 @@
       "highlighted": false
     },
     {
+      "tier": 3,
       "rank": 24,
       "name": "Chris Olave",
       "position": "WR",
@@ -199,6 +223,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 25,
       "name": "Javonte Williams",
       "position": "RB",
@@ -207,6 +232,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 26,
       "name": "Kyren Williams",
       "position": "RB",
@@ -215,6 +241,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 27,
       "name": "Jeremiyah Love",
       "position": "RB",
@@ -223,6 +250,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 28,
       "name": "Breece Hall",
       "position": "RB",
@@ -231,6 +259,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 29,
       "name": "DeVonta Smith",
       "position": "WR",
@@ -239,6 +268,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 30,
       "name": "Malik Nabers",
       "position": "WR",
@@ -247,6 +277,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 31,
       "name": "Ladd McConkey",
       "position": "WR",
@@ -255,6 +286,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 32,
       "name": "Zay Flowers",
       "position": "WR",
@@ -263,6 +295,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 33,
       "name": "Trey McBride",
       "position": "TE",
@@ -271,6 +304,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 34,
       "name": "Colston Loveland",
       "position": "TE",
@@ -279,6 +313,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 35,
       "name": "Josh Allen",
       "position": "QB",
@@ -287,6 +322,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 36,
       "name": "Tee Higgins",
       "position": "WR",
@@ -295,6 +331,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 37,
       "name": "Rashee Rice",
       "position": "WR",
@@ -303,6 +340,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 38,
       "name": "Garrett Wilson",
       "position": "WR",
@@ -311,6 +349,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 39,
       "name": "Jaylen Waddle",
       "position": "WR",
@@ -319,6 +358,7 @@
       "highlighted": false
     },
     {
+      "tier": 4,
       "rank": 40,
       "name": "Luther Burden",
       "position": "WR",
@@ -327,6 +367,7 @@
       "highlighted": true
     },
     {
+      "tier": 4,
       "rank": 41,
       "name": "Tetairoa McMillan",
       "position": "WR",
@@ -335,6 +376,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 42,
       "name": "D'Andre Swift",
       "position": "RB",
@@ -343,6 +385,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 43,
       "name": "Cam Skattebo",
       "position": "RB",
@@ -351,6 +394,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 44,
       "name": "Travis Etienne",
       "position": "RB",
@@ -359,6 +403,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 45,
       "name": "Quinshon Judkins",
       "position": "RB",
@@ -367,6 +412,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 46,
       "name": "Davante Adams",
       "position": "WR",
@@ -375,6 +421,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 47,
       "name": "Jameson Williams",
       "position": "WR",
@@ -383,6 +430,7 @@
       "highlighted": true
     },
     {
+      "tier": 5,
       "rank": 48,
       "name": "Christian Watson",
       "position": "WR",
@@ -391,6 +439,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 49,
       "name": "Parker Washington",
       "position": "WR",
@@ -399,6 +448,7 @@
       "highlighted": true
     },
     {
+      "tier": 5,
       "rank": 50,
       "name": "D.J. Moore",
       "position": "WR",
@@ -407,6 +457,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 51,
       "name": "Rome Odunze",
       "position": "WR",
@@ -415,6 +466,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 52,
       "name": "Emeka Egbuka",
       "position": "WR",
@@ -423,6 +475,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 53,
       "name": "Jadarian Price",
       "position": "RB",
@@ -431,6 +484,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 54,
       "name": "Bucky Irving",
       "position": "RB",
@@ -439,6 +493,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 55,
       "name": "Bhayshul Tuten",
       "position": "RB",
@@ -447,6 +502,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 56,
       "name": "Rhamondre Stevenson",
       "position": "RB",
@@ -455,6 +511,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 57,
       "name": "David Montgomery",
       "position": "RB",
@@ -463,6 +520,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 58,
       "name": "Tyler Warren",
       "position": "TE",
@@ -471,6 +529,7 @@
       "highlighted": false
     },
     {
+      "tier": 5,
       "rank": 59,
       "name": "Lamar Jackson",
       "position": "QB",
@@ -479,6 +538,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 60,
       "name": "Terry McLaurin",
       "position": "WR",
@@ -487,6 +547,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 61,
       "name": "Chris Godwin",
       "position": "WR",
@@ -495,6 +556,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 62,
       "name": "Mike Evans",
       "position": "WR",
@@ -503,6 +565,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 63,
       "name": "Quentin Johnston",
       "position": "WR",
@@ -511,6 +574,7 @@
       "highlighted": true
     },
     {
+      "tier": 6,
       "rank": 64,
       "name": "Marvin Harrison Jr.",
       "position": "WR",
@@ -519,6 +583,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 65,
       "name": "Michael Wilson",
       "position": "WR",
@@ -527,6 +592,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 66,
       "name": "Drake Maye",
       "position": "QB",
@@ -535,6 +601,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 67,
       "name": "Joe Burrow",
       "position": "QB",
@@ -543,6 +610,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 68,
       "name": "Jayden Daniels",
       "position": "QB",
@@ -551,6 +619,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 69,
       "name": "Jalen Hurts",
       "position": "QB",
@@ -559,6 +628,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 70,
       "name": "Tucker Kraft",
       "position": "TE",
@@ -567,6 +637,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 71,
       "name": "TreVeyon Henderson",
       "position": "RB",
@@ -575,6 +646,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 72,
       "name": "Jaylen Warren",
       "position": "RB",
@@ -583,6 +655,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 73,
       "name": "Rico Dowdle",
       "position": "RB",
@@ -591,6 +664,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 74,
       "name": "Jonathon Brooks",
       "position": "RB",
@@ -599,6 +673,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 75,
       "name": "MarShawn Lloyd",
       "position": "RB",
@@ -607,6 +682,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 76,
       "name": "Jordan Mason",
       "position": "RB",
@@ -615,6 +691,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 77,
       "name": "Kenneth Gainwell",
       "position": "RB",
@@ -623,6 +700,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 78,
       "name": "J.K. Dobbins",
       "position": "RB",
@@ -631,6 +709,7 @@
       "highlighted": false
     },
     {
+      "tier": 6,
       "rank": 79,
       "name": "Blake Corum",
       "position": "RB",
@@ -639,6 +718,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 80,
       "name": "Sam LaPorta",
       "position": "TE",
@@ -647,6 +727,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 81,
       "name": "Kyle Pitts",
       "position": "TE",
@@ -655,6 +736,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 82,
       "name": "Harold Fannin",
       "position": "TE",
@@ -663,6 +745,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 83,
       "name": "George Kittle",
       "position": "TE",
@@ -671,6 +754,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 84,
       "name": "Caleb Williams",
       "position": "QB",
@@ -679,6 +763,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 85,
       "name": "Justin Herbert",
       "position": "QB",
@@ -687,6 +772,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 86,
       "name": "Dak Prescott",
       "position": "QB",
@@ -695,6 +781,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 87,
       "name": "Trevor Lawrence",
       "position": "QB",
@@ -703,6 +790,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 88,
       "name": "Chuba Hubbard",
       "position": "RB",
@@ -711,6 +799,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 89,
       "name": "Tony Pollard",
       "position": "RB",
@@ -719,6 +808,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 90,
       "name": "Jacory Croskey-Merritt",
       "position": "RB",
@@ -727,6 +817,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 91,
       "name": "RJ Harvey",
       "position": "RB",
@@ -735,6 +826,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 92,
       "name": "DK Metcalf",
       "position": "WR",
@@ -743,6 +835,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 93,
       "name": "Carnell Tate",
       "position": "WR",
@@ -751,6 +844,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 94,
       "name": "Brian Thomas Jr.",
       "position": "WR",
@@ -759,6 +853,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 95,
       "name": "Jayden Reed",
       "position": "WR",
@@ -767,6 +862,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 96,
       "name": "Alec Pierce",
       "position": "WR",
@@ -775,6 +871,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 97,
       "name": "De'Zhaun Stribling",
       "position": "WR",
@@ -783,6 +880,7 @@
       "highlighted": false
     },
     {
+      "tier": 7,
       "rank": 98,
       "name": "Stefon Diggs",
       "position": "WR",
@@ -791,6 +889,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 99,
       "name": "Josh Downs",
       "position": "WR",
@@ -799,6 +898,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 100,
       "name": "Wan'Dale Robinson",
       "position": "WR",
@@ -807,6 +907,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 101,
       "name": "Matthew Golden",
       "position": "WR",
@@ -815,6 +916,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 102,
       "name": "KC Concepcion",
       "position": "WR",
@@ -823,6 +925,7 @@
       "highlighted": true
     },
     {
+      "tier": 8,
       "rank": 103,
       "name": "Brock Purdy",
       "position": "QB",
@@ -831,6 +934,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 104,
       "name": "Jaxson Dart",
       "position": "QB",
@@ -839,6 +943,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 105,
       "name": "Isaiah Likely",
       "position": "TE",
@@ -847,6 +952,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 106,
       "name": "Dalton Kincaid",
       "position": "TE",
@@ -855,6 +961,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 107,
       "name": "Courtland Sutton",
       "position": "WR",
@@ -863,6 +970,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 108,
       "name": "Michael Pittman Jr.",
       "position": "WR",
@@ -871,6 +979,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 109,
       "name": "Jordan Addison",
       "position": "WR",
@@ -879,6 +988,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 110,
       "name": "Xavier Worthy",
       "position": "WR",
@@ -887,6 +997,7 @@
       "highlighted": true
     },
     {
+      "tier": 8,
       "rank": 111,
       "name": "Makai Lemon",
       "position": "WR",
@@ -895,6 +1006,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 112,
       "name": "Chris Rodriguez",
       "position": "RB",
@@ -903,6 +1015,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 113,
       "name": "Josh Jacobs",
       "position": "RB",
@@ -911,6 +1024,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 114,
       "name": "Kyle Monangai",
       "position": "RB",
@@ -919,6 +1033,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 115,
       "name": "Mike Washington Jr.",
       "position": "RB",
@@ -927,6 +1042,7 @@
       "highlighted": true
     },
     {
+      "tier": 8,
       "rank": 116,
       "name": "Tyler Allgeier",
       "position": "RB",
@@ -935,6 +1051,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 117,
       "name": "Tyjae Spears",
       "position": "RB",
@@ -943,6 +1060,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 118,
       "name": "Keaton Mitchell",
       "position": "RB",
@@ -951,6 +1069,7 @@
       "highlighted": true
     },
     {
+      "tier": 8,
       "rank": 119,
       "name": "Aaron Jones",
       "position": "RB",
@@ -959,6 +1078,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 120,
       "name": "Emmett Johnson",
       "position": "RB",
@@ -967,6 +1087,7 @@
       "highlighted": true
     },
     {
+      "tier": 8,
       "rank": 121,
       "name": "Jonah Coleman",
       "position": "RB",
@@ -975,6 +1096,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 122,
       "name": "Tank Bigsby",
       "position": "RB",
@@ -983,6 +1105,7 @@
       "highlighted": true
     },
     {
+      "tier": 8,
       "rank": 123,
       "name": "Kaelon Black",
       "position": "RB",
@@ -991,6 +1114,7 @@
       "highlighted": false
     },
     {
+      "tier": 8,
       "rank": 124,
       "name": "Kyler Murray",
       "position": "QB",
@@ -999,6 +1123,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 125,
       "name": "Bo Nix",
       "position": "QB",
@@ -1007,6 +1132,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 126,
       "name": "Patrick Mahomes",
       "position": "QB",
@@ -1015,6 +1141,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 127,
       "name": "Matthew Stafford",
       "position": "QB",
@@ -1023,6 +1150,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 128,
       "name": "Jared Goff",
       "position": "QB",
@@ -1031,6 +1159,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 129,
       "name": "Jordan Love",
       "position": "QB",
@@ -1039,6 +1168,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 130,
       "name": "Baker Mayfield",
       "position": "QB",
@@ -1047,6 +1177,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 131,
       "name": "Tyler Shough",
       "position": "QB",
@@ -1055,6 +1186,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 132,
       "name": "Woody Marks",
       "position": "RB",
@@ -1063,6 +1195,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 133,
       "name": "Rachaad White",
       "position": "RB",
@@ -1071,6 +1204,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 134,
       "name": "Romeo Doubs",
       "position": "WR",
@@ -1079,6 +1213,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 135,
       "name": "Jordyn Tyson",
       "position": "WR",
@@ -1087,6 +1222,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 136,
       "name": "Jakobi Meyers",
       "position": "WR",
@@ -1095,6 +1231,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 137,
       "name": "Jalen Coker",
       "position": "WR",
@@ -1103,6 +1240,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 138,
       "name": "Deebo Samuel",
       "position": "WR",
@@ -1111,6 +1249,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 139,
       "name": "Brian Robinson",
       "position": "RB",
@@ -1119,6 +1258,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 140,
       "name": "Travis Kelce",
       "position": "TE",
@@ -1127,6 +1267,7 @@
       "highlighted": false
     },
     {
+      "tier": 9,
       "rank": 141,
       "name": "Dallas Goedert",
       "position": "TE",
@@ -1135,6 +1276,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 142,
       "name": "Ray Davis",
       "position": "RB",
@@ -1143,6 +1285,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 143,
       "name": "Malik Davis",
       "position": "RB",
@@ -1151,6 +1294,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 144,
       "name": "Seth McGowan",
       "position": "RB",
@@ -1159,6 +1303,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 145,
       "name": "Zach Charbonnet",
       "position": "RB",
@@ -1167,6 +1312,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 146,
       "name": "Demond Claiborne",
       "position": "RB",
@@ -1175,6 +1321,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 147,
       "name": "Mark Andrews",
       "position": "TE",
@@ -1183,6 +1330,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 148,
       "name": "Juwan Johnson",
       "position": "TE",
@@ -1191,6 +1339,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 149,
       "name": "Jake Ferguson",
       "position": "TE",
@@ -1199,6 +1348,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 150,
       "name": "Braelon Allen",
       "position": "RB",
@@ -1207,6 +1357,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 151,
       "name": "Nicholas Singleton",
       "position": "RB",
@@ -1215,6 +1366,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 152,
       "name": "Dylan Sampson",
       "position": "RB",
@@ -1223,6 +1375,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 153,
       "name": "Najee Harris",
       "position": "RB",
@@ -1231,6 +1384,7 @@
       "highlighted": false
     },
     {
+      "tier": 10,
       "rank": 154,
       "name": "Kimani Vidal",
       "position": "RB",
@@ -1239,6 +1393,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 155,
       "name": "Texans Defense",
       "position": "DST",
@@ -1247,6 +1402,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 156,
       "name": "Rams Defense",
       "position": "DST",
@@ -1255,6 +1411,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 157,
       "name": "Seahawks Defense",
       "position": "DST",
@@ -1263,6 +1420,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 158,
       "name": "Denver Defense",
       "position": "DST",
@@ -1271,6 +1429,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 159,
       "name": "Eagles Defense",
       "position": "DST",
@@ -1279,6 +1438,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 160,
       "name": "Steelers Defense",
       "position": "DST",
@@ -1287,6 +1447,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 161,
       "name": "Patriots Defense",
       "position": "DST",
@@ -1295,6 +1456,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 162,
       "name": "Ravens Defense",
       "position": "DST",
@@ -1303,6 +1465,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 163,
       "name": "Vikings Defense",
       "position": "DST",
@@ -1311,6 +1474,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 164,
       "name": "Jaguars Defense",
       "position": "DST",
@@ -1319,6 +1483,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 165,
       "name": "Chargers Defense",
       "position": "DST",
@@ -1327,6 +1492,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 166,
       "name": "Chiefs Defense",
       "position": "DST",
@@ -1335,6 +1501,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 167,
       "name": "Brandon Aubrey",
       "position": "K",
@@ -1343,6 +1510,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 168,
       "name": "Ka'imi Fairbairn",
       "position": "K",
@@ -1351,6 +1519,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 169,
       "name": "Cameron Dicker",
       "position": "K",
@@ -1359,6 +1528,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 170,
       "name": "Cam Little",
       "position": "K",
@@ -1367,6 +1537,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 171,
       "name": "Jason Myers",
       "position": "K",
@@ -1375,6 +1546,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 172,
       "name": "Eddy Pineiro",
       "position": "K",
@@ -1383,6 +1555,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 173,
       "name": "Harrison Mevis",
       "position": "K",
@@ -1391,6 +1564,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 174,
       "name": "Jake Bates",
       "position": "K",
@@ -1399,6 +1573,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 175,
       "name": "Tyler Loop",
       "position": "K",
@@ -1407,6 +1582,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 176,
       "name": "Cairo Santos",
       "position": "K",
@@ -1415,6 +1591,7 @@
       "highlighted": false
     },
     {
+      "tier": 11,
       "rank": 177,
       "name": "Will Reichard",
       "position": "K",

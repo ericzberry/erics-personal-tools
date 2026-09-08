@@ -3,7 +3,7 @@ const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice
 export function DraftView() {
   const advisor=Section([
     SectionTitle('Draft insight',Badge('YOUR BOARD',{id:'advice-mode',className:'pill badge-subtle'})),Note('',{id:'advice-context',className:'footnote context-note'}),Notice('',{id:'advice-status',className:'notice notice-subtle'}),Stack([],{id:'recommendations'}),
-    SourceNote('Your saved spreadsheet','Combined Ranks · roster fit · ADP availability estimates')
+    SourceNote('Your saved spreadsheet','Spreadsheet tiers · RB/TE targets · ADP estimates')
   ],{className:'advisor','aria-label':'Draft advisor'});
   const draft=Section([
     Highlight({id:'next-pick-chip',valueId:'next-pick-name',label:'RECOMMENDED NEXT PICK',value:'Waiting for live draft'}),

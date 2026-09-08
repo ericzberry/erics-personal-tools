@@ -49,7 +49,7 @@ export function PickRow(p,ownTeamId) {
   return element('li',{className:`pick pick--compact${p.teamId===ownTeamId?' mine':''}`},[Label(p.overall??'—',{className:'pick-number'}),Stack([Strong(p.player,{className:'pick-name'}),Text(`${p.manual?'Manual':`R${p.round} · P${p.pickInRound}`} · ${p.nflTeam} · ${p.team}`,{className:'pick-meta'})]),Label(p.position,{className:'position'})]);
 }
 export function RecommendationCard(p,{primary=false}={}) {
-  const children=[Text(primary?'PICK NEXT':'ALTERNATIVE',{className:'eyebrow'}),Heading(`${p.name} · ${p.position}`,3),Text(`Rank #${p.rank} · ADP ${p.adp ?? '—'}`,{className:'pick-meta'})];
+  const children=[Text(primary?'PICK NEXT':'ALTERNATIVE',{className:'eyebrow'}),Heading(`${p.name} · ${p.position}`,3),Text(`${p.tier?`Tier ${p.tier} · `:''}Rank #${p.rank} · ADP ${p.adp ?? '—'}`,{className:'pick-meta'})];
   if (p.shortWhy) children.push(Text(p.shortWhy,{className:'recommendation-why'}));
   if (p.outlook) children.push(Text(p.outlook,{className:'recommendation-outlook'}));
   children.push(Disclosure('Reasoning',[element('ul',{},p.reasons.map(text=>element('li',{text})))]));
