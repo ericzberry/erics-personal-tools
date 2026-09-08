@@ -5,7 +5,10 @@ export function pickCountdown(session,turn,{blocked=false}={}){
   if(blocked||session?.state!=='drafting'||!Number.isInteger(session.onClock)||session.onClock<1||
     !Number.isInteger(turn?.nextPick)||turn.nextPick<session.onClock)return '';
   const remaining=turn.nextPick-session.onClock;
-  return remaining===0?'Your pick now':`${remaining} ${remaining===1?'pick':'picks'} until you`;
+  if(remaining>0)return `${remaining} ${remaining===1?'pick':'picks'} until you`;
+  if(!Number.isInteger(turn.followingPick)||turn.followingPick<=turn.nextPick)return 'Your pick now';
+  const between=turn.followingPick-turn.nextPick-1;
+  return `Your pick now · ${between===0?'You pick again immediately':`${between} ${between===1?'pick':'picks'} until your next turn`}`;
 }
 export function rosterCounts(session){
   const counts=Object.fromEntries(rosterPositions.map(p=>[p,0]));

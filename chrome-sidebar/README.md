@@ -140,3 +140,6 @@ Version 0.6.18 collapses every fully taken tier into All taken, including late t
 
 
 Version 0.6.19 adds a live picks-until-your-turn count beside the next overall pick. It includes the opponent currently on the clock, follows snake-round reversals, and shows Your pick now at zero. Unknown or blocked draft progress suppresses the countdown. Manual boards update when you change the current pick.
+
+
+Version 0.6.20 also shows the number of intervening picks until your following turn while you are on the clock. It excludes your current selection, labels consecutive picks as You pick again immediately, and omits the following-turn wait when no further pick is known.
