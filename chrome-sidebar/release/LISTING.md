@@ -1,4 +1,4 @@
-# Eric's Sidebar — 0.2.1
+# Eric's Personal Tools — 0.3.0
 
 Status: prepared locally; not uploaded or published. Google developer dashboard requires reauthentication.
 
@@ -23,7 +23,7 @@ Help the user follow and prepare for their ESPN fantasy football draft.
 Open the sidebar to inspect saved league rules without signing in. Live capture requires an ESPN account and an active football draft or practice draft. Open or reload the draft room after installing. Keep session selection on Auto. After each pick, the count and available recommendations update. Completed, disconnected or incomplete drafts do not show actionable picks. No credentials are included in this submission.
 
 ## Submission checklist
-Upload erics-sidebar-0.2.1.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
+Upload erics-sidebar-0.3.0.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
 
 Install the approved store listing once on each computer while signed into the tester account. Subsequent approved versions of that same listing update automatically. Local draft storage does not sync between computers.
 

@@ -83,6 +83,13 @@ $('projections-file').addEventListener('change', async event => {
   } catch(error) {$('error').hidden=false;$('error').textContent=error.message;} finally {event.target.value='';}
 });
 $('clear-projections').addEventListener('click',async()=>{try{if(extension)await chrome.storage.local.remove('leagueProjections');projections=null;renderDraft();}catch(error){$('error').hidden=false;$('error').textContent=error.message;}});
+for (const button of document.querySelectorAll('[data-tool]')) {
+  button.addEventListener('click', () => {
+    for (const item of document.querySelectorAll('[data-tool]')) item.setAttribute('aria-pressed', String(item === button));
+    $('football-tool').hidden = button.dataset.tool !== 'football';
+    $('gmail-tool').hidden = button.dataset.tool !== 'gmail';
+  });
+}
 for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-pressed',String(b===button));$('draft-view').hidden=button.dataset.view!=='draft';$('rules-view').hidden=button.dataset.view!=='rules';});
 $('session').addEventListener('change',()=>{selected=$('session').value;$('team').value='all';renderDraft();});
 $('team').addEventListener('change',renderDraft);$('search-picks').addEventListener('input',renderDraft);

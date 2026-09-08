@@ -87,4 +87,8 @@ Twenty tests now cover the reader/storage pipeline and advisor, including unknow
 
 ## Private release
 
-Version 0.2.1 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.3.0 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+
+## Shared design and future tools
+
+The sidebar uses the [Eric’s Personal Tools design system](../docs/DESIGN.md). The Gmail tab is a planned tool; it does not yet read or act on email. See [Gmail scope](../docs/GMAIL.md).

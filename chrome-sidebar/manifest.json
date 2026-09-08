@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Eric's Sidebar",
-  "version": "0.2.1",
+  "name": "Eric's Personal Tools",
+  "version": "0.3.0",
   "description": "Personal tools, starting with ESPN fantasy football rules and draft tracking.",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -13,7 +13,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Open Eric's Sidebar",
+    "default_title": "Open Eric's Personal Tools",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",
