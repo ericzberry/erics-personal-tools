@@ -125,7 +125,7 @@ Version 0.6.14 uses native data-player-id identities observed in a live practice
 Version 0.6.15 collapses players taken by others within tiers 5 and higher into an expandable disclosure. Available players and your picks remain outside it, including your picks in otherwise exhausted late tiers.
 
 
-### RB and WR tier scarcity (0.6.16)
+### RB and WR tier scarcity (0.6.17)
 
 Scarcity is a selective cue, not a warning for every empty starting slot. No alerts appear on your first pick. RB targets follow the existing plan (one by round 2, two by round 4); WR targets allow one by round 3 and two by round 5. Only an overdue quality-starter need with one or two eligible options left in the current tier can trigger a warning. Each option must have ADP and be forecast unlikely to survive until your next pick or the turn after it. Broad tiers, uncertain forecasts, and already-exhausted positions stay quiet.
 

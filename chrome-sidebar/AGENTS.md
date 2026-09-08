@@ -11,3 +11,7 @@ The user requires every extension UI element to come from a reusable component.
 - Prefer native accessible elements inside components. Keep keyboard support, labels, disabled/loading states, and text-safe rendering.
 - Preserve the compact design and active-tab navigation. Do not add function tabs.
 - Run the component architecture checks and relevant behavior tests before building the release.
+
+## Release versions
+
+- Increment the extension patch version for every delivered update, including follow-up fixes. Keep the manifest, package metadata, release archive filename, and release documentation aligned.
