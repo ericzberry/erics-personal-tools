@@ -1,0 +1,14 @@
+{
+  "name": "erics-chrome-sidebar",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "build": "node scripts/build.js",
+    "preview": "python3 -m http.server 8765 --bind 127.0.0.1"
+  },
+  "devDependencies": {
+    "linkedom": "^0.18.13"
+  }
+}

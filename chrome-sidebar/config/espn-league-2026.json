@@ -1,0 +1,493 @@
+{
+  "schemaVersion": 1,
+  "leagueId": 182527585,
+  "seasonId": 2026,
+  "teamId": 8,
+  "leagueName": "Old Timer's League",
+  "teamName": "Bedford Bridges",
+  "source": {
+    "url": "https://fantasy.espn.com/football/league/settings?leagueId=182527585",
+    "verifiedAt": "2026-09-08 13:41:12 UTC",
+    "mode": "hardcoded",
+    "note": "Settings snapshot, not live league or draft state. Unlisted scoring categories are not inferred."
+  },
+  "league": {
+    "teamCount": 10,
+    "scoringType": "head_to_head_points",
+    "format": "league_manager",
+    "public": false,
+    "autoReactivate": false,
+    "lineupProtection": false
+  },
+  "draft": {
+    "type": "snake",
+    "secondsPerPick": 90,
+    "order": "manually_set_by_league_manager",
+    "pickTrading": false
+  },
+  "roster": {
+    "size": 16,
+    "starters": 9,
+    "bench": 7,
+    "ir": 1,
+    "positions": [
+      {
+        "label": "Quarterback",
+        "code": "QB",
+        "slots": 1,
+        "maximum": 4
+      },
+      {
+        "label": "Team Quarterback",
+        "code": "TQB",
+        "slots": 0,
+        "maximum": "No Limit"
+      },
+      {
+        "label": "Running Back",
+        "code": "RB",
+        "slots": 2,
+        "maximum": 8
+      },
+      {
+        "label": "Running Back/Wide Receiver",
+        "code": "RB/WR",
+        "slots": 0,
+        "maximum": "N/A"
+      },
+      {
+        "label": "Wide Receiver",
+        "code": "WR",
+        "slots": 2,
+        "maximum": 8
+      },
+      {
+        "label": "Wide Receiver/Tight End",
+        "code": "WR/TE",
+        "slots": 0,
+        "maximum": "N/A"
+      },
+      {
+        "label": "Tight End",
+        "code": "TE",
+        "slots": 1,
+        "maximum": 3
+      },
+      {
+        "label": "Flex",
+        "code": "FLEX",
+        "slots": 1,
+        "maximum": "N/A"
+      },
+      {
+        "label": "Offensive Player Utility",
+        "code": "OP",
+        "slots": 0,
+        "maximum": "N/A"
+      },
+      {
+        "label": "Defensive Tackle",
+        "code": "DT",
+        "slots": 0,
+        "maximum": "No Limit"
+      },
+      {
+        "label": "Defensive End",
+        "code": "DE",
+        "slots": 0,
+        "maximum": "No Limit"
+      },
+      {
+        "label": "Linebacker",
+        "code": "LB",
+        "slots": 0,
+        "maximum": "No Limit"
+      },
+      {
+        "label": "Defensive Line",
+        "code": "DL",
+        "slots": 0,
+        "maximum": "N/A"
+      },
+      {
+        "label": "Cornerback",
+        "code": "CB",
+        "slots": 0,
+        "maximum": "No Limit"
+      },
+      {
+        "label": "Safety",
+        "code": "S",
+        "slots": 0,
+        "maximum": "No Limit"
+      },
+      {
+        "label": "Defensive Back",
+        "code": "DB",
+        "slots": 0,
+        "maximum": "N/A"
+      },
+      {
+        "label": "Defensive Player Utility",
+        "code": "DP",
+        "slots": 0,
+        "maximum": "N/A"
+      },
+      {
+        "label": "Team Defense/Special Teams",
+        "code": "D/ST",
+        "slots": 1,
+        "maximum": 3
+      },
+      {
+        "label": "Place Kicker",
+        "code": "K",
+        "slots": 1,
+        "maximum": 3
+      },
+      {
+        "label": "Punter",
+        "code": "P",
+        "slots": 0,
+        "maximum": "No Limit"
+      },
+      {
+        "label": "Head Coach",
+        "code": "HC",
+        "slots": 0,
+        "maximum": "No Limit"
+      },
+      {
+        "label": "Bench",
+        "code": "BE",
+        "slots": 7,
+        "maximum": "N/A"
+      },
+      {
+        "label": "Injured Reserve",
+        "code": "IR",
+        "slots": 1,
+        "maximum": "N/A"
+      }
+    ]
+  },
+  "scoring": {
+    "Passing": [
+      {
+        "label": "Passing Yards",
+        "code": "PY",
+        "points": 0.04
+      },
+      {
+        "label": "TD Pass",
+        "code": "PTD",
+        "points": 4.0
+      },
+      {
+        "label": "Interceptions Thrown",
+        "code": "INT",
+        "points": -2.0
+      },
+      {
+        "label": "2pt Passing Conversion",
+        "code": "2PC",
+        "points": 2.0
+      }
+    ],
+    "Rushing": [
+      {
+        "label": "Rushing Yards",
+        "code": "RY",
+        "points": 0.1
+      },
+      {
+        "label": "TD Rush",
+        "code": "RTD",
+        "points": 6.0
+      },
+      {
+        "label": "2pt Rushing Conversion",
+        "code": "2PR",
+        "points": 2.0
+      }
+    ],
+    "Receiving": [
+      {
+        "label": "Receiving Yards",
+        "code": "REY",
+        "points": 0.1
+      },
+      {
+        "label": "Each reception",
+        "code": "REC",
+        "points": 0.5
+      },
+      {
+        "label": "TD Reception",
+        "code": "RETD",
+        "points": 6.0
+      },
+      {
+        "label": "2pt Receiving Conversion",
+        "code": "2PRE",
+        "points": 2.0
+      }
+    ],
+    "Kicking": [
+      {
+        "label": "Each PAT Made",
+        "code": "PAT",
+        "points": 1.0
+      },
+      {
+        "label": "Total FG Missed",
+        "code": "FGM",
+        "points": -1.0
+      },
+      {
+        "label": "FG Made (0-39 yards)",
+        "code": "FG0",
+        "points": 3.0
+      },
+      {
+        "label": "FG Made (40-49 yards)",
+        "code": "FG40",
+        "points": 4.0
+      },
+      {
+        "label": "FG Made (50-59 yards)",
+        "code": "FG50",
+        "points": 5.0
+      },
+      {
+        "label": "FG Made (60+ yards)",
+        "code": "FG60",
+        "points": 6.0
+      }
+    ],
+    "Team Defense / Special Teams": [
+      {
+        "label": "Kickoff Return TD",
+        "code": "KRTD",
+        "points": 6.0
+      },
+      {
+        "label": "Punt Return TD",
+        "code": "PRTD",
+        "points": 6.0
+      },
+      {
+        "label": "Interception Return TD",
+        "code": "INTTD",
+        "points": 6.0
+      },
+      {
+        "label": "Fumble Return TD",
+        "code": "FRTD",
+        "points": 6.0
+      },
+      {
+        "label": "Blocked Punt or FG return for TD",
+        "code": "BLKKRTD",
+        "points": 6.0
+      },
+      {
+        "label": "2pt Return",
+        "code": "2PTRET",
+        "points": 2.0
+      },
+      {
+        "label": "1pt Safety",
+        "code": "1PSF",
+        "points": 1.0
+      },
+      {
+        "label": "Each Sack",
+        "code": "SK",
+        "points": 1.0
+      },
+      {
+        "label": "Blocked Punt, PAT or FG",
+        "code": "BLKK",
+        "points": 2.0
+      },
+      {
+        "label": "Each Interception",
+        "code": "INT",
+        "points": 2.0
+      },
+      {
+        "label": "Each Fumble Recovered",
+        "code": "FR",
+        "points": 2.0
+      },
+      {
+        "label": "Each Safety",
+        "code": "SF",
+        "points": 2.0
+      },
+      {
+        "label": "0 points allowed",
+        "code": "PA0",
+        "points": 5.0
+      },
+      {
+        "label": "1-6 points allowed",
+        "code": "PA1",
+        "points": 4.0
+      },
+      {
+        "label": "7-13 points allowed",
+        "code": "PA7",
+        "points": 3.0
+      },
+      {
+        "label": "14-17 points allowed",
+        "code": "PA14",
+        "points": 1.0
+      },
+      {
+        "label": "28-34 points allowed",
+        "code": "PA28",
+        "points": -1.0
+      },
+      {
+        "label": "35-45 points allowed",
+        "code": "PA35",
+        "points": -3.0
+      },
+      {
+        "label": "46+ points allowed",
+        "code": "PA46",
+        "points": -5.0
+      },
+      {
+        "label": "Less than 100 total yards allowed",
+        "code": "YA100",
+        "points": 5.0
+      },
+      {
+        "label": "100-199 total yards allowed",
+        "code": "YA199",
+        "points": 3.0
+      },
+      {
+        "label": "200-299 total yards allowed",
+        "code": "YA299",
+        "points": 2.0
+      },
+      {
+        "label": "350-399 total yards allowed",
+        "code": "YA399",
+        "points": -1.0
+      },
+      {
+        "label": "400-449 total yards allowed",
+        "code": "YA449",
+        "points": -3.0
+      },
+      {
+        "label": "450-499 total yards allowed",
+        "code": "YA499",
+        "points": -5.0
+      },
+      {
+        "label": "500-549 total yards allowed",
+        "code": "YA549",
+        "points": -6.0
+      },
+      {
+        "label": "550+ total yards allowed",
+        "code": "YA550",
+        "points": -7.0
+      }
+    ],
+    "Miscellaneous": [
+      {
+        "label": "Kickoff Return TD",
+        "code": "KRTD",
+        "points": 6.0
+      },
+      {
+        "label": "Punt Return TD",
+        "code": "PRTD",
+        "points": 6.0
+      },
+      {
+        "label": "Fumble Recovered for TD",
+        "code": "FTD",
+        "points": 6.0
+      },
+      {
+        "label": "Total Fumbles Lost",
+        "code": "FUML",
+        "points": -2.0
+      },
+      {
+        "label": "Interception Return TD",
+        "code": "INTTD",
+        "points": 6.0
+      },
+      {
+        "label": "Fumble Return TD",
+        "code": "FRTD",
+        "points": 6.0
+      },
+      {
+        "label": "Blocked Punt or FG return for TD",
+        "code": "BLKKRTD",
+        "points": 6.0
+      },
+      {
+        "label": "2pt Return",
+        "code": "2PTRET",
+        "points": 2.0
+      },
+      {
+        "label": "1pt Safety",
+        "code": "1PSF",
+        "points": 1.0
+      }
+    ]
+  },
+  "players": {
+    "universe": "NFL",
+    "enforceUndroppableList": true
+  },
+  "transactions": {
+    "lineupLock": "individual_scheduled_game_time",
+    "acquisitionSystem": "waivers",
+    "seasonAcquisitionLimit": null,
+    "waiverPeriodDays": 1,
+    "waiverOrder": "reset_weekly_inverse_standings",
+    "lockEliminatedTeams": false
+  },
+  "trades": {
+    "limit": null,
+    "deadline": "2026-12-02T12:00:00-05:00",
+    "reviewPeriodDays": 1,
+    "vetoVotes": 4
+  },
+  "keepers": {
+    "2026": false,
+    "2027": false
+  },
+  "regularSeason": {
+    "startNflWeek": 1,
+    "weeksPerMatchup": 1,
+    "matchups": 14,
+    "matchupTiebreaker": null,
+    "homeFieldAdvantage": null,
+    "bonusWinsAndLosses": false
+  },
+  "playoffs": {
+    "teamCount": 4,
+    "firstRoundWeeks": 1,
+    "championshipWeeks": 1,
+    "seedingTiebreaker": "total_points_for",
+    "homeFieldAdvantage": null,
+    "reseed": false,
+    "lockEliminatedTeams": false,
+    "consolationLadder": true
+  }
+}

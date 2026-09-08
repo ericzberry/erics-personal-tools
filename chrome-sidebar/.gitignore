@@ -1,0 +1,4 @@
+# Local league imports
+data/
+node_modules/
+dist/

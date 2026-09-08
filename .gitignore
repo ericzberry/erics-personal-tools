@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Hammerspoon per-machine state (generated at runtime)
+mac-customization/layouts/
+
+# Gmail sender OAuth secrets — never commit
+gmail-sender/credentials/
