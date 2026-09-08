@@ -7,7 +7,13 @@ export function DraftView() {
     Notice('',{id:'manual-feedback',hidden:true}),DraftSettings(),Stack([],{id:'spreadsheet-players'}),
     Note('Saved on this device · Keep ESPN open.')
   ],{id:'draft-view'});
-  return Section([UI.StickyGroup([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Stack([],{id:'roster-counts','aria-live':'polite'}),Note('',{id:'advice-context',className:'footnote context-note'})]),Main([draft,RulesView(),Notice('',{id:'error',role:'alert',hidden:true})])],{id:'football-tool'});
+  return Section([UI.StickyGroup([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Stack([],{id:'roster-counts','aria-live':'polite'}),Note('',{id:'advice-context',className:'footnote context-note'})]),Main([draft,RulesView(),Notice('',{id:'error',role:'alert',hidden:true}),DraftReset()])],{id:'football-tool'});
+}
+export function DraftReset() {
+  return Disclosure('Reset draft data',[
+    Note('Clears this board’s picks and corrections and switches live capture off. Other drafts and rankings stay saved. Turn capture back on in Settings to use ESPN history again.'),
+    Button('Reset this draft',{id:'reset-draft'}),Notice('',{id:'reset-draft-status',hidden:true})
+  ],{className:'settings-panel'});
 }
 export function DraftSettings() {
   return Disclosure('Settings',[

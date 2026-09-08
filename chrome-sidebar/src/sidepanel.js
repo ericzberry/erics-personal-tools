@@ -1,6 +1,6 @@
 import {rosterCounts,currentTierPlayers,pickCountdown} from './draft-presentation.js';
 import {fetchEspnCatalog, reconcileRankings, reconcileSession, correctionPlayers} from './espn-catalog.js';
-import {createManualDraft, applyManualDraft, setManualPick, setManualProgress} from './manual-draft.js';
+import {createManualDraft, applyManualDraft, setManualPick, setManualProgress, resetManualDraft} from './manual-draft.js';
 import {playerKey} from './player-identity.js';
 import {downloadFile,Disclosure, DataTable, RosterCounts, TieredRankings, SelectionRow} from './components/ui.js';
 import {selectSession} from './session-selection.js';
@@ -85,7 +85,7 @@ function renderManual(updateFields=false) {
     return SelectionRow(p,{owner,corrected:!!record?.overrides[playerKey(p)],onSelect:value=>changeManual(r=>setManualPick(r,p,value),`${p.name}: ${value==='undo'?'correction undone':value==='me'?'taken by you':'taken by someone else'}.`)});
   }));
 }
-function changeManual(update,message='Saved.') {
+function changeManual(update,message='Saved.',feedbackId='manual-feedback') {
   const key=currentKey(),source=liveSession();selected=key;
   manualWrites=manualWrites.catch(()=>{}).then(async()=>{
     try {
@@ -93,13 +93,24 @@ function changeManual(update,message='Saved.') {
       const all=saved.manualDrafts||manualDrafts;
       const updated={...all,[key]:update(all[key]||createManualDraft(source,config))};
       if(extension)await chrome.storage.local.set({manualDrafts:updated});manualDrafts=updated;if(!updated[key].active)selected='auto';
-      $('manual-feedback').hidden=false;$('manual-feedback').textContent=message;
-      renderDraft();renderManual(true);
-    }catch(error){$('manual-feedback').hidden=false;$('manual-feedback').textContent=error.message;}
+      $(feedbackId).hidden=false;$(feedbackId).textContent=message;
+      renderDraft();renderManual(true);return true;
+    }catch(error){$(feedbackId).hidden=false;$(feedbackId).textContent=error.message;return false;}
   });
   return manualWrites;
 }
 function markPlayer(player,value){if(!manualDrafts[currentKey()]?.active)return;return changeManual(r=>setManualPick(r,player,value),`${player.name}: ${value==='undo'?'correction undone':value==='me'?'taken by you':'taken by someone else'}.`);}
+$('reset-draft').addEventListener('click',async()=>{
+  $('reset-draft').disabled=true;
+  try {
+    const reset=await changeManual(resetManualDraft,'Draft reset. Live capture is off; start marking picks or resume capture in Settings.','reset-draft-status');
+    if(reset){
+      tierStates.clear();lastBoardSignature=null;
+      $('manual-search').value='';$('manual-feedback').hidden=true;
+      renderDraft();renderManual(true);
+    }
+  }finally{$('reset-draft').disabled=false;}
+});
 $('download-espn-diagnostics').addEventListener('click',async()=>{
   try{
     const tab=liveSession()?.tabId;if(tab===undefined)throw Error('Open the ESPN draft first.');

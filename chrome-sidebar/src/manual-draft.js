@@ -12,6 +12,10 @@ export function setManualPick(record,player,owner) {
   else next.overrides[key]={player:{name:player.name,position:player.position,nflTeam:player.nflTeam,espnId:player.espnId},owner};
   return {...next,active:true,updatedAt:Date.now()};
 }
+export function resetManualDraft(record) {
+  return {...record,active:true,baseline:{...record.baseline,picks:[],onClock:null,upcomingOwnPicks:[],missing:[],rejected:0,identityIssues:false},
+    overrides:{},onClock:1,slot:null,updatedAt:Date.now()};
+}
 export function setManualProgress(record,onClock,slot) {
   const total=record.baseline.teams.length*(record.baseline.rounds||16);
   if(onClock!==null&&(!Number.isInteger(onClock)||onClock<1||onClock>total+1))throw Error(`Current pick must be 1–${total+1}.`);

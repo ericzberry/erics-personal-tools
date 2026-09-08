@@ -72,6 +72,7 @@ test('roster stays in a shared sticky group and recommendation panel is removed'
   assert.match(doc.querySelector('.sticky-group').textContent,/Bedford Bridges/);
   assert.equal(doc.querySelector('.advisor'),null);
   assert.ok(doc.getElementById('draft-view').contains(doc.getElementById('spreadsheet-players')));
+  assert.ok(doc.getElementById('football-tool').querySelector('main').lastElementChild.contains(doc.getElementById('reset-draft')));
   for(const id of ['draft-data','session','open-corrections','picks'])assert.equal(doc.getElementById(id),null);
 });
 

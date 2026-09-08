@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createManualDraft,setManualPick,setManualProgress,applyManualDraft} from '../src/manual-draft.js';
+import {createManualDraft,setManualPick,setManualProgress,applyManualDraft,resetManualDraft} from '../src/manual-draft.js';
 import {reconcileRankings,reconcileSession,correctionPlayers,matchEspnPlayer,fetchEspnCatalog} from '../src/espn-catalog.js';
 import {recommend,turns} from '../src/recommendations.js';
 import {playerKey} from '../src/player-identity.js';
@@ -49,4 +49,18 @@ test('ESPN players outside ranks can be marked and unresolved live identities bl
 test('failed or partial ESPN refresh is rejected instead of replacing saved catalog',async()=>{
  await assert.rejects(fetchEspnCatalog(2026,async()=>({ok:false})),/sync failed/);
  await assert.rejects(fetchEspnCatalog(2026,async url=>({ok:true,json:async()=>url.includes('/players')?[]:{settings:{proTeams:[]}}})),/incomplete/);
+});
+
+test('reset empties captured and corrected picks, clears progress, and stays empty through live updates',()=>{
+ const blank=createManualDraft(null,config);
+ const captured={...blank.baseline,onClock:20,state:'drafting',picks:[{...rankings.players[0],player:rankings.players[0].name,teamId:8,overall:1}]};
+ let record=createManualDraft(captured,config);
+ record=setManualPick(record,rankings.players[1],'me');record=setManualProgress(record,20,7);
+ const before=structuredClone(record),reset=resetManualDraft(record);
+ assert.deepEqual(record,before);assert.equal(reset.active,true);assert.deepEqual(reset.overrides,{});assert.equal(reset.onClock,1);assert.equal(reset.slot,null);
+ const effective=applyManualDraft({...captured,onClock:30},reset);
+ assert.deepEqual(effective.picks,[]);assert.equal(effective.manualMode,true);assert.equal(effective.onClock,1);assert.deepEqual(effective.upcomingOwnPicks,[]);
+ assert.equal(effective.leagueId,captured.leagueId);assert.equal(effective.teamId,captured.teamId);
+ assert.equal(applyManualDraft(captured,{...reset,active:false}),captured);
+ assert.deepEqual(applyManualDraft(null,resetManualDraft(blank)).picks,[]);
 });

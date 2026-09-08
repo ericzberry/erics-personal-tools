@@ -152,3 +152,6 @@ Version 0.6.22 keeps draft progress and both pick countdowns in the sticky roste
 
 
 Version 0.6.23 reserves the final available selections for a missing starting defense and kicker. It uses the smaller of open roster slots and known remaining snake-draft turns, so advancing a manual board cannot spend those final picks on depth. Once a defense or kicker starting slot is filled, the advisor excludes backups at that position. Earlier picks still follow the board and existing roster priorities. Required last-pick choices explain the defense/kicker need.
+
+
+Version 0.6.24 adds Reset draft data at the very bottom. Reset this draft creates an empty manual board for the current session, clears its corrections, draft position and progress, and switches live capture off so ESPN history cannot immediately refill it. Other drafts, rankings and settings are preserved. Re-enabling capture uses ESPN history again; this is a board reset, not deletion of ESPN’s draft.
