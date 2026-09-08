@@ -54,3 +54,18 @@ test('ARIA player rows support tier highlights and report matches',()=>{
  const context=vm.createContext({document});vm.runInContext(component,context);
  const result=context.EspnRecommendationHighlights.decorate(document,[],[{...candidate,tier:1}]);assert.equal(result.currentTier,1);assert.equal(result.recommended,0);
 });
+
+test('virtual ESPN div rows install their own stylesheet and highlight without manifest CSS',()=>{
+ const {document}=parseHTML('<html><head></head><body><div class="Table__TR"><div class="Table__TD"><a class="player-column__athlete" href="/nfl/player/_/id/4429795/jahmyr-gibbs">Jahmyr Gibbs</a></div><div class="Table__TD">DRAFT</div></div></body></html>');
+ const context=vm.createContext({document});vm.runInContext(component,context);
+ const result=context.EspnRecommendationHighlights.decorate(document,[candidate]);assert.equal(result.recommended,1);
+ assert.match(document.querySelector('[data-eric-highlight-styles]').textContent,/#1258d5/);
+ context.EspnRecommendationHighlights.decorate(document,[candidate]);assert.equal(document.querySelectorAll('[data-eric-highlight-styles]').length,1);
+ document.querySelector('[data-eric-highlight-styles]').remove();context.EspnRecommendationHighlights.decorate(document,[candidate]);assert.equal(document.querySelectorAll('[data-eric-highlight-styles]').length,1);
+});
+test('page receives recommendations directly from draft capture without a sidebar message',()=>{
+ const {document,context}=setup();Object.assign(context,{URL,location:{href:'https://fantasy.espn.com/football/draft?leagueId=123&seasonId=2026&teamId=8'},EspnDraftReader:{read:()=>({state:'drafting',onClock:7})},chrome:{runtime:{id:'ours',onMessage:{addListener:()=>{}}}},setInterval:()=>{}});
+ vm.runInContext(controller,context);
+ const response=context.EspnPageHighlights.receive({leagueId:123,seasonId:2026,teamId:8,onClock:7,candidates:[candidate],expiresAt:Date.now()+15000});
+ assert.equal(response.recommended,1);assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);
+});

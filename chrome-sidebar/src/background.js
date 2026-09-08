@@ -1,3 +1,4 @@
+import {pageAdvice} from './page-advice.js';
 import {validateSnapshot, mergeSnapshot, sessionKey} from './draft-state.js';
 chrome.sidePanel.setPanelBehavior({openPanelOnActionClick: true}).catch(console.error);
 let pending = Promise.resolve();
@@ -16,7 +17,10 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     const practice = Object.entries(draftSessions).filter(([,s]) => s.mode === 'practice').sort((a,b) => b[1].lastSeenAt-a[1].lastSeenAt);
     for (const [oldKey] of practice.slice(10)) delete draftSessions[oldKey];
     await chrome.storage.local.set({draftSessions});
-    respond({ok: true});
+    try{
+      const stored=await chrome.storage.local.get(['manualDrafts','espnCatalog']);
+      respond({ok:true,highlights:await pageAdvice(draftSessions[key],stored)});
+    }catch(error){respond({ok:true,highlightError:error.message});}
   }).catch(error => respond({ok: false, error: error.message}));
   return true;
 });

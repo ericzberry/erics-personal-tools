@@ -1,4 +1,4 @@
-(() => {
+var EspnPageHighlights = (() => {
   let message=null;
   function refresh(){
     const url=new URL(location.href);
@@ -8,11 +8,15 @@
     const matched=EspnRecommendationHighlights.decorate(document,valid&&current?message.candidates:[],valid&&current?(message.tierPlayers||[]):[]);
     return {ok:true,active:!!(valid&&current),...matched};
   }
+  function receive(next){
+    message=!next.clear&&Array.isArray(next.candidates)&&next.candidates.length<=2&&(!next.tierPlayers||(Array.isArray(next.tierPlayers)&&next.tierPlayers.length<=200))&&Number.isFinite(next.expiresAt)?next:null;
+    return refresh();
+  }
   chrome.runtime.onMessage.addListener((next,sender,respond)=>{
     if(sender.id!==chrome.runtime.id||next?.type!=='DRAFT_RECOMMENDATIONS')return;
-    message=!next.clear&&Array.isArray(next.candidates)&&next.candidates.length<=2&&(!next.tierPlayers||(Array.isArray(next.tierPlayers)&&next.tierPlayers.length<=200))&&Number.isFinite(next.expiresAt)?next:null;
-    const result=refresh();respond?.(result);
+    const result=receive(next);respond?.(result);
   });
   // Reapply after ESPN replaces virtualized player rows, and expire closed-panel advice.
   setInterval(refresh,1000);
+  return {receive};
 })();

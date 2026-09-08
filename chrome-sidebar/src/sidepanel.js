@@ -68,7 +68,7 @@ async function sendHighlights(session,candidates,tierPlayers){
   if(tab===undefined)return;
   try {const response=await chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,tierPlayers:tierPlayers.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam,tier:p.tier})),candidates:candidates.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam})),expiresAt:Date.now()+12000});
     if(highlightedTab!==tab)return;
-    $('espn-highlight-status').textContent=!candidates.length?'':!response?.ok?'Reload the ESPN draft tab to enable page highlights.':!response.active?'ESPN highlights are waiting for the draft feed to catch up.':response.recommended+response.currentTier===0?'No matching players visible on ESPN. Open Players or clear its filters.':'';
+    $('espn-highlight-status').textContent=!candidates.length?'':!response?.ok?'Reload the ESPN draft tab to enable page highlights.':!response.active?'ESPN highlights are waiting for the draft feed to catch up.':response.recommended+response.currentTier===0?'No matching players visible on ESPN. Open Players or clear its filters.':response.painted===0?'ESPN players matched, but highlight styles could not be applied.':'';
   }catch {if(highlightedTab===tab)$('espn-highlight-status').textContent=candidates.length?'Reload the ESPN draft tab to reconnect page highlights.':'';}
 
 }

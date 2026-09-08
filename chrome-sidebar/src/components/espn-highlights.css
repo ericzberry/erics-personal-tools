@@ -1,8 +1,0 @@
-/* Recommendation blue takes precedence over current-tier amber. */
-.eric-current-tier-row > td, .eric-current-tier-row > [role="cell"] { background-color: #fff0bc !important; border-top: 2px solid #c28b12 !important; border-bottom: 2px solid #c28b12 !important; }
-.eric-current-tier-row > td:first-child { box-shadow: inset 4px 0 #c28b12; }
-.eric-recommended-row > td, .eric-recommended-row > [role="cell"] { background-color: #d5e6ff !important; border-top: 3px solid #1258d5 !important; border-bottom: 3px solid #1258d5 !important; }
-.eric-recommended-row > td:first-child { box-shadow: inset 6px 0 #1258d5; }
-[data-eric-recommendation]::after, [data-eric-tier]::after { display: inline-block; margin-left: 7px; border-radius: 4px; color: #fff; padding: 3px 6px; font: 700 11px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; white-space: nowrap; }
-[data-eric-recommendation]::after { content: attr(data-eric-recommendation); background: #1258d5; }
-[data-eric-tier]::after { content: attr(data-eric-tier); background: #805900; }

@@ -74,7 +74,7 @@ Shared upload components remain available for future tools, but the draft featur
 
 ## Private release
 
-Version 0.6.8 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.6.9 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 
@@ -96,7 +96,7 @@ Early preferences target one RB by round 2, two RBs by round 4, and one TE by ro
 
 Recommendations appear as numbered highlights on the tier board and ESPN; the separate recommendation panel has been removed. The tier board replaces Pick history and the session dropdown. Available, Yours, and Taken have stronger, labeled colors. Recommended players also have a contrasting border and numbered NEXT PICK badge. Fully taken tiers collapse automatically and remain expandable. Expansion choices survive unchanged feed updates; a newly exhausted tier collapses. Disconnected/incomplete feeds mark uncaptured availability Unconfirmed.
 
-While the sidebar is open, the same two recommendations are sent only to the captured ESPN draft tab. A reusable content component outlines visible draftable player rows and adds a numbered label, matching ESPN IDs or exact normalized name/position/team. It never selects or drafts players. Highlights clear on draft change, stale/blocked advice, session changes, or within 12 seconds after sidebar updates stop. Refreshing ESPN is required after reloading the extension. Unit tests cover matching, expiry, wrong-session protection and clock changes. Live ESPN verification remains pending.
+The background returns recommendations directly in the response to each validated ESPN draft snapshot. The sidebar also sends immediate updates for manual corrections. A reusable content component outlines visible draftable player rows and adds a numbered label, matching ESPN IDs or exact normalized name/position/team. It never selects or drafts players. Highlights clear on draft change, stale/blocked advice, session changes, or within 15 seconds after capture updates stop. Refreshing ESPN is required after reloading the extension. Unit tests cover matching, expiry, wrong-session protection and clock changes. Live ESPN verification remains pending.
 
 ### ESPN tier colors and roster counts
 
@@ -104,8 +104,10 @@ Recommended visible ESPN player rows receive a blue border, blue background and 
 
 A prominent sticky roster strip directly beneath Bedford Bridges shows RB, WR, QB, TE, D/ST and K totals from the effective live or manual board, including players outside the spreadsheet. Counts stay visible when a captured session disconnects; unknown sessions show dashes.
 
-Version 0.6.8 expands ESPN matching to ordinary player links and ARIA rows, without requiring pick-feed name classes or a native Draft button. The page acknowledges matching counts; the sidebar reports disconnected scripts, changed draft clocks, and no visible matching rows instead of silently swallowing failures. Live DOM verification remains pending because the user's ESPN tab is not exposed to the connected browser.
+Version 0.6.9 expands ESPN matching to ordinary player links and ARIA rows, without requiring pick-feed name classes or a native Draft button. The page acknowledges matching counts; the sidebar reports disconnected scripts, changed draft clocks, and no visible matching rows instead of silently swallowing failures. Live DOM verification remains pending because the user's ESPN tab is not exposed to the connected browser.
 
 ### Sticky roster and completed tiers
 
 Bedford Bridges and Your roster share a sticky component at the top of the viewport while you scroll through later tiers. All exhausted tiers are grouped inside a single collapsed **All taken** disclosure; individual tiers remain expandable within it. Undoing a pick returns its tier to the active board. Archive expansion state survives normal feed updates. Recommendation calculations and ESPN/board highlights remain active without a duplicate recommendation panel.
+
+Version 0.6.9 adds capture-response highlight delivery, so the page can update without an open sidebar. The component owns and installs its CSS, supports virtual div rows and reports whether matched rows have the expected painted background. The first capture runs after the highlighter is initialized. Background tests verify recommendations in capture acknowledgments; browser verification uses a standalone player-list fixture. Live ESPN validation is still pending access to the user’s draft tab.

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Eric's Personal Tools",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "description": "A personal sidebar for live ESPN draft advice and on-device Gmail summaries and reply drafts.",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -31,14 +31,11 @@
       ],
       "js": [
         "src/draft-reader.js",
-        "src/content.js",
         "src/components/espn-highlights.js",
-        "src/espn-highlights-content.js"
+        "src/espn-highlights-content.js",
+        "src/content.js"
       ],
-      "run_at": "document_idle",
-      "css": [
-        "src/components/espn-highlights.css"
-      ]
+      "run_at": "document_idle"
     },
     {
       "matches": [

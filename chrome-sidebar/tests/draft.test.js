@@ -56,9 +56,14 @@ test('validates sender origin, league, overall number and team',()=>{
 test('background pipeline saves picks and marks closed tab disconnected',async()=>{
   let listener,closed,data={};
   globalThis.chrome={sidePanel:{setPanelBehavior:async()=>{}},runtime:{onMessage:{addListener(fn){listener=fn;}}},storage:{local:{get:async()=>structuredClone(data),set:async v=>{data=structuredClone(v);}}},tabs:{onRemoved:{addListener(fn){closed=fn;}}}};
+  const originalFetch=globalThis.fetch;globalThis.fetch=async url=>({ok:true,json:async()=>JSON.parse(readFileSync(url,'utf8'))});
   await import('../src/background.js');const s=complete();
   const result=await new Promise(resolve=>listener({type:'DRAFT_SNAPSHOT',snapshot:s},{url,tab:{id:123},frameId:0},resolve));
-  assert.deepEqual(result,{ok:true});assert.equal(data.draftSessions[sessionKey(s)].picks.length,160);
+  assert.equal(result.ok,true);assert.equal(result.highlights.candidates.length,0);assert.equal(data.draftSessions[sessionKey(s)].picks.length,160);
+  const drafting={...s,state:'drafting',onClock:6,picks:s.picks.slice(0,5),upcomingOwnPicks:[6,15]};
+  const next=await new Promise(resolve=>listener({type:'DRAFT_SNAPSHOT',snapshot:drafting},{url,tab:{id:123},frameId:0},resolve));
+  assert.ok(next.highlights.candidates.length>0);assert.ok(next.highlights.tierPlayers.length>0);assert.equal(next.highlights.onClock,6);
+  globalThis.fetch=originalFetch;
   await closed(123);assert.equal(data.draftSessions[sessionKey(s)].connected,false);delete globalThis.chrome;
 });
 test('build excludes personal captures, tests and dependencies',()=>{

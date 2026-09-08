@@ -9,6 +9,8 @@
     try {
       const response = await chrome.runtime.sendMessage({type: 'DRAFT_SNAPSHOT', snapshot});
       if (!response?.ok) return;
+      if(response.highlights)globalThis.EspnPageHighlights?.receive(response.highlights);
+      else if(response.highlightError)globalThis.EspnPageHighlights?.receive({clear:true});
       lastSignature = signature;
       lastSent = Date.now();
     } catch (error) {
