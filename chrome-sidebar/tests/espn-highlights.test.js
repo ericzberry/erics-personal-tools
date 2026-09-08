@@ -10,7 +10,7 @@ const candidate={name:'Jahmyr Gibbs',espnId:4429795,position:'RB',nflTeam:'DET'}
 function setup(){const {document}=parseHTML(`<html><body><table><tbody>${row('Jahmyr Gibbs',4429795)}${row('Jahmyr Gibbs',111)}${row('Unavailable',222,'DET',true)}</tbody></table></body></html>`);const context=vm.createContext({document});vm.runInContext(component,context);return {document,context,decorate:context.EspnRecommendationHighlights.decorate};}
 test('ESPN decoration uses exact IDs, adds no draft actions, and clears old recommendations',()=>{
  const {document,decorate}=setup();const before=document.body.textContent;
- decorate(document,[candidate]);assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);assert.equal(document.querySelector('[data-eric-recommendation]').getAttribute('data-eric-recommendation'),'Eric’s pick 1');
+ decorate(document,[candidate]);assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);assert.equal(document.querySelector('[data-eric-recommendation]'),null);
  assert.equal(document.body.textContent,before);assert.equal(document.querySelectorAll('button').length,3);
  decorate(document,[{...candidate,espnId:222}]);assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);assert.equal(document.querySelectorAll('button[disabled]').length,1);
  decorate(document,[candidate]);decorate(document,[]);assert.equal(document.querySelectorAll('[data-eric-recommendation]').length,0);
@@ -38,7 +38,7 @@ test('current-tier rows use a separate highlight and recommendations take preced
  decorate(document,[candidate],[{...candidate,tier:1},other]);
  assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);assert.equal(document.querySelectorAll('.eric-current-tier-row').length,1);
  assert.equal(document.querySelector('.eric-recommended-row').classList.contains('eric-current-tier-row'),false);
- assert.equal(document.querySelector('[data-eric-tier]').getAttribute('data-eric-tier'),'Tier 1');
+ assert.equal(document.querySelector('[data-eric-tier]'),null);
  decorate(document,[],[]);assert.equal(document.querySelectorAll('[data-eric-tier],.eric-current-tier-row,.eric-recommended-row').length,0);
 });
 
@@ -59,7 +59,7 @@ test('virtual ESPN div rows install their own stylesheet and highlight without m
  const {document}=parseHTML('<html><head></head><body><div class="Table__TR"><div class="Table__TD"><a class="player-column__athlete" href="/nfl/player/_/id/4429795/jahmyr-gibbs">Jahmyr Gibbs</a></div><div class="Table__TD">DRAFT</div></div></body></html>');
  const context=vm.createContext({document});vm.runInContext(component,context);
  const result=context.EspnRecommendationHighlights.decorate(document,[candidate]);assert.equal(result.recommended,1);
- assert.match(document.querySelector('[data-eric-highlight-styles]').textContent,/#1258d5/);
+ assert.match(document.querySelector('[data-eric-highlight-styles]').textContent,/#d5e6ff/);
  context.EspnRecommendationHighlights.decorate(document,[candidate]);assert.equal(document.querySelectorAll('[data-eric-highlight-styles]').length,1);
  document.querySelector('[data-eric-highlight-styles]').remove();context.EspnRecommendationHighlights.decorate(document,[candidate]);assert.equal(document.querySelectorAll('[data-eric-highlight-styles]').length,1);
 });
@@ -68,4 +68,15 @@ test('page receives recommendations directly from draft capture without a sideba
  vm.runInContext(controller,context);
  const response=context.EspnPageHighlights.receive({leagueId:123,seasonId:2026,teamId:8,onClock:7,candidates:[candidate],expiresAt:Date.now()+15000});
  assert.equal(response.recommended,1);assert.equal(document.querySelectorAll('.eric-recommended-row').length,1);
+});
+
+test('ESPN highlights change only backgrounds and remove obsolete badge styling',()=>{
+ const {document,decorate}=setup();const before=document.body.textContent;
+ const old=document.createElement('style');old.setAttribute('data-eric-highlight-styles','true');old.textContent='[data-eric-tier]::after{content:attr(data-eric-tier);padding:8px}';document.head.append(old);
+ document.querySelector('a').setAttribute('data-eric-tier','Tier 1');
+ decorate(document,[candidate]);
+ assert.equal(document.body.textContent,before);assert.equal(document.querySelectorAll('[data-eric-tier],[data-eric-recommendation]').length,0);
+ const css=document.querySelector('[data-eric-highlight-styles]').textContent;
+ assert.doesNotMatch(css,/::after|::before|border|padding|margin|font|height|width|content:|box-shadow/);
+ assert.deepEqual([...css.matchAll(/\{([^}]+)\}/g)].map(m=>m[1].trim().split(':')[0]),['background-color','background-color']);
 });
