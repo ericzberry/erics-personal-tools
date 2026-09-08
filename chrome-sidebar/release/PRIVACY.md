@@ -1,6 +1,6 @@
 # Eric’s Personal Tools privacy policy
 
-Updated September 8, 2026. Applies to version 0.6.3.
+Updated September 8, 2026. Applies to version 0.6.4.
 
 Eric’s Personal Tools displays contextual assistance alongside ESPN and Gmail. It checks the active tab’s URL to select the appropriate function; it does not retain browsing history.
 
@@ -15,3 +15,5 @@ Exporting draft history creates a local JSON file. You control subsequent sharin
 This version declares all-site host permission at the owner’s request for planned personal tools. Current page-reading scripts run only in ESPN football draft rooms and Gmail. Other sites are not read beyond identifying the active tab’s URL to select a function.
 
 Manual draft corrections are saved locally, separately for each draft session, and used only when manual mode is active. The extension bundles a public ESPN player catalog and offers a refresh that requests public player and NFL team data from ESPN without cookies. These requests do not include your draft, rankings, or email content. Refreshed player identities are cached locally.
+
+With the sidebar open, recommendations are passed locally to the captured ESPN draft tab to highlight matching visible players. This does not submit selections or send draft data to an external server. Highlights expire when sidebar updates stop.

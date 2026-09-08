@@ -1,7 +1,7 @@
 import {fetchEspnCatalog, reconcileRankings, reconcileSession, correctionPlayers} from './espn-catalog.js';
 import {createManualDraft, applyManualDraft, setManualPick, setManualProgress} from './manual-draft.js';
 import {playerKey} from './player-identity.js';
-import {Option, Disclosure, DataTable, PickRow, RecommendationCard, TieredRankings, SelectionRow, downloadFile} from './components/ui.js';
+import {Disclosure, DataTable, RecommendationCard, TieredRankings, SelectionRow} from './components/ui.js';
 import {selectSession} from './session-selection.js';
 import {sessionKey} from './draft-state.js';
 import {recommend} from './recommendations.js';
@@ -9,7 +9,9 @@ const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.storage?.local;
 let config, rankings, sourceRankings, catalog, catalogPlayers=[], syncMessage='', sessions = {}, selected = 'auto', manualDrafts = {};
 let manualWrites=Promise.resolve();
-let lastBoardSignature, lastAdviceSignature;
+let lastBoardSignature, lastAdviceSignature, lastTierSession, highlightedTab;
+let recommendedKeys=[];
+const tierStates=new Map();
 const liveSession=()=>reconcileSession(selectSession(sessions,selected),catalog);
 const currentKey=()=>liveSession()?sessionKey(liveSession()):(selected==='auto'?'league:2026:182527585':selected);
 const effectiveSession=()=>reconcileSession(applyManualDraft(liveSession(),manualDrafts[currentKey()]),catalog);
@@ -25,12 +27,6 @@ function renderRules() {
   for (const [key,title] of Object.entries({league:'League settings',draft:'Draft rules',roster:'Roster size',players:'Player rules',transactions:'Waivers & lineups',trades:'Trades',keepers:'Keepers',regularSeason:'Regular season',playoffs:'Playoffs'}))
     group(title,['Rule','Setting'],Object.entries(config[key]).filter(([,v])=>!Array.isArray(v)).map(([k,v])=>[human(k),valueLabel(k,v)]));
 }
-function refreshSessionMenu() {
-  const menu=$('session');menu.replaceChildren();const auto=Option('Auto · follow live draft');auto.value='auto';menu.append(auto);const base=Option('2026 league draft');base.value='league:2026:182527585';menu.append(base);
-  for(const s of Object.values(sessions).filter(s=>s.mode==='practice').sort((a,b)=>b.lastSeenAt-a.lastSeenAt)) { const o=Option(`Practice · ${new Date(s.lastSeenAt).toLocaleDateString()} · ${s.leagueId}`);o.value=sessionKey(s);menu.append(o); }
-  if (![...menu.options].some(o=>o.value===selected)) selected='auto';
-  menu.value=selected;
-}
 function renderDraft() {
   const s=effectiveSession();const live=s?.connected && Date.now()-s.lastSeenAt<15000;
   $('dot').classList.toggle('live',!!live);
@@ -41,23 +37,13 @@ function renderDraft() {
   $('my-count').textContent=s?.picks.filter(p=>p.teamId===s.teamId).length || 0;
   const warning=s?.missing?.length?`${s.missing.length} earlier pick(s) missing. Open ESPN’s Pick History or reload the draft room to recover available history.`:s?.rejected?'Some ESPN pick entries could not be read. Check ESPN’s pick history.':'';
   $('coverage').hidden=!warning;$('coverage').textContent=warning;
-  const oldTeam=$('team').value;$('team').replaceChildren();const all=Option('All teams');all.value='all';$('team').append(all);
-  for (const team of s?.teams || []) {const option=Option(team.name);option.value=String(team.id);$('team').append(option);}
-  $('team').value=[...$('team').options].some(o=>o.value===oldTeam)?oldTeam:'all';
-  const search=$('search-picks').value.toLowerCase();
-  const picks=(s?.picks || []).filter(p=>($('team').value==='all'||String(p.teamId)===$('team').value)&&`${p.player} ${p.team} ${p.position}`.toLowerCase().includes(search)).toReversed();
-  $('picks').replaceChildren();
-  $('picks').append(...picks.map(p=>PickRow(p,s.teamId)));
-  $('empty').hidden=picks.length>0;
-  if(s?.picks.length && !picks.length)$('empty').textContent='No picks match your filters.';
-  else $('empty').textContent='Picks will appear as ESPN announces them.';
-  $('export').disabled=!s?.picks.length;
   renderAdvice(s);
   const confirmed=!!s&&(s.manualMode||(live&&!s.missing?.length&&!s.rejected&&!s.identityIssues));
   $('spreadsheet-context').textContent=!s?'Connect a draft to confirm availability.':s.manualMode?'Status from your manual board.':confirmed?'Status from captured ESPN picks.':'Saved picks shown; remaining availability is unconfirmed.';
-  const boardSignature=JSON.stringify([rankings?.players,s?.picks,s?.teamId,confirmed]);
-  if(boardSignature!==lastBoardSignature&&rankings){lastBoardSignature=boardSignature;$('spreadsheet-players').replaceChildren(...TieredRankings(rankings.players.map(p=>({...p,key:playerKey(p)})),new Map((s?.picks||[]).map(p=>[playerKey(p),p])),s?.teamId,{confirmed}));}
-  if(!$('corrections-view').hidden)renderManual();
+  const key=currentKey();if(key!==lastTierSession){tierStates.clear();lastTierSession=key;}
+  const boardSignature=JSON.stringify([key,rankings?.players,s?.picks,s?.teamId,confirmed,recommendedKeys,manualDrafts[key]?.overrides]);
+  if(boardSignature!==lastBoardSignature&&rankings){lastBoardSignature=boardSignature;$('spreadsheet-players').replaceChildren(...TieredRankings(rankings.players.map(p=>({...p,key:playerKey(p)})),new Map((s?.picks||[]).map(p=>[playerKey(p),p])),s?.teamId,{confirmed,recommended:recommendedKeys,overrides:manualDrafts[key]?.overrides,tierStates,onSelect:markPlayer}));}
+  if($('board-tools').open)renderManual();
 }
 function renderAdvice(session) {
   if (!rankings) return;
@@ -70,8 +56,19 @@ function renderAdvice(session) {
   $('next-pick-name').textContent = session?.state === 'complete' ? 'Draft complete' : 'Waiting for live draft';
   $('next-pick-chip').classList.toggle('has-pick', !!top);
   const candidates=session?advice.candidates:[];
+  recommendedKeys=candidates.map(playerKey);
+  sendHighlights(session,candidates);
   const signature=JSON.stringify(candidates);
   if(signature!==lastAdviceSignature){lastAdviceSignature=signature;$('recommendations').replaceChildren(...candidates.map((p,i)=>RecommendationCard(p,{primary:i===0,compact:true})));}
+}
+
+function sendHighlights(session,candidates){
+  if(!globalThis.chrome?.tabs?.sendMessage)return;
+  const tab=session?.tabId;
+  if(highlightedTab!==undefined&&highlightedTab!==tab)chrome.tabs.sendMessage(highlightedTab,{type:'DRAFT_RECOMMENDATIONS',clear:true}).catch(()=>{});
+  highlightedTab=tab;
+  if(tab===undefined)return;
+  chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,candidates:candidates.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam})),expiresAt:Date.now()+12000}).catch(()=>{});
 }
 
 function renderManual(updateFields=false) {
@@ -93,25 +90,21 @@ function renderManual(updateFields=false) {
   }));
 }
 function changeManual(update,message='Saved.') {
-  const key=currentKey(),source=liveSession();
+  const key=currentKey(),source=liveSession();selected=key;
   manualWrites=manualWrites.catch(()=>{}).then(async()=>{
     try {
       const saved=extension?await chrome.storage.local.get('manualDrafts'):{};
       const all=saved.manualDrafts||manualDrafts;
       const updated={...all,[key]:update(all[key]||createManualDraft(source,config))};
-      if(extension)await chrome.storage.local.set({manualDrafts:updated});manualDrafts=updated;
+      if(extension)await chrome.storage.local.set({manualDrafts:updated});manualDrafts=updated;if(!updated[key].active)selected='auto';
       $('manual-feedback').hidden=false;$('manual-feedback').textContent=message;
       renderDraft();renderManual(true);
     }catch(error){$('manual-feedback').hidden=false;$('manual-feedback').textContent=error.message;}
   });
   return manualWrites;
 }
-$('open-corrections').addEventListener('click',()=>{
-  if(!config||!rankings)return;
-  selected=currentKey();refreshSessionMenu();
-  $('draft-view').hidden=true;$('rules-view').hidden=true;$('corrections-view').hidden=false;renderManual(true);$('manual-search').focus();
-});
-$('close-corrections').addEventListener('click',()=>{$('corrections-view').hidden=true;$('draft-view').hidden=false;$('rules-view').hidden=false;renderDraft();$('open-corrections').focus();});
+function markPlayer(player,value){return changeManual(r=>setManualPick(r,player,value),`${player.name}: ${value==='undo'?'correction undone':value==='me'?'taken by you':'taken by someone else'}.`);}
+$('board-tools').addEventListener('toggle',()=>{if($('board-tools').open)renderManual(true);});
 function useCatalog(next){catalog=next;rankings=reconcileRankings(sourceRankings,catalog);catalogPlayers=correctionPlayers(rankings,catalog);}
 $('sync-espn-players').addEventListener('click',async()=>{
   $('sync-espn-players').disabled=true;syncMessage='Syncing ESPN players…';renderManual();
@@ -126,23 +119,20 @@ $('save-manual-progress').addEventListener('click',()=>{
   const clock=$('manual-clock').value.trim(),slot=$('manual-slot').value;
   changeManual(r=>setManualProgress(r,clock?Number(clock):null,slot?Number(slot):null),'Draft progress saved.');
 });
-$('session').addEventListener('change',()=>{selected=$('session').value;$('team').value='all';renderDraft();});
-$('team').addEventListener('change',renderDraft);$('search-picks').addEventListener('input',renderDraft);
 $('search-rules').addEventListener('input',()=>{const query=$('search-rules').value.toLowerCase();let matches=0;for(const d of $('rules').children){const match=d.textContent.toLowerCase().includes(query);d.hidden=!match;if(query)d.open=match;if(match)matches++;}$('no-rules').hidden=matches>0;});
-$('export').addEventListener('click',()=>{const s=effectiveSession();if(!s)return;const {tabId,connected,...data}=s;const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));downloadFile({url,filename:`espn-${s.mode}-${s.seasonId}-${s.leagueId}.json`});setTimeout(()=>URL.revokeObjectURL(url),1000);});
 try {
   const response=await fetch('./config/espn-league-2026.json');if(!response.ok)throw Error('League rules could not be loaded.');config=await response.json();renderRules();
   const ranksResponse=await fetch('./config/rankings-2026.json');if(!ranksResponse.ok)throw Error('Rankings could not be loaded.');sourceRankings=await ranksResponse.json();
   const catalogResponse=await fetch('./config/espn-players-2026.json');if(!catalogResponse.ok)throw Error('ESPN player list could not be loaded.');useCatalog(await catalogResponse.json());
   if(extension){
-    const saved=await chrome.storage.local.get(['draftSessions','manualDrafts','espnCatalog']);sessions=saved.draftSessions || {};manualDrafts=saved.manualDrafts || {};if(saved.espnCatalog?.seasonId===config.seasonId&&saved.espnCatalog.fetchedAt>catalog.fetchedAt)useCatalog(saved.espnCatalog);
+    const saved=await chrome.storage.local.get(['draftSessions','manualDrafts','espnCatalog']);sessions=saved.draftSessions || {};manualDrafts=saved.manualDrafts || {};const activeKey=liveSession()?sessionKey(liveSession()):'league:2026:182527585';if(manualDrafts[activeKey]?.active)selected=activeKey;if(saved.espnCatalog?.seasonId===config.seasonId&&saved.espnCatalog.fetchedAt>catalog.fetchedAt)useCatalog(saved.espnCatalog);
     chrome.storage.onChanged.addListener((changes,area)=>{
       if(area!=='local')return;
       if(changes.espnCatalog?.newValue?.seasonId===config.seasonId)useCatalog(changes.espnCatalog.newValue);
       if(changes.draftSessions)sessions=changes.draftSessions.newValue || {};
       if(changes.manualDrafts)manualDrafts=changes.manualDrafts.newValue || {};
-      refreshSessionMenu();renderDraft();
+      renderDraft();
     });
   }
-  refreshSessionMenu();renderDraft();setInterval(renderDraft,5000);
+  renderDraft();setInterval(renderDraft,5000);
 } catch(error){$('error').hidden=false;$('error').textContent=error.message;}

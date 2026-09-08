@@ -1,0 +1,3 @@
+.eric-recommended-row > td { background-color: #e4f0be !important; border-top: 2px solid #668632 !important; border-bottom: 2px solid #668632 !important; }
+.eric-recommended-row > td:first-child { box-shadow: inset 4px 0 #547a25; }
+[data-eric-recommendation]::after { content: attr(data-eric-recommendation); display: inline-block; margin-left: 7px; border-radius: 4px; background: #244b29; color: #fff; padding: 3px 6px; font: 600 10px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; white-space: nowrap; }

@@ -59,14 +59,27 @@ test('ranked spreadsheet keeps source order, tiers, ownership and explicit avail
   const players=[{rank:3,tier:2,name:'C',key:'c'},{rank:1,tier:1,name:'A',key:'a'},{rank:2,tier:1,name:'B',key:'b'}];
   const board=Stack(TieredRankings(players,new Map([['a',{teamId:8}],['b',{teamId:2}]]),8,{confirmed:true}));
   assert.deepEqual([...board.querySelectorAll('.pick-name')].map(p=>p.textContent),['A','B','C']);
-  assert.deepEqual([...board.querySelectorAll('.tier-heading')].map(p=>p.textContent),['Tier 1','Tier 2']);
+  assert.deepEqual([...board.querySelectorAll('.tier-group')].map(p=>p.getAttribute('aria-label')),['Tier 1','Tier 2']);
   for(const status of ['mine','taken','available'])assert.equal(board.querySelectorAll(`.ranked-player--${status}`).length,1);
   const unknown=Stack(TieredRankings(players,new Map(),8));assert.equal(unknown.querySelectorAll('.ranked-player--unknown').length,3);
 });
-test('recommendations have one top container and spreadsheet lives in a reusable tab panel',()=>{
+test('recommendations have one top container and the board replaces history and session controls',()=>{
   const doc=setup();mountApp(doc.getElementById('app'));
   assert.equal(doc.querySelectorAll('#recommendations').length,1);
   assert.ok(doc.getElementById('next-pick-chip').contains(doc.getElementById('recommendations')));
   assert.equal(doc.querySelector('.advisor'),null);
-  assert.ok(doc.getElementById('draft-data-spreadsheet-panel').contains(doc.getElementById('spreadsheet-players')));
+  assert.ok(doc.getElementById('draft-view').contains(doc.getElementById('spreadsheet-players')));
+  for(const id of ['draft-data','session','open-corrections','picks'])assert.equal(doc.getElementById(id),null);
+});
+
+test('taken tiers collapse, remain expandable, and recommendation marks follow ownership edits',async()=>{
+ const {TieredRankings,Stack}=await import('../src/components/ui.js');const doc=setup();
+ const p={rank:1,tier:1,name:'Test',key:'a'},states=new Map(),picks=new Map([['a',{teamId:8}]]);
+ let group=TieredRankings([p],picks,8,{tierStates:states})[0];assert.equal(group.open,false);
+ group.open=true;group.dispatchEvent(new doc.defaultView.Event('toggle'));
+ group=TieredRankings([p],picks,8,{tierStates:states})[0];assert.equal(group.open,true);
+ let selected;const board=Stack(TieredRankings([p],new Map(),8,{tierStates:states,recommended:['a'],onSelect:(player,owner)=>{selected=[player.key,owner];}}));
+ assert.equal(board.querySelector('.tier-group').open,true);assert.equal(board.querySelectorAll('.ranked-player--recommended').length,1);
+ board.querySelector('[aria-label="Test: taken by me"]').click();assert.deepEqual(selected,['a','me']);
+ const taken=Stack(TieredRankings([p],picks,8,{tierStates:states,recommended:[]}));assert.equal(taken.querySelector('.tier-group').open,false);assert.equal(taken.querySelectorAll('.ranked-player--recommended').length,0);
 });

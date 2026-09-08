@@ -74,7 +74,7 @@ Shared upload components remain available for future tools, but the draft featur
 
 ## Private release
 
-Version 0.6.3 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.6.4 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 
@@ -82,9 +82,9 @@ The sidebar uses the [Eric’s Personal Tools design system](../docs/DESIGN.md).
 
 ### Manual draft fallback
 
-Open **Correct draft picks**, search ESPN's player list, and choose **Me** or **Someone else**. **Undo** restores the captured ownership or removes a new manual entry. The first correction starts a manual board from that session's captured picks. Set the current overall pick and your assigned draft position under **Draft progress** to calculate your next two snake turns; update the current pick as the draft progresses. **Use live feed** resumes ESPN capture; saved corrections are retained separately for each draft.
+Use **Me** or **Someone else** directly on a player in the tier board. **Undo** restores captured ownership or removes a manual addition. The first correction starts a manual board from that draft's captured picks. **Board tools** contains the current pick, your assigned draft position, **Use live feed**, and a searchable ESPN catalog for players outside the spreadsheet. Update current pick as the manual draft progresses. Practice and real draft corrections remain separate; the visible draft is selected automatically.
 
-All 177 Combined Ranks players are reconciled to ESPN IDs, with canonical names, positions and NFL teams displayed. The bundled public ESPN catalog includes 4,552 entries at this league's positions, including free agents and historical records; search can find players outside your ranks. **Sync ESPN players** refreshes the public catalog without cookies or league data. Matching accepts IDs, normalized names and team aliases; ambiguous identities are disabled. ESPN's duplicate Davante Adams record is resolved to the verified NFL player card (16800). Unmatched captured picks block advice. Rankings and ADP remain in spreadsheet order. Manual corrections and refreshed catalogs stay in local extension storage.
+All 177 Combined Ranks players are reconciled to ESPN IDs, with canonical names, positions and NFL teams displayed. The bundled public ESPN catalog includes 4,552 entries at this league's positions, including free agents and historical records. **Sync ESPN players** refreshes it without cookies or league data. Ambiguous identities are disabled; unmatched captured picks block advice. Manual corrections and catalogs stay in local extension storage.
 
 ### Tiers and early roster targets
 
@@ -92,6 +92,8 @@ Combined Ranks' dark horizontal borders define 11 tiers: 1–8, 9–16, 17–24,
 
 Early preferences target one RB by round 2, two RBs by round 4, and one TE by round 4 when possible. RB deadlines take precedence over ordinary tier ordering; round 3 reserves remaining choices for missing RB/TE targets. TE urgency can reach at most one tier below the best available tier. Explanations name the active target. Targets use the next own pick's round when known, otherwise the current round (or roster count when progress is unknown); they never assign a draft slot. Deadline bonuses stop after round 4 or when targets are satisfied. Taken players and position limits still apply in both live and manual mode.
 
-### Compact recommendations and board tabs
+### Tier board and on-page highlights
 
-The top recommendation panel shows up to two picks with tier, rank and ADP. Expand **Why this pick** for explanations; recommendations are not repeated below. The reusable, keyboard-accessible tabs switch between **Pick history** and **Spreadsheet**. The spreadsheet shows all 177 entries in rank order with tier dividers and labeled, subtle colors for Available, Yours and Taken. Saved/disconnected boards show unselected players as Unconfirmed. Manual mode uses the manual board for ownership. Tab selection survives feed updates.
+The top panel shows up to two recommendations; expand **Why this pick** for explanations. The tier board replaces Pick history and the session dropdown. Available, Yours, and Taken have stronger, labeled colors. Recommended players also have a contrasting border and numbered NEXT PICK badge. Fully taken tiers collapse automatically and remain expandable. Expansion choices survive unchanged feed updates; a newly exhausted tier collapses. Disconnected/incomplete feeds mark uncaptured availability Unconfirmed.
+
+While the sidebar is open, the same two recommendations are sent only to the captured ESPN draft tab. A reusable content component outlines visible draftable player rows and adds a numbered label, matching ESPN IDs or exact normalized name/position/team. It never selects or drafts players. Highlights clear on draft change, stale/blocked advice, session changes, or within 12 seconds after sidebar updates stop. Refreshing ESPN is required after reloading the extension. Unit tests cover matching, expiry, wrong-session protection and clock changes; no live draft was open during 0.6.4 verification.

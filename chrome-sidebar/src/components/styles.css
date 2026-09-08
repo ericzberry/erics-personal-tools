@@ -208,3 +208,20 @@ th, td { padding: 8px 11px; }
 .ranked-player .pick-number { font-size: 13px; }
 .ranked-player .pick-name { font-size: 11px; display: block; line-height: 1.3; }
 .ranked-player .pick-meta { font-size: 9px; margin: 2px 0 0; }
+
+/* Ownership and recommendations stay distinct at a glance. */
+.ranked-player--available, .availability-label--available { background: #ecf3df; color: #304b24; }
+.ranked-player--mine, .availability-label--mine { background: #cce6d2; color: #173f28; }
+.ranked-player--taken, .availability-label--taken { background: #dedad4; color: #57524b; }
+.ranked-player { border-left: 4px solid transparent; }
+.ranked-player--mine { border-left-color: #27734a; }
+.ranked-player--taken { border-left-color: #8d8276; }
+.ranked-player--recommended { background: #e5efb9; border: 2px solid #6d892d; border-left-width: 5px; }
+.recommendation-tag { display: inline-block; margin-bottom: 4px; border-radius: 3px; background: #365222; color: #fff; font-size: 8px; font-weight: 700; letter-spacing: .5px; padding: 3px 5px; }
+.ranked-actions { grid-column: 2 / -1; }
+.ranked-actions .action-group { margin: 0; gap: 5px; }
+.ranked-actions button { padding: 4px 6px; font-size: 9px; border-radius: 4px; }
+.tier-group { border: 1px solid #b8c3af; background: transparent; }
+.tier-group > summary { background: #e4eadc; color: #34492c; font-weight: 600; font-size: 11px; padding: 9px; }
+.tier-group--complete > summary { background: #e5e1dc; color: #665e55; }
+.tier-group .ranked-list { padding: 5px; }

@@ -63,12 +63,16 @@ export function downloadFile({url,filename}) {const link=Link('',url,{download:f
 
 export const ActionGroup=children=>Stack(children,{className:'action-group'});
 
-export function SelectionRow(player,{owner=null,corrected=false,onSelect}) {
+export function OwnershipActions(player,{owner=null,corrected=false,onSelect}) {
   const actions=ActionGroup(['me','other'].map(value=>{
     const button=Button(value==='me'?'Me':'Someone else',{variant:owner===value?'primary':'secondary',disabled:!!player.identityUnverified,'aria-label':`${player.name}: ${value==='me'?'taken by me':'taken by someone else'}`,'aria-pressed':String(owner===value)});
     button.addEventListener('click',()=>onSelect(value));return button;
   }));
   if(corrected){const undo=Button('Undo',{'aria-label':`Undo correction for ${player.name}`});undo.addEventListener('click',()=>onSelect('undo'));actions.append(undo);}
+  return actions;
+}
+export function SelectionRow(player,options) {
+  const {owner}=options,actions=OwnershipActions(player,options);
   return Stack([Stack([Strong(player.name,{className:'pick-name'}),Note(`${player.position} · ${player.nflTeam} · ${player.rank?`Rank #${player.rank}`:'Not in your ranks'} · ${player.espnId!==undefined?`ESPN ${player.espnId}`:'Unmatched — refresh ESPN'}${owner?` · ${owner==='me'?'Yours':'Taken'}`:''}`)]),actions],{className:'selection-row'});
 }
 export const SubPage=({id,title,backId,children=[]})=>Section([SectionTitle(title,Button('← Back',{id:backId}),{level:1}),...children],{id,hidden:true,className:'sub-page'});
@@ -86,17 +90,31 @@ export function Tabs({id,label,items}) {
 }
 const statusLabels={available:'Available',mine:'Yours',taken:'Taken',unknown:'Unconfirmed'};
 export const StatusLegend=()=>Stack(['available','mine','taken'].map(status=>Label(statusLabels[status],{className:`availability-label availability-label--${status}`})),{className:'availability-legend','aria-label':'Player status legend'});
-export function RankedPlayerRow(player,status='unknown') {
-  return element('li',{className:`ranked-player ranked-player--${status}`,value:player.rank},[
-    Label(player.rank,{className:'pick-number'}),Stack([Strong(player.name,{className:'pick-name'}),Text(`${player.position} · ${player.nflTeam} · ADP ${player.adp??'—'}`,{className:'pick-meta'})]),Label(statusLabels[status],{className:'availability-label'})
+export function RankedPlayerRow(player,status='unknown',{recommendation=0,owner=null,corrected=false,onSelect}={}) {
+  return element('li',{className:`ranked-player ranked-player--${status}${recommendation?' ranked-player--recommended':''}`,value:player.rank},[
+    Label(player.rank,{className:'pick-number'}),Stack([recommendation?Badge(`NEXT PICK ${recommendation}`,{className:'recommendation-tag'}):null,Strong(player.name,{className:'pick-name'}),Text(`${player.position} · ${player.nflTeam} · ADP ${player.adp??'—'}`,{className:'pick-meta'})]),Label(statusLabels[status],{className:'availability-label'}),
+    onSelect?Stack([OwnershipActions(player,{owner,corrected,onSelect})],{className:'ranked-actions'}):null
   ]);
 }
-export function TieredRankings(players,picks,ownTeamId,{confirmed=false}={}) {
+export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommended=[],overrides={},onSelect,tierStates=new Map()}={}) {
   const groups=new Map();
   for(const player of [...players].sort((a,b)=>a.rank-b.rank)){
     const tier=player.tier??'Unspecified';if(!groups.has(tier))groups.set(tier,[]);
-    const pick=picks.get(player.key);const status=pick?(pick.teamId===ownTeamId?'mine':'taken'):confirmed?'available':'unknown';
-    groups.get(tier).push(RankedPlayerRow(player,status));
+    groups.get(tier).push(player);
   }
-  return [...groups].map(([tier,rows])=>Section([Heading(`Tier ${tier}`,3,{className:'tier-heading'}),List(rows,{className:'ranked-list'})],{className:'tier-group','aria-label':`Tier ${tier}`}));
+  return [...groups].map(([tier,entries])=>{
+    const taken=entries.filter(p=>picks.has(p.key)).length,full=taken===entries.length;
+    const previous=tierStates.get(tier);
+    const open=previous&&previous.full===full?previous.open:!full;
+    tierStates.set(tier,{full,open});
+    const rows=entries.map(player=>{
+      const pick=picks.get(player.key),owner=pick?(pick.teamId===ownTeamId?'me':'other'):null;
+      const status=pick?(owner==='me'?'mine':'taken'):confirmed?'available':'unknown';
+      return RankedPlayerRow(player,status,{recommendation:recommended.indexOf(player.key)+1,owner,corrected:!!overrides[player.key],onSelect:onSelect?value=>onSelect(player,value):null});
+    });
+    const section=Disclosure(`Tier ${tier} · ${full?'All taken':`${entries.length-taken} remaining`}`, [List(rows,{className:'ranked-list'})],{className:`tier-group${full?' tier-group--complete':''}`,'aria-label':`Tier ${tier}`});
+    section.open=open;
+    section.addEventListener('toggle',()=>tierStates.set(tier,{full,open:section.open}));
+    return section;
+  });
 }
