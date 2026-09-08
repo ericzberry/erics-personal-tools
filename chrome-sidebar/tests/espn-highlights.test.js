@@ -97,3 +97,14 @@ test('diagnostics report page version, advice and row structure without modifyin
  listener({type:'ESPN_HIGHLIGHT_DIAGNOSTICS'},{id:'ours'},value=>result=value);
  assert.equal(result.version,'0.6.12');assert.equal(result.rows[0].node.text,'Jahmyr Gibbs');assert.equal(result.rows[0].ancestors[0].tag,'TD');assert.equal(document.body.textContent,before);
 });
+
+test('ESPN fixedDataTable paints nested cell layers across frozen and scrolling columns',()=>{
+ const {document}=parseHTML(`<html><body><div class="public_fixedDataTableRow_main"><div><div class="fixedDataTableCellGroupLayout_cellGroup"><div class="public_fixedDataTableCell_main" style="background-color:white"><div class="fixedDataTableCellLayout_wrap3 public_fixedDataTableCell_wrap3"><div class="public_fixedDataTableCell_cellContent"><div class="player-column"><div class="player-details"><span class="playerinfo__playername"><a>Jahmyr Gibbs</a></span><span class="playerinfo__playerteam">DET</span><span class="playerinfo__playerpos">RB</span></div></div></div></div></div></div><div class="fixedDataTableCellGroupLayout_cellGroup"><div class="public_fixedDataTableCell_main" style="background-color:white">335.1</div></div></div></div></body></html>`);
+ const context=vm.createContext({document});vm.runInContext(component,context);const api=context.EspnRecommendationHighlights;
+ const before=document.body.textContent;assert.equal(api.decorate(document,[candidate]).recommended,1);
+ for(const cell of document.querySelectorAll('[class*="fixedDataTableCell"]'))assert.equal(cell.style.backgroundColor,'#d5e6ff');
+ assert.equal(document.body.textContent,before);api.decorate(document,[],[candidate]);
+ assert.equal(document.querySelector('.public_fixedDataTableCell_main').style.backgroundColor,'#fff0bc');
+ api.decorate(document,[]);assert.equal(document.querySelector('.public_fixedDataTableCell_main').style.backgroundColor,'white');
+ assert.equal(document.querySelector('.public_fixedDataTableCell_cellContent').style.backgroundColor,'');
+});

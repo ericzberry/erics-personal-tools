@@ -10,8 +10,10 @@ var EspnRecommendationHighlights = (() => {
     }
     backgrounds.clear();
   }
+  const cellSelector='td, [role="cell"], .Table__TD, [class*="fixedDataTableCell"]';
+  const rowSelector='tr, [role="row"], .Table__TR, .player-row, .public_fixedDataTableRow_main, .fixedDataTableRowLayout_main';
   function paintRow(row,color){
-    const surfaces=new Set([row,...row.children,...row.querySelectorAll('td, [role="cell"], .Table__TD')]);
+    const surfaces=new Set([row,...row.children,...row.querySelectorAll(cellSelector)]);
     for(const element of surfaces){
       if(!backgrounds.has(element))backgrounds.set(element,{value:element.style.getPropertyValue('background-color'),priority:typeof element.style.getPropertyPriority==='function'?element.style.getPropertyPriority('background-color'):''});
       element.style.setProperty('background-color',color,'important');
@@ -28,7 +30,6 @@ var EspnRecommendationHighlights = (() => {
     for(const el of document.querySelectorAll('[data-eric-tier]'))el.removeAttribute('data-eric-tier');
     for(const el of document.querySelectorAll('.eric-current-tier-row'))el.classList.remove('eric-current-tier-row');
     let recommended=0,currentTier=0;
-    const rowSelector='tr, [role="row"], .Table__TR, .player-row';
     const rows=new Set(document.querySelectorAll(rowSelector));
     for(const name of document.querySelectorAll('.playerinfo__playername, .player-column__athlete, a')){
       if(name.closest('.pick-message__container'))continue;
@@ -59,8 +60,18 @@ var EspnRecommendationHighlights = (() => {
     }
     const getStyle=document.defaultView?.getComputedStyle;
     const painted=typeof getStyle==='function'?[...document.querySelectorAll('.eric-recommended-row,.eric-current-tier-row')].filter(row=>{
-      const color=getStyle.call(document.defaultView,row.firstElementChild||row).backgroundColor;
-      return color==='rgb(213, 230, 255)'||color==='rgb(255, 240, 188)';
+      const expected=row.classList.contains('eric-recommended-row')?'rgb(213, 230, 255)':'rgb(255, 240, 188)';
+      const name=row.querySelector('.playerinfo__playername, .player-column__athlete, a');
+      const rect=name?.getBoundingClientRect();
+      if(!rect||!rect.width||!rect.height)return false;
+      let surface=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);
+      if(!surface||!row.contains(surface))return false;
+      while(surface&&row.contains(surface)){
+        const color=getStyle.call(document.defaultView,surface).backgroundColor;
+        if(color!=='rgba(0, 0, 0, 0)'&&color!=='transparent')return color===expected;
+        surface=surface.parentElement;
+      }
+      return false;
     }).length:null;
     return {recommended,currentTier,painted};
   }
