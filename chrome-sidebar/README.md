@@ -74,7 +74,7 @@ Shared upload components remain available for future tools, but the draft featur
 
 ## Private release
 
-Version 0.6.2 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.6.3 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 
@@ -91,3 +91,7 @@ All 177 Combined Ranks players are reconciled to ESPN IDs, with canonical names,
 Combined Ranks' dark horizontal borders define 11 tiers: 1–8, 9–16, 17–24, 25–41, 42–59, 60–79, 80–98, 99–124, 125–141, 142–154, and 155–177. The importer reads top/bottom borders without counting the same divider twice. Recommendations prioritize the highest plausible available tier, then adjust within that tier for overall rank, roster fit and ADP waiting cost. The existing ordinal replacement calculation remains a rank proxy, not projected points.
 
 Early preferences target one RB by round 2, two RBs by round 4, and one TE by round 4 when possible. RB deadlines take precedence over ordinary tier ordering; round 3 reserves remaining choices for missing RB/TE targets. TE urgency can reach at most one tier below the best available tier. Explanations name the active target. Targets use the next own pick's round when known, otherwise the current round (or roster count when progress is unknown); they never assign a draft slot. Deadline bonuses stop after round 4 or when targets are satisfied. Taken players and position limits still apply in both live and manual mode.
+
+### Compact recommendations and board tabs
+
+The top recommendation panel shows up to two picks with tier, rank and ADP. Expand **Why this pick** for explanations; recommendations are not repeated below. The reusable, keyboard-accessible tabs switch between **Pick history** and **Spreadsheet**. The spreadsheet shows all 177 entries in rank order with tier dividers and labeled, subtle colors for Available, Yours and Taken. Saved/disconnected boards show unselected players as Unconfirmed. Manual mode uses the manual board for ownership. Tab selection survives feed updates.

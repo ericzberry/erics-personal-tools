@@ -180,3 +180,31 @@ th, td { padding: 8px 11px; }
 .selection-row .footnote { margin: 3px 0; font-size: 10px; }
 .selection-row .action-group { margin: 6px 0 0; }
 .selection-row .action-group > button { font-size: 10px; padding: 6px 8px; }
+
+/* Shared tabs and compact ranked lists. */
+.tabs-list { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 14px 0 8px; }
+.tabs-button { flex: 1; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 12px; padding: 9px 8px; }
+.tabs-button[aria-selected=true] { color: var(--forest); border-bottom-color: var(--forest); font-weight: 600; }
+.recommendation-summary.has-pick { background: #edf1e6; border-color: #c4d2b6; box-shadow: none; }
+.recommendation-summary .context-note { margin: 1px 0; }
+.recommendation-compact { padding: 8px 0 2px; }
+.recommendation-compact + .recommendation-compact { border-top: 1px solid #d4ddca; margin-top: 6px; }
+.recommendation-compact > div { display: flex; align-items: baseline; gap: 8px; }
+.recommendation-compact h3 { font-size: 14px; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+.recommendation-number { font-size: 11px; color: var(--muted); }
+.recommendation-compact .pick-meta { margin: 2px 0 0 15px; }
+.recommendation-compact details { border: 0; background: transparent; margin: 3px 0 0 15px; overflow: visible; }
+.recommendation-compact summary { padding: 3px 0; font-size: 10px; color: var(--muted); }
+.recommendation-compact .recommendation-why { font-size: 11px; margin-top: 4px; }
+.availability-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.availability-label { font-size: 9px; white-space: nowrap; padding: 3px 5px; border-radius: 4px; }
+.availability-label--available, .ranked-player--available { background: #f0f4ec; }
+.availability-label--mine, .ranked-player--mine { background: #dfeadd; color: #254f3a; }
+.availability-label--taken, .ranked-player--taken { background: #eeeae4; color: #69655f; }
+.ranked-player--unknown { background: var(--surface); }
+.tier-heading { font-size: 10px; letter-spacing: .5px; margin: 13px 0 5px; padding: 6px 0; border-bottom: 2px solid #899780; color: var(--forest); }
+.ranked-list { padding: 0; margin: 0; list-style: none; }
+.ranked-player { display: grid; grid-template-columns: 25px minmax(0,1fr) auto; gap: 7px; align-items: center; border-radius: 5px; padding: 6px; margin-bottom: 3px; }
+.ranked-player .pick-number { font-size: 13px; }
+.ranked-player .pick-name { font-size: 11px; display: block; line-height: 1.3; }
+.ranked-player .pick-meta { font-size: 9px; margin: 2px 0 0; }

@@ -1,7 +1,7 @@
 import {fetchEspnCatalog, reconcileRankings, reconcileSession, correctionPlayers} from './espn-catalog.js';
 import {createManualDraft, applyManualDraft, setManualPick, setManualProgress} from './manual-draft.js';
 import {playerKey} from './player-identity.js';
-import {Option, Disclosure, DataTable, PickRow, RecommendationCard, SelectionRow, downloadFile} from './components/ui.js';
+import {Option, Disclosure, DataTable, PickRow, RecommendationCard, TieredRankings, SelectionRow, downloadFile} from './components/ui.js';
 import {selectSession} from './session-selection.js';
 import {sessionKey} from './draft-state.js';
 import {recommend} from './recommendations.js';
@@ -9,6 +9,7 @@ const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.storage?.local;
 let config, rankings, sourceRankings, catalog, catalogPlayers=[], syncMessage='', sessions = {}, selected = 'auto', manualDrafts = {};
 let manualWrites=Promise.resolve();
+let lastBoardSignature, lastAdviceSignature;
 const liveSession=()=>reconcileSession(selectSession(sessions,selected),catalog);
 const currentKey=()=>liveSession()?sessionKey(liveSession()):(selected==='auto'?'league:2026:182527585':selected);
 const effectiveSession=()=>reconcileSession(applyManualDraft(liveSession(),manualDrafts[currentKey()]),catalog);
@@ -52,20 +53,25 @@ function renderDraft() {
   else $('empty').textContent='Picks will appear as ESPN announces them.';
   $('export').disabled=!s?.picks.length;
   renderAdvice(s);
+  const confirmed=!!s&&(s.manualMode||(live&&!s.missing?.length&&!s.rejected&&!s.identityIssues));
+  $('spreadsheet-context').textContent=!s?'Connect a draft to confirm availability.':s.manualMode?'Status from your manual board.':confirmed?'Status from captured ESPN picks.':'Saved picks shown; remaining availability is unconfirmed.';
+  const boardSignature=JSON.stringify([rankings?.players,s?.picks,s?.teamId,confirmed]);
+  if(boardSignature!==lastBoardSignature&&rankings){lastBoardSignature=boardSignature;$('spreadsheet-players').replaceChildren(...TieredRankings(rankings.players.map(p=>({...p,key:playerKey(p)})),new Map((s?.picks||[]).map(p=>[playerKey(p),p])),s?.teamId,{confirmed}));}
   if(!$('corrections-view').hidden)renderManual();
 }
 function renderAdvice(session) {
   if (!rankings) return;
   const advice = recommend({rankings, config, session});
-  $('advice-mode').textContent = 'YOUR BOARD';
   $('advice-context').textContent = session ? `${session.manualMode?'Manual board':`Through #${advice.throughPick}`}${advice.turn.nextPick ? ` · Next #${advice.turn.nextPick}` : ' · Your turn unknown'}${advice.turn.followingPick ? ` · Then #${advice.turn.followingPick}` : ''}` : '';
   $('advice-status').textContent = !session ? 'Connect a draft to see your next pick.' : advice.blocked || '';
   $('advice-status').hidden = !$('advice-status').textContent;
   const top = session && !advice.blocked ? advice.candidates[0] : null;
-  $('next-pick-name').textContent = top ? `${top.name} · ${top.position}` : session?.state === 'complete' ? 'Draft complete' : 'Waiting for live draft';
+  $('next-pick-name').hidden=!!top;
+  $('next-pick-name').textContent = session?.state === 'complete' ? 'Draft complete' : 'Waiting for live draft';
   $('next-pick-chip').classList.toggle('has-pick', !!top);
-  $('recommendations').replaceChildren();
-  $('recommendations').append(...(session ? advice.candidates : []).map((p,i)=>RecommendationCard(p,{primary:i===0})));
+  const candidates=session?advice.candidates:[];
+  const signature=JSON.stringify(candidates);
+  if(signature!==lastAdviceSignature){lastAdviceSignature=signature;$('recommendations').replaceChildren(...candidates.map((p,i)=>RecommendationCard(p,{primary:i===0,compact:true})));}
 }
 
 function renderManual(updateFields=false) {

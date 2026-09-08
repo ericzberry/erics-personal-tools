@@ -48,8 +48,9 @@ export function DataTable(headers,rows) {
 export function PickRow(p,ownTeamId) {
   return element('li',{className:`pick pick--compact${p.teamId===ownTeamId?' mine':''}`},[Label(p.overall??'—',{className:'pick-number'}),Stack([Strong(p.player,{className:'pick-name'}),Text(`${p.manual?'Manual':`R${p.round} · P${p.pickInRound}`} · ${p.nflTeam} · ${p.team}`,{className:'pick-meta'})]),Label(p.position,{className:'position'})]);
 }
-export function RecommendationCard(p,{primary=false}={}) {
+export function RecommendationCard(p,{primary=false,compact=false}={}) {
   const children=[Text(primary?'PICK NEXT':'ALTERNATIVE',{className:'eyebrow'}),Heading(`${p.name} · ${p.position}`,3),Text(`${p.tier?`Tier ${p.tier} · `:''}Rank #${p.rank} · ADP ${p.adp ?? '—'}`,{className:'pick-meta'})];
+  if(compact)return element('article',{className:'recommendation-compact'},[Stack([Label(primary?'1':'2',{className:'recommendation-number'}),Heading(`${p.name} · ${p.position}`,3)]),Text(`${p.tier?`Tier ${p.tier} · `:''}Rank #${p.rank} · ADP ${p.adp??'—'}`,{className:'pick-meta'}),Disclosure('Why this pick',[Text(p.shortWhy||'',{className:'recommendation-why'}),Text(p.outlook||'',{className:'recommendation-outlook'}),...(p.reasons||[]).map(reason=>Note(reason))])]);
   if (p.shortWhy) children.push(Text(p.shortWhy,{className:'recommendation-why'}));
   if (p.outlook) children.push(Text(p.outlook,{className:'recommendation-outlook'}));
   children.push(Disclosure('Reasoning',[element('ul',{},p.reasons.map(text=>element('li',{text})))]));
@@ -71,3 +72,31 @@ export function SelectionRow(player,{owner=null,corrected=false,onSelect}) {
   return Stack([Stack([Strong(player.name,{className:'pick-name'}),Note(`${player.position} · ${player.nflTeam} · ${player.rank?`Rank #${player.rank}`:'Not in your ranks'} · ${player.espnId!==undefined?`ESPN ${player.espnId}`:'Unmatched — refresh ESPN'}${owner?` · ${owner==='me'?'Yours':'Taken'}`:''}`)]),actions],{className:'selection-row'});
 }
 export const SubPage=({id,title,backId,children=[]})=>Section([SectionTitle(title,Button('← Back',{id:backId}),{level:1}),...children],{id,hidden:true,className:'sub-page'});
+
+// Shared, keyboard-accessible tabs. Selection is owned here and survives content updates.
+export function Tabs({id,label,items}) {
+  const panels=items.map(item=>Section([item.content],{id:`${id}-${item.key}-panel`,role:'tabpanel','aria-labelledby':`${id}-${item.key}-tab`,tabindex:0}));
+  const buttons=items.map(item=>Button(item.label,{id:`${id}-${item.key}-tab`,className:'tabs-button',role:'tab','aria-controls':`${id}-${item.key}-panel`}));
+  function select(index,focus=false){buttons.forEach((button,i)=>{button.setAttribute('aria-selected',String(i===index));button.setAttribute('tabindex',i===index?'0':'-1');panels[i].hidden=i!==index;});if(focus)buttons[index].focus();}
+  buttons.forEach((button,i)=>{
+    button.addEventListener('click',()=>select(i));
+    button.addEventListener('keydown',event=>{const next={ArrowRight:(i+1)%items.length,ArrowLeft:(i-1+items.length)%items.length,Home:0,End:items.length-1}[event.key];if(next!==undefined){event.preventDefault();select(next,true);}});
+  });
+  select(0);return Stack([Stack(buttons,{role:'tablist','aria-label':label,className:'tabs-list'}),...panels],{id,className:'tabs'});
+}
+const statusLabels={available:'Available',mine:'Yours',taken:'Taken',unknown:'Unconfirmed'};
+export const StatusLegend=()=>Stack(['available','mine','taken'].map(status=>Label(statusLabels[status],{className:`availability-label availability-label--${status}`})),{className:'availability-legend','aria-label':'Player status legend'});
+export function RankedPlayerRow(player,status='unknown') {
+  return element('li',{className:`ranked-player ranked-player--${status}`,value:player.rank},[
+    Label(player.rank,{className:'pick-number'}),Stack([Strong(player.name,{className:'pick-name'}),Text(`${player.position} · ${player.nflTeam} · ADP ${player.adp??'—'}`,{className:'pick-meta'})]),Label(statusLabels[status],{className:'availability-label'})
+  ]);
+}
+export function TieredRankings(players,picks,ownTeamId,{confirmed=false}={}) {
+  const groups=new Map();
+  for(const player of [...players].sort((a,b)=>a.rank-b.rank)){
+    const tier=player.tier??'Unspecified';if(!groups.has(tier))groups.set(tier,[]);
+    const pick=picks.get(player.key);const status=pick?(pick.teamId===ownTeamId?'mine':'taken'):confirmed?'available':'unknown';
+    groups.get(tier).push(RankedPlayerRow(player,status));
+  }
+  return [...groups].map(([tier,rows])=>Section([Heading(`Tier ${tier}`,3,{className:'tier-heading'}),List(rows,{className:'ranked-list'})],{className:'tier-group','aria-label':`Tier ${tier}`}));
+}

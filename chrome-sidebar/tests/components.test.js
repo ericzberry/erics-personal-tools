@@ -41,3 +41,32 @@ test('pick history uses one compact metadata line',()=>{
   setup();const row=PickRow({player:'Drake London',overall:15,round:2,pickInRound:5,nflTeam:'ATL',position:'WR',team:'East Dillon Lions',teamId:1},2);
   assert.ok(row.classList.contains('pick--compact'));assert.equal(row.querySelectorAll('.pick-meta').length,1);assert.ok(row.textContent.includes('East Dillon Lions'));
 });
+
+test('shared tabs expose one panel and support click, arrows, Home and End',async()=>{
+  const {Tabs,Text}=await import('../src/components/ui.js');const doc=setup();
+  const tabs=Tabs({id:'example',label:'Example',items:[{key:'a',label:'First',content:Text('A')},{key:'b',label:'Second',content:Text('B')}]});doc.body.append(tabs);
+  const buttons=[...tabs.querySelectorAll('[role=tab]')],panels=[...tabs.querySelectorAll('[role=tabpanel]')];
+  assert.equal(buttons[0].getAttribute('aria-selected'),'true');assert.equal(panels[1].hidden,true);
+  buttons[1].click();assert.equal(panels[0].hidden,true);assert.equal(panels[1].hidden,false);
+  for(const [key,index] of [['ArrowRight',0],['End',1],['Home',0],['ArrowLeft',1]]){
+    const current=buttons.find(b=>b.getAttribute('aria-selected')==='true');
+    const event=new doc.defaultView.Event('keydown',{cancelable:true});event.key=key;current.dispatchEvent(event);
+    assert.equal(buttons[index].getAttribute('aria-selected'),'true');assert.equal(buttons[index].getAttribute('tabindex'),'0');assert.equal(panels[index].hidden,false);
+  }
+});
+test('ranked spreadsheet keeps source order, tiers, ownership and explicit availability labels',async()=>{
+  const {TieredRankings,Stack}=await import('../src/components/ui.js');setup();
+  const players=[{rank:3,tier:2,name:'C',key:'c'},{rank:1,tier:1,name:'A',key:'a'},{rank:2,tier:1,name:'B',key:'b'}];
+  const board=Stack(TieredRankings(players,new Map([['a',{teamId:8}],['b',{teamId:2}]]),8,{confirmed:true}));
+  assert.deepEqual([...board.querySelectorAll('.pick-name')].map(p=>p.textContent),['A','B','C']);
+  assert.deepEqual([...board.querySelectorAll('.tier-heading')].map(p=>p.textContent),['Tier 1','Tier 2']);
+  for(const status of ['mine','taken','available'])assert.equal(board.querySelectorAll(`.ranked-player--${status}`).length,1);
+  const unknown=Stack(TieredRankings(players,new Map(),8));assert.equal(unknown.querySelectorAll('.ranked-player--unknown').length,3);
+});
+test('recommendations have one top container and spreadsheet lives in a reusable tab panel',()=>{
+  const doc=setup();mountApp(doc.getElementById('app'));
+  assert.equal(doc.querySelectorAll('#recommendations').length,1);
+  assert.ok(doc.getElementById('next-pick-chip').contains(doc.getElementById('recommendations')));
+  assert.equal(doc.querySelector('.advisor'),null);
+  assert.ok(doc.getElementById('draft-data-spreadsheet-panel').contains(doc.getElementById('spreadsheet-players')));
+});

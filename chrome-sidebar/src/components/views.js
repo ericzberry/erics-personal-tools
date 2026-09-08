@@ -1,19 +1,22 @@
 import * as UI from './ui.js';
 const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
 export function DraftView() {
-  const advisor=Section([
-    SectionTitle('Draft insight',Badge('YOUR BOARD',{id:'advice-mode',className:'pill badge-subtle'})),Note('',{id:'advice-context',className:'footnote context-note'}),Notice('',{id:'advice-status',className:'notice notice-subtle'}),Stack([],{id:'recommendations'}),
-    SourceNote('Your saved spreadsheet','Spreadsheet tiers · RB/TE targets · ADP estimates')
-  ],{className:'advisor','aria-label':'Draft advisor'});
+  const history=Stack([
+    SectionTitle('Pick history',Button('Export',{id:'export',disabled:true})),
+    Stack([...Field({id:'team',label:'Filter by team',kind:'select',hiddenLabel:true,options:[{text:'All teams',value:'all'}]}),...Field({id:'search-picks',label:'Search picks',placeholder:'Find a player…',hiddenLabel:true})],{className:'filters'}),
+    Text('Picks will appear as ESPN announces them.',{id:'empty',className:'empty'}),List([],{id:'picks',className:'pick-list'})
+  ]);
+  const spreadsheet=Stack([
+    Note('Combined Ranks · original order'),UI.StatusLegend(),Note('',{id:'spreadsheet-context'}),Stack([],{id:'spreadsheet-players'})
+  ]);
   const draft=Section([
-    Highlight({id:'next-pick-chip',valueId:'next-pick-name',label:'RECOMMENDED NEXT PICK',value:'Waiting for live draft'}),
+    Section([UI.Label('RECOMMENDED NEXT PICKS'),Note('',{id:'advice-context',className:'footnote context-note'}),UI.Strong('Waiting for live draft',{id:'next-pick-name'}),Notice('',{id:'advice-status',className:'notice notice-subtle'}),Stack([],{id:'recommendations'})],{id:'next-pick-chip',className:'next-pick-chip recommendation-summary','aria-label':'Recommended next picks'}),
     StatusCard({statusId:'connection',detailId:'status-detail',dotId:'dot',status:'Waiting for ESPN',detail:'Open your ESPN draft room to start capturing picks.',links:[{text:'Open league ↗',href:'https://fantasy.espn.com/football/team?leagueId=182527585&teamId=8&seasonId=2026'},{text:'Practice draft ↗',href:'https://fantasy.espn.com/football/mockdraftlobby'}]}),
     Button('Correct draft picks',{id:'open-corrections'}),
     ...Field({id:'session',label:'Draft session',kind:'select',options:[{text:'2026 league draft',value:'league:2026:182527585'}]}),
-    Metrics([{id:'pick-count',value:0,label:'PICKS CAPTURED'},{id:'round',value:'—',label:'ROUND'},{id:'my-count',value:0,label:'YOUR PICKS'}]),Notice('',{id:'coverage',hidden:true}),advisor,
-    SectionTitle('Pick history',Button('Export',{id:'export',disabled:true})),
-    Stack([...Field({id:'team',label:'Filter by team',kind:'select',hiddenLabel:true,options:[{text:'All teams',value:'all'}]}),...Field({id:'search-picks',label:'Search picks',placeholder:'Find a player…',hiddenLabel:true})],{className:'filters'}),
-    Text('Picks will appear as ESPN announces them.',{id:'empty',className:'empty'}),List([],{id:'picks',className:'pick-list'}),Note('Saved on this device · Keep ESPN open.')
+    Metrics([{id:'pick-count',value:0,label:'PICKS CAPTURED'},{id:'round',value:'—',label:'ROUND'},{id:'my-count',value:0,label:'YOUR PICKS'}]),Notice('',{id:'coverage',hidden:true}),
+    UI.Tabs({id:'draft-data',label:'Draft data',items:[{key:'history',label:'Pick history',content:history},{key:'spreadsheet',label:'Spreadsheet',content:spreadsheet}]}),
+    Note('Saved on this device · Keep ESPN open.')
   ],{id:'draft-view'});
   return Section([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Main([draft,RulesView(),CorrectionsView(),Notice('',{id:'error',role:'alert',hidden:true})])],{id:'football-tool'});
 }
