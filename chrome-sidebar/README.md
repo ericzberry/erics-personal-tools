@@ -45,7 +45,7 @@ There is no sync server yet. Hosting, authentication, protocol, and scope remain
 
 ## Recommendation engine
 
-The advisor in `src/recommendations.js` recomputes locally on each draft update. It displays one top choice and up to two nearby alternatives, the last pick considered, and reasons for moving above the highest available player on your board. No model service, API key, server, or outgoing data is required. This is a transparent deterministic decision engine, not an LLM or a calibrated outcome predictor.
+The advisor in `src/recommendations.js` recomputes locally on each draft update. It displays one or two recommended picks, the last pick considered, and reasons for moving above the highest available player on your board. No model service, API key, server, or outgoing data is required. This is a transparent deterministic decision engine, not an LLM or a calibrated outcome predictor.
 
 The imported workbook is in `config/rankings-2026.json`. The 177-entry first tab is authoritative; its ADP values are market context. The 196 QB/RB/WR/TE positional comparisons from the second tab are retained for future discussion, not used to override the first tab. Yellow highlights have no scoring effect because their meaning has not been specified. The original workbook is unchanged. `scripts/import-rankings.py` regenerates the JSON from the workbook using Python/openpyxl.
 
@@ -62,15 +62,19 @@ The imported workbook is in `config/rankings-2026.json`. The 177-entry first tab
 
 Stale, incomplete, disconnected and completed drafts suppress live recommendations. Projection files are neither requested nor read; previously saved projection data cannot affect advice.
 
-### Updating your board
+### Static board and turn outlook
 
-Your supplied Combined Ranks are already loaded. Optionally open **Update draft board** and drag a `.xlsx` workbook or rankings `.json` onto the upload surface, or click it to browse. XLSX imports read only the `Combined Ranks` sheet and the original B–F rank/name/position/team/ADP columns. The first row is the header. JSON uses the bundled rankings schema. Imports validate sequential unique ranks, player identities, positions and ADP before replacing the board. The original board can be restored. Nothing is uploaded to a server.
+The supplied spreadsheet’s Combined Ranks are bundled as static JSON. No upload or board-update control is shown. Previously saved custom boards and projection files are ignored; live picks never modify the source ranking.
 
-The shared `src/components/file-drop.js` component gives future file inputs the same drop, browse, validation and feedback behavior. The Excel parser is bundled locally by the build; no CDN scripts are loaded.
+For each update, remove taken players, sort the remaining market queue by ADP (falling back to Combined Rank), and count picks before your next turn and the turn after it. A band of ±max(1, ceil(opponent picks × 0.2)) around the expected cutoff marks uncertain availability. Players expected to be gone before the next turn are excluded when plausible eligible choices remain. The rank-based shortlist and roster/replacement scoring are then applied to that pool. The following-turn forecast discounts one intervening selection as yours and identifies a possible later alternative at the same position.
+
+These are transparent heuristic estimates, not calibrated probabilities or individual opponent predictions. A player can be available now and still unlikely to reach your next turn. When draft position is unknown, the UI says so and does not guess a slot. Each recommendation includes visible roster/rank reasoning and availability outlook; details remain expandable.
+
+Shared upload components remain available for future tools, but the draft feature does not use them or bundle an Excel parser.
 
 ## Private release
 
-Version 0.5.1 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.6.0 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 

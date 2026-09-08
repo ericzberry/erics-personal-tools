@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {recommend,turns,replacementLevels,lineupValue} from '../src/recommendations.js';
+import {recommend,turns,replacementLevels,lineupValue,availabilityAt} from '../src/recommendations.js';
 import {playerKey} from '../src/player-identity.js';
 const load=name=>JSON.parse(readFileSync(new URL(`../config/${name}.json`,import.meta.url)));
 const config=load('espn-league-2026'),rankings=load('rankings-2026');
@@ -55,6 +55,29 @@ test('legacy projections cannot override the Combined Ranks proxy',()=>{
   assert.deepEqual(a,b);assert.ok(a.candidates.every(p=>p.par===undefined));
 });
 test('ADP changes waiting explanations only with observed draft order',()=>{
-  const a=run({session:{...current(),upcomingOwnPicks:[1,20]}});assert.equal(a.turn.followingPick,20);assert.ok(a.candidates[0].reasons.some(r=>r.includes('ADP is before')));
+  const a=run({session:{...current(),upcomingOwnPicks:[1,20]}});assert.equal(a.turn.followingPick,20);assert.ok(a.candidates[0].reasons.some(r=>r.includes('Remaining ADP order')));
   assert.ok(run().candidates[0].reasons.some(r=>r.includes('unknown')));
+});
+
+test('remaining market queue uses taken players, next turn and following turn',()=>{
+  const players=Array.from({length:12},(_,i)=>({rank:i+1,name:`Player ${i}`,position:'RB',nflTeam:'BUF',adp:i+1}));
+  const next=availabilityAt(players,10,13),following=availabilityAt(players,10,20,1);
+  assert.equal(next.get(playerKey(players[0])),'unlikely');
+  assert.equal(next.get(playerKey(players[5])),'likely');
+  assert.equal(following.get(playerKey(players[5])),'unlikely');
+  assert.equal(availabilityAt(players,10,10).get(playerKey(players[0])),'available');
+  assert.equal(availabilityAt(players,null,null).get(playerKey(players[0])),'unknown');
+  // Same absolute ADP, different remaining pool: earlier selections change survival outlook.
+  assert.equal(availabilityAt(players.slice(5),10,13).get(playerKey(players[5])),'unlikely');
+});
+test('recommendation offers at most two explained options and responds to distance to next turn',()=>{
+  const near=run({session:{...current(),upcomingOwnPicks:[1,20]}});
+  const far=run({session:{...current(),upcomingOwnPicks:[10,11]}});
+  assert.ok(near.candidates.length<=2);assert.ok(far.candidates.length<=2);
+  assert.notEqual(near.candidates[0].name,far.candidates[0].name);
+  for(const p of far.candidates){assert.ok(p.shortWhy);assert.ok(p.outlook.includes('#10'));assert.ok(p.outlook.includes('#11'));}
+});
+
+test('recommendations never mutate the fixed source board',()=>{
+  const before=JSON.stringify(rankings);run({session:{...current(),upcomingOwnPicks:[10,11]}});assert.equal(JSON.stringify(rankings),before);
 });

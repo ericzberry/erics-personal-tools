@@ -39,6 +39,17 @@ export function lineupValue(roster,req,levels){
   }
   return total+leftovers.sort((a,b)=>b-a).slice(0,req.FLEX||0).reduce((a,b)=>a+b,0);
 }
+// Forecast by the remaining market queue, not absolute ADP. Already-taken players
+// are removed first. The uncertainty band is a heuristic, not a calibrated probability.
+export function availabilityAt(available, onClock, targetPick, ownPicksBefore=0) {
+  const outlook=new Map();
+  const ordered=[...available].sort((a,b)=>(a.adp ?? a.rank)-(b.adp ?? b.rank)||a.rank-b.rank);
+  const known=Number.isInteger(onClock)&&Number.isInteger(targetPick)&&targetPick>=onClock;
+  const opponents=known?Math.max(0,targetPick-onClock-ownPicksBefore):null;
+  const band=known?Math.max(1,Math.ceil(opponents*0.2)):0;
+  ordered.forEach((p,index)=>outlook.set(p.key??playerKey(p),!known?'unknown':opponents===0?'available':index<opponents-band?'unlikely':index<opponents+band?'uncertain':'likely'));
+  return outlook;
+}
 export function recommend({rankings,config,session=null,now=Date.now(),weights={}}){
   const w={...defaults,...weights},req=requirements(config);
   const players=rankings.players.map(p=>({...p,position:positionKey(p.position),key:playerKey(p)}));
@@ -71,15 +82,23 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   const ownValued=roster.filter(p=>offense.includes(p.position)).map(p=>({...p,value:p.value ?? result.replacement[p.position]?.value ?? 0}));
   const base=completeBenchmarks?lineupValue(ownValued,req,result.replacement):0;
   // Compare only near the best eligible overall rank, except when filling mandatory starters.
-  const baseline=Math.min(...eligible.map(p=>p.rank));
-  const shortlist=eligible.filter(p=>p.rank<=baseline+w.rankWindow);
+  const nextOutlook=availabilityAt(available,session?.onClock,result.turn.nextPick);
+  const plausible=eligible.filter(p=>nextOutlook.get(p.key)!=='unlikely');
+  // If every legal choice is at risk, still show a conditional option rather than no advice.
+  const pool=plausible.length?plausible:eligible;
+  const baseline=Math.min(...pool.map(p=>p.rank));
+  const shortlist=pool.filter(p=>p.rank<=baseline+w.rankWindow);
   const horizon=result.turn.followingPick;
   result.candidates=shortlist.map(p=>{
     const starter=isStarter(p.position),benchDepth=Math.max(0,count(roster,p.position)-(req[p.position]||0));
     const fitFactor=starter?1:({RB:0.55,WR:0.4,TE:0.2,QB:0.1,'D/ST':0,K:0}[p.position]||0)/(1+benchDepth);
     // ADP is a market heuristic, not a calibrated survival probability.
-    const later=horizon?available.filter(a=>a.position===p.position&&a.key!==p.key&&a.adp!==null&&a.adp>=horizon).sort((a,b)=>a.rank-b.rank)[0]:null;
-    const atRisk=!!horizon&&p.adp!==null&&p.adp<horizon;
+    // Compare passing on this player until the turn after next. One intervening
+    // selection is ours; all others consume the remaining ADP/rank queue.
+    const followingOutlook=availabilityAt(available,session?.onClock,horizon,1);
+    const nextAvailability=nextOutlook.get(p.key), followingAvailability=followingOutlook.get(p.key);
+    const later=horizon?available.filter(a=>a.position===p.position&&a.key!==p.key&&['likely','available'].includes(followingOutlook.get(a.key))).sort((a,b)=>a.rank-b.rank)[0]:null;
+    const atRisk=!!horizon&&['unlikely','uncertain'].includes(followingAvailability);
     let par=null,gain=null,waitCost=null,bonus=w.rankFitWeight*fitFactor;
     if(completeBenchmarks&&offense.includes(p.position)){
       const value=p.value;par=value-result.replacement[p.position].value;
@@ -93,10 +112,16 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
     const reasons=[`Your overall rank #${p.rank}${p.adp!==null?`; ADP ${p.adp}`:'; ADP unavailable'}.`,starter?`Can fill an open ${needed[p.position]>0?p.position:'FLEX'} starting slot.`:`Adds ${p.position} depth; its starting slots are already covered.`];
     if(par!==null)reasons.push(`${round(par)} rank slots above ${result.replacement[p.position].name} (${p.position} starter-replacement #${result.replacement[p.position].positionRank}); ${round(gain)} rank slots of lineup improvement.`);
     else reasons.push(`${samePos} available ${p.position} option(s) within the next ${w.rankWindow} ranks of this player; this measures ranking depth, not a value gap.`);
-    if(atRisk)reasons.push(`ADP is before your following turn at pick ${horizon}${later?`; later ${p.position} comparison: ${later.name} (#${later.rank})`:''}. Availability is an estimate.`);
+    if(atRisk)reasons.push(`Remaining ADP order suggests waiting until #${horizon} risks losing this player${later?`; later ${p.position} comparison: ${later.name} (#${later.rank})`:''}. Availability is an estimate.`);
     if(!horizon)reasons.push('Next-turn availability is unknown until the actual draft order is visible.');
-    return {...p,score:round(-p.rank+bonus),rankAdvantage:par===null?null:round(par),lineupRankGain:gain===null?null:round(gain),waitCost:waitCost===null?null:round(waitCost),starter,alternativesAtPosition:samePos,reasons};
-  }).sort((a,b)=>b.score-a.score||a.rank-b.rank).slice(0,3);
+    const fitWhy=starter?`fills your open ${needed[p.position]>0?p.position:'FLEX'} slot`:`adds ${p.position} depth`;
+    const scarcity=par>0?`; ${round(par)} rank slots above replacement`:'';
+    const shortWhy=`#${p.rank} on your board; ${fitWhy}${scarcity}.`;
+    const nextText=nextAvailability==='available'?'Available now':nextAvailability==='likely'?`Likely there at #${result.turn.nextPick}`:nextAvailability==='uncertain'?`Could go before #${result.turn.nextPick}`:nextAvailability==='unlikely'?`If still there at #${result.turn.nextPick}`:'Your draft position is not known yet';
+    const followingText=!horizon?'':atRisk?` May not last to #${horizon}.${later?` ${later.name} may be a later ${p.position} option.`:''}`:` May last to #${horizon}.`;
+    const outlook=nextText+'.'+followingText;
+    return {...p,shortWhy,outlook,nextAvailability,followingAvailability,laterOption:later?.name??null,score:round(-p.rank+bonus),rankAdvantage:par===null?null:round(par),lineupRankGain:gain===null?null:round(gain),waitCost:waitCost===null?null:round(waitCost),starter,alternativesAtPosition:samePos,reasons};
+  }).sort((a,b)=>b.score-a.score||a.rank-b.rank).slice(0,2);
   if(result.candidates[0]?.rank!==baseline)result.candidates[0].reasons.push(`Moves ahead of your highest eligible available rank (#${baseline}) because of the roster and waiting-cost adjustments above.`);
   return result;
 }

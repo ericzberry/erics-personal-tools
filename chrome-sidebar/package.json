@@ -1,6 +1,6 @@
 {
   "name": "erics-chrome-sidebar",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,8 +9,6 @@
     "preview": "python3 -m http.server 8765 --bind 127.0.0.1"
   },
   "devDependencies": {
-    "esbuild": "0.28.2",
-    "linkedom": "^0.18.13",
-    "read-excel-file": "6.0.3"
+    "linkedom": "^0.18.13"
   }
 }

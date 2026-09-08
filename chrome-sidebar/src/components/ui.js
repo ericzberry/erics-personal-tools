@@ -46,14 +46,13 @@ export function DataTable(headers,rows) {
   return element('table',{},[element('thead',{},[element('tr',{},headers.map(text=>element('th',{text})))]),element('tbody',{},rows.map(row=>element('tr',{},row.map(text=>element('td',{text:String(text)}))))) ]);
 }
 export function PickRow(p,ownTeamId) {
-  return element('li',{className:`pick${p.teamId===ownTeamId?' mine':''}`},[Label(p.overall,{className:'pick-number'}),Stack([Stack([],{text:p.player,className:'pick-name'}),Stack([],{text:`R${p.round} · P${p.pickInRound} · ${p.nflTeam}`,className:'pick-meta'}),Stack([],{text:p.team,className:'pick-meta'})]),Label(p.position,{className:'position'})]);
+  return element('li',{className:`pick pick--compact${p.teamId===ownTeamId?' mine':''}`},[Label(p.overall,{className:'pick-number'}),Stack([Strong(p.player,{className:'pick-name'}),Text(`R${p.round} · P${p.pickInRound} · ${p.nflTeam} · ${p.team}`,{className:'pick-meta'})]),Label(p.position,{className:'position'})]);
 }
 export function RecommendationCard(p,{primary=false}={}) {
   const children=[Text(primary?'PICK NEXT':'ALTERNATIVE',{className:'eyebrow'}),Heading(`${p.name} · ${p.position}`,3),Text(`Rank #${p.rank} · ADP ${p.adp ?? '—'}`,{className:'pick-meta'})];
-  if(primary) {
-    const why=p.reasons.find(r=>!r.startsWith('Your overall rank'));if(why)children.push(Text(why,{className:'pick-meta'}));
-    children.push(Disclosure('Why this pick',[element('ul',{},p.reasons.map(text=>element('li',{text})))]));
-  }
+  if (p.shortWhy) children.push(Text(p.shortWhy,{className:'recommendation-why'}));
+  if (p.outlook) children.push(Text(p.outlook,{className:'recommendation-outlook'}));
+  children.push(Disclosure('Reasoning',[element('ul',{},p.reasons.map(text=>element('li',{text})))]));
   return element('article',{className:`recommendation${primary?' recommendation--primary':''}`},children);
 }
 export function EditableResult({id,titleId,copyId,fieldId,title='Summary',label='Generated text — editable'}) {

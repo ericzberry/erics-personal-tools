@@ -162,3 +162,13 @@ th, td { padding: 8px 11px; }
 .upload-status[data-state=success] { color: #436c45; }
 
 .action-group > button { flex: 1; }
+
+/* Compact activity row, shared anywhere a pick is listed. */
+.pick.pick--compact { padding: 7px 2px; gap: 8px; align-items: center; }
+.pick.pick--compact.mine { padding: 7px 8px; }
+.pick--compact .pick-number { font-size: 16px; }
+.pick--compact .pick-name { display: block; font-size: 12px; line-height: 1.3; }
+.pick--compact .pick-meta { margin: 2px 0 0; font-size: 9px; line-height: 1.3; }
+.pick--compact .position { padding: 3px 5px; font-size: 8px; }
+.recommendation-why { font-size: 12px; line-height: 1.45; margin: 8px 0 0; color: var(--ink); }
+.recommendation-outlook { font-size: 10px; line-height: 1.5; margin: 6px 0 0; color: var(--muted); }

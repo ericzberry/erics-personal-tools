@@ -3,8 +3,7 @@ const {ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,
 export function DraftView() {
   const advisor=Section([
     SectionTitle('Draft insight',Badge('YOUR BOARD',{id:'advice-mode',className:'pill badge-subtle'})),Note('',{id:'advice-context',className:'footnote context-note'}),Notice('',{id:'advice-status',className:'notice notice-subtle'}),Stack([],{id:'recommendations'}),
-    SourceNote('Combined Ranks','Your order, adjusted for roster needs and positional scarcity.'),
-    Disclosure('Update draft board',[UploadField({id:'rankings-drop',inputId:'rankings-file',statusId:'ranking-upload-status',label:'Drop your rankings here',formats:'Excel or JSON',accept:'.xlsx,.json',status:'Using your saved Combined Ranks.',resetId:'reset-rankings',resetLabel:'Use original board'})],{className:'ranking-settings'})
+    SourceNote('Your saved spreadsheet','Combined Ranks · roster fit · ADP availability estimates')
   ],{className:'advisor','aria-label':'Draft advisor'});
   const draft=Section([
     Highlight({id:'next-pick-chip',valueId:'next-pick-name',label:'RECOMMENDED NEXT PICK',value:'Waiting for live draft'}),

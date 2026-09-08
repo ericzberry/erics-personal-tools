@@ -34,3 +34,5 @@ The next draft recommendation gets a small highlighted card at the top. Keep the
 File inputs use the reusable file-drop component: a quiet dashed surface, drag highlight, click/keyboard browsing, and inline status. Keep the native input hidden. Use concise copy and put optional board maintenance behind a disclosure. The draft source gets one short line rather than a large explanatory card.
 
 All extension UI must be composed from the [shared component library](../chrome-sidebar/src/components/README.md). The rule is recorded in chrome-sidebar/AGENTS.md and enforced by architecture tests. Feature controllers supply state and actions; they do not create markup or styles.
+
+Pick history uses the shared compact two-line row: player name, then round/NFL team/fantasy team. Recommendations show a short reason for both options, not only the primary card. The draft board is fixed, so do not display an upload or board-update control there.
