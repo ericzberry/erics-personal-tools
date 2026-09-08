@@ -5,11 +5,11 @@ var EspnPageHighlights = (() => {
     const valid=message&&message.expiresAt>Date.now()&&url.pathname==='/football/draft'&&Number(url.searchParams.get('leagueId'))===message.leagueId&&Number(url.searchParams.get('seasonId'))===message.seasonId&&Number(url.searchParams.get('teamId'))===message.teamId;
     const snapshot=valid?EspnDraftReader.read(document,location.href):null;
     const current=snapshot&&snapshot.state==='drafting'&&(message.manualMode||snapshot.onClock===message.onClock);
-    const matched=EspnRecommendationHighlights.decorate(document,valid&&current?message.candidates:[],valid&&current?(message.tierPlayers||[]):[]);
+    const matched=EspnRecommendationHighlights.decorate(document,valid&&current?message.candidates:[],valid&&current?(message.tierPlayers||[]):[],valid&&current?(message.scarcityPlayers||[]):[]);
     return {ok:true,active:!!(valid&&current),...matched};
   }
   function receive(next){
-    message=!next.clear&&Array.isArray(next.candidates)&&next.candidates.length<=2&&(!next.tierPlayers||(Array.isArray(next.tierPlayers)&&next.tierPlayers.length<=200))&&Number.isFinite(next.expiresAt)?next:null;
+    message=!next.clear&&Array.isArray(next.candidates)&&next.candidates.length<=2&&(!next.tierPlayers||(Array.isArray(next.tierPlayers)&&next.tierPlayers.length<=200))&&(!next.scarcityPlayers||(Array.isArray(next.scarcityPlayers)&&next.scarcityPlayers.length<=200))&&Number.isFinite(next.expiresAt)?next:null;
     return refresh();
   }
   chrome.runtime.onMessage.addListener((next,sender,respond)=>{

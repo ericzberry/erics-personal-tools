@@ -63,6 +63,12 @@ test('background pipeline saves picks and marks closed tab disconnected',async()
   const drafting={...s,state:'drafting',onClock:6,picks:s.picks.slice(0,5),upcomingOwnPicks:[6,15]};
   const next=await new Promise(resolve=>listener({type:'DRAFT_SNAPSHOT',snapshot:drafting},{url,tab:{id:123},frameId:0},resolve));
   assert.ok(next.highlights.candidates.length>0);assert.ok(next.highlights.tierPlayers.length>0);assert.equal(next.highlights.onClock,6);
+  const scarcityDraft={...s,state:'drafting',onClock:16,picks:s.picks.slice(0,15)};
+  const scarcity=await new Promise(resolve=>listener({type:'DRAFT_SNAPSHOT',snapshot:scarcityDraft},{url,tab:{id:123},frameId:0},resolve));
+  assert.deepEqual(scarcity.highlights.scarcityPlayers,[]); // One RB and WR by round 3 is on track.
+  assert.ok(scarcity.highlights.scarcityPlayers.every(p=>['RB','WR'].includes(p.position)&&p.tier===2&&p.espnId));
+  const finished=await new Promise(resolve=>listener({type:'DRAFT_SNAPSHOT',snapshot:s},{url,tab:{id:123},frameId:0},resolve));
+  assert.deepEqual(finished.highlights.scarcityPlayers,[]);
   globalThis.fetch=originalFetch;
   await closed(123);assert.equal(data.draftSessions[sessionKey(s)].connected,false);delete globalThis.chrome;
 });

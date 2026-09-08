@@ -123,3 +123,14 @@ Version 0.6.13 supports ESPN’s nested fixedDataTable row and cell layers, iden
 Version 0.6.14 uses native data-player-id identities observed in a live practice draft, updates recycled rows on DOM changes, and preserves unchanged background colors between refreshes. Draft capture is isolated from rendering failures. Regression tests include three actual ESPN row fragments and recycled player IDs. Live verification of the installed update requires reloading the extension in Chrome; automated access to extension management is blocked.
 
 Version 0.6.15 collapses players taken by others within tiers 5 and higher into an expandable disclosure. Available players and your picks remain outside it, including your picks in otherwise exhausted late tiers.
+
+
+### RB and WR tier scarcity (0.6.16)
+
+Scarcity is a selective cue, not a warning for every empty starting slot. No alerts appear on your first pick. RB targets follow the existing plan (one by round 2, two by round 4); WR targets allow one by round 3 and two by round 5. Only an overdue quality-starter need with one or two eligible options left in the current tier can trigger a warning. Each option must have ADP and be forecast unlikely to survive until your next pick or the turn after it. Broad tiers, uncertain forecasts, and already-exhausted positions stay quiet.
+
+Quality means a verified ranked player above the existing starter-replacement benchmark, even if you drafted that player from a later tier. Short boards without a benchmark use current-or-better tiers. FLEX and bench depth do not increase starter targets; ownership counts still include all players.
+
+Only the most urgent position gets a short roster note and small muted badges. Player rows keep their ownership colors and recommendations keep their blue ESPN backgrounds. Other affected ESPN players receive a soft amber highlight. Hover over a note or badge for context. Alerts recalculate with live/manual changes and clear for unknown order or blocked/stale feeds. ADP availability remains an estimate.
+
+Regression checks cover the empty first-pick screenshot, normal early roster building, depleted tiers, missing ADP, uncertainty, recommendation colors and one-warning limits.

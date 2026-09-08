@@ -12,6 +12,7 @@ let config, rankings, sourceRankings, catalog, catalogPlayers=[], syncMessage=''
 let manualWrites=Promise.resolve();
 let lastBoardSignature, lastTierSession, highlightedTab, lastRosterSignature;
 let recommendedKeys=[];
+let rosterAlerts=[];
 const tierStates=new Map();
 const liveSession=()=>reconcileSession(selectSession(sessions,selected),catalog);
 const currentKey=()=>liveSession()?sessionKey(liveSession()):(selected==='auto'?'league:2026:182527585':selected);
@@ -36,16 +37,16 @@ function renderDraft() {
   $('pick-count').textContent=s?.picks.length || 0;
   $('round').textContent=s?.onClock ? Math.ceil(s.onClock/s.teams.length) : s?.picks.at(-1)?.round || '—';
   $('my-count').textContent=s?.picks.filter(p=>p.teamId===s.teamId).length || 0;
-  const counts=rosterCounts(s),countSignature=JSON.stringify([counts,!!s]);
-  if(countSignature!==lastRosterSignature){lastRosterSignature=countSignature;$('roster-counts').replaceChildren(RosterCounts(counts,{known:!!s}));}
   const warning=s?.missing?.length?`${s.missing.length} earlier pick(s) missing. Open ESPN’s Pick History or reload the draft room to recover available history.`:s?.rejected?'Some ESPN pick entries could not be read. Check ESPN’s pick history.':'';
   $('coverage').hidden=!warning;$('coverage').textContent=warning;
   renderAdvice(s);
+  const counts=rosterCounts(s),countSignature=JSON.stringify([counts,!!s,rosterAlerts]);
+  if(countSignature!==lastRosterSignature){lastRosterSignature=countSignature;$('roster-counts').replaceChildren(RosterCounts(counts,{known:!!s,alerts:rosterAlerts}));}
   const confirmed=!!s&&(s.manualMode||(live&&!s.missing?.length&&!s.rejected&&!s.identityIssues));
   $('spreadsheet-context').textContent=!s?'Connect a draft to confirm availability.':s.manualMode?'Status from your manual board.':confirmed?'Status from captured ESPN picks.':'Saved picks shown; remaining availability is unconfirmed.';
   const key=currentKey();if(key!==lastTierSession){tierStates.clear();lastTierSession=key;}
-  const boardSignature=JSON.stringify([key,rankings?.players,s?.picks,s?.teamId,confirmed,recommendedKeys,!!manualDrafts[key]?.active,manualDrafts[key]?.overrides]);
-  if(boardSignature!==lastBoardSignature&&rankings){lastBoardSignature=boardSignature;$('spreadsheet-players').replaceChildren(...TieredRankings(rankings.players.map(p=>({...p,key:playerKey(p)})),new Map((s?.picks||[]).map(p=>[playerKey(p),p])),s?.teamId,{confirmed,recommended:recommendedKeys,overrides:manualDrafts[key]?.overrides,tierStates,onSelect:manualDrafts[key]?.active?markPlayer:null}));}
+  const boardSignature=JSON.stringify([key,rankings?.players,s?.picks,s?.teamId,confirmed,recommendedKeys,rosterAlerts,!!manualDrafts[key]?.active,manualDrafts[key]?.overrides]);
+  if(boardSignature!==lastBoardSignature&&rankings){lastBoardSignature=boardSignature;$('spreadsheet-players').replaceChildren(...TieredRankings(rankings.players.map(p=>({...p,key:playerKey(p)})),new Map((s?.picks||[]).map(p=>[playerKey(p),p])),s?.teamId,{confirmed,recommended:recommendedKeys,rosterAlerts,overrides:manualDrafts[key]?.overrides,tierStates,onSelect:manualDrafts[key]?.active?markPlayer:null}));}
   renderManual();
 }
 function renderAdvice(session) {
@@ -56,19 +57,21 @@ function renderAdvice(session) {
   $('advice-status').hidden = !$('advice-status').textContent;
   const candidates=session?advice.candidates:[];
   recommendedKeys=candidates.map(playerKey);
-  sendHighlights(session,candidates,session&&!advice.blocked?currentTierPlayers(rankings.players,session):[]);
+  rosterAlerts=advice.rosterAlerts;
+  sendHighlights(session,candidates,session&&!advice.blocked?currentTierPlayers(rankings.players,session):[],rankings.players.filter(p=>rosterAlerts.some(a=>a.playerKeys.includes(playerKey(p)))));
 
 }
 
-async function sendHighlights(session,candidates,tierPlayers){
+async function sendHighlights(session,candidates,tierPlayers,scarcityPlayers){
   if(!globalThis.chrome?.tabs?.sendMessage)return;
   const tab=session?.tabId;
   if(highlightedTab!==undefined&&highlightedTab!==tab)chrome.tabs.sendMessage(highlightedTab,{type:'DRAFT_RECOMMENDATIONS',clear:true}).catch(()=>{});
   highlightedTab=tab;
   if(tab===undefined)return;
-  try {const response=await chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,tierPlayers:tierPlayers.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam,tier:p.tier})),candidates:candidates.map(p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam})),expiresAt:Date.now()+12000});
+  const player=p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam,tier:p.tier});
+  try {const response=await chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,tierPlayers:tierPlayers.map(player),scarcityPlayers:scarcityPlayers.map(player),candidates:candidates.map(player),expiresAt:Date.now()+12000});
     if(highlightedTab!==tab)return;
-    $('espn-highlight-status').textContent=!candidates.length?'':!response?.ok?'Reload the ESPN draft tab to enable page highlights.':!response.active?'ESPN highlights are waiting for the draft feed to catch up.':response.recommended+response.currentTier===0?'No matching players visible on ESPN. Open Players or clear its filters.':response.painted===0?'ESPN players matched, but highlight styles could not be applied.':`ESPN highlights: ${response.recommended} recommended · ${response.currentTier} tier · ${response.painted??'?'} colored`;
+    $('espn-highlight-status').textContent=!candidates.length?'':!response?.ok?'Reload the ESPN draft tab to enable page highlights.':!response.active?'ESPN highlights are waiting for the draft feed to catch up.':response.recommended+response.currentTier+(response.scarcity||0)===0?'No matching players visible on ESPN. Open Players or clear its filters.':response.painted===0?'ESPN players matched, but highlight styles could not be applied.':`ESPN highlights: ${response.recommended} recommended · ${response.currentTier} tier · ${response.scarcity||0} getting thin · ${response.painted??'?'} colored`;
   }catch {if(highlightedTab===tab)$('espn-highlight-status').textContent=candidates.length?'Reload the ESPN draft tab to reconnect page highlights.':'';}
 
 }

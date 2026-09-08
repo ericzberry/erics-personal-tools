@@ -117,3 +117,80 @@ test('target deadlines use the next own pick round rather than the current oppon
  const session={...withRoster(['WR'],1),onClock:10,upcomingOwnPicks:[12,29]};
  const a=run({rankings:tierBoard,session});assert.equal(a.targetRound,2);assert.equal(a.candidates[0].position,'RB');
 });
+
+const scarcityBoard={players:[
+ {rank:1,tier:1,name:'Owned RB A',position:'RB',nflTeam:'DET',adp:1},
+ {rank:2,tier:1,name:'Owned RB B',position:'RB',nflTeam:'BUF',adp:2},
+ {rank:3,tier:1,name:'Owned WR A',position:'WR',nflTeam:'DET',adp:3},
+ {rank:4,tier:1,name:'Owned WR B',position:'WR',nflTeam:'BUF',adp:4},
+ {rank:5,tier:2,name:'Last RB',position:'RB',nflTeam:'KC',adp:5},
+ {rank:6,tier:2,name:'Last WR',position:'WR',nflTeam:'KC',adp:6},
+ {rank:7,tier:2,name:'Tier TE',position:'TE',nflTeam:'KC',adp:100},
+ ...Array.from({length:30},(_,i)=>({rank:i+8,tier:3,name:`Market QB ${i}`,position:'QB',nflTeam:'FA',adp:i+8})),
+ {rank:38,tier:9,name:'Depth RB',position:'RB',nflTeam:'FA',adp:100},
+ {rank:39,tier:9,name:'Depth WR',position:'WR',nflTeam:'FA',adp:101}
+]};
+function scarcityRun({owned=[1,3,4],clock=41,next=41,board=scarcityBoard,extra=[],sessionChanges={}}={}){
+ const picks=board.players.filter(p=>p.rank<=4||extra.includes(p.rank)).map(p=>({...pick(p,null),teamId:owned.includes(p.rank)?8:2}));
+ return run({rankings:board,session:{...current(),manualMode:true,picks,onClock:clock,upcomingOwnPicks:next?[next]:[],...sessionChanges}});
+}
+test('a missing quality RB triggers a tier warning if waiting loses every same-tier option',()=>{
+ const a=scarcityRun();assert.equal(a.rosterAlerts.length,1);
+ const alert=a.rosterAlerts[0];assert.equal(alert.position,'RB');assert.equal(alert.tier,2);assert.equal(alert.owned,1);assert.equal(alert.target,2);assert.equal(alert.stage,'following');assert.equal(alert.pick,60);
+ assert.deepEqual(alert.playerKeys,[playerKey(scarcityBoard.players[4])]);assert.match(alert.message,/RB getting thin/);
+});
+test('WR shortages and loss before the next own pick are highlighted separately',()=>{
+ const a=scarcityRun({owned:[1,2,3],clock:41,next:50});
+ assert.equal(a.rosterAlerts.length,1);assert.equal(a.rosterAlerts[0].position,'WR');assert.equal(a.rosterAlerts[0].stage,'next');assert.equal(a.rosterAlerts[0].pick,50);
+});
+test('quality coverage clears alerts, while later-tier depth does not hide the shortage',()=>{
+ assert.deepEqual(scarcityRun({owned:[1,2,3,4]}).rosterAlerts,[]);
+ const a=scarcityRun({owned:[1,3,4,38],extra:[38]});assert.equal(a.rosterAlerts[0].owned,1);
+});
+test('no warning when a same-tier alternative is likely to survive, including consecutive snake picks',()=>{
+ const board={players:scarcityBoard.players.map(p=>p.name==='Last RB'?{...p,adp:150}:p)};
+ assert.deepEqual(scarcityRun({board}).rosterAlerts,[]);
+ assert.deepEqual(scarcityRun({clock:20,next:20}).rosterAlerts,[]);
+});
+test('exhausted positions do not raise non-actionable warnings',()=>{
+ assert.deepEqual(scarcityRun({extra:[5]}).rosterAlerts,[]);
+});
+test('unknown order, waiting, blocked and expired feeds suppress scarcity advice',()=>{
+ assert.deepEqual(scarcityRun({next:null}).rosterAlerts,[]);
+ for(const sessionChanges of [{state:'waiting'},{state:'complete'},{missing:[1]},{identityIssues:true},{manualMode:false,connected:false},{manualMode:false,lastSeenAt:-20000}])assert.deepEqual(scarcityRun({sessionChanges}).rosterAlerts,[]);
+ assert.deepEqual(run().rosterAlerts,[]);
+});
+test('missing ADP and unverified options do not manufacture scarcity',()=>{
+ for(const change of [{adp:null},{identityUnverified:true}]){
+  const board={players:scarcityBoard.players.map(p=>p.name==='Last RB'?{...p,...change}:p)};
+  assert.deepEqual(scarcityRun({board}).rosterAlerts,[]);
+ }
+});
+test('starter replacement prevents later depth from counting as quality even in the current tier',()=>{
+ const values=scarcityBoard.players.map(p=>({...p,tier:p.rank>=38?2:p.tier}));
+ const smallConfig={...config,league:{...config.league,teamCount:1},roster:{...config.roster,positions:[{code:'RB',slots:2},{code:'WR',slots:2},{code:'BE',slots:12}]}};
+ const session={...current(),teams:[{id:8}],manualMode:true,onClock:3,upcomingOwnPicks:[3],picks:[...values.filter(p=>p.rank<=4).map(p=>({...pick(p,null),teamId:2})),{...pick(values.find(p=>p.rank===38),null),teamId:8}]};
+ const a=run({rankings:{players:values},config:smallConfig,session});
+ assert.deepEqual(a.rosterAlerts,[]);
+});
+
+test('first-pick screenshot scenario stays quiet with empty RB and WR slots',()=>{
+ const taken=rankings.players.filter(p=>p.tier===1&&p.position==='RB').map(p=>({...pick(p,null),teamId:2}));
+ const a=run({session:{...current(),manualMode:true,picks:taken,onClock:5,upcomingOwnPicks:[5,16]}});
+ assert.deepEqual(a.rosterAlerts,[]);
+});
+test('starter deadlines permit normal early roster building',()=>{
+ assert.deepEqual(scarcityRun({clock:21,next:21}).rosterAlerts,[]); // One RB in round 3 is on track.
+ assert.deepEqual(scarcityRun({owned:[1,2,3],clock:31,next:31}).rosterAlerts,[]); // One WR in round 4 is on track.
+ assert.equal(scarcityRun({owned:[3,4],clock:11,next:11}).rosterAlerts[0].position,'RB');
+ assert.equal(scarcityRun({owned:[1,2],clock:21,next:21}).rosterAlerts[0].position,'WR');
+});
+test('broad tiers and uncertainty alone do not trigger urgent scarcity',()=>{
+ const board={players:[...scarcityBoard.players,...[40,41].map(rank=>({rank,tier:2,name:`Extra RB ${rank}`,position:'RB',nflTeam:'FA',adp:7}))]};
+ assert.deepEqual(scarcityRun({board}).rosterAlerts,[]);
+ const uncertain={players:scarcityBoard.players.map(p=>p.name==='Last RB'?{...p,adp:24}:p)};
+ assert.deepEqual(scarcityRun({board:uncertain}).rosterAlerts,[]);
+});
+test('only the most urgent position gets a warning',()=>{
+ const a=scarcityRun({owned:[1,3]});assert.equal(a.rosterAlerts.length,1);assert.equal(a.rosterAlerts[0].position,'RB');
+});

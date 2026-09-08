@@ -120,3 +120,20 @@ test('actual ESPN rows use native IDs and clear recycled rows even when names la
  button.setAttribute('data-player-id',String(player.espnId));api.decorate(document,[],[player]);assert.equal(row.classList.contains('eric-current-tier-row'),true);
  row.remove();api.decorate(document,[player]);for(const cell of cells)assert.equal(cell.style.backgroundColor,'');
 });
+
+test('scarcity preserves blue recommendations and uses a quiet color for other options',()=>{
+ const {document,decorate}=setup();const row=document.querySelector('tr');row.style.backgroundColor='white';const before=document.body.textContent;
+ let result=decorate(document,[candidate],[candidate],[candidate]);assert.equal(result.scarcity,1);assert.equal(result.recommended,1);assert.equal(row.style.backgroundColor,'rgb(213, 230, 255)');assert.equal(document.body.textContent,before);
+ assert.ok(row.classList.contains('eric-recommended-row'));assert.ok(row.classList.contains('eric-scarcity-row'));
+ decorate(document,[candidate],[candidate]);assert.equal(row.style.backgroundColor,'rgb(213, 230, 255)');assert.equal(row.classList.contains('eric-scarcity-row'),false);
+ decorate(document,[],[],[candidate]);assert.equal(row.style.backgroundColor,'rgb(255, 229, 184)');
+ decorate(document,[]);assert.equal(row.style.backgroundColor,'white');assert.equal(row.classList.contains('eric-scarcity-row'),false);
+});
+test('scarcity delivery expires and clears with invalid sessions, clocks and malformed payloads',()=>{
+ const {document,context}=setup();let tick;let snapshot={state:'drafting',onClock:7};
+ Object.assign(context,{URL,location:{href:'https://fantasy.espn.com/football/draft?leagueId=123&seasonId=2026&teamId=8'},EspnDraftReader:{read:()=>snapshot},chrome:{runtime:{id:'ours',onMessage:{addListener:()=>{}}}},setInterval:fn=>tick=fn});
+ vm.runInContext(controller,context);const receive=context.EspnPageHighlights.receive;
+ const message={leagueId:123,seasonId:2026,teamId:8,onClock:7,candidates:[],scarcityPlayers:[candidate],expiresAt:Date.now()+15000};
+ assert.equal(receive(message).scarcity,1);snapshot={state:'drafting',onClock:8};tick();assert.equal(document.querySelector('.eric-scarcity-row'),null);snapshot.onClock=7;
+ for(const update of [{expiresAt:Date.now()-1},{teamId:9},{scarcityPlayers:{}},{scarcityPlayers:Array(201).fill(candidate)},{clear:true}]){receive(message);assert.equal(receive({...message,...update}).scarcity,0);}
+});

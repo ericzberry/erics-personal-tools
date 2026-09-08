@@ -122,3 +122,14 @@ test('late tiers fold other owners while keeping available and own picks visible
  assert.equal(board.querySelector('.completed-tiers'),null);assert.equal(board.querySelector('.tier-group').open,true);
  assert.equal(board.querySelectorAll('details details .ranked-player').length,2);
 });
+
+test('scarcity highlights roster needs and available players without obscuring ownership',async()=>{
+ const {RosterCounts,TieredRankings,Stack}=await import('../src/components/ui.js');setup();
+ const alert={position:'RB',pick:40,message:'1/2 quality RB starters. Waiting risks losing Tier 2 RBs.',playerKeys:['a']};
+ const roster=RosterCounts({RB:2,WR:2},{alerts:[alert]});assert.equal(roster.querySelectorAll('.roster-count--scarce').length,1);assert.match(roster.querySelector('.scarcity-notice').textContent,/1\/2 quality/);
+ const players=[{name:'Last RB',key:'a',rank:5,tier:2,position:'RB',nflTeam:'KC',adp:5}];
+ const board=Stack(TieredRankings(players,new Map(),8,{confirmed:true,recommended:['a'],rosterAlerts:[alert]}));
+ const row=board.querySelector('.ranked-player');assert.ok(row.classList.contains('ranked-player--scarce'));assert.ok(row.classList.contains('ranked-player--recommended'));assert.match(row.textContent,/RB getting thin/);assert.equal(row.querySelector('.scarcity-detail'),null);
+ for(const [picks,confirmed] of [[new Map([['a',{teamId:8}]]),true],[new Map([['a',{teamId:2}]]),true],[new Map(),false]])assert.equal(Stack(TieredRankings(players,picks,8,{confirmed,rosterAlerts:[alert]})).querySelector('.scarcity-tag'),null);
+ assert.equal(RosterCounts({RB:2}).querySelector('.scarcity-notice'),null);
+});

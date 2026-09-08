@@ -90,13 +90,14 @@ export function Tabs({id,label,items}) {
 }
 const statusLabels={available:'Available',mine:'Yours',taken:'Taken',unknown:'Unconfirmed'};
 export const StatusLegend=()=>Stack(['available','mine','taken'].map(status=>Label(statusLabels[status],{className:`availability-label availability-label--${status}`})),{className:'availability-legend','aria-label':'Player status legend'});
-export function RankedPlayerRow(player,status='unknown',{recommendation=0,owner=null,corrected=false,onSelect}={}) {
-  return element('li',{className:`ranked-player ranked-player--${status}${recommendation?' ranked-player--recommended':''}`,value:player.rank},[
-    Label(player.rank,{className:'pick-number'}),Stack([recommendation?Badge(`NEXT PICK ${recommendation}`,{className:'recommendation-tag'}):null,Strong(player.name,{className:'pick-name'}),Text(`${player.position} · ${player.nflTeam} · ADP ${player.adp??'—'}`,{className:'pick-meta'})]),Label(statusLabels[status],{className:'availability-label'}),
+export function RankedPlayerRow(player,status='unknown',{recommendation=0,scarcity=null,owner=null,corrected=false,onSelect}={}) {
+  const risk=status==='available'?scarcity:null;
+  return element('li',{className:`ranked-player ranked-player--${status}${recommendation?' ranked-player--recommended':''}${risk?' ranked-player--scarce':''}`,value:player.rank},[
+    Label(player.rank,{className:'pick-number'}),Stack([recommendation?Badge(`NEXT PICK ${recommendation}`,{className:'recommendation-tag'}):null,risk?Badge(`${player.position} getting thin`,{className:'scarcity-tag',title:risk.message}):null,Strong(player.name,{className:'pick-name'}),Text(`${player.position} · ${player.nflTeam} · ADP ${player.adp??'—'}`,{className:'pick-meta'})]),Label(statusLabels[status],{className:'availability-label'}),
     onSelect?Stack([OwnershipActions(player,{owner,corrected,onSelect})],{className:'ranked-actions'}):null
   ]);
 }
-export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommended=[],overrides={},onSelect,tierStates=new Map()}={}) {
+export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommended=[],rosterAlerts=[],overrides={},onSelect,tierStates=new Map()}={}) {
   const groups=new Map();
   for(const player of [...players].sort((a,b)=>a.rank-b.rank)){
     const tier=player.tier??'Unspecified';if(!groups.has(tier))groups.set(tier,[]);
@@ -114,7 +115,7 @@ export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommen
     for(const player of entries){
       const pick=picks.get(player.key),owner=pick?(pick.teamId===ownTeamId?'me':'other'):null;
       const status=pick?(owner==='me'?'mine':'taken'):confirmed?'available':'unknown';
-      const row=RankedPlayerRow(player,status,{recommendation:recommended.indexOf(player.key)+1,owner,corrected:!!overrides[player.key],onSelect:onSelect?value=>onSelect(player,value):null});
+      const row=RankedPlayerRow(player,status,{recommendation:recommended.indexOf(player.key)+1,scarcity:rosterAlerts.find(alert=>alert.playerKeys.includes(player.key)),owner,corrected:!!overrides[player.key],onSelect:onSelect?value=>onSelect(player,value):null});
       (compact&&owner==='other'?hiddenRows:rows).push(row);
     }
     const contents=[List(rows,{className:'ranked-list'})];
@@ -144,8 +145,8 @@ export function Toggle({id,label,checked=false,descriptionId}) {
   return element('label',{className:'toggle-field',for:id},[Label(label),input]);
 }
 
-export function RosterCounts(counts,{known=true}={}) {
-  return Section([Label('YOUR ROSTER',{className:'eyebrow'}),Stack(Object.entries(counts).map(([position,count])=>Stack([Strong(known?count:'—'),Label(position)],{'aria-label':`${position}: ${known?count:'unknown'}`})),{className:'roster-count-grid'})],{className:'roster-count-card','aria-label':'Your roster by position'});
+export function RosterCounts(counts,{known=true,alerts=[]}={}) {
+  return Section([Label('YOUR ROSTER',{className:'eyebrow'}),Stack(Object.entries(counts).map(([position,count])=>Stack([Strong(known?count:'—'),Label(position)],{'aria-label':`${position}: ${known?count:'unknown'}`,className:alerts.some(a=>a.position===position)?'roster-count--scarce':undefined})),{className:'roster-count-grid'}),...alerts.map(alert=>Notice(alert.message,{className:'scarcity-notice',title:'ADP estimate. Quality means ranked above starter replacement; short boards use current-or-better tiers. Alerts start when a starter is due: RB rounds 2/4, WR rounds 3/5.'}))],{className:'roster-count-card','aria-label':'Your roster by position'});
 }
 
 export const StickyGroup=children=>Stack(children,{className:'sticky-group'});

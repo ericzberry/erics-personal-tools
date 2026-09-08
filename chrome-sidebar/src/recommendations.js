@@ -1,4 +1,5 @@
 import {playerKey, positionKey} from './player-identity.js';
+import {currentTierPlayers} from './draft-presentation.js';
 const offense=['QB','RB','WR','TE'];
 export const defaults={rankWindow:15,rankFitWeight:8,rankWaitWeight:5,benchWeight:0.15,waitWeight:0.35};
 const round=n=>Math.round(n*10)/10;
@@ -50,6 +51,36 @@ export function availabilityAt(available, onClock, targetPick, ownPicksBefore=0)
   ordered.forEach((p,index)=>outlook.set(p.key??playerKey(p),!known?'unknown':opponents===0?'available':index<opponents-band?'unlikely':index<opponents+band?'uncertain':'likely'));
   return outlook;
 }
+// Scarcity is actionable only when a starter is due and just 1–2 options remain.
+// RB targets follow the existing round-2/4 plan; WR targets allow rounds 3/5.
+export function rosterTierAlerts({players,available,eligible,roster,req,replacement,session,turn}) {
+  if(session?.state!=='drafting'||!turn.nextPick||!roster.length)return [];
+  const roundNumber=Math.ceil(turn.nextPick/session.teams.length);
+  if(roundNumber<2)return [];
+  const tier=currentTierPlayers(players,session)[0]?.tier;
+  if(!tier)return [];
+  const next=availabilityAt(available,session.onClock,turn.nextPick);
+  const following=availabilityAt(available,session.onClock,turn.followingPick,1);
+  const alerts=['RB','WR'].flatMap(position=>{
+    const deadlines=position==='RB'?[2,4]:[3,5];
+    const target=Math.min(req[position]||0,deadlines.filter(r=>roundNumber>=r).length);
+    const quality=p=>p.position===position&&!p.identityUnverified&&Number.isInteger(p.tier)&&
+      (replacement[position]?p.value>replacement[position].value:p.tier<=tier);
+    const owned=roster.filter(quality).length;
+    if(owned>=target)return [];
+    const options=eligible.filter(p=>p.tier===tier&&quality(p));
+    // Empty tiers are no longer actionable; broad tiers are ordinary draft choices.
+    if(!options.length||options.length>2||options.some(p=>!Number.isFinite(p.adp)))return [];
+    let stage,pick;
+    if(options.every(p=>next.get(p.key)==='unlikely')){stage='next';pick=turn.nextPick;}
+    else if(turn.followingPick&&options.every(p=>following.get(p.key)==='unlikely')){stage='following';pick=turn.followingPick;}
+    else return [];
+    const message=`${position} getting thin: ${owned} quality ${owned===1?'starter':'starters'}; ${options.length} left in Tier ${tier} may go before #${pick}.`;
+    return [{position,tier,owned,target,stage,pick,message,playerKeys:options.map(p=>p.key)}];
+  });
+  // One concise warning, favoring the earliest loss and largest overdue need.
+  return alerts.sort((a,b)=>a.pick-b.pick||(b.target-b.owned)-(a.target-a.owned)).slice(0,1);
+}
 // Roster targets are preferences, not league eligibility rules. RB deadlines take
 // precedence; TE can cross at most one tier to avoid a large early-round reach.
 export function earlyRosterPriority(roster,roundNumber,player,bestTier){
@@ -72,7 +103,7 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   const index=new Map(players.map(p=>[p.key,p]));const picks=session?.picks||[];
   const drafted=new Set(picks.map(playerKey));
   const roster=picks.filter(p=>p.teamId===session?.teamId).map(p=>index.get(playerKey(p))||{...p,name:p.player,position:positionKey(p.position),key:playerKey(p)});
-  const result={mode:'rank-proxy',warnings:[],candidates:[],turn:turns(session,config.league.teamCount),roster:roster.map(p=>({name:p.name,position:p.position})),replacement:{},throughPick:Math.max(0,...picks.map(p=>p.overall||0))};
+  const result={mode:'rank-proxy',warnings:[],candidates:[],rosterAlerts:[],turn:turns(session,config.league.teamCount),roster:roster.map(p=>({name:p.name,position:p.position})),replacement:{},throughPick:Math.max(0,...picks.map(p=>p.overall||0))};
   if(session && (session.mode==='league'&&session.leagueId!==config.leagueId || session.seasonId!==config.seasonId || session.teams.length!==config.league.teamCount))return {...result,blocked:'This draft does not match the configured season and 10-team league.'};
   if(session?.identityIssues)return {...result,blocked:'A captured player could not be matched to ESPN. Refresh the player list before using advice.'};
   if(session?.state==='complete')return {...result,blocked:'Draft complete.'};
@@ -95,6 +126,7 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   // Linear rank-slot values are ordinal proxies, never projected fantasy points.
   for (const p of players) p.value = rankCeiling-p.rank;
   result.replacement=replacementLevels(players,req,config.league.teamCount);
+  result.rosterAlerts=rosterTierAlerts({players,available,eligible,roster,req,replacement:result.replacement,session,turn:result.turn});
   const completeBenchmarks=offense.every(pos=>result.replacement[pos]);
   const ownValued=roster.filter(p=>offense.includes(p.position)).map(p=>({...p,value:p.value ?? result.replacement[p.position]?.value ?? 0}));
   const base=completeBenchmarks?lineupValue(ownValued,req,result.replacement):0;
@@ -110,13 +142,13 @@ export function recommend({rankings,config,session=null,now=Date.now(),weights={
   const shortlist=pool.filter(p=>p.rank<=baseline+w.rankWindow||p.tier===bestTier||priorities.get(p.key).priority>0);
   result.targetRound=roundNumber;
   const horizon=result.turn.followingPick;
+  const followingOutlook=availabilityAt(available,session?.onClock,horizon,1);
   result.candidates=shortlist.map(p=>{
     const starter=isStarter(p.position),benchDepth=Math.max(0,count(roster,p.position)-(req[p.position]||0));
     const fitFactor=starter?1:({RB:0.55,WR:0.4,TE:0.2,QB:0.1,'D/ST':0,K:0}[p.position]||0)/(1+benchDepth);
     // ADP is a market heuristic, not a calibrated survival probability.
     // Compare passing on this player until the turn after next. One intervening
     // selection is ours; all others consume the remaining ADP/rank queue.
-    const followingOutlook=availabilityAt(available,session?.onClock,horizon,1);
     const nextAvailability=nextOutlook.get(p.key), followingAvailability=followingOutlook.get(p.key);
     const later=horizon?available.filter(a=>a.position===p.position&&a.key!==p.key&&['likely','available'].includes(followingOutlook.get(a.key))).sort((a,b)=>a.rank-b.rank)[0]:null;
     const atRisk=!!horizon&&['unlikely','uncertain'].includes(followingAvailability);

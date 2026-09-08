@@ -27,14 +27,15 @@ var EspnRecommendationHighlights = (() => {
   const normalize=name=>String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.'’]/g,'').replace(/\b(jr|sr|iii|ii|iv)\b/g,'').replace(/[^a-z0-9]/g,'').replace(/^kennygainwell$/,'kennethgainwell');
   const team=value=>({JAC:'JAX',WAS:'WSH'}[value]||value);
   const position=value=>value==='DST'?'D/ST':value;
-  function decorate(document,candidates,tierPlayers=[]){
+  function decorate(document,candidates,tierPlayers=[],scarcityPlayers=[]){
     desiredBackgrounds=new Map();
     for(const style of document.querySelectorAll('[data-eric-highlight-styles]'))style.remove();
     for(const el of document.querySelectorAll('[data-eric-recommendation]'))el.removeAttribute('data-eric-recommendation');
     for(const el of document.querySelectorAll('.eric-recommended-row'))el.classList.remove('eric-recommended-row');
     for(const el of document.querySelectorAll('[data-eric-tier]'))el.removeAttribute('data-eric-tier');
     for(const el of document.querySelectorAll('.eric-current-tier-row'))el.classList.remove('eric-current-tier-row');
-    let recommended=0,currentTier=0;
+    for(const el of document.querySelectorAll('.eric-scarcity-row'))el.classList.remove('eric-scarcity-row');
+    let recommended=0,currentTier=0,scarcity=0;
     const rows=new Set();
     for(const name of document.querySelectorAll('.playerinfo__playername, .player-column__athlete, a')){
       if(name.closest('.pick-message__container'))continue;
@@ -60,6 +61,11 @@ var EspnRecommendationHighlights = (() => {
         return false;
       };
       const index=candidates.findIndex(matches);
+      if(scarcityPlayers.some(matches)){
+        scarcity++;row.classList.add('eric-scarcity-row');
+        if(index>=0){recommended++;row.classList.add('eric-recommended-row');}
+        paintRow(row,index>=0?'rgb(213, 230, 255)':'rgb(255, 229, 184)');continue;
+      }
       const tierPlayer=index<0?tierPlayers.find(matches):null;
       if(tierPlayer&&index<0){currentTier++;row.classList.add('eric-current-tier-row');paintRow(row,'rgb(255, 240, 188)');}
       if(index<0)continue;
@@ -67,8 +73,8 @@ var EspnRecommendationHighlights = (() => {
     }
     applyBackgrounds();
     const getStyle=document.defaultView?.getComputedStyle;
-    const painted=typeof getStyle==='function'?[...document.querySelectorAll('.eric-recommended-row,.eric-current-tier-row')].filter(row=>{
-      const expected=row.classList.contains('eric-recommended-row')?'rgb(213, 230, 255)':'rgb(255, 240, 188)';
+    const painted=typeof getStyle==='function'?[...document.querySelectorAll('.eric-recommended-row,.eric-current-tier-row,.eric-scarcity-row')].filter(row=>{
+      const expected=row.classList.contains('eric-recommended-row')?'rgb(213, 230, 255)':row.classList.contains('eric-scarcity-row')?'rgb(255, 229, 184)':'rgb(255, 240, 188)';
       const name=row.querySelector('.playerinfo__playername, .player-column__athlete, a');
       const rect=name?.getBoundingClientRect();
       if(!rect||!rect.width||!rect.height)return false;
@@ -81,7 +87,7 @@ var EspnRecommendationHighlights = (() => {
       }
       return false;
     }).length:null;
-    return {recommended,currentTier,painted};
+    return {recommended,currentTier,scarcity,painted};
   }
   function diagnostics(document){
     const describe=element=>{

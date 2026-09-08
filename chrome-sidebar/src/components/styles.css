@@ -248,3 +248,8 @@ th, td { padding: 8px 11px; }
 .completed-tiers { border: 1px solid #c9c3ba; background: #ebe7e0; }
 .completed-tiers > summary { font-size: 11px; font-weight: 600; color: #665e55; }
 .completed-tiers > .tier-group { margin: 5px 7px; }
+
+/* Scarcity is a quiet cue; existing ownership and recommendation colors stay intact. */
+.roster-count-grid .roster-count--scarce { color: #80602d; }
+.scarcity-notice { margin: 6px 0 0; color: #80602d; font-size: 10px; line-height: 1.4; }
+.scarcity-tag { display: inline-block; margin: 0 4px 4px 0; padding: 2px 4px; border-radius: 3px; background: #f4e5c6; color: #705321; font-size: 8px; font-weight: 600; }
