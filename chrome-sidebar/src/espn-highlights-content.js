@@ -20,5 +20,15 @@ var EspnPageHighlights = (() => {
   });
   // Reapply after ESPN replaces virtualized player rows, and expire closed-panel advice.
   setInterval(refresh,1000);
+  // React recycles rows on scroll and filtering. Refresh from the current DOM,
+  // not cached names or row indices; ignore our own style/class mutations.
+  if(typeof MutationObserver==='function'){
+    let queued=false;
+    const observer=new MutationObserver(()=>{
+      if(queued)return;queued=true;
+      setTimeout(()=>{queued=false;refresh();},0);
+    });
+    observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-player-id']});
+  }
   return {receive};
 })();

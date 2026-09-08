@@ -60,7 +60,7 @@ test('virtual ESPN div rows paint cells without relying on an injected styleshee
  const context=vm.createContext({document});vm.runInContext(component,context);
  const result=context.EspnRecommendationHighlights.decorate(document,[candidate]);assert.equal(result.recommended,1);
  assert.equal(document.querySelector('[data-eric-highlight-styles]'),null);
- assert.equal(document.querySelector('.Table__TD').style.backgroundColor,'#d5e6ff');
+ assert.equal(document.querySelector('.Table__TD').style.backgroundColor,'rgb(213, 230, 255)');
  context.EspnRecommendationHighlights.decorate(document,[]);
  assert.equal(document.querySelector('.Table__TD').style.backgroundColor,'');
 
@@ -85,7 +85,7 @@ test('ESPN highlights change only backgrounds and remove obsolete badge styling'
 test('clearing highlights restores preexisting row colors and preserves geometry styles',()=>{
  const {document,decorate}=setup();const row=document.querySelector('tr');
  row.style.setProperty('height','48px');row.style.setProperty('background-color','red');
- decorate(document,[candidate]);assert.equal(row.style.backgroundColor,'#d5e6ff');
+ decorate(document,[candidate]);assert.equal(row.style.backgroundColor,'rgb(213, 230, 255)');
  decorate(document,[]);assert.equal(row.style.backgroundColor,'red');assert.equal(row.style.height,'48px');
 });
 
@@ -102,9 +102,21 @@ test('ESPN fixedDataTable paints nested cell layers across frozen and scrolling 
  const {document}=parseHTML(`<html><body><div class="public_fixedDataTableRow_main"><div><div class="fixedDataTableCellGroupLayout_cellGroup"><div class="public_fixedDataTableCell_main" style="background-color:white"><div class="fixedDataTableCellLayout_wrap3 public_fixedDataTableCell_wrap3"><div class="public_fixedDataTableCell_cellContent"><div class="player-column"><div class="player-details"><span class="playerinfo__playername"><a>Jahmyr Gibbs</a></span><span class="playerinfo__playerteam">DET</span><span class="playerinfo__playerpos">RB</span></div></div></div></div></div></div><div class="fixedDataTableCellGroupLayout_cellGroup"><div class="public_fixedDataTableCell_main" style="background-color:white">335.1</div></div></div></div></body></html>`);
  const context=vm.createContext({document});vm.runInContext(component,context);const api=context.EspnRecommendationHighlights;
  const before=document.body.textContent;assert.equal(api.decorate(document,[candidate]).recommended,1);
- for(const cell of document.querySelectorAll('[class*="fixedDataTableCell"]'))assert.equal(cell.style.backgroundColor,'#d5e6ff');
+ for(const cell of document.querySelectorAll('[class*="fixedDataTableCell"]'))assert.equal(cell.style.backgroundColor,'rgb(213, 230, 255)');
  assert.equal(document.body.textContent,before);api.decorate(document,[],[candidate]);
- assert.equal(document.querySelector('.public_fixedDataTableCell_main').style.backgroundColor,'#fff0bc');
+ assert.equal(document.querySelector('.public_fixedDataTableCell_main').style.backgroundColor,'rgb(255, 240, 188)');
  api.decorate(document,[]);assert.equal(document.querySelector('.public_fixedDataTableCell_main').style.backgroundColor,'white');
  assert.equal(document.querySelector('.public_fixedDataTableCell_cellContent').style.backgroundColor,'');
+});
+
+test('actual ESPN rows use native IDs and clear recycled rows even when names lag behind',()=>{
+ const html=readFileSync(new URL('./fixtures/espn-live-player-rows.html',import.meta.url),'utf8');
+ const {document}=parseHTML(`<html><body>${html}</body></html>`);const context=vm.createContext({document});vm.runInContext(component,context);
+ const api=context.EspnRecommendationHighlights;const row=document.querySelector('.public_fixedDataTable_bodyRow');const button=row.querySelector('[data-player-id]');
+ const player={espnId:Number(button.getAttribute('data-player-id')),name:'Different display name',position:'WR',nflTeam:'XXX'};
+ assert.equal(api.decorate(document,[player]).recommended,1);
+ const cells=[...row.querySelectorAll('[role="gridcell"]')];assert.ok(cells.length>3);for(const cell of cells)assert.equal(cell.style.backgroundColor,'rgb(213, 230, 255)');
+ button.setAttribute('data-player-id','999999');api.decorate(document,[player]);assert.equal(row.classList.contains('eric-recommended-row'),false);for(const cell of cells)assert.equal(cell.style.backgroundColor,'');
+ button.setAttribute('data-player-id',String(player.espnId));api.decorate(document,[],[player]);assert.equal(row.classList.contains('eric-current-tier-row'),true);
+ row.remove();api.decorate(document,[player]);for(const cell of cells)assert.equal(cell.style.backgroundColor,'');
 });

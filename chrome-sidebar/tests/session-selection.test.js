@@ -28,3 +28,15 @@ test('transient message failure retries; failed acknowledgement is not cached', 
   await heartbeat();await heartbeat();
   assert.equal(attempts,3);assert.equal(disconnected,false);
 });
+
+test('highlight failures do not retry acknowledged picks or stop future captures',async()=>{
+ let heartbeat,attempts=0,disconnected=false,pick=1;
+ const context=vm.createContext({
+  EspnDraftReader:{read:()=>({picks:[pick]})},EspnPageHighlights:{receive:()=>{throw Error('Extension context invalidated in decorator');}},document:{body:{}},location:{href:'test'},
+  chrome:{runtime:{sendMessage:async()=>{attempts++;return {ok:true,highlights:{candidates:[]}};}}},
+  MutationObserver:class{observe(){}disconnect(){disconnected=true;}},setInterval:fn=>{heartbeat=fn;},clearInterval(){},setTimeout(){},Date,JSON
+ });
+ vm.runInContext(readFileSync(new URL('../src/content.js',import.meta.url),'utf8'),context);
+ await new Promise(resolve=>setImmediate(resolve));await heartbeat();assert.equal(attempts,1);assert.equal(disconnected,false);
+ pick=2;await heartbeat();assert.equal(attempts,2);
+});

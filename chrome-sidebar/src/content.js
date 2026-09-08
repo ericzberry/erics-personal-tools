@@ -9,10 +9,13 @@
     try {
       const response = await chrome.runtime.sendMessage({type: 'DRAFT_SNAPSHOT', snapshot});
       if (!response?.ok) return;
-      if(response.highlights)globalThis.EspnPageHighlights?.receive(response.highlights);
-      else if(response.highlightError)globalThis.EspnPageHighlights?.receive({clear:true});
+      // Capture is acknowledged independently of optional page decoration.
       lastSignature = signature;
       lastSent = Date.now();
+      try {
+        if(response.highlights)globalThis.EspnPageHighlights?.receive(response.highlights);
+        else if(response.highlightError)globalThis.EspnPageHighlights?.receive({clear:true});
+      } catch { /* Page rendering must never interrupt the capture lifecycle. */ }
     } catch (error) {
       if (!/Extension context invalidated/i.test(error.message || '')) return;
       // Reloading an unpacked extension invalidates existing content scripts.
