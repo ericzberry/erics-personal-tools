@@ -63,10 +63,12 @@ test('ranked spreadsheet keeps source order, tiers, ownership and explicit avail
   for(const status of ['mine','taken','available'])assert.equal(board.querySelectorAll(`.ranked-player--${status}`).length,1);
   const unknown=Stack(TieredRankings(players,new Map(),8));assert.equal(unknown.querySelectorAll('.ranked-player--unknown').length,3);
 });
-test('recommendations have one top container and the board replaces history and session controls',()=>{
+test('roster stays in a shared sticky group and recommendation panel is removed',()=>{
   const doc=setup();mountApp(doc.getElementById('app'));
-  assert.equal(doc.querySelectorAll('#recommendations').length,1);
-  assert.ok(doc.getElementById('next-pick-chip').contains(doc.getElementById('recommendations')));
+  assert.equal(doc.querySelectorAll('#recommendations').length,0);
+  assert.equal(doc.getElementById('next-pick-chip'),null);
+  assert.ok(doc.querySelector('.sticky-group').contains(doc.getElementById('roster-counts')));
+  assert.match(doc.querySelector('.sticky-group').textContent,/Bedford Bridges/);
   assert.equal(doc.querySelector('.advisor'),null);
   assert.ok(doc.getElementById('draft-view').contains(doc.getElementById('spreadsheet-players')));
   for(const id of ['draft-data','session','open-corrections','picks'])assert.equal(doc.getElementById(id),null);
@@ -75,9 +77,9 @@ test('recommendations have one top container and the board replaces history and 
 test('taken tiers collapse, remain expandable, and recommendation marks follow ownership edits',async()=>{
  const {TieredRankings,Stack}=await import('../src/components/ui.js');const doc=setup();
  const p={rank:1,tier:1,name:'Test',key:'a'},states=new Map(),picks=new Map([['a',{teamId:8}]]);
- let group=TieredRankings([p],picks,8,{tierStates:states})[0];assert.equal(group.open,false);
+ let group=TieredRankings([p],picks,8,{tierStates:states})[0].querySelector('.tier-group');assert.equal(group.open,false);
  group.open=true;group.dispatchEvent(new doc.defaultView.Event('toggle'));
- group=TieredRankings([p],picks,8,{tierStates:states})[0];assert.equal(group.open,true);
+ group=TieredRankings([p],picks,8,{tierStates:states})[0].querySelector('.tier-group');assert.equal(group.open,true);
  let selected;const board=Stack(TieredRankings([p],new Map(),8,{tierStates:states,recommended:['a'],onSelect:(player,owner)=>{selected=[player.key,owner];}}));
  assert.equal(board.querySelector('.tier-group').open,true);assert.equal(board.querySelectorAll('.ranked-player--recommended').length,1);
  board.querySelector('[aria-label="Test: taken by me"]').click();assert.deepEqual(selected,['a','me']);
@@ -94,4 +96,16 @@ test('tier board omits manual controls unless an edit handler is explicitly enab
  const {TieredRankings,Stack}=await import('../src/components/ui.js');setup();const players=[{rank:1,tier:1,key:'a',name:'Player'}];
  const live=Stack(TieredRankings(players,new Map(),8,{confirmed:true}));assert.equal(live.querySelectorAll('button').length,0);
  const manual=Stack(TieredRankings(players,new Map(),8,{confirmed:true,onSelect:()=>{}}));assert.equal(manual.querySelectorAll('button').length,2);
+});
+
+test('all exhausted tiers share one expandable archive and reopen when a pick is undone',async()=>{
+ const {TieredRankings,Stack}=await import('../src/components/ui.js');const doc=setup();
+ const players=[{name:'A',rank:1,tier:1,key:'a'},{name:'B',rank:2,tier:2,key:'b'},{name:'C',rank:3,tier:3,key:'c'}],states=new Map();
+ const picks=new Map([['a',{teamId:8}],['b',{teamId:1}]]);
+ let board=Stack(TieredRankings(players,picks,8,{tierStates:states}));
+ const archive=board.querySelector('.completed-tiers');assert.equal(archive.open,false);assert.equal(archive.querySelectorAll('.tier-group').length,2);assert.equal(board.children.length,2);
+ archive.open=true;archive.dispatchEvent(new doc.defaultView.Event('toggle'));
+ board=Stack(TieredRankings(players,picks,8,{tierStates:states}));assert.equal(board.querySelector('.completed-tiers').open,true);
+ picks.delete('a');board=Stack(TieredRankings(players,picks,8,{tierStates:states}));assert.equal(board.querySelector('.completed-tiers').querySelectorAll('.tier-group').length,1);
+ assert.equal([...board.children].find(el=>el.getAttribute('aria-label')==='Tier 1').open,true);
 });

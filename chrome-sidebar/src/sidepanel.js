@@ -2,7 +2,7 @@ import {rosterCounts,currentTierPlayers} from './draft-presentation.js';
 import {fetchEspnCatalog, reconcileRankings, reconcileSession, correctionPlayers} from './espn-catalog.js';
 import {createManualDraft, applyManualDraft, setManualPick, setManualProgress} from './manual-draft.js';
 import {playerKey} from './player-identity.js';
-import {Disclosure, DataTable, RosterCounts, RecommendationCard, TieredRankings, SelectionRow} from './components/ui.js';
+import {Disclosure, DataTable, RosterCounts, TieredRankings, SelectionRow} from './components/ui.js';
 import {selectSession} from './session-selection.js';
 import {sessionKey} from './draft-state.js';
 import {recommend} from './recommendations.js';
@@ -10,7 +10,7 @@ const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.storage?.local;
 let config, rankings, sourceRankings, catalog, catalogPlayers=[], syncMessage='', sessions = {}, selected = 'auto', manualDrafts = {};
 let manualWrites=Promise.resolve();
-let lastBoardSignature, lastAdviceSignature, lastTierSession, highlightedTab, lastRosterSignature;
+let lastBoardSignature, lastTierSession, highlightedTab, lastRosterSignature;
 let recommendedKeys=[];
 const tierStates=new Map();
 const liveSession=()=>reconcileSession(selectSession(sessions,selected),catalog);
@@ -54,15 +54,10 @@ function renderAdvice(session) {
   $('advice-context').textContent = session ? `${session.manualMode?'Manual board':`Through #${advice.throughPick}`}${advice.turn.nextPick ? ` · Next #${advice.turn.nextPick}` : ' · Your turn unknown'}${advice.turn.followingPick ? ` · Then #${advice.turn.followingPick}` : ''}` : '';
   $('advice-status').textContent = !session ? 'Connect a draft to see your next pick.' : advice.blocked || '';
   $('advice-status').hidden = !$('advice-status').textContent;
-  const top = session && !advice.blocked ? advice.candidates[0] : null;
-  $('next-pick-name').hidden=!!top;
-  $('next-pick-name').textContent = session?.state === 'complete' ? 'Draft complete' : 'Waiting for live draft';
-  $('next-pick-chip').classList.toggle('has-pick', !!top);
   const candidates=session?advice.candidates:[];
   recommendedKeys=candidates.map(playerKey);
   sendHighlights(session,candidates,session&&!advice.blocked?currentTierPlayers(rankings.players,session):[]);
-  const signature=JSON.stringify(candidates);
-  if(signature!==lastAdviceSignature){lastAdviceSignature=signature;$('recommendations').replaceChildren(...candidates.map((p,i)=>RecommendationCard(p,{primary:i===0,compact:true})));}
+
 }
 
 async function sendHighlights(session,candidates,tierPlayers){

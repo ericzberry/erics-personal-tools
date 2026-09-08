@@ -242,3 +242,9 @@ th, td { padding: 8px 11px; }
 .roster-count-grid > div:last-child { border-right: 0; }
 .roster-count-grid strong { display: block; font-size: 25px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .roster-count-grid span { display: block; font-size: 10px; font-weight: 600; margin-top: 5px; }
+
+.sticky-group { position: sticky; top: 0; z-index: 20; background: var(--paper); padding-bottom: 1px; border-bottom: 1px solid var(--line); box-shadow: 0 3px 8px #173e3709; }
+.sticky-group .roster-count-card { margin: 10px 14px; }
+.completed-tiers { border: 1px solid #c9c3ba; background: #ebe7e0; }
+.completed-tiers > summary { font-size: 11px; font-weight: 600; color: #665e55; }
+.completed-tiers > .tier-group { margin: 5px 7px; }

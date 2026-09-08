@@ -2,16 +2,15 @@ import * as UI from './ui.js';
 const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
 export function DraftView() {
   const draft=Section([
-    Section([UI.Label('RECOMMENDED NEXT PICKS'),Note('',{id:'advice-context',className:'footnote context-note'}),UI.Strong('Waiting for live draft',{id:'next-pick-name'}),Notice('',{id:'advice-status',className:'notice notice-subtle'}),Stack([],{id:'recommendations'})],{id:'next-pick-chip',className:'next-pick-chip recommendation-summary','aria-label':'Recommended next picks'}),
+    Note('',{id:'advice-context',className:'footnote context-note'}),Notice('',{id:'advice-status',className:'notice notice-subtle'}),
     Note('',{id:'espn-highlight-status',role:'status'}),
-    Stack([],{id:'roster-counts','aria-live':'polite'}),
     StatusCard({statusId:'connection',detailId:'status-detail',dotId:'dot',status:'Waiting for ESPN',detail:'Open your ESPN draft room to start capturing picks.',links:[{text:'Open league ↗',href:'https://fantasy.espn.com/football/team?leagueId=182527585&teamId=8&seasonId=2026'},{text:'Practice draft ↗',href:'https://fantasy.espn.com/football/mockdraftlobby'}]}),
     Metrics([{id:'pick-count',value:0,label:'PICKS CAPTURED'},{id:'round',value:'—',label:'ROUND'},{id:'my-count',value:0,label:'YOUR PICKS'}]),Notice('',{id:'coverage',hidden:true}),
     SectionTitle('Draft board'),UI.StatusLegend(),Note('',{id:'spreadsheet-context'}),
     Notice('',{id:'manual-feedback',hidden:true}),DraftSettings(),Stack([],{id:'spreadsheet-players'}),
     Note('Saved on this device · Keep ESPN open.')
   ],{id:'draft-view'});
-  return Section([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Main([draft,RulesView(),Notice('',{id:'error',role:'alert',hidden:true})])],{id:'football-tool'});
+  return Section([UI.StickyGroup([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Stack([],{id:'roster-counts','aria-live':'polite'})]),Main([draft,RulesView(),Notice('',{id:'error',role:'alert',hidden:true})])],{id:'football-tool'});
 }
 export function DraftSettings() {
   return Disclosure('Settings',[

@@ -102,7 +102,7 @@ export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommen
     const tier=player.tier??'Unspecified';if(!groups.has(tier))groups.set(tier,[]);
     groups.get(tier).push(player);
   }
-  return [...groups].map(([tier,entries])=>{
+  const sections=[...groups].map(([tier,entries])=>{
     const taken=entries.filter(p=>picks.has(p.key)).length,full=taken===entries.length;
     const previous=tierStates.get(tier);
     const open=previous&&previous.full===full?previous.open:!full;
@@ -117,6 +117,13 @@ export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommen
     section.addEventListener('toggle',()=>tierStates.set(tier,{full,open:section.open}));
     return section;
   });
+  const completed=sections.filter(section=>section.classList.contains('tier-group--complete'));
+  const remaining=sections.filter(section=>!section.classList.contains('tier-group--complete'));
+  if(!completed.length)return remaining;
+  const archive=Disclosure(`All taken · ${completed.length} ${completed.length===1?'tier':'tiers'}`,completed,{className:'completed-tiers','aria-label':'All taken tiers'});
+  archive.open=tierStates.get('archive')?.open??false;
+  archive.addEventListener('toggle',()=>tierStates.set('archive',{open:archive.open}));
+  return [archive,...remaining];
 }
 
 export function Toggle({id,label,checked=false,descriptionId}) {
@@ -127,3 +134,5 @@ export function Toggle({id,label,checked=false,descriptionId}) {
 export function RosterCounts(counts,{known=true}={}) {
   return Section([Label('YOUR ROSTER',{className:'eyebrow'}),Stack(Object.entries(counts).map(([position,count])=>Stack([Strong(known?count:'—'),Label(position)],{'aria-label':`${position}: ${known?count:'unknown'}`})),{className:'roster-count-grid'})],{className:'roster-count-card','aria-label':'Your roster by position'});
 }
+
+export const StickyGroup=children=>Stack(children,{className:'sticky-group'});
