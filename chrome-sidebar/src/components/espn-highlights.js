@@ -1,20 +1,28 @@
 /* Reusable page decoration component. No clicks, drafting, or page-content replacement. */
 var EspnRecommendationHighlights = (() => {
-  // Background-only decoration: never change ESPN row geometry or add name content.
-  const styles=`
-.eric-current-tier-row, .eric-current-tier-row > * { background-color: #fff0bc !important; }
-.eric-recommended-row, .eric-recommended-row > * { background-color: #d5e6ff !important; }
-`;
-  function ensureStyles(document){
-    let style=document.querySelector('[data-eric-highlight-styles]');
-    if(!style){style=document.createElement('style');style.setAttribute('data-eric-highlight-styles','true');(document.head||document.documentElement).append(style);}
-    if(style.textContent!==styles)style.textContent=styles;
+  // Direct CSSOM updates work even when the host blocks injected stylesheets.
+  // Remember only the property we own; leave layout and all other styles intact.
+  const backgrounds=new Map();
+  function restoreBackgrounds(){
+    for(const [element,previous] of backgrounds){
+      if(previous.value)element.style.setProperty('background-color',previous.value,previous.priority);
+      else element.style.removeProperty('background-color');
+    }
+    backgrounds.clear();
+  }
+  function paintRow(row,color){
+    const surfaces=new Set([row,...row.children,...row.querySelectorAll('td, [role="cell"], .Table__TD')]);
+    for(const element of surfaces){
+      if(!backgrounds.has(element))backgrounds.set(element,{value:element.style.getPropertyValue('background-color'),priority:typeof element.style.getPropertyPriority==='function'?element.style.getPropertyPriority('background-color'):''});
+      element.style.setProperty('background-color',color,'important');
+    }
   }
   const normalize=name=>String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.'’]/g,'').replace(/\b(jr|sr|iii|ii|iv)\b/g,'').replace(/[^a-z0-9]/g,'').replace(/^kennygainwell$/,'kennethgainwell');
   const team=value=>({JAC:'JAX',WAS:'WSH'}[value]||value);
   const position=value=>value==='DST'?'D/ST':value;
   function decorate(document,candidates,tierPlayers=[]){
-    ensureStyles(document);
+    restoreBackgrounds();
+    for(const style of document.querySelectorAll('[data-eric-highlight-styles]'))style.remove();
     for(const el of document.querySelectorAll('[data-eric-recommendation]'))el.removeAttribute('data-eric-recommendation');
     for(const el of document.querySelectorAll('.eric-recommended-row'))el.classList.remove('eric-recommended-row');
     for(const el of document.querySelectorAll('[data-eric-tier]'))el.removeAttribute('data-eric-tier');
@@ -45,9 +53,9 @@ var EspnRecommendationHighlights = (() => {
       };
       const index=candidates.findIndex(matches);
       const tierPlayer=index<0?tierPlayers.find(matches):null;
-      if(tierPlayer&&index<0){currentTier++;row.classList.add('eric-current-tier-row');}
+      if(tierPlayer&&index<0){currentTier++;row.classList.add('eric-current-tier-row');paintRow(row,'#fff0bc');}
       if(index<0)continue;
-      recommended++;row.classList.add('eric-recommended-row');
+      recommended++;row.classList.add('eric-recommended-row');paintRow(row,'#d5e6ff');
     }
     const getStyle=document.defaultView?.getComputedStyle;
     const painted=typeof getStyle==='function'?[...document.querySelectorAll('.eric-recommended-row,.eric-current-tier-row')].filter(row=>{

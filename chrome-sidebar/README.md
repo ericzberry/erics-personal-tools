@@ -74,7 +74,7 @@ Shared upload components remain available for future tools, but the draft featur
 
 ## Private release
 
-Version 0.6.10 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.6.11 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 
@@ -113,3 +113,5 @@ Bedford Bridges and Your roster share a sticky component at the top of the viewp
 Version 0.6.10 adds capture-response highlight delivery, so the page can update without an open sidebar. The component owns and installs its CSS, supports virtual div rows and reports whether matched rows have the expected painted background. The first capture runs after the highlighter is initialized. Background tests verify recommendations in capture acknowledgments; browser verification uses a standalone player-list fixture. Live ESPN validation is still pending access to the user’s draft tab.
 
 Version 0.6.10 removes on-page badges and borders, including obsolete injected styles. Browser fixture checks confirm identical row dimensions and text before and after highlighting.
+
+Version 0.6.11 paints row and cell backgrounds directly through CSSOM, so highlighting does not depend on ESPN accepting an injected stylesheet. Clearing advice restores previous inline background colors. A browser fixture with restrictive style CSP verifies blue/amber colors and unchanged row dimensions; the live ESPN tab remains unavailable to the connected browser.
