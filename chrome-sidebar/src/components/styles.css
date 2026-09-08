@@ -253,3 +253,5 @@ th, td { padding: 8px 11px; }
 .roster-count-grid .roster-count--scarce { color: #80602d; }
 .scarcity-notice { margin: 6px 0 0; color: #80602d; font-size: 10px; line-height: 1.4; }
 .scarcity-tag { display: inline-block; margin: 0 4px 4px 0; padding: 2px 4px; border-radius: 3px; background: #f4e5c6; color: #705321; font-size: 8px; font-weight: 600; }
+
+.sticky-group .context-note { margin: 5px 14px 9px; }

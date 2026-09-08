@@ -68,6 +68,7 @@ test('roster stays in a shared sticky group and recommendation panel is removed'
   assert.equal(doc.querySelectorAll('#recommendations').length,0);
   assert.equal(doc.getElementById('next-pick-chip'),null);
   assert.ok(doc.querySelector('.sticky-group').contains(doc.getElementById('roster-counts')));
+  assert.ok(doc.querySelector('.sticky-group').contains(doc.getElementById('advice-context')));
   assert.match(doc.querySelector('.sticky-group').textContent,/Bedford Bridges/);
   assert.equal(doc.querySelector('.advisor'),null);
   assert.ok(doc.getElementById('draft-view').contains(doc.getElementById('spreadsheet-players')));
@@ -110,9 +111,9 @@ test('all exhausted tiers share one expandable archive and reopen when a pick is
  assert.equal([...board.children].find(el=>el.getAttribute('aria-label')==='Tier 1').open,true);
 });
 
-test('late tiers archive on the final pick even with own players, and reopen on undo',async()=>{
+test('tier 4 folds other owners and archives on the final pick, then reopens on undo',async()=>{
  const {TieredRankings,Stack}=await import('../src/components/ui.js');const doc=setup();const states=new Map();
- const players=[{key:'a',rank:60,tier:5,name:'Available'},{key:'m',rank:61,tier:5,name:'Mine'},{key:'o',rank:62,tier:5,name:'Other'}];
+ const players=[{key:'a',rank:25,tier:4,name:'Available'},{key:'m',rank:26,tier:4,name:'Mine'},{key:'o',rank:27,tier:4,name:'Other'}];
  const picks=new Map([['m',{teamId:8}],['o',{teamId:2}]]);
  const render=()=>Stack(TieredRankings(players,picks,8,{confirmed:true,tierStates:states}));
  let board=render();let group=board.querySelector('.tier-group');

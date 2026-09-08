@@ -146,3 +146,6 @@ Version 0.6.20 also shows the number of intervening picks until your following t
 
 
 Version 0.6.21 removes the highlight-status line, connection card and links, draft totals, Draft board heading, status legend, and capture-source note. The roster, pick countdown, settings and tiered player list remain; page highlights continue updating in the background.
+
+
+Version 0.6.22 keeps draft progress and both pick countdowns in the sticky roster section. Players taken by other teams now fold into Taken by others starting in Tier 4; your players remain visible until the whole tier is exhausted.
