@@ -30,3 +30,5 @@ The implementation tokens live in chrome-sidebar/sidepanel.css. Reuse these name
 Short, specific, calm. Lead with the result. One sentence of context is usually enough. Label unfinished tools honestly. Avoid technical implementation details in normal user flows.
 
 The next draft recommendation gets a small highlighted card at the top. Keep the name and position immediately readable; reasoning belongs below. Gmail shows the current subject, two action buttons, and editable results without a large hero or introduction.
+
+File inputs use the reusable file-drop component: a quiet dashed surface, drag highlight, click/keyboard browsing, and inline status. Keep the native input hidden. Use concise copy and put optional board maintenance behind a disclosure. The draft source gets one short line rather than a large explanatory card.

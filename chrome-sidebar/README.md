@@ -54,40 +54,23 @@ The imported workbook is in `config/rankings-2026.json`. The 177-entry first tab
 1. Match ESPN selections to the board using name, position and NFL team, with suffix, punctuation, team-abbreviation and known Kenny/Kenneth Gainwell aliases. Remove selected players and count your roster, including unranked players' positions.
 2. Respect position maximums and reserve enough remaining roster spots to fill mandatory starters. Evaluate FLEX across RB, WR and TE.
 3. Use candidates within 15 overall ranks of the highest eligible available player. This limits deviations from your board. Filling mandatory starters can override the global board because ineligible backups are removed first.
-4. Without full projections, use rank-based heuristics: up to 8 ranks of roster-fit adjustment, lower backup weights (RB 0.55, WR 0.4, TE 0.2, QB 0.1), declining further with depth. A bounded ADP waiting adjustment adds at most 5 ranks. These are initial tunable preferences, not point projections. Display nearby positional depth but do not interpret ordinal rank gaps as fantasy-point gaps.
-5. With complete offensive projections, allocate league-wide starting demand: 10 QBs, 20 RBs, 20 WRs, 10 TEs, plus 10 FLEX players chosen by projected points. The next player outside this pool at each position is the **starter-replacement benchmark**. This is not a waiver-wire replacement estimate; bench drafting, injuries and weekly streaming are not modeled as such.
-6. Calculate each candidate's projected points above that benchmark and its marginal improvement to your best starting lineup. Empty slots use replacement-level placeholders. Existing better starters, FLEX allocation and bench value affect the result. Bench upside itself is not quantified by a season-total forecast.
-7. Infer your snake slot from actual own picks or ESPN's displayed future own-pick numbers, never from the team ID, roster dropdown order, or the practice draft. Compare with the best same-position alternative whose ADP is at or beyond your following turn. This is a coarse waiting-cost estimate, not a probability of survival. It does not yet predict each opponent's individual next choice.
-8. Points mode uses bounded rank adjustments: marginal lineup gain / 20 capped at 10, discounted bench PAR capped at 2, and 0.35 × waiting-cost / 20 capped at 4. The baseline remains negative overall rank. These scales are tunable heuristics, not fitted coefficients. The complete breakdown is returned by the engine.
+4. Convert Combined Ranks into a linear value proxy: `highestRank + 1 − playerRank`. One rank slot is one proxy unit, not a fantasy-point forecast.
+5. Allocate the league’s starters (10 QBs, 20 RBs, 20 WRs, 10 TEs), then assign 10 FLEX slots to the best-ranked remaining RB/WR/TE players. The next player at each position is its starter-replacement benchmark. This is not a waiver-wire prediction.
+6. Measure rank-slot advantage over replacement and marginal improvement to your best starting lineup, including FLEX. Existing better starters reduce the value of a backup. Unranked owned players receive replacement proxy value, without inventing rankings.
+7. Infer your snake slot from actual picks or displayed upcoming picks. Use ADP to compare waiting until your following turn with picking now. ADP is a heuristic, not a survival probability.
+8. Preserve your board as the primary priority: bounded bonuses for lineup improvement (up to 10 ranks), discounted bench value (up to 2) and waiting cost (up to 4). If a shorter custom board lacks replacement coverage, roster-fit and ADP heuristics still work without manufacturing missing benchmarks. D/ST and K use rank and roster fit.
 
-Draft completion, unknown draft state, a stale/disconnected feed, missing pick history, and unreadable picks suppress recommendations. Before connecting a draft, the panel shows a clearly marked pre-draft baseline. Practice recommendations remain isolated from real draft recommendations.
+Stale, incomplete, disconnected and completed drafts suppress live recommendations. Projection files are neither requested nor read; previously saved projection data cannot affect advice.
 
-### Projection input
+### Updating your board
 
-The workbook contains ranks and ADP, not projected points. Therefore the shipped advisor starts in **Rank estimates** mode and does not invent PAR values. Use **Points above replacement → Import league projections (JSON)** to add real projections. They stay in local extension storage and can be removed in the same panel.
+Your supplied Combined Ranks are already loaded. Optionally open **Update draft board** and drag a `.xlsx` workbook or rankings `.json` onto the upload surface, or click it to browse. XLSX imports read only the `Combined Ranks` sheet and the original B–F rank/name/position/team/ADP columns. The first row is the header. JSON uses the bundled rankings schema. Imports validate sequential unique ranks, player identities, positions and ADP before replacing the board. The original board can be restored. Nothing is uploaded to a server.
 
-Required structure (the point value below is a schema example, not a player forecast):
-
-```json
-{
-  "leagueId": 182527585,
-  "seasonId": 2026,
-  "scoring": "half-ppr",
-  "units": "season_total_points",
-  "source": "Your projection provider and as-of date",
-  "players": [
-    {"name": "Jahmyr Gibbs", "position": "RB", "nflTeam": "DET", "points": 300}
-  ]
-}
-```
-
-Include all 154 ranked offensive players to enable points comparisons. The engine validates matching identity, league, season, scoring label, finite point values and duplicates, and requires enough coverage to establish each positional replacement. It cannot independently verify that a provider's point totals actually use every league scoring rule; the source must supply league-compatible season totals. Partial coverage stays in ranking mode. D/ST and K follow board priority and roster fit; offensive PAR does not estimate their value.
-
-Twenty tests now cover the reader/storage pipeline and advisor, including unknown versus observed draft slots, drafted-player exclusion, QB depth, roster limits, mandatory completion, FLEX replacement demand, scarcity-sensitive point comparisons, missing projections and stale feeds. Synthetic projections are used only in tests. The actual completed practice draft was also replayed locally at several pick counts to verify changing recommendations.
+The shared `src/file-drop.js` component gives future file inputs the same drop, browse, validation and feedback behavior. The Excel parser is bundled locally by the build; no CDN scripts are loaded.
 
 ## Private release
 
-Version 0.4.0 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.5.0 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 

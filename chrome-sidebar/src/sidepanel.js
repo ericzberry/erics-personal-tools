@@ -1,9 +1,11 @@
+import {attachFileDrop} from './file-drop.js';
+import {validateRankings, rankingsFromRows} from './ranking-import.js';
 import {selectSession} from './session-selection.js';
 import {sessionKey} from './draft-state.js';
-import {recommend, validateProjections} from './recommendations.js';
+import {recommend} from './recommendations.js';
 const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.storage?.local;
-let config, rankings, projections = null, sessions = {}, selected = 'auto';
+let config, rankings, originalRankings, sessions = {}, selected = 'auto';
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; };
 const human = text => text.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
 const nullLabels = {seasonAcquisitionLimit:'No limit',limit:'No limit',matchupTiebreaker:'None',homeFieldAdvantage:'None'};
@@ -53,10 +55,10 @@ function renderDraft() {
 }
 function renderAdvice(session) {
   if (!rankings) return;
-  const advice = recommend({rankings, config, session, projections});
-  $('advice-mode').textContent = advice.mode === 'points' ? 'PROJECTED POINTS' : 'RANK ESTIMATES';
+  const advice = recommend({rankings, config, session});
+  $('advice-mode').textContent = 'YOUR BOARD';
   $('advice-context').textContent = session ? `Through pick ${advice.throughPick}${advice.turn.nextPick ? ` · Your turn #${advice.turn.nextPick}` : ''}` : '';
-  $('advice-status').textContent = !session ? 'Connect a draft to see your next pick.' : advice.blocked || (advice.mode !== 'points' ? 'Rank + roster + ADP · no point projections' : '');
+  $('advice-status').textContent = !session ? 'Connect a draft to see your next pick.' : advice.blocked || '';
   $('advice-status').hidden = !$('advice-status').textContent;
   const top = session && !advice.blocked ? advice.candidates[0] : null;
   $('next-pick-name').textContent = top ? `${top.name} · ${top.position}` : session?.state === 'complete' ? 'Draft complete' : 'Waiting for live draft';
@@ -75,24 +77,37 @@ function renderAdvice(session) {
     }
     $('recommendations').append(card);
   });
-  $('clear-projections').hidden = !projections;
-  $('projection-status').textContent = projections ? `Source: ${projections.source}. ${advice.projectionMissing ?? 0} ranked offensive players missing projections.` : 'No projections loaded.';
 }
-$('projections-file').addEventListener('change', async event => {
-  try {
-    const file=event.target.files[0];if(!file)return;if(file.size>1000000)throw Error('Projection file must be smaller than 1 MB.');
-    const data=JSON.parse(await file.text());validateProjections(data,config,rankings.players);
-    if(extension)await chrome.storage.local.set({leagueProjections:data});projections=data;$('error').hidden=true;renderDraft();
-  } catch(error) {$('error').hidden=false;$('error').textContent=error.message;} finally {event.target.value='';}
+attachFileDrop({zone:$('rankings-drop'),input:$('rankings-file'),status:$('ranking-upload-status'),onFile:async file=>{
+  let data;
+  if(file.name.toLowerCase().endsWith('.xlsx')){
+    const {default:readXlsx}=await import('../vendor/read-xlsx.js');
+    data=rankingsFromRows(await readXlsx(file,{sheet:'Combined Ranks'}),file.name,config.seasonId);
+  }else data=validateRankings(JSON.parse(await file.text()),config.seasonId);
+  if(extension)await chrome.storage.local.set({customRankings:data});
+  rankings=data;$('reset-rankings').hidden=false;renderDraft();
+  return `${data.players.length} players · ${file.name}`;
+}});
+$('reset-rankings').addEventListener('click',async()=>{
+  try{if(extension)await chrome.storage.local.remove('customRankings');rankings=originalRankings;$('reset-rankings').hidden=true;$('ranking-upload-status').textContent='Using your original Combined Ranks.';renderDraft();}
+  catch(error){$('ranking-upload-status').textContent=error.message;}
 });
-$('clear-projections').addEventListener('click',async()=>{try{if(extension)await chrome.storage.local.remove('leagueProjections');projections=null;renderDraft();}catch(error){$('error').hidden=false;$('error').textContent=error.message;}});
 $('session').addEventListener('change',()=>{selected=$('session').value;$('team').value='all';renderDraft();});
 $('team').addEventListener('change',renderDraft);$('search-picks').addEventListener('input',renderDraft);
 $('search-rules').addEventListener('input',()=>{const query=$('search-rules').value.toLowerCase();let matches=0;for(const d of $('rules').children){const match=d.textContent.toLowerCase().includes(query);d.hidden=!match;if(query)d.open=match;if(match)matches++;}$('no-rules').hidden=matches>0;});
 $('export').addEventListener('click',()=>{const s=selectSession(sessions,selected);if(!s)return;const {tabId,connected,...data}=s;const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=node('a');a.href=url;a.download=`espn-${s.mode}-${s.seasonId}-${s.leagueId}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 try {
   const response=await fetch('./config/espn-league-2026.json');if(!response.ok)throw Error('League rules could not be loaded.');config=await response.json();renderRules();
-  const ranksResponse=await fetch('./config/rankings-2026.json');if(!ranksResponse.ok)throw Error('Rankings could not be loaded.');rankings=await ranksResponse.json();
-  if(extension){const saved=await chrome.storage.local.get(['draftSessions','leagueProjections']);sessions=saved.draftSessions || {};if(saved.leagueProjections){validateProjections(saved.leagueProjections,config,rankings.players);projections=saved.leagueProjections;}chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local')return;if(changes.draftSessions)sessions=changes.draftSessions.newValue || {};if(changes.leagueProjections)projections=changes.leagueProjections.newValue || null;refreshSessionMenu();renderDraft();});}
+  const ranksResponse=await fetch('./config/rankings-2026.json');if(!ranksResponse.ok)throw Error('Rankings could not be loaded.');rankings=await ranksResponse.json();originalRankings=rankings;
+  if(extension){
+    const saved=await chrome.storage.local.get(['draftSessions','customRankings']);sessions=saved.draftSessions || {};
+    if(saved.customRankings){rankings=validateRankings(saved.customRankings,config.seasonId);$('reset-rankings').hidden=false;$('ranking-upload-status').textContent=`${rankings.players.length} players · ${rankings.source}`;}
+    chrome.storage.onChanged.addListener((changes,area)=>{
+      if(area!=='local')return;
+      if(changes.draftSessions)sessions=changes.draftSessions.newValue || {};
+      if(changes.customRankings){rankings=changes.customRankings.newValue?validateRankings(changes.customRankings.newValue,config.seasonId):originalRankings;$('reset-rankings').hidden=rankings===originalRankings;}
+      refreshSessionMenu();renderDraft();
+    });
+  }
   refreshSessionMenu();renderDraft();setInterval(renderDraft,5000);
 } catch(error){$('error').hidden=false;$('error').textContent=error.message;}
