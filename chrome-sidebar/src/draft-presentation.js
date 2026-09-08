@@ -1,5 +1,12 @@
 import {playerKey,positionKey} from './player-identity.js';
 export const rosterPositions=['RB','WR','QB','TE','D/ST','K'];
+// Include the opponent currently on the clock; our own selection is not a wait.
+export function pickCountdown(session,turn,{blocked=false}={}){
+  if(blocked||session?.state!=='drafting'||!Number.isInteger(session.onClock)||session.onClock<1||
+    !Number.isInteger(turn?.nextPick)||turn.nextPick<session.onClock)return '';
+  const remaining=turn.nextPick-session.onClock;
+  return remaining===0?'Your pick now':`${remaining} ${remaining===1?'pick':'picks'} until you`;
+}
 export function rosterCounts(session){
   const counts=Object.fromEntries(rosterPositions.map(p=>[p,0]));
   const seen=new Set();

@@ -137,3 +137,6 @@ Regression checks cover the empty first-pick screenshot, normal early roster bui
 
 
 Version 0.6.18 collapses every fully taken tier into All taken, including late tiers containing your picks. Expand the archive to review your players; undoing a pick returns the tier to the active board.
+
+
+Version 0.6.19 adds a live picks-until-your-turn count beside the next overall pick. It includes the opponent currently on the clock, follows snake-round reversals, and shows Your pick now at zero. Unknown or blocked draft progress suppresses the countdown. Manual boards update when you change the current pick.

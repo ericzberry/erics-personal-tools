@@ -1,4 +1,4 @@
-import {rosterCounts,currentTierPlayers} from './draft-presentation.js';
+import {rosterCounts,currentTierPlayers,pickCountdown} from './draft-presentation.js';
 import {fetchEspnCatalog, reconcileRankings, reconcileSession, correctionPlayers} from './espn-catalog.js';
 import {createManualDraft, applyManualDraft, setManualPick, setManualProgress} from './manual-draft.js';
 import {playerKey} from './player-identity.js';
@@ -52,7 +52,8 @@ function renderDraft() {
 function renderAdvice(session) {
   if (!rankings) return;
   const advice = recommend({rankings, config, session});
-  $('advice-context').textContent = session ? `${session.manualMode?'Manual board':`Through #${advice.throughPick}`}${advice.turn.nextPick ? ` · Next #${advice.turn.nextPick}` : ' · Your turn unknown'}${advice.turn.followingPick ? ` · Then #${advice.turn.followingPick}` : ''}` : '';
+  const countdown=pickCountdown(session,advice.turn,{blocked:!!advice.blocked});
+  $('advice-context').textContent = session ? `${session.manualMode?'Manual board':`Through #${advice.throughPick}`}${advice.turn.nextPick ? ` · Next #${advice.turn.nextPick}` : ' · Your turn unknown'}${countdown?` · ${countdown}`:''}${advice.turn.followingPick ? ` · Then #${advice.turn.followingPick}` : ''}` : '';
   $('advice-status').textContent = !session ? 'Connect a draft to see your next pick.' : advice.blocked || '';
   $('advice-status').hidden = !$('advice-status').textContent;
   const candidates=session?advice.candidates:[];
