@@ -23,7 +23,7 @@ The prepared build is in `dist/`. Run `npm run build` to regenerate it (Node.js 
 
 The reader watches rendered pick messages and the roster team selector. Changes trigger a read after 300 ms, with a 5-second heartbeat. Actual latency depends on ESPN and Chrome scheduling. Keep the draft tab open. Background throttling or an ESPN layout change can delay or break capture. Existing history can only be recovered if ESPN renders it; missing picks are flagged. Commissioner rollback handling is tested with fixtures, not a live league undo.
 
-The extension does not submit picks, modify ESPN, read cookies, or access private application state. It requests `sidePanel`, `storage`, and `<all_urls>` host access, as requested for future personal tools. The current content script runs only on `https://fantasy.espn.com/football/draft*`. Chrome still restricts protected browser pages and requires separate user enablement for file URLs or incognito access. It makes no external network calls of its own. The UI uses Chrome's [Side Panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel).
+The extension does not submit picks, modify ESPN, read cookies, or access private application state. It requests `sidePanel`, `storage`, and `<all_urls>` host access, as requested for future personal tools. Content scripts run only on ESPN football draft rooms and `https://mail.google.com/*`. Chrome still restricts protected browser pages and requires separate user enablement for file URLs or incognito access. It makes no external network calls of its own. The UI uses Chrome's [Side Panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel).
 
 ## Validation
 
@@ -87,8 +87,8 @@ Twenty tests now cover the reader/storage pipeline and advisor, including unknow
 
 ## Private release
 
-Version 0.3.0 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
+Version 0.4.0 requests all-site host access. Google’s [permissions policy](https://developer.chrome.com/docs/webstore/program-policies/permissions/) prohibits requesting permissions solely for features not yet implemented; this is an unresolved store-review issue. The private tester release is prepared locally, not published. See `release/LISTING.md` for submission status.
 
 ## Shared design and future tools
 
-The sidebar uses the [Eric’s Personal Tools design system](../docs/DESIGN.md). The Gmail tab is a planned tool; it does not yet read or act on email. See [Gmail scope](../docs/GMAIL.md).
+The sidebar uses the [Eric’s Personal Tools design system](../docs/DESIGN.md). The compact header names the current function, selected automatically from the active tab. Gmail reads the latest expanded message and offers on-device summaries and editable reply drafts. See [Gmail behavior and requirements](../docs/GMAIL.md).

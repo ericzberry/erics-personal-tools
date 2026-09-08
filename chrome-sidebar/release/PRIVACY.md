@@ -1,11 +1,15 @@
 # Eric’s Personal Tools privacy policy
 
-Updated September 8, 2026. Applies to version 0.3.0.
+Updated September 8, 2026. Applies to version 0.4.0.
 
-Eric’s Personal Tools reads visible information in ESPN football draft rooms: player selections, team names and identifiers, league and season identifiers, draft order and progress. It stores captured sessions and any projections you choose to import in Chrome extension storage on your device. The extension retains up to ten practice sessions and the configured league session.
+Eric’s Personal Tools displays contextual assistance alongside ESPN and Gmail. It checks the active tab’s URL to select the appropriate function; it does not retain browsing history.
 
-This information supports draft recommendations, roster tracking and history. The extension does not transmit this information to its developer or any server, sell it, use analytics, or access passwords or cookies. It does not submit draft selections. Links to ESPN open ESPN’s own service, governed by ESPN’s policies.
+In ESPN football draft rooms, the extension reads visible selections, team names and identifiers, league and season identifiers, draft order and progress. Captured sessions and optionally imported projections are stored in Chrome extension storage on your device. The extension retains up to ten practice sessions and the configured league session.
 
-Exporting a draft creates a local JSON file. You control any subsequent sharing of that file. Imported projections can be removed using the sidebar’s Remove projections button. Uninstalling the extension clears its extension storage; exported files remain until you delete them. Data is not synced across computers by this version.
+In Gmail, the sidebar reads the latest expanded message’s subject, sender and rendered text. This data stays in memory, is not saved to extension storage, and is cleared when the message or context changes or the sidebar closes. When you click Summarize or Generate reply, the text is processed using Chrome’s on-device AI. Chrome may download its model from Google before first use; email content is not sent to Google or another server for generation. Generated text stays in sidebar memory unless you copy it. Copied text is placed on your system clipboard, which is governed by your device and clipboard-sync settings.
 
-This version declares all-site host permission for planned personal tools. Its current page-reading code runs only in ESPN football draft rooms. It does not currently read or store information from other websites.
+The extension does not transmit captured email or draft information to its developer or any server, sell data, use analytics, read passwords or cookies, or automatically submit draft picks or email. Links to ESPN or Gmail open those services under their own policies.
+
+Exporting draft history creates a local JSON file. You control subsequent sharing. Imported projections can be removed in the sidebar. Uninstalling clears extension storage; exported files and copied text remain until you delete or replace them. Draft storage is not synced across computers by this version.
+
+This version declares all-site host permission at the owner’s request for planned personal tools. Current page-reading scripts run only in ESPN football draft rooms and Gmail. Other sites are not read beyond identifying the active tab’s URL to select a function.

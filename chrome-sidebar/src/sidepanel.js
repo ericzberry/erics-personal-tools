@@ -58,6 +58,9 @@ function renderAdvice(session) {
   $('advice-context').textContent = session ? `Through pick ${advice.throughPick}${advice.turn.nextPick ? ` · Your turn #${advice.turn.nextPick}` : ''}` : '';
   $('advice-status').textContent = !session ? 'Connect a draft to see your next pick.' : advice.blocked || (advice.mode !== 'points' ? 'Rank + roster + ADP · no point projections' : '');
   $('advice-status').hidden = !$('advice-status').textContent;
+  const top = session && !advice.blocked ? advice.candidates[0] : null;
+  $('next-pick-name').textContent = top ? `${top.name} · ${top.position}` : session?.state === 'complete' ? 'Draft complete' : 'Waiting for live draft';
+  $('next-pick-chip').classList.toggle('has-pick', !!top);
   $('recommendations').replaceChildren();
   (session ? advice.candidates : []).forEach((p,i) => {
     const card = node('article', undefined, 'recommendation');
@@ -83,14 +86,6 @@ $('projections-file').addEventListener('change', async event => {
   } catch(error) {$('error').hidden=false;$('error').textContent=error.message;} finally {event.target.value='';}
 });
 $('clear-projections').addEventListener('click',async()=>{try{if(extension)await chrome.storage.local.remove('leagueProjections');projections=null;renderDraft();}catch(error){$('error').hidden=false;$('error').textContent=error.message;}});
-for (const button of document.querySelectorAll('[data-tool]')) {
-  button.addEventListener('click', () => {
-    for (const item of document.querySelectorAll('[data-tool]')) item.setAttribute('aria-pressed', String(item === button));
-    $('football-tool').hidden = button.dataset.tool !== 'football';
-    $('gmail-tool').hidden = button.dataset.tool !== 'gmail';
-  });
-}
-for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{for(const b of document.querySelectorAll('[data-view]'))b.setAttribute('aria-pressed',String(b===button));$('draft-view').hidden=button.dataset.view!=='draft';$('rules-view').hidden=button.dataset.view!=='rules';});
 $('session').addEventListener('change',()=>{selected=$('session').value;$('team').value='all';renderDraft();});
 $('team').addEventListener('change',renderDraft);$('search-picks').addEventListener('input',renderDraft);
 $('search-rules').addEventListener('input',()=>{const query=$('search-rules').value.toLowerCase();let matches=0;for(const d of $('rules').children){const match=d.textContent.toLowerCase().includes(query);d.hidden=!match;if(query)d.open=match;if(match)matches++;}$('no-rules').hidden=matches>0;});

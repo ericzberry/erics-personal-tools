@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Eric's Personal Tools",
-  "version": "0.3.0",
-  "description": "Personal tools, starting with ESPN fantasy football rules and draft tracking.",
+  "version": "0.4.0",
+  "description": "A personal sidebar for live ESPN draft advice and on-device Gmail summaries and reply drafts.",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",
@@ -32,6 +32,16 @@
       "js": [
         "src/draft-reader.js",
         "src/content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mail.google.com/*"
+      ],
+      "js": [
+        "src/gmail-reader.js",
+        "src/gmail-content.js"
       ],
       "run_at": "document_idle"
     }
