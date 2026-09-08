@@ -143,3 +143,6 @@ Version 0.6.19 adds a live picks-until-your-turn count beside the next overall p
 
 
 Version 0.6.20 also shows the number of intervening picks until your following turn while you are on the clock. It excludes your current selection, labels consecutive picks as You pick again immediately, and omits the following-turn wait when no further pick is known.
+
+
+Version 0.6.21 removes the highlight-status line, connection card and links, draft totals, Draft board heading, status legend, and capture-source note. The roster, pick countdown, settings and tiered player list remain; page highlights continue updating in the background.

@@ -3,10 +3,7 @@ const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice
 export function DraftView() {
   const draft=Section([
     Note('',{id:'advice-context',className:'footnote context-note'}),Notice('',{id:'advice-status',className:'notice notice-subtle'}),
-    Note('',{id:'espn-highlight-status',role:'status'}),
-    StatusCard({statusId:'connection',detailId:'status-detail',dotId:'dot',status:'Waiting for ESPN',detail:'Open your ESPN draft room to start capturing picks.',links:[{text:'Open league ↗',href:'https://fantasy.espn.com/football/team?leagueId=182527585&teamId=8&seasonId=2026'},{text:'Practice draft ↗',href:'https://fantasy.espn.com/football/mockdraftlobby'}]}),
-    Metrics([{id:'pick-count',value:0,label:'PICKS CAPTURED'},{id:'round',value:'—',label:'ROUND'},{id:'my-count',value:0,label:'YOUR PICKS'}]),Notice('',{id:'coverage',hidden:true}),
-    SectionTitle('Draft board'),UI.StatusLegend(),Note('',{id:'spreadsheet-context'}),
+    Notice('',{id:'coverage',hidden:true}),
     Notice('',{id:'manual-feedback',hidden:true}),DraftSettings(),Stack([],{id:'spreadsheet-players'}),
     Note('Saved on this device · Keep ESPN open.')
   ],{id:'draft-view'});

@@ -31,19 +31,12 @@ function renderRules() {
 }
 function renderDraft() {
   const s=effectiveSession();const live=s?.connected && Date.now()-s.lastSeenAt<15000;
-  $('dot').classList.toggle('live',!!live);
-  $('connection').textContent=s?.manualMode?'Manual board':!extension?'Preview · connection unavailable':!s?'Waiting for ESPN':live?(s.mode==='practice'?'Practice draft connected':'League draft connected'):'Saved draft · disconnected';
-  $('status-detail').textContent=s?.manualMode?'Using your corrections. Update picks here as the draft continues.':!extension?'Load the unpacked extension in Chrome to capture draft picks.':!s?'Reload your ESPN draft tab to connect.':`${s.state==='complete'?'Draft complete':s.state==='drafting'?`On the clock: pick ${s.onClock}`:s.state==='waiting'?'Waiting for the first pick':'Draft status unavailable'}. Last checked ${new Date(s.lastSeenAt).toLocaleTimeString()}.`;
-  $('pick-count').textContent=s?.picks.length || 0;
-  $('round').textContent=s?.onClock ? Math.ceil(s.onClock/s.teams.length) : s?.picks.at(-1)?.round || '—';
-  $('my-count').textContent=s?.picks.filter(p=>p.teamId===s.teamId).length || 0;
   const warning=s?.missing?.length?`${s.missing.length} earlier pick(s) missing. Open ESPN’s Pick History or reload the draft room to recover available history.`:s?.rejected?'Some ESPN pick entries could not be read. Check ESPN’s pick history.':'';
   $('coverage').hidden=!warning;$('coverage').textContent=warning;
   renderAdvice(s);
   const counts=rosterCounts(s),countSignature=JSON.stringify([counts,!!s,rosterAlerts]);
   if(countSignature!==lastRosterSignature){lastRosterSignature=countSignature;$('roster-counts').replaceChildren(RosterCounts(counts,{known:!!s,alerts:rosterAlerts}));}
   const confirmed=!!s&&(s.manualMode||(live&&!s.missing?.length&&!s.rejected&&!s.identityIssues));
-  $('spreadsheet-context').textContent=!s?'Connect a draft to confirm availability.':s.manualMode?'Status from your manual board.':confirmed?'Status from captured ESPN picks.':'Saved picks shown; remaining availability is unconfirmed.';
   const key=currentKey();if(key!==lastTierSession){tierStates.clear();lastTierSession=key;}
   const boardSignature=JSON.stringify([key,rankings?.players,s?.picks,s?.teamId,confirmed,recommendedKeys,rosterAlerts,!!manualDrafts[key]?.active,manualDrafts[key]?.overrides]);
   if(boardSignature!==lastBoardSignature&&rankings){lastBoardSignature=boardSignature;$('spreadsheet-players').replaceChildren(...TieredRankings(rankings.players.map(p=>({...p,key:playerKey(p)})),new Map((s?.picks||[]).map(p=>[playerKey(p),p])),s?.teamId,{confirmed,recommended:recommendedKeys,rosterAlerts,overrides:manualDrafts[key]?.overrides,tierStates,onSelect:manualDrafts[key]?.active?markPlayer:null}));}
@@ -70,10 +63,8 @@ async function sendHighlights(session,candidates,tierPlayers,scarcityPlayers){
   highlightedTab=tab;
   if(tab===undefined)return;
   const player=p=>({espnId:p.espnId,name:p.name,position:p.position,nflTeam:p.nflTeam,tier:p.tier});
-  try {const response=await chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,tierPlayers:tierPlayers.map(player),scarcityPlayers:scarcityPlayers.map(player),candidates:candidates.map(player),expiresAt:Date.now()+12000});
-    if(highlightedTab!==tab)return;
-    $('espn-highlight-status').textContent=!candidates.length?'':!response?.ok?'Reload the ESPN draft tab to enable page highlights.':!response.active?'ESPN highlights are waiting for the draft feed to catch up.':response.recommended+response.currentTier+(response.scarcity||0)===0?'No matching players visible on ESPN. Open Players or clear its filters.':response.painted===0?'ESPN players matched, but highlight styles could not be applied.':`ESPN highlights: ${response.recommended} recommended · ${response.currentTier} tier · ${response.scarcity||0} getting thin · ${response.painted??'?'} colored`;
-  }catch {if(highlightedTab===tab)$('espn-highlight-status').textContent=candidates.length?'Reload the ESPN draft tab to reconnect page highlights.':'';}
+  try {await chrome.tabs.sendMessage(tab,{type:'DRAFT_RECOMMENDATIONS',leagueId:session.leagueId,seasonId:session.seasonId,teamId:session.teamId,onClock:session.onClock,manualMode:!!session.manualMode,tierPlayers:tierPlayers.map(player),scarcityPlayers:scarcityPlayers.map(player),candidates:candidates.map(player),expiresAt:Date.now()+12000});
+  }catch { /* Retry on the next draft update; highlights expire automatically. */ }
 
 }
 
@@ -116,7 +107,7 @@ $('download-espn-diagnostics').addEventListener('click',async()=>{
     if(!result)throw Error('Reload the extension and ESPN, then try again.');
     const url=URL.createObjectURL(new Blob([JSON.stringify({sidebarVersion:chrome.runtime.getManifest().version,...result},null,2)],{type:'application/json'}));
     downloadFile({url,filename:'espn-highlight-diagnostics.json'});setTimeout(()=>URL.revokeObjectURL(url),10000);
-  }catch(error){$('espn-highlight-status').textContent=error.message;}
+  }catch(error){$('espn-sync-status').textContent=error.message;}
 });
 $('draft-settings').addEventListener('toggle',()=>{if($('draft-settings').open)renderManual(true);});
 $('capture-picks').addEventListener('change',async()=>{
