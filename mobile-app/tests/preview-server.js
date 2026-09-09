@@ -3,6 +3,7 @@ import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import worker from '../../tools-api/src/index.js';
 const root = new URL('../dist/', import.meta.url);
+const port = Number(process.env.PORT || 8791);
 const token = 'synthetic-private-token-at-least-32-characters';
 const id = '11111111-1111-4111-8111-111111111111';
 let records = [{id, name: 'Synthetic airline', category: 'Airline', traveler: 'Test traveler', number: '000123456', notes: 'Synthetic private note', expires: '', revision: 'first', updatedAt: new Date().toISOString()}];
@@ -75,4 +76,4 @@ createServer(async (req, res) => {
     }
     res.statusCode=404;res.end('{}');
   } catch {res.statusCode=500;res.end('Preview unavailable');}
-}).listen(8791,'127.0.0.1',()=>console.log('Synthetic mobile preview: http://localhost:8791/app/'));
+}).listen(port,'127.0.0.1',()=>console.log(`Synthetic mobile preview: http://localhost:${port}/app/`));

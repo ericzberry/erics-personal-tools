@@ -18,11 +18,11 @@ export function idleSession({now = Date.now, onLock = () => {}} = {}) {
   return {
     start() { active = true; last = now(); },
     check() {
-      if (active && (now() < last || now() - last >= IDLE_MS)) this.lock();
+      if (active && (now() < last || now() - last >= IDLE_MS)) this.lock('idle');
       return active;
     },
     touch() { if (this.check()) last = now(); },
-    lock() { const wasActive = active; active = false; last = 0; if (wasActive) onLock(); }
+    lock(reason = 'manual') { const wasActive = active; active = false; last = 0; if (wasActive) onLock(reason); }
   };
 }
 export function passkeyVault({storage = globalThis.localStorage, credentials = globalThis.navigator?.credentials, origin = globalThis.location?.origin, rpId = globalThis.location?.hostname} = {}) {

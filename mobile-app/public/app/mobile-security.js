@@ -1,3 +1,4 @@
+import {autoUnlock} from './auto-unlock.js';
 import {passkeyVault, idleSession, VAULT_KEY} from './passkey-vault.js';
 const root = document.getElementById('capabilities-root');
 root.innerHTML = `
@@ -23,9 +24,13 @@ root.innerHTML = `
 </section>
 <div id="mobile-private" hidden></div>`;
 const el = id => document.getElementById(id);
-let vault, token = '', frame = null, busy = false, epoch = 0;
+let vault, token = '', frame = null, busy = false, epoch = 0, supported = false;
+const automatic = autoUnlock({
+  eligible: () => supported && !document.hidden && !busy && !frame && !el('lock-unlock').hidden && el('lock-setup').hidden,
+  unlock: () => unlock()
+});
 const status = text => { el('lock-status').textContent = text; };
-const session = idleSession({onLock: () => {
+const session = idleSession({onLock: reason => {
   ++epoch;
   token = '';
   vault?.cancel();
@@ -37,6 +42,10 @@ const session = idleSession({onLock: () => {
   showGate();
   status('Your mobile app is locked.');
   if (!document.hidden) el('lock-unlock').focus();
+  if (reason === 'idle' && !document.hidden) {
+    automatic.background();
+    queueMicrotask(() => automatic.request());
+  }
 }});
 // The child checks expiry synchronously before any private storage or API use.
 window.mobileAccessAllowed = () => session.check() && !document.hidden;
@@ -106,7 +115,8 @@ el('lock-finish').addEventListener('click', () => run(async attempt => {
   el('lock-token').value = '';
   open(value, attempt);
 }));
-el('lock-unlock').addEventListener('click', () => run(async attempt => open(await vault.unlock(), attempt)));
+function unlock() { return run(async attempt => open(await vault.unlock(), attempt)); }
+el('lock-unlock').addEventListener('click', () => { automatic.suppress(); unlock(); });
 el('lock-recover').addEventListener('click', () => {
   el('lock-setup').hidden = false;
   el('lock-token').value = '';
@@ -114,7 +124,7 @@ el('lock-recover').addEventListener('click', () => {
   status('Enter your original token. Replacing the passkey preserves your downloaded data and pending changes.');
   el('lock-token').focus();
 });
-el('lock-now').addEventListener('click', () => session.lock());
+el('lock-now').addEventListener('click', () => { automatic.suppress(); session.lock(); });
 window.addEventListener('message', event => {
   if (!frame || event.source !== frame.contentWindow || event.origin !== location.origin || !session.check()) return;
   if (event.data?.type === 'mobile-ready') frame.contentWindow.postMessage({type: 'mobile-unlock', token}, location.origin);
@@ -127,11 +137,12 @@ for (const type of ['pointerdown', 'keydown', 'scroll']) document.addEventListen
 }, {capture: true, passive: true});
 document.addEventListener('visibilitychange', () => {
   // Conceal private content while backgrounded; foregrounding is not activity.
-  if (document.hidden) el('mobile-private').hidden = true;
+  if (document.hidden) { el('mobile-private').hidden = true; automatic.background(); }
   else if (session.check()) el('mobile-private').hidden = false;
+  else automatic.request();
 }, true);
-window.addEventListener('pagehide', () => { ++epoch; session.lock(); vault?.cancel(); el('lock-token').value = ''; });
-window.addEventListener('pageshow', () => session.check());
+window.addEventListener('pagehide', () => { ++epoch; automatic.background(); session.lock(); vault?.cancel(); el('lock-token').value = ''; });
+window.addEventListener('pageshow', () => { if (!session.check()) automatic.request(); });
 window.addEventListener('storage', event => {
   if (event.key === VAULT_KEY || event.key === null) {
     ++epoch; session.lock();
@@ -142,10 +153,11 @@ setInterval(() => session.check(), 1000);
 try {
   vault = passkeyVault();
   showGate();
-  if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials?.create || !navigator.credentials?.get) {
+  supported = !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials?.create && navigator.credentials?.get);
+  if (!supported) {
     for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = true;
     status('Passkeys are unavailable here. Open the app in Safari on an updated iPhone using its HTTPS address.');
-  }
+  } else automatic.request();
 } catch (error) {
   for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = true;
   status(error.message || 'Device storage is unavailable. Enable website storage and reopen the app.');

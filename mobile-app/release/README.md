@@ -1,3 +1,13 @@
+# Mobile 0.1.5 — automatic passkey prompt
+
+A configured mobile app starts passkey verification automatically on opening, returning locked to the foreground, or reaching its inactivity lock while visible. Canceled or rejected automatic requests leave the manual Unlock button available and do not loop. Lock now remains a deliberate lock until another visit. Extension authentication is unchanged.
+
+Validation: all 18 mobile tests pass, including duplicate lifecycle events, cancellation, manual locking, idle expiry, encryption, and access guards. Synthetic browser tests verified automatic reopening without a tap, automatic idle prompting, cancellation remaining locked, manual Lock now, and the narrow layout. Real iPhone Face ID/PRF prompts and Safari user-gesture restrictions were not directly tested; the manual button remains available when required.
+
+Archive: `erics-tools-mobile-0.1.5.zip`.
+
+---
+
 # Offline data release — mobile 0.1.3 / extension 0.6.43
 
 Shared Capabilities navigation replaces travel callouts. Travel records support encrypted device storage, offline copy/search/edit/delete, durable queued changes, optimistic revisions, lost-response reconciliation, and explicit conflict resolution. Mobile also includes bundled league rules/player rankings and encrypted offline AI connection metadata. Provider keys stay on the server.
