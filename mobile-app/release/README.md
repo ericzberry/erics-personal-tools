@@ -45,3 +45,7 @@ Archive: `erics-tools-mobile-0.1.9.zip`.
 Smaller search and entry text, a hidden accessible search label, and copy icons disclosed on hover, keyboard focus, or expanded touch rows. Removes routine up-to-date messages. Connection controls remain in header Settings. Shared extension update: 0.6.48.
 
 Validation: 138 extension and 19 mobile tests pass; synthetic phone layout reviewed at 390px. Native iPhone behavior was not directly tested. Archive: `erics-tools-mobile-0.1.10.zip`.
+
+## Mobile 0.1.11 — consistent wallet controls
+
+Applies the shared control style guide to wallet record and form actions. Uses compact subtle Edit / Copy notes / Delete actions, consistent radii and focus treatment, and separate form/record touch sizes. See `../../docs/DESIGN.md` for roles and density rules. 138 extension and 19 mobile tests pass; synthetic narrow layouts reviewed. Native iPhone behavior remains unverified. Archive: `erics-tools-mobile-0.1.11.zip`.

@@ -228,3 +228,9 @@ Archive: `release/erics-sidebar-0.6.47.zip`.
 Makes Add record, search, and entry text smaller. Search uses only the visible placeholder “find record” with an accessible hidden label. Copy uses a small icon shown on row hover or keyboard focus; touch users can reveal it by expanding the row. Routine up-to-date messages are omitted. Wallet connection controls live in sidebar Settings and are absent from browse and editor pages; mobile retains its header Settings.
 
 Validation: 138 extension tests and 19 mobile tests pass. Synthetic 30-record UI reviewed at 280px sidebar and 390px mobile, including hover icons, keyboard access, and Settings navigation. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.48.zip`.
+
+## Shared control style guide (0.6.49)
+
+Defines control roles, sizes, typography, spacing, focus, and touch behavior in `docs/DESIGN.md`, linked from repository instructions. Shared Button supports an explicit compact size. Wallet Edit, Copy notes, and Delete use matching compact subtle actions; form and confirmation actions retain the appropriate stronger treatment. Replaces accumulated wallet overrides with one token-based stylesheet shared with mobile 0.1.11.
+
+Validation: 138 extension and 19 mobile tests pass; synthetic expanded/collapsed records reviewed at 280px and 390px. Native installed Chrome and iPhone behavior remain unverified. Archive: `release/erics-sidebar-0.6.49.zip`.

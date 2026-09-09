@@ -15,6 +15,8 @@ Apply these rules to every user-facing interface in this repository. Follow each
 
 ## Controls and interaction
 
+- Follow the action roles, density sizes, and state rules in [docs/DESIGN.md](docs/DESIGN.md). Use shared component variants; do not independently resize feature buttons.
+
 - Make buttons visibly interactive. Use consistent primary, secondary, quiet, and destructive variants; reserve quiet text actions for clearly established contexts.
 - Keep related buttons adjacent with a consistent gap. Use content-width actions unless equal widths serve a deliberate choice or layout.
 - Label actions with concrete verbs. Keep labels stable and distinguish disconnecting a device from deleting stored data.

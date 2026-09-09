@@ -1,15 +1,72 @@
-.travel-wallet{font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#173e37;max-width:680px;margin:0 auto;padding:24px;display:grid;gap:20px;overflow-wrap:anywhere}.travel-wallet h1{font-size:26px;line-height:1.2;margin:0}.travel-wallet h2,.travel-wallet h3{font-size:17px;margin:0}.travel-wallet p{margin:0;line-height:1.5}.travel-wallet .footnote{color:#58645f;font-size:14px}.travel-wallet .settings-group{display:grid;gap:12px;border-top:1px solid #d8ddd5;padding-top:20px}.travel-wallet .form-stack,.travel-wallet .form-field{display:grid;gap:8px}.travel-wallet .form-stack{gap:16px}.travel-wallet input,.travel-wallet select{font:inherit;width:100%;min-width:0;min-height:44px;padding:9px 10px;border:1px solid #aab6ad;border-radius:8px;background:#fff;color:#173e37}.travel-wallet .action-group{display:flex;gap:8px;flex-wrap:wrap}.travel-wallet button{font:inherit;min-height:44px;margin:0;padding:8px 12px;border:1px solid #adb9af;border-radius:8px;cursor:pointer;background:#fff;color:#173e37}.travel-wallet .button-primary{background:#173e37;color:white;border-color:#173e37}.travel-wallet .button-danger{color:#982f27;border-color:#bb7c77}.travel-wallet button:disabled{opacity:.55;cursor:default}.travel-wallet :focus-visible{outline:3px solid #527d38;outline-offset:3px}.travel-list{display:grid;gap:0}.travel-record{display:grid;gap:8px;padding:16px 0;border-bottom:1px solid #d8ddd5;min-width:0}.travel-wallet [hidden]{display:none!important}@media(max-width:340px){.travel-wallet{padding:16px}} 
-
+/* Shared wallet styles for the extension and mobile app. See docs/DESIGN.md. */
+.travel-wallet {
+  --control-height:36px; --control-compact:28px; --control-radius:6px;
+  --control-text:13px; --control-text-compact:12px;
+  --wallet-ink:#203b33; --wallet-muted:#626f67; --wallet-forest:#173e37;
+  --wallet-line:#dedfd5; --wallet-control-line:#aab6ad; --wallet-surface:#fffefa;
+  --wallet-hover:#e8eee5; --wallet-danger:#982f27; --wallet-danger-hover:#f7e9e6;
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--wallet-ink); max-width:680px; margin:0 auto; padding:24px;
+  display:grid; gap:16px; overflow-wrap:anywhere;
+}
+.travel-wallet,.travel-wallet *{box-sizing:border-box}
+.travel-wallet h1{font-size:24px;line-height:1.2;margin:0}
+.travel-wallet h2,.travel-wallet h3{font-size:16px;margin:0}
+.travel-wallet p{margin:0;line-height:1.5}
+.travel-wallet .footnote{color:var(--wallet-muted);font-size:12px}
+.travel-wallet>.footnote:empty{display:none}
+.travel-wallet .settings-group{display:grid;gap:12px;border:0;border-radius:0;background:transparent;box-shadow:none;padding:0}
+.travel-wallet .form-stack,.travel-wallet .form-field{display:grid;gap:8px}
+.travel-wallet .form-stack{gap:16px}
+.travel-wallet input,.travel-wallet select{font:inherit;width:100%;min-width:0;min-height:var(--control-height);padding:7px 10px;border:1px solid var(--wallet-control-line);border-radius:var(--control-radius);background:var(--wallet-surface);color:var(--wallet-ink)}
+.travel-wallet .action-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.travel-wallet button{font:500 var(--control-text)/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:var(--control-height);margin:0;padding:7px 12px;border:1px solid var(--wallet-control-line);border-radius:var(--control-radius);cursor:pointer;background:var(--wallet-surface);color:var(--wallet-ink)}
+.travel-wallet .button--compact{min-height:var(--control-compact);padding:4px 8px;font-size:var(--control-text-compact)}
+.travel-wallet .button-primary{background:var(--wallet-forest);color:white;border-color:var(--wallet-forest)}
+.travel-wallet .button-subtle,.travel-wallet .button-danger-subtle{background:transparent;border-color:transparent}
+.travel-wallet .button-danger,.travel-wallet .button-danger-subtle{color:var(--wallet-danger)}
+.travel-wallet .button-danger{border-color:#bb7c77}
+@media(hover:hover){
+  .travel-wallet button:hover:not(:disabled){background:var(--wallet-hover)}
+  .travel-wallet .button-primary:hover:not(:disabled){background:#244f44}
+  .travel-wallet .button-danger:hover:not(:disabled),.travel-wallet .button-danger-subtle:hover:not(:disabled){background:var(--wallet-danger-hover)}
+  .travel-wallet .button-subtle:hover:not(:disabled),.travel-wallet .button-danger-subtle:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px}
+}
+.travel-wallet button:disabled{opacity:.5;cursor:default}
+.travel-wallet :focus-visible{outline:2px solid var(--wallet-forest);outline-offset:2px}
+.travel-wallet [hidden]{display:none!important}
+.travel-wallet details{background:transparent;border:0;border-top:1px solid var(--wallet-line);border-radius:0;margin:0;padding:12px 0;overflow:visible}
+.travel-wallet summary{cursor:pointer;font-size:12px;padding:4px 0}
+.travel-wallet summary h2{display:inline}
+.travel-wallet details[open]>:not(summary){margin-top:12px}
+.travel-list{display:grid;gap:0}
+.travel-wallet .record-search input{min-height:30px;padding:5px 8px;font-size:12px}
+.travel-wallet .record-search .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.travel-wallet .record-row{border-bottom:1px solid var(--wallet-line);min-width:0}
+.travel-wallet .record-row-heading{display:flex;align-items:center;gap:8px}
+.travel-wallet .record-row-toggle{flex:1;min-width:0;min-height:34px;border:0;border-radius:0;background:transparent;text-align:left;padding:6px 0;display:grid;gap:2px;line-height:1.35}
+.travel-wallet .record-row-toggle strong{font-size:13px;font-weight:500}
+.travel-wallet .record-row-toggle .footnote{font-size:11px}
+.travel-wallet .record-row-toggle strong::after{content:' ›';font-weight:400;color:var(--wallet-muted)}
+.travel-wallet .record-row-toggle[aria-expanded=true] strong::after{content:' ⌄'}
+.travel-wallet .record-row-content{display:grid;gap:4px;padding:4px 0 12px}
+.travel-number{font-size:18px;line-height:1.4;letter-spacing:.02em;font-variant-numeric:tabular-nums;user-select:text}
+.travel-wallet .record-row-content .action-group{gap:4px;margin-top:4px}
+.travel-wallet .icon-button{width:28px;min-height:28px;padding:6px;border:0;background:transparent;display:grid;place-items:center}
+.travel-wallet .row-copy,.travel-wallet .row-copy:disabled{opacity:0}
+.travel-wallet .record-row:hover .row-copy,.travel-wallet .record-row:focus-within .row-copy,.travel-wallet .row-copy:focus-visible{opacity:1}
+.copy-glyph{position:relative;width:11px;height:12px;border:1.5px solid currentColor;border-radius:2px}
+.copy-glyph::before{content:'';position:absolute;width:8px;height:9px;left:-5px;top:-5px;border:1.5px solid currentColor;border-right:0;border-bottom:0;border-radius:2px}
+.connection-surface{display:grid;gap:16px}
+.travel-wallet .connection-surface{font-size:12px;color:var(--wallet-muted)}
+.connection-only{padding-top:12px;padding-bottom:12px}
 .shell .travel-wallet{padding:28px 0 0}
-
-.travel-wallet,.travel-wallet *{box-sizing:border-box}.travel-wallet details{border-top:1px solid #d8ddd5;border-bottom:1px solid #d8ddd5;padding:12px 0}.travel-wallet summary{cursor:pointer}.travel-wallet summary h2{display:inline}.travel-wallet details[open]>:not(summary){margin-top:12px}.travel-wallet summary:focus-visible{outline:3px solid #527d38;outline-offset:3px}
-
-.connection-surface{display:grid;gap:16px}.connection-only{padding-top:12px;padding-bottom:12px}.shell .connection-only{padding-top:12px}.shell .capability-navigation{padding-left:0;padding-right:0}.shell .data-library{padding-left:0;padding-right:0}
-
-.travel-number{font-size:22px;letter-spacing:.04em;font-variant-numeric:tabular-nums;user-select:text}.travel-wallet .travel-record details{border:0;padding:0;color:#58645f;font-size:14px}.travel-wallet .travel-record summary{padding:6px 0}.travel-wallet .connection-surface{font-size:14px;color:#58645f}.travel-wallet>.footnote:empty{display:none} .travel-wallet .settings-group:first-of-type{border-top:0;padding-top:0}
-.travel-wallet .settings-group{border:0;border-radius:0;background:transparent;box-shadow:none;padding:0}.travel-wallet details{background:transparent;border-left:0;border-right:0;border-radius:0;margin:0;overflow:visible}.travel-wallet summary{font-size:14px;padding:4px 0}.travel-wallet button{font-size:14px;padding:8px 10px}
-
-.travel-wallet .record-row{border-bottom:1px solid #d8ddd5;min-width:0}.travel-wallet .record-row-heading{display:flex;align-items:center;gap:8px}.travel-wallet .record-row-toggle{flex:1;min-width:0;border:0;border-radius:0;background:transparent;text-align:left;padding:10px 0;display:grid;gap:2px;line-height:1.35}.travel-wallet .record-row-toggle strong{font-size:15px}.travel-wallet .record-row-toggle .footnote{font-size:12px}.travel-wallet .record-row-toggle[aria-expanded=true] strong{color:#426632}.travel-wallet .record-row-content{display:grid;gap:8px;padding:0 0 12px}.travel-wallet .record-row-content .travel-number{font-size:20px}.travel-wallet .record-row-toggle:hover strong{text-decoration:underline}
-.travel-wallet .record-row-toggle strong::after{content:' ›';font-weight:400;color:#58645f}.travel-wallet .record-row-toggle[aria-expanded=true] strong::after{content:' ⌄'}
-
-.travel-wallet .button-compact{min-height:28px;padding:4px 8px;font-size:11px;border-radius:5px;align-self:center}.travel-wallet .record-search input{min-height:30px;padding:5px 8px;font-size:12px}.travel-wallet .record-search .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.travel-wallet .record-row-toggle{min-height:34px;padding:6px 0}.travel-wallet .record-row-toggle strong{font-size:13px;font-weight:500}.travel-wallet .record-row-toggle .footnote{font-size:11px}.travel-wallet .icon-button{width:28px;min-height:28px;padding:6px;border:0;background:transparent;border-radius:4px;display:grid;place-items:center;opacity:0}.copy-glyph{position:relative;width:11px;height:12px;border:1.5px solid currentColor;border-radius:2px}.copy-glyph::before{content:'';position:absolute;width:8px;height:9px;left:-5px;top:-5px;border:1.5px solid currentColor;border-right:0;border-bottom:0;border-radius:2px}.travel-wallet .record-row:hover .row-copy,.travel-wallet .record-row:focus-within .row-copy{opacity:1}.travel-wallet .icon-button:focus-visible{opacity:1}@media(hover:none){.travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]) .row-copy{opacity:1}}
+.shell .connection-only{padding-top:12px}
+.shell .capability-navigation,.shell .data-library{padding-left:0;padding-right:0}
+@media(max-width:340px){.travel-wallet{padding:16px}}
+@media(hover:none){
+  .travel-wallet input:not([type=search]),.travel-wallet select{font-size:16px;min-height:44px}
+  .travel-wallet .form-stack button{min-height:44px}
+  .travel-wallet .record-row-content button{min-height:32px}
+  .travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]) .row-copy{opacity:1}
+}

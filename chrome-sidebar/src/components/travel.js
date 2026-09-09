@@ -2,7 +2,7 @@ import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
 export function TravelView({connection=true,mode='inline',editId=null}={}) {
   return Section([
-    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',className:'button-primary button-compact',hidden:mode!=='browse'}),Button('Done',{id:'travel-done',variant:'secondary',hidden:mode!=='editor'})],{compact:true}),
+    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',size:'compact',hidden:mode!=='browse'}),Button('Done',{id:'travel-done',variant:'secondary',hidden:mode!=='editor'})],{compact:true}),
     Note('',{id:'travel-status',role:'status','aria-live':'polite'}),
     Stack([
       FormField({id:'travel-search',label:'Find record',hiddenLabel:true,kind:'search',placeholder:'find record'}),
@@ -28,18 +28,19 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
   ],{className:'travel-wallet'});
 }
 export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve}) {
+  const action=(label,options)=>Button(label,{size:'compact',...options});
   const number=Strong('••••••••',{className:'travel-number','aria-live':'polite'});
-  const copy=CopyIconButton(`Copy number for ${record.name}`), edit=Button('Edit',{variant:'secondary'}), remove=Button('Delete',{variant:'danger'});
+  const copy=CopyIconButton(`Copy number for ${record.name}`), edit=action('Edit',{variant:'subtle'}), remove=action('Delete',{variant:'danger-subtle'});
   copy.addEventListener('click',onCopy);edit.addEventListener('click',onEdit);
-  const confirm=Button('Delete from all devices',{variant:'danger'}), keep=Button('Keep record',{variant:'secondary'});
+  const confirm=action('Delete from all devices',{variant:'danger'}), keep=action('Keep record',{variant:'secondary'});
   const confirmation=Stack([Note('Permanently delete this travel record from all devices?'),ActionGroup([confirm,keep],{compact:true})],{hidden:true});
   remove.addEventListener('click',()=>{confirmation.hidden=false;confirm.focus();});
   keep.addEventListener('click',()=>{confirmation.hidden=true;remove.focus();});confirm.addEventListener('click',onDelete);
-  const notes=Button('Copy notes',{variant:'secondary'});notes.addEventListener('click',onCopyNotes);
+  const notes=action('Copy notes',{variant:'subtle'});notes.addEventListener('click',onCopyNotes);
   const resolutions=Stack([]);
   if(record.conflict){
-    const local=Button('Keep this device’s changes',{variant:'secondary'}), cloud=Button('Use cloud version',{variant:'secondary'});
-    const accept=Button('Discard my pending change',{variant:'danger'}), cancel=Button('Keep reviewing',{variant:'secondary'});
+    const local=action('Keep this device’s changes',{variant:'secondary'}), cloud=action('Use cloud version',{variant:'secondary'});
+    const accept=action('Discard my pending change',{variant:'danger'}), cancel=action('Keep reviewing',{variant:'secondary'});
     const warning=Stack([Note('Discard the pending change on this device and use the cloud version?'),ActionGroup([accept,cancel],{compact:true})],{hidden:true});
     local.addEventListener('click',()=>onResolve('local'));
     cloud.addEventListener('click',()=>{warning.hidden=false;accept.focus();});cancel.addEventListener('click',()=>{warning.hidden=true;cloud.focus();});
