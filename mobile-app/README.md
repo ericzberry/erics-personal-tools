@@ -29,3 +29,5 @@ For local UI validation, build first and run `node mobile-app/tests/preview-serv
 Mobile 0.1.5 starts passkey verification automatically when a configured app opens, returns locked to the foreground, or reaches its inactivity lock while visible. Each automatic attempt runs once; canceling or browser refusal leaves an Unlock with passkey button, without repeated prompts. Verification is still required; automatic prompting never bypasses the passkey or extends an expired session.
 
 Mobile 0.1.6 puts saved content directly below Tools, remembers the selected tool, and sizes the private frame to its content for a single page scroll. Connection maintenance follows the content; offline setup details are collapsed under App details, opening automatically if setup fails. The unlocked banner and manual lock button are removed; passkey and inactivity protection remain.
+
+Mobile 0.1.8 shares compact expandable wallet rows for long lists: Copy stays visible, tapping a program reveals its number and actions, and adding or editing stays inline. The extension opens its editor in a separate tab.

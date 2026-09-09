@@ -1,4 +1,4 @@
-const CACHE = 'erics-tools-shell-0.1.7';
+const CACHE = 'erics-tools-shell-0.1.8';
 const SHELL = ['/app/tool-layout.js', '/app/auto-unlock.js', '/app/mobile-security.js', '/app/passkey-vault.js', '/app/mobile-session.js', '/app/unlocked.js', '/app/unlocked.html', '/app/', '/app/styles.css', '/app/app.js', '/app/capabilities.js', '/app/data/espn-league-2026.json', '/app/data/rankings-2026.json', '/app/shared/travel-data.js', '/app/shared/travel-offline.js', '/app/shared/offline-resource.js', '/app/shared/offline-storage.js', '/app/shared/capabilities.js', '/app/shared/data-library.js', '/app/shared/components/capabilities.js', '/app/shared/components/capabilities.css', '/app/releases.js', '/app/shared/travel.js', '/app/shared/cloud-storage.js', '/app/shared/components/ui.js', '/app/shared/components/travel.js', '/app/shared/components/travel.css', '/app/manifest.webmanifest', '/app/icon-192.png', '/app/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));

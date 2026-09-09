@@ -216,3 +216,9 @@ Travel wallet opens directly from Tools in the extension sidebar. Show number re
 Validation: 133 extension tests (including component architecture, reveal/hide, edit failure preservation, deletion confirmation, and sidebar selection), 19 mobile tests, and 31 API tests pass. Synthetic browser checks covered 280px sidebar and 390px phone layouts, inline reveal, offline reopening, queued edits surviving reload and syncing on reconnect, long record names, and connected settings. Native Chrome installation and real iPhone biometric/clipboard behavior were not directly tested.
 
 Archive: `release/erics-sidebar-0.6.46.zip`.
+
+## Separate travel record editor (0.6.47)
+
+Travel wallet keeps the compact searchable record list in the sidebar. Add record and Edit open a dedicated extension tab; saved changes refresh the viewing list. The editor reloads the selected record by ID, preserves failed edits, and keeps numbers masked. Done closes the editor after changes are saved or canceled. Mobile keeps its inline editor and shares the compact rows.
+
+Archive: `release/erics-sidebar-0.6.47.zip`.

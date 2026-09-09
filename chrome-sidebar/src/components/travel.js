@@ -16,7 +16,7 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
         FormField({id:'travel-name',label:'Program or document name',kind:'text',placeholder:'e.g. Delta SkyMiles'}),
         FormField({id:'travel-traveler',label:'Traveler (optional)',kind:'text'}),
         FormField({id:'travel-number',label:'Number',kind:'password'}),
-        Note('Tap a program to see its number, or use Copy in the list.',{id:'travel-number-help'}),
+        Note(mode==='editor'?'Numbers stay masked while you edit.':'Tap a program to see its number, or use Copy in the list.',{id:'travel-number-help'}),
         FormField({id:'travel-expires',label:'Expiration date (optional)',kind:'date'}),
         FormField({id:'travel-notes',label:'Private notes (optional)',kind:'password'}),
         Note('On edit, blank number and notes fields keep their saved values. Use Clear notes to remove saved notes.'),
