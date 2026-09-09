@@ -2,13 +2,13 @@ import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
 export function TravelView({connection=true}={}) {
   return Section([
-    Heading('Travel wallet',1), Note('Your travel numbers, together across your extension and phone.'),
-    ...(connection?[TravelConnection()]:[]),
-    SettingsGroup({title:'Saved travel details',level:2,children:[
+    Heading('Travel wallet',1),
+    Note('',{id:'travel-status',role:'status','aria-live':'polite'}),
+    SettingsGroup({title:'Your travel numbers',level:2,children:[
       FormField({id:'travel-search',label:'Find a record',kind:'search',placeholder:'Program, traveler, or category'}),
       Stack([],{id:'travel-list',className:'travel-list'})
     ]}),
-    SettingsGroup({title:'Add or edit a record',level:2,children:[
+    Disclosure('Add or edit a record',[
       Note('Add airline, hotel, rental-car, trusted traveler, passport, visa, or other membership numbers.'),
       Form([
         Strong('New record',{id:'travel-editor-title'}),
@@ -16,17 +16,27 @@ export function TravelView({connection=true}={}) {
         FormField({id:'travel-name',label:'Program or document name',kind:'text',placeholder:'e.g. Delta SkyMiles'}),
         FormField({id:'travel-traveler',label:'Traveler (optional)',kind:'text'}),
         FormField({id:'travel-number',label:'Number',kind:'password'}),
-        Note('Numbers stay hidden. Use Copy number when you need one.',{id:'travel-number-help'}),
+        Note('Use Show number or Copy number on a saved record.',{id:'travel-number-help'}),
         FormField({id:'travel-expires',label:'Expiration date (optional)',kind:'date'}),
         FormField({id:'travel-notes',label:'Private notes (optional)',kind:'password'}),
         Note('On edit, blank number and notes fields keep their saved values. Use Clear notes to remove saved notes.'),
         ActionGroup([Button('Save record',{id:'travel-save',type:'submit',variant:'primary'}),Button('Cancel edits',{id:'travel-cancel',variant:'secondary'}),Button('Clear notes',{id:'travel-clear-notes',variant:'secondary'})],{compact:true}),
         Note('',{id:'travel-form-status',role:'status'})
       ],{id:'travel-form',className:'form-stack'})
-    ]})
+    ],{id:'travel-editor'}),
+    ...(connection?[TravelConnection()]:[])
   ],{className:'travel-wallet'});
 }
-export function TravelRecord(record, {onEdit,onCopy,onCopyNotes,onDelete,onResolve}) {
+export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve}) {
+  const number=Strong('••••••••',{className:'travel-number','aria-live':'polite'});
+  const show=Button('Show number',{variant:'secondary','aria-expanded':'false'});
+  let revealed=false;
+  show.addEventListener('click',async()=>{
+    if(revealed){number.textContent='••••••••';show.textContent='Show number';show.setAttribute('aria-expanded','false');revealed=false;return;}
+    const value=await onShow();
+    if(value===undefined)return;
+    number.textContent=value;show.textContent='Hide number';show.setAttribute('aria-expanded','true');revealed=true;
+  });
   const copy=Button('Copy number',{variant:'secondary'}), edit=Button('Edit',{variant:'secondary'}), remove=Button('Delete',{variant:'danger'});
   copy.addEventListener('click',onCopy);edit.addEventListener('click',onEdit);
   const confirm=Button('Delete from all devices',{variant:'danger'}), keep=Button('Keep record',{variant:'secondary'});
@@ -44,12 +54,12 @@ export function TravelRecord(record, {onEdit,onCopy,onCopyNotes,onDelete,onResol
     accept.addEventListener('click',()=>onResolve('cloud'));
     resolutions.append(Note('Changed on another device. Choose which version to use.'),ActionGroup([local,cloud],{compact:true}),warning);
   }
-  return Section([Strong(record.name),...(record.pending?[Note(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Saved on this device · Waiting to sync')]:[]),Note([record.category,record.traveler,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),Note('Number: ••••••••'),ActionGroup([copy,edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],{className:'travel-record'});
+  return Section([Strong(record.name),...(record.pending?[Note(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Waiting to sync')]:[]),Note([record.category,record.traveler,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),number,ActionGroup([copy,show],{compact:true}),Disclosure('Record details',[ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation]),resolutions],{className:'travel-record'});
 }
 
-export function TravelConnection(){return Stack([Disclosure('Connection',[
+export function TravelConnection(){return Stack([Disclosure('Connection settings',[
       Note('Connect with the same private access token on each device.',{id:'travel-connection',role:'status'}),
-      FormField({id:'travel-token',label:'Private access token',kind:'password'}),
-      ActionGroup([Button('Connect',{id:'travel-connect',variant:'primary'}),Button('Refresh records',{id:'travel-refresh',variant:'secondary'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger'})],{compact:true}),
+      Stack([FormField({id:'travel-token',label:'Private access token',kind:'password'}),Button('Connect',{id:'travel-connect',variant:'primary'})],{id:'travel-setup'}),
+      ActionGroup([Button('Refresh records',{id:'travel-refresh',variant:'secondary'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger'})],{compact:true}),
       Note('Records are encrypted in cloud storage. Downloaded records are encrypted on this device for offline use. Changes sync when connected. Disconnect clears this device’s copy and keeps cloud records.')
-    ],{id:'travel-cloud',open:true,titleHeading:true}),Note('',{id:'travel-status',role:'status','aria-live':'polite'})],{className:'connection-surface'});}
+    ],{id:'travel-cloud'})],{className:'connection-surface'});}

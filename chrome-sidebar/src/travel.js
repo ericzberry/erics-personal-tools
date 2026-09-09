@@ -9,6 +9,7 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   function controls(){
     for(const node of $('form').querySelectorAll('input,select,button'))node.disabled=busy||!token;
     for(const node of $('list').querySelectorAll('button'))node.disabled=busy||!token;
+    $('setup').hidden=!!token;
     $('connect').disabled=busy; $('token').disabled=busy;
     $('refresh').disabled=busy||!token;$('disconnect').disabled=busy||!token;
     $('connection').textContent=token?'Connected · Shared with your other connected devices.':'Connect with the same private access token on each device.';
@@ -25,7 +26,8 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
     const term=$('search').value.trim().toLowerCase();
     const matches=records.filter(r=>`${r.name} ${r.category} ${r.traveler}`.toLowerCase().includes(term));
     $('list').replaceChildren(...(matches.length?matches.map(record=>TravelRecord(record,{
-      onEdit:()=>{if(busy)return;if(dirty){status('Save or cancel your edits first.');return;}edit(record);$('name').focus();},
+      onEdit:()=>{if(busy)return;if(dirty){status('Save or cancel your edits first.');return;}edit(record);$('editor').open=true;$('name').focus();},
+      onShow:async()=>{let value;await run(async()=>{value=(await request(token,`/v1/travel/${record.id}`)).record.number;status('');});return value;},
       onCopy:()=>copy(record,'number'),onCopyNotes:()=>copy(record,'notes'),
       onResolve:choice=>run(async()=>{if(dirty)throw Error('Save or cancel your edits first.');const result=await offline.resolve(token,record.id,choice);records=result.records;edit();render();status(result.syncMessage);}),
       onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting.');const result=await request(token,`/v1/travel/${record.id}`,{method:'DELETE',value:{revision:record.revision}});records=result.records||records.filter(r=>r.id!==record.id);if(selected?.id===record.id)edit();render();status(result.syncMessage||'Record deleted from all devices.');})
@@ -56,7 +58,7 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   $('refresh').addEventListener('click',()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before refreshing.');const message=await refresh();edit();status(message);}));
   $('search').addEventListener('input',render);
   $('form').addEventListener('input',()=>{dirty=true;});
-  $('cancel').addEventListener('click',()=>{edit();status('Edits canceled.','form-status');});
+  $('cancel').addEventListener('click',()=>{edit();$('editor').open=false;status('Edits canceled.','form-status');});
   $('clear-notes').addEventListener('click',()=>{clearNotes=true;dirty=true;$('notes').value='';status('Notes will be removed when you save.','form-status');});
   $('form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
     const value={revision:selected?.revision??null};
@@ -71,7 +73,7 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   // Refresh on foreground/reconnect, without overwriting an in-progress edit.
   const reload=()=>{if(token&&!dirty&&!busy)run(async()=>{status(await refresh());});};
   window.addEventListener('online',reload);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();else render();});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
   credentials.subscribe?.(async()=>{
     const current=await credentials.get();

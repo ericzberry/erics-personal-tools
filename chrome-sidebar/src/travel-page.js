@@ -9,4 +9,6 @@ const credentials = {
   subscribe(callback){if(storage)chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes[CONNECTION_KEY])callback();});}
 };
 const offline=travelOffline();
-mountTravel(document.getElementById('travel-root'),{credentials,request:offline.request,offline});
+export function mountExtensionTravel(root){return mountTravel(root,{credentials,request:offline.request,offline});}
+const root=document.getElementById('travel-root');
+if(root)mountExtensionTravel(root);

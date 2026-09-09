@@ -23,7 +23,12 @@ test('travel wallet preserves failed edits, masks records, and confirms deletion
   const $=id=>document.getElementById(`travel-${id}`);
   assert.match($('list').textContent,/••••••••/);
   $('list').querySelector('button').click();await tick();assert.equal(copied,'00123456');
-  $('list').querySelectorAll('button')[1].click();
+  const show=[...$('list').querySelectorAll('button')].find(b=>b.textContent==='Show number');
+  show.click();await tick();assert.match($('list').textContent,/00123456/);
+  show.click();assert.doesNotMatch($('list').textContent,/00123456/);
+  assert.equal($('cloud').open,false);assert.equal($('setup').hidden,true);
+  [...$('list').querySelectorAll('button')].find(b=>b.textContent==='Edit').click();
+  assert.equal($('editor').open,true);
   assert.equal($('number').value,'');
   $('name').value='Updated program';$('name').dispatchEvent(new window.Event('input',{bubbles:true}));
   fail=true;$('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();

@@ -5,3 +5,6 @@
 .travel-wallet,.travel-wallet *{box-sizing:border-box}.travel-wallet details{border-top:1px solid #d8ddd5;border-bottom:1px solid #d8ddd5;padding:12px 0}.travel-wallet summary{cursor:pointer}.travel-wallet summary h2{display:inline}.travel-wallet details[open]>:not(summary){margin-top:12px}.travel-wallet summary:focus-visible{outline:3px solid #527d38;outline-offset:3px}
 
 .connection-surface{display:grid;gap:16px}.connection-only{padding-top:12px;padding-bottom:12px}.shell .connection-only{padding-top:12px}.shell .capability-navigation{padding-left:0;padding-right:0}.shell .data-library{padding-left:0;padding-right:0}
+
+.travel-number{font-size:22px;letter-spacing:.04em;font-variant-numeric:tabular-nums;user-select:text}.travel-wallet .travel-record details{border:0;padding:0;color:#58645f;font-size:14px}.travel-wallet .travel-record summary{padding:6px 0}.travel-wallet .connection-surface{font-size:14px;color:#58645f}.travel-wallet>.footnote:empty{display:none} .travel-wallet .settings-group:first-of-type{border-top:0;padding-top:0}
+.travel-wallet .settings-group{border:0;border-radius:0;background:transparent;box-shadow:none;padding:0}.travel-wallet details{background:transparent;border-left:0;border-right:0;border-radius:0;margin:0;overflow:visible}.travel-wallet summary{font-size:14px;padding:4px 0}.travel-wallet button{font-size:14px;padding:8px 10px}

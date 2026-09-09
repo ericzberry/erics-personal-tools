@@ -208,3 +208,11 @@ Use the **Tools** dropdown to open Travel wallet, league rules, player rankings,
 Connect Travel wallet once with your private access token to download all records, including masked numbers and notes, into encrypted IndexedDB storage. Downloaded records can be searched, copied, added, edited, and marked for deletion offline. Changes persist before network requests and sync on refresh, reconnect, or foregrounding. Per-record revisions reject stale edits. Conflicts retain the device's changes until you choose the cloud version or explicitly keep the device's version. A lost successful response is reconciled before a retry.
 
 Cloud and device copies are encrypted with AES-GCM. Device encryption is unlocked by the device's saved access token. Disconnect clears the local copy and token but leaves cloud records; pending changes must first be synced or resolved. Browser storage is not a permanent backup. The phone includes bundled league rules and player rankings, plus encrypted offline AI connection metadata; provider keys remain on the server and provider requests require internet. Live draft capture remains an extension action.
+
+## Travel wallet in the sidebar (0.6.46)
+
+Travel wallet opens directly from Tools in the extension sidebar. Show number reveals a selected record inline; Hide number masks it again, and Copy number remains available. Records come first, editing and record maintenance use disclosures, and Connection settings stay collapsed after connecting. Shared mobile UI (0.1.7) has the same controls. Sync messages no longer emphasize device storage.
+
+Validation: 133 extension tests (including component architecture, reveal/hide, edit failure preservation, deletion confirmation, and sidebar selection), 19 mobile tests, and 31 API tests pass. Synthetic browser checks covered 280px sidebar and 390px phone layouts, inline reveal, offline reopening, queued edits surviving reload and syncing on reconnect, long record names, and connected settings. Native Chrome installation and real iPhone biometric/clipboard behavior were not directly tested.
+
+Archive: `release/erics-sidebar-0.6.46.zip`.

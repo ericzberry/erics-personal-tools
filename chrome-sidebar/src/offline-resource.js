@@ -15,9 +15,9 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
   function message(state){
     const pending=Object.values(state.pending),conflicts=pending.filter(item=>item.conflict).length;
     if(conflicts)return `${conflicts} conflicting change${conflicts===1?'':'s'}. Review the marked records; your local changes are safe.`;
-    if(pending.length)return `Saved on this device · ${pending.length} change${pending.length===1?'':'s'} waiting to sync.${state.error?' '+state.error:''}`;
+    if(pending.length)return `${pending.length} change${pending.length===1?'':'s'} waiting to sync.${state.error?' '+state.error:''}`;
     if(state.error)return `Using the saved offline copy. ${state.error}`;
-    return online()?'Saved on this device · Up to date.':'Offline · Saved records are available on this device.';
+    return online()?'Up to date.':'Offline · Your records are available.';
   }
   async function sync(token,state){
     if(!online())return state;

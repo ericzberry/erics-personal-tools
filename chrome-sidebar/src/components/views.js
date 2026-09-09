@@ -70,7 +70,7 @@ export function SettingsView() {
     Disclosure('Draft',[DraftSettings(),RulesView(),DraftReset()],{className:'settings-panel',titleHeading:true})
   ]});
 }
-export function mountApp(root) {root.replaceChildren(AppHeader({}),CapabilityPicker(),DraftView(),GmailView(),HomeView(),SettingsView());}
+export function mountApp(root) {root.replaceChildren(AppHeader({}),CapabilityPicker(),DraftView(),GmailView(),HomeView(),Section([],{id:'travel-tool',hidden:true}),SettingsView());}
 
 export function AISettingsView() {
   const field=UI.FormField;

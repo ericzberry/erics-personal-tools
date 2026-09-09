@@ -23,3 +23,11 @@ Mobile 0.1.3 also fixes Cloudflare HTML canonicalization for the unlocked frame.
 ## Tools label — mobile 0.1.4 / extension 0.6.44
 
 Renames the shared navigation label to Tools, with Choose a tool prompts. Updated AGENTS.md and current instructions to use the same name. Extension (132) and mobile (13) tests pass; shared UI reviewed at 280px and 390px.
+
+## Mobile 0.1.7 — travel numbers first
+
+Travel records now offer Show number / Hide number alongside Copy number. Connection settings remain collapsed below content, connected token setup is hidden, and editing and record maintenance are disclosed on demand. Removes the emphasis on device storage from shared sync messages. The extension 0.6.46 now opens the wallet inside its sidebar.
+
+Validation: 133 extension, 19 mobile, and 31 API tests pass. Synthetic browser checks verified narrow layouts, reveal after offline reopening, a queued edit surviving reload, and successful reconnect synchronization. Real iPhone biometric and OS clipboard behavior remain unverified.
+
+Archive: `erics-tools-mobile-0.1.7.zip`.
