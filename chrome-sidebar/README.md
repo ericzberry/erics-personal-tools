@@ -161,3 +161,5 @@ Version 0.6.24 adds Reset draft data at the very bottom. Reset this draft create
 After installing or updating the extension, right-click a webpage and choose **Open Eric’s Personal Tools**. This native menu is created on each installation and does not depend on a saved keyboard shortcut or extension URL. The toolbar icon also opens the sidebar. Uses Chrome’s [documented context-menu side-panel launcher](https://developer.chrome.com/docs/extensions/reference/api/sidePanel#programmatically_open_the_side_panel_on_user_interaction).
 
 Version 0.6.25 adds the native right-click launcher.
+
+Version 0.6.26 adds a gear in the sidebar header that opens in-sidebar Settings. Credentials and Draft are subsections; draft capture, league rules, and reset controls live there. Credentials support named local secrets, replacement, and deletion. Secret inputs are masked and saved values are never rendered back into the UI. Storage access is restricted to trusted extension contexts before saving; values are not encrypted by this extension or synced. Saving credentials does not yet configure provider integrations.

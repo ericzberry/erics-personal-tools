@@ -8,7 +8,7 @@ function setup(){const {document}=parseHTML('<html><body><div id="app"></div></b
 test('all screens mount through components with unique, accessible controller hooks',()=>{
   const doc=setup();mountApp(doc.getElementById('app'));
   const ids=[...doc.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length);
-  for(const filename of ['sidepanel.js','context-panel.js']){
+  for(const filename of ['sidepanel.js','context-panel.js','settings.js']){
     const source=readFileSync(new URL(`../src/${filename}`,import.meta.url),'utf8');
     for(const [,id] of source.matchAll(/\$\('([^']+)'\)/g))assert.ok(doc.getElementById(id),`${filename}: missing ${id}`);
   }
@@ -72,7 +72,7 @@ test('roster stays in a shared sticky group and recommendation panel is removed'
   assert.match(doc.querySelector('.sticky-group').textContent,/Bedford Bridges/);
   assert.equal(doc.querySelector('.advisor'),null);
   assert.ok(doc.getElementById('draft-view').contains(doc.getElementById('spreadsheet-players')));
-  assert.ok(doc.getElementById('football-tool').querySelector('main').lastElementChild.contains(doc.getElementById('reset-draft')));
+  assert.ok(doc.getElementById('settings-tool').contains(doc.getElementById('reset-draft')));
   for(const id of ['draft-data','session','open-corrections','picks'])assert.equal(doc.getElementById(id),null);
 });
 
@@ -141,4 +141,13 @@ test('scarcity highlights roster needs and available players without obscuring o
  const row=board.querySelector('.ranked-player');assert.ok(row.classList.contains('ranked-player--scarce'));assert.ok(row.classList.contains('ranked-player--recommended'));assert.match(row.textContent,/RB getting thin/);assert.equal(row.querySelector('.scarcity-detail'),null);
  for(const [picks,confirmed] of [[new Map([['a',{teamId:8}]]),true],[new Map([['a',{teamId:2}]]),true],[new Map(),false]])assert.equal(Stack(TieredRankings(players,picks,8,{confirmed,rosterAlerts:[alert]})).querySelector('.scarcity-tag'),null);
  assert.equal(RosterCounts({RB:2}).querySelector('.scarcity-notice'),null);
+});
+
+test('settings remain open across active-tab updates and return to the latest tool',async()=>{
+ const doc=setup();mountApp(doc.getElementById('app'));
+ const {showTool,showSettings}=await import('../src/navigation.js');
+ showTool('football');showSettings(true);showTool('gmail');
+ assert.equal(doc.getElementById('settings-tool').hidden,false);assert.equal(doc.getElementById('gmail-tool').hidden,true);
+ assert.equal(doc.getElementById('credential-secret').getAttribute('type'),'password');
+ showSettings(false);assert.equal(doc.getElementById('gmail-tool').hidden,false);assert.equal(doc.getElementById('settings-tool').hidden,true);
 });

@@ -255,3 +255,9 @@ th, td { padding: 8px 11px; }
 .scarcity-tag { display: inline-block; margin: 0 4px 4px 0; padding: 2px 4px; border-radius: 3px; background: #f4e5c6; color: #705321; font-size: 8px; font-weight: 600; }
 
 .sticky-group .context-note { margin: 5px 14px 9px; }
+
+.settings-gear { color: inherit; background: transparent; border: 0; padding: 4px 6px; font-size: 20px; line-height: 1; cursor: pointer; }
+.settings-gear:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.credential-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.credential-row > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.credential-row .action-group { display: flex; gap: 4px; }

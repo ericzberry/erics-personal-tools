@@ -1,6 +1,6 @@
 # Eric’s Personal Tools privacy policy
 
-Updated September 8, 2026. Applies to version 0.6.25.
+Updated September 8, 2026. Applies to version 0.6.26.
 
 Eric’s Personal Tools displays contextual assistance alongside ESPN and Gmail. It checks the active tab’s URL to select the appropriate function; it does not retain browsing history.
 
@@ -19,3 +19,5 @@ Manual draft corrections are saved locally, separately for each draft session, a
 Recommendations are passed locally to the captured ESPN draft tab via draft-capture responses and sidebar updates to highlight matching visible players. This does not submit selections or send draft data to an external server. Highlights expire when draft-capture and sidebar updates stop.
 
 The contextMenus permission adds a webpage right-click launcher. Clicking it opens the sidebar in that Chrome window; the launcher does not store or transmit the clicked page, link, or selected text.
+
+Credentials entered in Settings are stored in local Chrome extension storage, restricted to trusted extension contexts. They are not encrypted by the extension, synced, exported with draft diagnostics, or transmitted to a provider. Saved keys are not displayed in the credential list. You can replace or delete them; uninstalling clears extension storage. Saving a key does not yet activate a service integration.

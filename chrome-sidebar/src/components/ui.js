@@ -32,7 +32,7 @@ export function Field({id,label,kind='search',options=[],hiddenLabel=false,place
   return [caption,control];
 }
 export function AppHeader({name='Eric’s tools',context='Draft advisor'}) {
-  return element('header',{className:'app-header'},[element('img',{className:'mark',src:'icons/icon-32.png',width:24,height:24,alt:''}),Label(name,{className:'compact-brand'}),Strong(context,{id:'current-function',className:'context-label'})]);
+  return element('header',{className:'app-header'},[element('img',{className:'mark',src:'icons/icon-32.png',width:24,height:24,alt:''}),Label(name,{className:'compact-brand'}),Strong(context,{id:'current-function',className:'context-label'}),Button('⚙',{id:'open-settings',className:'settings-gear','aria-label':'Open settings',title:'Settings','aria-expanded':'false','aria-controls':'settings-tool'})]);
 }
 export const ToolHeading=(title,subtitle)=>Stack([Heading(title,1),Label(subtitle,{className:'subtitle'})],{className:'tool-heading'});
 export const Highlight=({id,valueId,label,value})=>Stack([Label(label),Strong(value,{id:valueId})],{id,className:'next-pick-chip',role:'status'});
@@ -149,3 +149,9 @@ export function RosterCounts(counts,{known=true,alerts=[]}={}) {
 }
 
 export const StickyGroup=children=>Stack(children,{className:'sticky-group'});
+
+export function CredentialRow(credential,{onEdit,onDelete}) {
+  const edit=Button('Replace',{'aria-label':`Replace ${credential.name}`});edit.addEventListener('click',onEdit);
+  const remove=Button('Delete',{'aria-label':`Delete ${credential.name}`});remove.addEventListener('click',onDelete);
+  return Stack([Stack([Strong(credential.name),Note('Key saved')]),ActionGroup([edit,remove])],{className:'credential-row'});
+}

@@ -1,11 +1,8 @@
+import {showTool} from './navigation.js';
 import {generateEmailText} from './email-ai.js';
 const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.tabs;
 let email = null, identity = '', generation = 0, controller, activeTab, polling = false, working = false;
-function showTool(tool) {
-  for (const key of ['football','gmail','home']) $(`${key}-tool`).hidden = key !== tool;
-  $('current-function').textContent = {football:'Draft advisor',gmail:'Gmail',home:'Personal tools'}[tool];
-}
 function clearEmail(next = null) {
   const nextIdentity = next ? JSON.stringify(next) : '';
   if (identity === nextIdentity) return;

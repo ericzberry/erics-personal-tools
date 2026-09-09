@@ -4,10 +4,10 @@ export function DraftView() {
   const draft=Section([
     Notice('',{id:'advice-status',className:'notice notice-subtle'}),
     Notice('',{id:'coverage',hidden:true}),
-    Notice('',{id:'manual-feedback',hidden:true}),DraftSettings(),Stack([],{id:'spreadsheet-players'}),
+    Notice('',{id:'manual-feedback',hidden:true}),Stack([],{id:'spreadsheet-players'}),
     Note('Saved on this device · Keep ESPN open.')
   ],{id:'draft-view'});
-  return Section([UI.StickyGroup([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Stack([],{id:'roster-counts','aria-live':'polite'}),Note('',{id:'advice-context',className:'footnote context-note'})]),Main([draft,RulesView(),Notice('',{id:'error',role:'alert',hidden:true}),DraftReset()])],{id:'football-tool'});
+  return Section([UI.StickyGroup([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Stack([],{id:'roster-counts','aria-live':'polite'}),Note('',{id:'advice-context',className:'footnote context-note'})]),Main([draft,Notice('',{id:'error',role:'alert',hidden:true})])],{id:'football-tool'});
 }
 export function DraftReset() {
   return Disclosure('Reset draft data',[
@@ -16,7 +16,7 @@ export function DraftReset() {
   ],{className:'settings-panel'});
 }
 export function DraftSettings() {
-  return Disclosure('Settings',[
+  return Disclosure('Draft capture',[
     Button('Download ESPN diagnostics',{id:'download-espn-diagnostics'}),
     UI.Toggle({id:'capture-picks',label:'ESPN is capturing picks',checked:true,descriptionId:'capture-help'}),
     Note('On: use ESPN picks. Off: mark players on the board.',{id:'capture-help'}),
@@ -41,4 +41,17 @@ export function GmailView() {
   ],{id:'gmail-tool',className:'tool-page',hidden:true});
 }
 export const HomeView=()=>Section([Heading('Ready when you are.',1),Note('Open Gmail or an ESPN draft. The sidebar follows your current tab.'),Link('Open Gmail ↗','https://mail.google.com/')],{id:'home-tool',className:'tool-page',hidden:true});
-export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView());}
+export function SettingsView() {
+  return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
+    Disclosure('Credentials',[
+      Note('API keys and other secrets. Stored locally on this computer, not synced or encrypted by the extension. Saving a key does not connect a service yet.'),
+      Stack([],{id:'credential-list'}),
+      ...Field({id:'credential-name',label:'Service or name',kind:'text',placeholder:'e.g. OpenAI'}),
+      ...Field({id:'credential-secret',label:'API key or secret',kind:'password',placeholder:'Enter a new key'}),
+      Button('Save credential',{id:'save-credential',variant:'primary'}),
+      Notice('',{id:'credential-status',hidden:true})
+    ],{className:'settings-panel',open:true}),
+    Disclosure('Draft',[DraftSettings(),RulesView(),DraftReset()],{className:'settings-panel'})
+  ]});
+}
+export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),SettingsView());}
