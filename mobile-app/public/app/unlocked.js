@@ -1,0 +1,26 @@
+import {initialize} from './mobile-session.js';
+let started = false;
+window.addEventListener('message', async event => {
+  if (started || window.parent === window || event.source !== parent || event.origin !== location.origin || event.data?.type !== 'mobile-unlock' || typeof event.data.token !== 'string') return;
+  started = true;
+  initialize(event.data.token);
+  try {
+    await import('./capabilities.js');
+    // The connection is already established by the passkey. Keep maintenance
+    // and disconnect controls, but never offer a second plaintext token store.
+    const tokenField = document.getElementById('travel-token');
+    if (tokenField) { tokenField.disabled = true; tokenField.closest('.form-field')?.setAttribute('hidden', ''); }
+    const connect = document.getElementById('travel-connect');
+    if (connect) connect.hidden = true;
+    document.getElementById('capability-picker')?.focus();
+  } catch {
+    document.getElementById('capabilities-root').textContent = 'Could not open your tools. Lock the app and unlock to try again.';
+  }
+});
+if (parent !== window) parent.postMessage({type: 'mobile-ready'}, location.origin);
+for (const type of ['pointerdown', 'keydown', 'input', 'scroll']) {
+  document.addEventListener(type, event => {
+    if (event.isTrusted && !document.hidden) parent.postMessage({type: 'mobile-activity'}, location.origin);
+  }, {capture: true, passive: true});
+}
+new ResizeObserver(() => parent.postMessage({type: 'mobile-size', height: Math.ceil(document.body.getBoundingClientRect().height)}, location.origin)).observe(document.body);

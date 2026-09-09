@@ -1,11 +1,4 @@
-import {mountTravel} from './shared/travel.js';
-import {cloudRequest} from './shared/cloud-storage.js';
-const credentials = {
-  async get(){return localStorage.getItem('travelAccessToken') || '';},
-  async set(token){localStorage.setItem('travelAccessToken',token);},
-  async remove(){localStorage.removeItem('travelAccessToken');}
-};
-mountTravel(document.getElementById('travel-root'),{credentials,request:cloudRequest});
+import './mobile-security.js';
 import {VERSION, checkRelease, newer} from './releases.js';
 const el = id => document.getElementById(id);
 let registration;
@@ -22,10 +15,12 @@ async function offlineSetup() {
   el('retry-offline').hidden = true;
   try {
     if (!('serviceWorker' in navigator)) throw Error('unsupported');
-    registration = await navigator.serviceWorker.register('/app/sw.js', {scope: '/app/', updateViaCache: 'none'});
+    const existing=await navigator.serviceWorker.getRegistration('/app/');
+    try {registration = await navigator.serviceWorker.register('/app/sw.js', {scope: '/app/', updateViaCache: 'none'});}
+    catch(error){if(!existing?.active)throw error;registration=existing;}
     await Promise.race([navigator.serviceWorker.ready, new Promise((_, reject) => setTimeout(() => reject(Error('timeout')), 15000))]);
     el('offline-status').textContent = 'Ready';
-    el('offline-detail').textContent = 'The app opens offline. Travel records require internet and are never cached on this device.';
+    el('offline-detail').textContent = 'Downloaded records and reference data work offline. Changes wait on this device until they can sync. Device storage is not a permanent backup.';
   } catch {
     el('offline-status').textContent = 'Not ready';
     el('offline-detail').textContent = 'Reconnect and retry to save the app for offline use.';

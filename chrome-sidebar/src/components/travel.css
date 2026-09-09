@@ -3,3 +3,5 @@
 .shell .travel-wallet{padding:28px 0 0}
 
 .travel-wallet,.travel-wallet *{box-sizing:border-box}.travel-wallet details{border-top:1px solid #d8ddd5;border-bottom:1px solid #d8ddd5;padding:12px 0}.travel-wallet summary{cursor:pointer}.travel-wallet summary h2{display:inline}.travel-wallet details[open]>:not(summary){margin-top:12px}.travel-wallet summary:focus-visible{outline:3px solid #527d38;outline-offset:3px}
+
+.connection-surface{display:grid;gap:16px}.connection-only{padding-top:12px;padding-bottom:12px}.shell .connection-only{padding-top:12px}.shell .capability-navigation{padding-left:0;padding-right:0}.shell .data-library{padding-left:0;padding-right:0}

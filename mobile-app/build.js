@@ -11,8 +11,11 @@ await mkdir(new URL('./dist/', import.meta.url), {recursive: true});
 await cp(new URL('./public/', import.meta.url), new URL('./dist/', import.meta.url), {recursive: true});
 console.log(`Built Eric’s Tools ${version}`);
 
-for (const file of ['travel.js','cloud-storage.js','components/ui.js','components/travel.js','components/travel.css']) {
+const shared=['travel.js','travel-data.js','travel-offline.js','offline-resource.js','offline-storage.js','capabilities.js','data-library.js','cloud-storage.js','components/ui.js','components/travel.js','components/travel.css','components/capabilities.js','components/capabilities.css'];
+for (const file of shared) {
   const target = new URL(`./dist/app/shared/${file}`, import.meta.url);
   await mkdir(new URL('./', target), {recursive:true});
   await cp(new URL(`../chrome-sidebar/src/${file}`, import.meta.url), target);
 }
+await mkdir(new URL('./dist/app/data/',import.meta.url),{recursive:true});
+for(const file of ['espn-league-2026.json','rankings-2026.json'])await cp(new URL(`../chrome-sidebar/config/${file}`,import.meta.url),new URL(`./dist/app/data/${file}`,import.meta.url));

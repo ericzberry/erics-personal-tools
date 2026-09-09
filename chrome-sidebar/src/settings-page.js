@@ -2,6 +2,7 @@ import {mountSettings} from './components/views.js';
 import {ConnectionCard,setModelSuggestions} from './components/ui.js';
 import {providerFor} from './ai-providers.js';
 mountSettings(document.getElementById('app'));
+await import('./capability-links.js');
 const $=id=>document.getElementById(id);
 let connected=false, working=false, connections=[], selected=null, dirty=false, newId=crypto.randomUUID();
 const available=!!globalThis.chrome?.runtime?.sendMessage && location.protocol==='chrome-extension:';

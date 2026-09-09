@@ -57,7 +57,7 @@ export default {
       response.headers.set('Cache-Control', 'no-cache');
       response.headers.set('X-Content-Type-Options', 'nosniff');
       response.headers.set('Referrer-Policy', 'no-referrer');
-      response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+      response.headers.set('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors ${url.pathname === '/app/unlocked.html' ? "'self'" : "'none'"}; base-uri 'none'; form-action 'none'`);
       return response;
     }
     if(new URL(request.url).pathname==='/v1/releases/latest'){

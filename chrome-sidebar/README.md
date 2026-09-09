@@ -201,8 +201,10 @@ Version 0.6.39 promotes Summarize to the primary action, grows editable results 
 
 Version 0.6.41 checks the public Worker release endpoint against D1 at most hourly while the sidebar is open, persisting checks across reopenings. A compact banner announces newer builds. After packaging each release, run `node tools-api/scripts/publish-release.js` from the repository root to publish its manifest version to D1. This does not reload Chrome automatically.
 
-## Travel wallet (0.6.42)
+## Data capabilities (0.6.43)
 
-Open **Settings → Travel wallet** (also linked on the home screen and AI settings page). Save airline, hotel, rental-car, trusted traveler, passport, visa, and other travel numbers, with traveler names, expiration dates, and private notes. Connect the phone app with the same private access token to use the same records. Records refresh when reopening/foregrounding or reconnecting, and with **Refresh records**; unsaved edits are preserved. Stale saves/deletes are rejected so another device's changes are not overwritten.
+Use the **Capabilities** dropdown to open Travel wallet, league rules, player rankings, or AI connections. Travel is an ordinary capability; there are no separate travel callouts on the home or settings screens. The mobile app uses the same catalog.
 
-Travel records are AES-GCM encrypted in D1. Numbers and notes remain masked and are retrieved only for explicit copy actions. The extension reuses its existing cloud connection. Internet is required for travel records; no offline record cache is created. Disconnect removes the device's token, while Delete permanently removes the selected cloud record after confirmation.
+Connect Travel wallet once with your private access token to download all records, including masked numbers and notes, into encrypted IndexedDB storage. Downloaded records can be searched, copied, added, edited, and marked for deletion offline. Changes persist before network requests and sync on refresh, reconnect, or foregrounding. Per-record revisions reject stale edits. Conflicts retain the device's changes until you choose the cloud version or explicitly keep the device's version. A lost successful response is reconciled before a retry.
+
+Cloud and device copies are encrypted with AES-GCM. Device encryption is unlocked by the device's saved access token. Disconnect clears the local copy and token but leaves cloud records; pending changes must first be synced or resolved. Browser storage is not a permanent backup. The phone includes bundled league rules and player rankings, plus encrypted offline AI connection metadata; provider keys remain on the server and provider requests require internet. Live draft capture remains an extension action.

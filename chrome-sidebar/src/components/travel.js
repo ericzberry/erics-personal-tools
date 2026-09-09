@@ -1,15 +1,9 @@
 import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong} from './ui.js';
-export const TRAVEL_CATEGORIES = ['Airline','Hotel','Rental car','Trusted traveler','Passport','Visa','Other'];
-export function TravelView() {
+import {TRAVEL_CATEGORIES} from '../travel-data.js';
+export function TravelView({connection=true}={}) {
   return Section([
     Heading('Travel wallet',1), Note('Your travel numbers, together across your extension and phone.'),
-    Disclosure('Connection',[
-      Note('Connect with the same private access token on each device.',{id:'travel-connection',role:'status'}),
-      FormField({id:'travel-token',label:'Private access token',kind:'password'}),
-      ActionGroup([Button('Connect',{id:'travel-connect',variant:'primary'}),Button('Refresh records',{id:'travel-refresh',variant:'secondary'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger'})],{compact:true}),
-      Note('Records are encrypted in cloud storage. Internet is required to load and save them. Disconnecting keeps your saved records.')
-    ],{id:'travel-cloud',open:true,titleHeading:true}),
-    Note('',{id:'travel-status',role:'status','aria-live':'polite'}),
+    ...(connection?[TravelConnection()]:[]),
     SettingsGroup({title:'Saved travel details',level:2,children:[
       FormField({id:'travel-search',label:'Find a record',kind:'search',placeholder:'Program, traveler, or category'}),
       Stack([],{id:'travel-list',className:'travel-list'})
@@ -32,7 +26,7 @@ export function TravelView() {
     ]})
   ],{className:'travel-wallet'});
 }
-export function TravelRecord(record, {onEdit,onCopy,onCopyNotes,onDelete}) {
+export function TravelRecord(record, {onEdit,onCopy,onCopyNotes,onDelete,onResolve}) {
   const copy=Button('Copy number',{variant:'secondary'}), edit=Button('Edit',{variant:'secondary'}), remove=Button('Delete',{variant:'danger'});
   copy.addEventListener('click',onCopy);edit.addEventListener('click',onEdit);
   const confirm=Button('Delete from all devices',{variant:'danger'}), keep=Button('Keep record',{variant:'secondary'});
@@ -40,5 +34,22 @@ export function TravelRecord(record, {onEdit,onCopy,onCopyNotes,onDelete}) {
   remove.addEventListener('click',()=>{confirmation.hidden=false;confirm.focus();});
   keep.addEventListener('click',()=>{confirmation.hidden=true;remove.focus();});confirm.addEventListener('click',onDelete);
   const notes=Button('Copy notes',{variant:'secondary'});notes.addEventListener('click',onCopyNotes);
-  return Section([Strong(record.name),Note([record.category,record.traveler,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),Note('Number: ••••••••'),ActionGroup([copy,edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation],{className:'travel-record'});
+  const resolutions=Stack([]);
+  if(record.conflict){
+    const local=Button('Keep this device’s changes',{variant:'secondary'}), cloud=Button('Use cloud version',{variant:'secondary'});
+    const accept=Button('Discard my pending change',{variant:'danger'}), cancel=Button('Keep reviewing',{variant:'secondary'});
+    const warning=Stack([Note('Discard the pending change on this device and use the cloud version?'),ActionGroup([accept,cancel],{compact:true})],{hidden:true});
+    local.addEventListener('click',()=>onResolve('local'));
+    cloud.addEventListener('click',()=>{warning.hidden=false;accept.focus();});cancel.addEventListener('click',()=>{warning.hidden=true;cloud.focus();});
+    accept.addEventListener('click',()=>onResolve('cloud'));
+    resolutions.append(Note('Changed on another device. Choose which version to use.'),ActionGroup([local,cloud],{compact:true}),warning);
+  }
+  return Section([Strong(record.name),...(record.pending?[Note(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Saved on this device · Waiting to sync')]:[]),Note([record.category,record.traveler,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),Note('Number: ••••••••'),ActionGroup([copy,edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],{className:'travel-record'});
 }
+
+export function TravelConnection(){return Stack([Disclosure('Connection',[
+      Note('Connect with the same private access token on each device.',{id:'travel-connection',role:'status'}),
+      FormField({id:'travel-token',label:'Private access token',kind:'password'}),
+      ActionGroup([Button('Connect',{id:'travel-connect',variant:'primary'}),Button('Refresh records',{id:'travel-refresh',variant:'secondary'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger'})],{compact:true}),
+      Note('Records are encrypted in cloud storage. Downloaded records are encrypted on this device for offline use. Changes sync when connected. Disconnect clears this device’s copy and keeps cloud records.')
+    ],{id:'travel-cloud',open:true,titleHeading:true}),Note('',{id:'travel-status',role:'status','aria-live':'polite'})],{className:'connection-surface'});}

@@ -9,16 +9,20 @@ test('travel wallet preserves failed edits, masks records, and confirms deletion
   globalThis.window=window;globalThis.document=document;
   Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,get(){return this.querySelector('option[selected]')?.value||this.querySelector('option')?.value||'';},set(value){for(const o of this.querySelectorAll('option'))o.selected=o.value===value;}});
   const record={id:'abc',revision:'one',name:'Synthetic airline',category:'Airline',traveler:'Test traveler',expires:'',hasNotes:true};
-  let fail=false, writes=[], deleted=false;
+  let fail=false, writes=[], deleted=false, copied='';
+  globalThis.ClipboardItem=class {constructor(data){this.data=data;}};
+  const clipboard={async write(items){copied=await (await items[0].data['text/plain']).text();}};
   const request=async(token,path,options={})=>{
     assert.equal(token,'synthetic');
     if(options.method==='PUT'){writes.push(options.value);if(fail)throw Error('Offline: try again.');return {record:{...record,...options.value}};}
     if(options.method==='DELETE'){deleted=true;return {ok:true};}
+    if(path!=='/v1/travel')return {record:{...record,number:'00123456'}};
     return {records:[record]};
   };
-  await mountTravel(document.getElementById('app'),{credentials:{get:async()=> 'synthetic'},request}).ready;
+  await mountTravel(document.getElementById('app'),{credentials:{get:async()=> 'synthetic'},request,clipboard}).ready;
   const $=id=>document.getElementById(`travel-${id}`);
   assert.match($('list').textContent,/••••••••/);
+  $('list').querySelector('button').click();await tick();assert.equal(copied,'00123456');
   $('list').querySelectorAll('button')[1].click();
   assert.equal($('number').value,'');
   $('name').value='Updated program';$('name').dispatchEvent(new window.Event('input',{bubbles:true}));

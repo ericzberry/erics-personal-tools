@@ -22,6 +22,8 @@ test('authenticated encrypted travel CRUD shares records and rejects stale write
     const value={name:'Synthetic airline',category:'Airline',number:'00123456789',notes:'Private synthetic notes',revision:null};
     const saved=await (await call(`/${id}`,'PUT',value)).json();assert.ok(saved.record.revision);assert.equal(saved.record.number,undefined);
     const list=await (await call()).json();assert.equal(list.records.length,1);assert.equal(list.records[0].notes,undefined);
+    const snapshot=await (await call('/snapshot')).json();assert.equal(snapshot.records[0].number,value.number);assert.equal(snapshot.records[0].notes,value.notes);
+    assert.equal((await call('/snapshot','GET',undefined,'wrong')).status,401);
     const row=await db.prepare('SELECT value FROM travel_records WHERE id = ?').bind(id).first();assert.ok(!row.value.includes(value.number));assert.ok(!row.value.includes(value.notes));
     const detail=await (await call(`/${id}`)).json();assert.equal(detail.record.number,value.number);
     assert.equal((await call(`/${id}`,'PUT',value)).status,409);

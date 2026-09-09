@@ -1,25 +1,17 @@
 import {encryptSettings, decryptSettings} from './ai-settings.js';
 const fail = (status, message) => { throw {status, message}; };
-const categories = ['Airline','Hotel','Rental car','Trusted traveler','Passport','Visa','Other'];
-export function normalizeTravel(input, previous = {}) {
-  const field = (key, max, required = false) => {
-    const value = input[key] ?? previous[key] ?? '';
-    if (typeof value !== 'string' || value.length > max || (required && !value.trim())) fail(400, `Check ${key} (up to ${max} characters).`);
-    return value.trim();
-  };
-  const category = field('category', 30, true);
-  if (!categories.includes(category)) fail(400, 'Choose a travel category.');
-  const expires = field('expires', 10);
-  if (expires && (!/^\d{4}-\d{2}-\d{2}$/.test(expires) || !Number.isFinite(Date.parse(expires)) || new Date(expires).toISOString().slice(0,10) !== expires)) fail(400, 'Enter a valid expiration date.');
-  return {category, name:field('name',100,true), traveler:field('traveler',100), number:field('number',200,true), notes:field('notes',2000), expires};
-}
+export {normalizeTravel} from '../../chrome-sidebar/src/travel-data.js';
+import {normalizeTravel} from '../../chrome-sidebar/src/travel-data.js';
 const metadata = (row, value) => ({id:row.id, revision:row.revision, updatedAt:row.updated_at, name:value.name, category:value.category, traveler:value.traveler, expires:value.expires, hasNotes:!!value.notes});
 export async function travel(request, env, readValue, json) {
   const path = new URL(request.url).pathname;
-  if (path === '/v1/travel') {
+  if (path === '/v1/travel' || path === '/v1/travel/snapshot') {
     if (request.method !== 'GET') return json({error:'Method not allowed.'},405);
     const {results} = await env.DB.prepare('SELECT id, value, revision, updated_at FROM travel_records ORDER BY updated_at DESC').all();
-    return json({records:await Promise.all(results.map(async row => metadata(row,await decryptSettings(row.value,`travel:${row.id}`,env))))});
+    return json({records:await Promise.all(results.map(async row => {
+      const value=await decryptSettings(row.value,`travel:${row.id}`,env);
+      return {...metadata(row,value),...(path.endsWith('/snapshot')?value:{})};
+    }))});
   }
   const match = /^\/v1\/travel\/([a-f0-9-]{36})$/.exec(path);
   if (!match) return json({error:'Not found.'},404);
