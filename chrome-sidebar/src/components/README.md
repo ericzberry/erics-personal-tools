@@ -22,3 +22,5 @@ The tests in `tests/components.test.js` enforce controller hooks, accessible fie
 `Title` owns title typography through `.title-text`; `Heading` is its compatibility alias. `SectionTitle`, `ToolHeading`, and `SubPage` compose it. Use `Disclosure` with `titleHeading: true` for section titles; ordinary disclosure controls retain compact labels. Do not add page-specific title font overrides.
 
 `PageHeader` and `PageBody` own page spacing with `--page-inset` and `--section-gap`. `ToolHeading` and `Main` delegate to them. Compose new screens with these modules; do not add feature-specific outer padding.
+
+`SettingsGroup` provides a titled, bounded settings section. `ActionGroup(children, {compact: true})` keeps maintenance actions adjacent and allows wrapping. Use secondary buttons for maintenance and danger buttons for destructive actions.

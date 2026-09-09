@@ -15,3 +15,10 @@ The user requires every extension UI element to come from a reusable component.
 ## Release versions
 
 - Increment the extension patch version for every delivered update, including follow-up fixes. Keep the manifest, package metadata, release archive filename, and release documentation aligned.
+
+## Layout and action structure
+
+- Apply the repository-wide UI/UX rules in `../AGENTS.md` to every extension screen.
+- Use `SettingsGroup` for a titled group of related settings, status, and actions.
+- Use `ActionGroup` with `compact: true` for adjacent maintenance and row actions; use explicit secondary and danger button variants instead of floating text.
+- Keep the sidebar usable at 280px and normal sidebar widths. Check long saved names and wrapped actions using synthetic credentials.

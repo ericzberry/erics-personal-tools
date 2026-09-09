@@ -49,16 +49,20 @@ export function SettingsView() {
     Disclosure('Credentials',[
       UI.FormStack([
       Note('API keys are encrypted in D1.'),
+      UI.SettingsGroup({title:'Cloud connection',children:[
       Note('Worker not connected.',{id:'credential-cloud-state',role:'status'}),
       Stack([
         UI.FormField({id:'credential-token',label:'Worker access token',kind:'password',placeholder:'Your Worker’s API_TOKEN'}),
         Button('Connect',{id:'credential-connect',variant:'primary'})
       ],{id:'credential-connection',className:'form-stack'}),
-      ActionGroup([Button('Refresh',{id:'credential-refresh'}),Button('Disconnect',{id:'credential-disconnect'})]),
-      Stack([],{id:'credential-list'}),
+      ActionGroup([Button('Refresh',{id:'credential-refresh',variant:'secondary'}),Button('Disconnect',{id:'credential-disconnect',variant:'danger'})],{compact:true})
+      ]}),
+      UI.SettingsGroup({title:'Saved credentials',children:[Stack([Note('Connect to load saved credentials.')],{id:'credential-list'})]}),
+      UI.SettingsGroup({title:'Add or replace a key',children:[UI.FormStack([
       UI.FormField({id:'credential-name',label:'Service',kind:'select',options:[{text:'Select a service',value:''},...AI_PROVIDERS.filter(p=>p.id!=='custom').map(p=>({text:p.name,value:p.id}))]}),
       UI.FormField({id:'credential-secret',label:'API key or secret',kind:'password',placeholder:'Enter a new key'}),
-      Button('Save credential',{id:'save-credential',variant:'primary'}),
+      Button('Save credential',{id:'save-credential',variant:'primary'})
+      ])]}),
       Notice('',{id:'credential-status',hidden:true})
       ])
     ],{className:'settings-panel',open:true,titleHeading:true}),

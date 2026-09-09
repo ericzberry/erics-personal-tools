@@ -191,4 +191,6 @@ Version 0.6.33 distinguishes Worker authentication from saved provider keys. Sid
 Version 0.6.34 connects Gmail Summarize to the existing Worker generate endpoint and a saved OpenAI D1 connection. It uses the most recently updated OpenAI connection with a key, its configured model or gpt-4.1-mini, and at most three bullets. Reading email alone never sends it. Reply generation remains on-device. No Worker redeploy or schema change is needed.
 Default summary model reference: [OpenAI GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini).
 
+Version 0.6.35 organizes Credentials into Cloud connection, Saved credentials, and Add or replace a key. Maintenance actions use adjacent bordered buttons, destructive actions have a distinct style, and shared sections keep related controls together. Repository agent guidance now defines UI/UX standards for grouping, hierarchy, spacing, accessibility, responsive layouts, and visual review.
+
 Version 0.6.36 reconnects already-open Gmail tabs after extension updates. The sidebar injects its reader only on Gmail when the connection is missing; retries are bounded and existing listeners are replaced. Adds scripting permission for this recovery.

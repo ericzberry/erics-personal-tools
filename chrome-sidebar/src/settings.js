@@ -46,7 +46,7 @@ $('credential-connect').addEventListener('click',()=>mutate(async()=>{
   await send('connect',{token:$('credential-token').value});$('credential-token').value='';connected=true;feedback('Worker connected. Add an API key below.');await load();
 }));
 $('credential-refresh').addEventListener('click',()=>mutate(async()=>{feedback('');await load();}));
-$('credential-disconnect').addEventListener('click',()=>mutate(async()=>{await send('disconnect');connected=false;records=[];clearForm();$('credential-list').replaceChildren();feedback('Disconnected. Keys remain in D1.');}));
+$('credential-disconnect').addEventListener('click',()=>mutate(async()=>{await send('disconnect');connected=false;records=[];clearForm();$('credential-list').replaceChildren(Note('Connect to load saved credentials.'));feedback('Disconnected. Keys remain in D1.');}));
 $('save-credential').addEventListener('click',()=>mutate(async()=>{
   const provider=$('credential-name').value,apiKey=$('credential-secret').value.trim();
   if(!provider||!apiKey)throw Error('Choose a service and enter its API key.');

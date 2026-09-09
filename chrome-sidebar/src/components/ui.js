@@ -65,7 +65,8 @@ export function EditableResult({id,titleId,copyId,fieldId,title='Summary',label=
 }
 export function downloadFile({url,filename}) {const link=Link('',url,{download:filename});link.removeAttribute('target');link.click();}
 
-export const ActionGroup=children=>Stack(children,{className:'action-group'});
+export const ActionGroup=(children,{compact=false,...props}={})=>Stack(children,{className:`action-group${compact?' action-group--compact':''}`,...props});
+export const SettingsGroup=({title,children=[]})=>Section([Heading(title,3,{className:'settings-group-title'}),...children],{className:'settings-group','aria-label':title});
 
 export function OwnershipActions(player,{owner=null,corrected=false,onSelect}) {
   const actions=ActionGroup(['me','other'].map(value=>{
@@ -155,9 +156,9 @@ export function RosterCounts(counts,{known=true,alerts=[]}={}) {
 export const StickyGroup=children=>Stack(children,{className:'sticky-group'});
 
 export function CredentialRow(credential,{onEdit,onDelete}) {
-  const edit=Button('Replace',{'aria-label':`Replace ${credential.name}`});edit.addEventListener('click',onEdit);
-  const remove=Button('Delete',{'aria-label':`Delete ${credential.name}`});remove.addEventListener('click',onDelete);
-  return Stack([Stack([Strong(credential.name),Note(credential.hasApiKey===false?'No API key saved':credential.hasApiKey===true?'API key saved in D1':'Key saved')]),ActionGroup([edit,remove])],{className:'credential-row'});
+  const edit=Button('Replace',{variant:'secondary','aria-label':`Replace ${credential.name}`});edit.addEventListener('click',onEdit);
+  const remove=Button('Delete',{variant:'danger','aria-label':`Delete ${credential.name}`});remove.addEventListener('click',onDelete);
+  return Stack([Stack([Strong(credential.name),Note(credential.hasApiKey===false?'No API key saved':credential.hasApiKey===true?'API key saved in D1':'Key saved')]),ActionGroup([edit,remove],{compact:true})],{className:'credential-row'});
 }
 
 export function CredentialServiceOptions(services,savedNames=[]) {

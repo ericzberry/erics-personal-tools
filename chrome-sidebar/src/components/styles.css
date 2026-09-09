@@ -340,3 +340,18 @@ summary > .title-text { display: inline; }
 }
 
 .form-stack .footnote { margin: 0; }
+
+/* Bounded settings sections keep status, fields, and their actions together. */
+.settings-group { display: grid; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.settings-group-title { font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+.settings-group > .form-stack { padding-bottom: 0; }
+.settings-group .action-group { margin: 0; }
+.action-group--compact { flex-wrap: wrap; justify-content: flex-start; margin: 0; }
+.action-group--compact > button { flex: 0 0 auto; min-height: 32px; }
+.button-danger { padding: 9px 10px; border: 1px solid #d8bcb5; border-radius: 8px; background: var(--surface); color: #843c32; font-size: 12px; }
+.button-danger:disabled { opacity: .5; cursor: default; }
+.button-secondary:hover:not(:disabled) { background: #dce8d9; border-color: #93aa9b; }
+.button-danger:hover:not(:disabled) { background: #f6e9e5; border-color: #b97e70; }
+.credential-row { flex-wrap: wrap; padding: 10px 0; gap: 10px; }
+.credential-row:first-child { padding-top: 0; }
+.credential-row:last-child { padding-bottom: 0; border-bottom: 0; }
