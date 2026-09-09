@@ -22,3 +22,7 @@ The user requires every extension UI element to come from a reusable component.
 - Use `SettingsGroup` for a titled group of related settings, status, and actions.
 - Use `ActionGroup` with `compact: true` for adjacent maintenance and row actions; use explicit secondary and danger button variants instead of floating text.
 - Keep the sidebar usable at 280px and normal sidebar widths. Check long saved names and wrapped actions using synthetic credentials.
+
+## Release availability
+
+- After packaging and publishing a release, run `node tools-api/scripts/publish-release.js` from the repository root to update the version in D1. Never advertise an unfinished build. The sidebar checks this metadata at most once per hour.

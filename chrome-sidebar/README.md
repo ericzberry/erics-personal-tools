@@ -198,3 +198,5 @@ Version 0.6.36 reconnects already-open Gmail tabs after extension updates. The s
 Version 0.6.37 makes the email subject the single page title and fixes provider requests for Cloudflare Workers: manual redirects are rejected explicitly. Requires redeploying tools-api. Runtime regression tests now exercise the actual Workers Request implementation.
 
 Version 0.6.39 promotes Summarize to the primary action, grows editable results to fit all text, and fixes email summaries to lightweight GPT-4.1 mini regardless of other connection model settings.
+
+Version 0.6.41 checks the public Worker release endpoint against D1 at most hourly while the sidebar is open, persisting checks across reopenings. A compact banner announces newer builds. After packaging each release, run `node tools-api/scripts/publish-release.js` from the repository root to publish its manifest version to D1. This does not reload Chrome automatically.

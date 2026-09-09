@@ -1,3 +1,4 @@
+import {latestRelease} from './releases.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
 const MAX_BYTES = 64 * 1024;
@@ -46,6 +47,10 @@ async function readValue(request) {
 
 export default {
   async fetch(request, env) {
+    if(new URL(request.url).pathname==='/v1/releases/latest'){
+      if(request.method!=='GET')return json({error:'Method not allowed.'},405);
+      try{return await latestRelease(env);}catch{return json({error:'Release unavailable.'},503);}
+    }
     // Extension pages use their host permission. No cross-origin website access is granted.
     if (!await authorized(request, env.API_TOKEN)) return json({error: 'Unauthorized.'}, 401);
     const path = new URL(request.url).pathname;

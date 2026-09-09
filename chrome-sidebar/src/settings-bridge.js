@@ -1,3 +1,5 @@
+import {releaseChecker} from './release-check.js';
+const releaseChecks=new WeakMap();
 import {migrateCredentials} from './credential-migration.js';
 import {cloudRequest, CONNECTION_KEY} from './cloud-storage.js';
 export function isSettingsPage(sender, chromeApi) {
@@ -6,6 +8,10 @@ export function isSettingsPage(sender, chromeApi) {
 export async function settingsAction(message, chromeApi, request = cloudRequest) {
   const storage = chromeApi.storage.local;
   await storage.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'});
+  if(message.action==='release-check'){
+    if(!releaseChecks.has(storage))releaseChecks.set(storage,releaseChecker(storage));
+    return releaseChecks.get(storage)();
+  }
   if (message.action === 'disconnect') {
     await storage.remove(CONNECTION_KEY); return {connected:false};
   }

@@ -358,3 +358,5 @@ summary > .title-text { display: inline; }
 
 /* Generated text stays fully visible, including after edits and sidebar resizing. */
 .editable-output--fit { field-sizing: content; min-height: 96px; resize: none; overflow: hidden; line-height: 1.65; padding: 12px; }
+
+.release-banner { margin: 0; padding: 8px var(--page-inset); background: #f3ead6; color: #614a23; font-size: 11px; line-height: 1.4; border-bottom: 1px solid #dfcea9; }

@@ -185,3 +185,5 @@ export function ConnectionCard(connection, {selected=false,onSelect}={}) {
   button.addEventListener('click',()=>onSelect(connection));
   return button;
 }
+
+export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true});
