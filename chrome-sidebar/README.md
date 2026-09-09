@@ -196,3 +196,5 @@ Version 0.6.35 organizes Credentials into Cloud connection, Saved credentials, a
 Version 0.6.36 reconnects already-open Gmail tabs after extension updates. The sidebar injects its reader only on Gmail when the connection is missing; retries are bounded and existing listeners are replaced. Adds scripting permission for this recovery.
 
 Version 0.6.37 makes the email subject the single page title and fixes provider requests for Cloudflare Workers: manual redirects are rejected explicitly. Requires redeploying tools-api. Runtime regression tests now exercise the actual Workers Request implementation.
+
+Version 0.6.39 promotes Summarize to the primary action, grows editable results to fit all text, and fixes email summaries to lightweight GPT-4.1 mini regardless of other connection model settings.

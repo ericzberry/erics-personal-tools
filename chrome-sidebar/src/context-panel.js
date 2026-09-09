@@ -58,6 +58,7 @@ for (const [id, action] of [['summarize-email','summary'],['reply-email','reply'
     if (token !== generation) return;
     $('email-result-title').textContent = action === 'reply' ? 'Reply draft' : 'Summary';
     $('email-output').value = text; $('email-result').hidden = false;
+    $('email-output').dispatchEvent(new Event('output-updated'));
     $('email-action-status').textContent = action === 'reply' ? 'Review and edit before using.' : '';
   } catch (error) {if(token===generation)$('email-action-status').textContent=error.message;}
   finally {if(token===generation){working=false;renderEmail();}}

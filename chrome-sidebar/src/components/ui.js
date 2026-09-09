@@ -61,7 +61,13 @@ export function RecommendationCard(p,{primary=false,compact=false}={}) {
   return element('article',{className:`recommendation${primary?' recommendation--primary':''}`},children);
 }
 export function EditableResult({id,titleId,copyId,fieldId,title='Summary',label='Generated text — editable'}) {
-  return Section([SectionTitle(title,Button('Copy',{id:copyId}),{titleId}),...Field({id:fieldId,label,kind:'textarea',hiddenLabel:true})],{id,hidden:true});
+  const fields=Field({id:fieldId,label,kind:'textarea',hiddenLabel:true});
+  const output=fields[1];output.classList.add('editable-output--fit');
+  const resize=()=>{if(!output.getClientRects().length)return;output.style.height='auto';output.style.height=`${output.scrollHeight+2}px`;};
+  output.addEventListener('input',resize);
+  if(globalThis.ResizeObserver){let width=-1;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;resize();}}).observe(output);}
+  output.addEventListener('output-updated',resize);
+  return Section([SectionTitle(title,Button('Copy',{id:copyId,variant:'secondary'}),{titleId}),...fields],{id,hidden:true});
 }
 export function downloadFile({url,filename}) {const link=Link('',url,{download:filename});link.removeAttribute('target');link.click();}
 

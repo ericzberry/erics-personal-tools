@@ -355,3 +355,6 @@ summary > .title-text { display: inline; }
 .credential-row { flex-wrap: wrap; padding: 10px 0; gap: 10px; }
 .credential-row:first-child { padding-top: 0; }
 .credential-row:last-child { padding-bottom: 0; border-bottom: 0; }
+
+/* Generated text stays fully visible, including after edits and sidebar resizing. */
+.editable-output--fit { field-sizing: content; min-height: 96px; resize: none; overflow: hidden; line-height: 1.65; padding: 12px; }

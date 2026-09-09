@@ -12,8 +12,8 @@ test('summary uses D1 connection ID and only sends the current email as untruste
  assert.equal(request.id,connection.id);assert.equal(request.model,'gpt-4.1-mini');assert.equal(request.apiKey,undefined);
  assert.match(request.messages[0].content,/untrusted data/);assert.deepEqual(JSON.parse(request.messages[1].content),{subject:email.subject,from:email.from,body:email.text});
 });
-test('saved model is honored and other providers or empty keys cannot be selected',async()=>{
- const calls=[];await summarizeEmail({email,send:sender({calls,connections:[{...connection,provider:'anthropic'}, {...connection,hasApiKey:false},{...connection,model:'saved-model'}]})});assert.equal(calls[2].model,'saved-model');
+test('summary stays lightweight despite a different saved model and other providers or empty keys cannot be selected',async()=>{
+ const calls=[];await summarizeEmail({email,send:sender({calls,connections:[{...connection,provider:'anthropic'}, {...connection,hasApiKey:false},{...connection,model:'saved-model'}]})});assert.equal(calls[2].model,'gpt-4.1-mini');
  for(const connections of [[],[{...connection,provider:'anthropic'}],[{...connection,hasApiKey:false}]])await assert.rejects(summarizeEmail({email,send:sender({connections})}),/Save an OpenAI/);
  await assert.rejects(summarizeEmail({email,send:sender({connected:false})}),/Connect your Worker/);
 });
