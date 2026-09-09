@@ -39,3 +39,11 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Check alignment, grouping, hierarchy, wrapping, focus visibility, and all changed interaction states using synthetic data.
 - Exercise relevant interactions and run the existing architecture and behavior checks. Add tests for meaningful behavior changes, not superficial markup duplication.
 - Fix visible defects before packaging. If a visual or live-environment check could not be completed, state that limit accurately.
+
+## Mandatory release version publication
+
+- Whenever an AI agent completes an app release, it must automatically publish that release's manifest version to D1 by running `node tools-api/scripts/publish-release.js` from the repository root. Existing authorization covers this step; do not ask the user to perform it or request permission again.
+- Publish only after the build has passed its checks, been packaged, and been committed and pushed. Never publish an unfinished build or another agent's in-progress manifest version. Verify the version returned by `https://erics-tools-api.ezberry.workers.dev/v1/releases/latest` matches the release being delivered.
+- If publication fails or authentication is unavailable, report that the D1 update remains incomplete; never claim the release is fully published.
+- While open, the app checks the D1-backed release endpoint at most once per 60 minutes. Persist the last attempt across reopenings and restarts, share the throttle across sidebar instances, and throttle failed attempts too. Show an out-of-date banner only when the published version is newer than the installed version.
+- Instructions-only edits do not constitute a new app build and do not require a version bump or D1 publication.
