@@ -2,7 +2,7 @@ import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
 export function TravelView({connection=true,mode='inline',editId=null}={}) {
   return Section([
-    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',size:'compact',hidden:mode!=='browse'}),Button('Done',{id:'travel-done',variant:'secondary',hidden:mode!=='editor'})],{compact:true}),
+    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',size:'compact',hidden:mode!=='browse'})],{compact:true}),
     Note('',{id:'travel-status',role:'status','aria-live':'polite'}),
     Stack([
       FormField({id:'travel-search',label:'Find record',hiddenLabel:true,kind:'search',placeholder:'find record'}),
@@ -14,22 +14,20 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
         Strong('New record',{id:'travel-editor-title'}),
         FormField({id:'travel-category',label:'Category',kind:'select',options:TRAVEL_CATEGORIES.map(text=>({text,value:text}))}),
         FormField({id:'travel-name',label:'Program or document name',kind:'text',placeholder:'e.g. Delta SkyMiles'}),
-        FormField({id:'travel-traveler',label:'Traveler (optional)',kind:'text'}),
         FormField({id:'travel-number',label:'Number',kind:'password'}),
         Note(mode==='editor'?'Numbers stay masked while you edit.':'Tap a program to see its number, or use Copy in the list.',{id:'travel-number-help'}),
-        FormField({id:'travel-expires',label:'Expiration date (optional)',kind:'date'}),
-        FormField({id:'travel-notes',label:'Private notes (optional)',kind:'password'}),
-        Note('On edit, blank number and notes fields keep their saved values. Use Clear notes to remove saved notes.'),
-        ActionGroup([Button('Save record',{id:'travel-save',type:'submit',variant:'primary'}),Button('Cancel edits',{id:'travel-cancel',variant:'secondary'}),Button('Clear notes',{id:'travel-clear-notes',variant:'secondary'})],{compact:true}),
+        FormField({id:'travel-notes',label:'Notes (optional)',kind:'password'}),
+        Note('On edit, blank number and notes fields keep their saved values.'),
+        ActionGroup([Button('Save record',{id:'travel-save',type:'submit',variant:'primary'}),Button('Cancel edits',{id:'travel-cancel',variant:'secondary'})],{compact:true}),
         Note('',{id:'travel-form-status',role:'status'})
       ],{id:'travel-form',className:'form-stack'})
     ],{id:'travel-editor',hidden:mode==='browse'}),
     ...(connection?[TravelConnection()]:[])
   ],{className:'travel-wallet'});
 }
-export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve}) {
+export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve,showNumber=false}) {
   const action=(label,options)=>Button(label,{size:'compact',...options});
-  const number=Strong('••••••••',{className:'travel-number','aria-live':'polite'});
+  const number=Strong(showNumber?record.number||'—':'••••••••',{className:'travel-number','aria-live':'polite'});
   const copy=CopyIconButton(`Copy number for ${record.name}`), edit=action('Edit',{variant:'subtle'}), remove=action('Delete',{variant:'danger-subtle'});
   copy.addEventListener('click',onCopy);edit.addEventListener('click',onEdit);
   const confirm=action('Delete from all devices',{variant:'danger'}), keep=action('Keep record',{variant:'secondary'});
@@ -50,9 +48,11 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
   return ExpandableRecord({
     title:record.name,
     subtitle:[record.traveler,record.pending?(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Waiting to sync'):''].filter(Boolean).join(' · '),
-    action:copy,
-    children:[number,Note([record.category,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],
+    action:showNumber?null:copy,
+    preview:showNumber?Stack([number,copy],{className:'record-number-line'}):null,
+    children:[...(showNumber?[]:[number]),Note([record.category,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],
     onToggle:async open=>{
+      if(showNumber)return;
       number.textContent='••••••••';
       if(!open)return;
       const value=await onShow();
