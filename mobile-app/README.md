@@ -18,6 +18,14 @@ Recovery requires the original access token and a new supported passkey. It pres
 
 ## Development and deployment
 
+### Restaurants (0.1.12)
+
+Choose **Restaurants** in Tools to research a restaurant or category using the same source-backed research and criteria as the extension. City, neighborhood, editorial criteria, date/time window, and flexible party size are supported. Open a restaurant's **Booking pages** to choose a provider and party size; OpenTable and Tock also offer hourly links across the requested window. Confirm the filters on the provider before booking. The iPhone web app cannot inspect other sites' signed-in tabs, so these links never claim confirmed availability. Automatic live page inspection remains an extension capability.
+
+The latest successfully downloaded shortlist, addresses, rating/source details, booking destinations, and original search are encrypted in device storage. They remain readable after a cold offline reopen and are timestamped; past dates require a new search before opening booking links. New research and provider pages require internet. Failed and canceled research preserve the prior download. A cache failure is visible and retains the old download. Disconnect clears the restaurant download along with other private copies. Browser storage remains evictable.
+
+This is a read-only research download, not an editable saved-search database: it does not write cloud records, expose offline edits, or require a pending-write queue. A newer download wins when concurrent searches finish out of order. Research is never automatically repeated or billed on reconnect; only connection metadata refreshes. The passkey transport preference from the preceding fix is included in this release.
+
 From tools-api, `npm run dev` builds the mobile assets and runs the existing Worker. Open `/app/` on its local URL. The vanilla HTML/CSS/module structure matches the existing project's lightweight browser code; assets are served by the same Worker so future authenticated requests do not need cross-origin access.
 
 Run `npm --prefix mobile-app run build`, `npm --prefix mobile-app test`, and `npm --prefix tools-api test` from the repository root. `npm --prefix tools-api run deploy` also builds the mobile assets before deploying both server and app.

@@ -1,3 +1,11 @@
+# Mobile 0.1.12 — Restaurants
+
+Adds Restaurants to Tools: source-backed restaurant/category research, the extension's search criteria, provider links for the selected dates, times, and party sizes, and an encrypted offline download of the latest shortlist. Saved results appear before the search form. Mobile does not claim live availability or inspect other sites' signed-in tabs; users check tables on the provider. Includes the on-device passkey transport preference and the per-commit app-version rule.
+
+Validation: 21 mobile, 164 extension, and 40 API tests; builds; synthetic 280px/390px review; cold offline reopen with the preview server stopped; cancellation, failed-search preservation, and cache clearing. Download results are read-only; no editable cloud records or offline write queue are introduced. Native iPhone passkey prompts and paid live research were not tested.
+
+Archives: `erics-tools-mobile-0.1.12.zip` and `../../chrome-sidebar/release/erics-sidebar-0.6.51.zip`.
+
 # Mobile 0.1.5 — automatic passkey prompt
 
 A configured mobile app starts passkey verification automatically on opening, returning locked to the foreground, or reaching its inactivity lock while visible. Canceled or rejected automatic requests leave the manual Unlock button available and do not loop. Lock now remains a deliberate lock until another visit. Extension authentication is unchanged.

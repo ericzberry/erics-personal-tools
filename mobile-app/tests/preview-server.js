@@ -1,6 +1,7 @@
 // Local-only synthetic passkey/API fixture. Never copied into dist or deployed.
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import worker from '../../tools-api/src/index.js';
 const root = new URL('../dist/', import.meta.url);
 const port = Number(process.env.PORT || 8791);
@@ -37,7 +38,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     ['Simulate 15 minutes idle',()=>{offset+=900001;}],
     ['Cancel next passkey',()=>{canceled=true;}],
     ['Disable passkey encryption',()=>{unsupported=true;}],
-    ['Go offline',()=>{localStorage.setItem('fixture-offline','yes');window.dispatchEvent(new Event('offline'));}],
+    ['Go offline',()=>{localStorage.setItem('fixture-offline','yes');window.dispatchEvent(new Event('offline'));for(const f of document.querySelectorAll('iframe'))f.contentWindow.dispatchEvent(new Event('offline'));}],
     ['Go online',()=>{localStorage.removeItem('fixture-offline');window.dispatchEvent(new Event('online'));for(const f of document.querySelectorAll('iframe'))f.contentWindow.dispatchEvent(new Event('online'));}]
   ]){const button=document.createElement('button');button.textContent=label;button.onclick=action;panel.append(button);}
   document.body.append(panel);
@@ -47,13 +48,17 @@ const types = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', 
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost:8791');
-    if (url.pathname === '/fixture.js') {res.setHeader('Content-Type','text/javascript');res.end(fixture);return;}
+    if (url.pathname === '/app/fixture.js') {res.setHeader('Content-Type','text/javascript');res.end(fixture);return;}
     if (url.pathname === '/fixture-count') {res.end(JSON.stringify({apiCalls}));return;}
     if (url.pathname.startsWith('/app/')) {
       const response = await worker.fetch(new Request(url), {ASSETS:{fetch:async () => {
         const path = url.pathname.endsWith('/') ? url.pathname + 'index.html' : url.pathname;
         let value = await readFile(new URL('.' + path, root));
-        if (path.endsWith('.html')) value = value.toString().replace('<head>', '<head><script src="/fixture.js"></script>');
+        if (path.endsWith('.html')) value = value.toString().replace('<head>', '<head><script src="/app/fixture.js"></script>');
+        if (path.endsWith('/sw.js')) {
+          const revision=createHash('sha256').update(await readFile(new URL('app/restaurants.js',root))).update(await readFile(new URL('app/shared/components/restaurant-views.js',root))).digest('hex').slice(0,8);
+          value=value.toString().replace(/(const CACHE = '[^']+)/,`$1-preview-${revision}`).replace('const SHELL = [',"const SHELL = ['/app/fixture.js', ");
+        }
         const type=Object.entries(types).find(([extension])=>path.endsWith(extension))?.[1] || 'application/octet-stream';
         return new Response(value,{headers:{'Content-Type':type}});
       }}});
@@ -64,7 +69,12 @@ createServer(async (req, res) => {
     if (url.pathname === '/v1/releases/latest') {res.end(JSON.stringify({version:'0.1.2'}));return;}
     if (req.headers.authorization !== 'Bearer ' + token) {res.statusCode=401;res.end('{}');return;}
     if (url.pathname === '/health') {res.end('{"ok":true}');return;}
-    if (url.pathname === '/v1/ai-connections') {res.end('{"connections":[]}');return;}
+    if (url.pathname === '/v1/ai-connections') {res.end(JSON.stringify({connections:[{id,name:'Synthetic research connection',provider:'openai',hasApiKey:true}]}));return;}
+    if (url.pathname === `/v1/ai-connections/${id}/restaurants`) {
+      let text='';for await(const data of req)text+=data;const {search}=JSON.parse(text);
+      if(search.query==='failure'){res.statusCode=502;res.end('{"error":"Synthetic research failure"}');return;}
+      res.end(JSON.stringify({summary:'Synthetic source-backed matches for the selected criteria.',clarification:'Review the restaurant address before booking.',researchedAt:new Date().toISOString(),restaurants:[{id:'1',name:'Example Bistro with a deliberately long restaurant name',address:'100 Example Avenue',city:'New York City',neighborhood:'Upper West Side',borough:'Manhattan',travel:'included',reason:'Synthetic candidate for layout and offline testing.',evidence:[{url:'https://example.com/review',title:'Synthetic restaurant review',detail:'Two stars in the synthetic guide.',published:'2026'}],booking:[{url:'https://resy.com/cities/new-york-ny/venues/example-bistro',provider:'Resy'},{url:'https://www.opentable.com/r/example-bistro',provider:'OpenTable'}]}]}));return;
+    }
     if (url.pathname === '/v1/travel/snapshot') {res.end(JSON.stringify({records}));return;}
     if (url.pathname.startsWith('/v1/travel/')) {
       const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');

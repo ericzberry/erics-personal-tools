@@ -1,3 +1,4 @@
+@import url('./workspace.css');
 /* Eric’s Personal Tools · Forest & Paper */
 :root {
   --page-inset: 14px;
@@ -17,40 +18,6 @@
   background: var(--paper);
   color-scheme: light;
 }
-body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
-.workspace-shell {max-width:1100px;margin:0 auto;padding:28px 24px;}
-.workspace-heading {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:28px;}
-.workspace-heading h1 {font-size:28px;margin:6px 0;}
-.workspace-heading p {margin:6px 0;}
-.workspace-columns {display:grid;grid-template-columns:minmax(260px,350px) minmax(0,1fr);gap:36px;align-items:start;}
-.workspace-columns > * {min-width:0;}
-.workspace-shell .form-field {margin:0;display:grid;gap:5px;min-width:0;}
-.workspace-shell input,.workspace-shell select {min-width:0;width:100%;box-sizing:border-box;}
-.workspace-shell .toggle-field input,.workspace-shell .choice-row input {width:auto;flex-shrink:0;}
-.workspace-shell .footnote {font-size:12px;line-height:1.55;margin:0;}
-.workspace-shell .settings-group {gap:12px;background:var(--surface);padding:16px;}
-.workspace-shell h2 {font-size:19px;margin:0 0 12px;}
-.workspace-shell h3 {font-size:14px;}
-.workspace-shell .form-stack {gap:16px;}
-.field-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
-.choice-row {display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px 0;}
-.choice-row input {margin:3px 0 0;accent-color:var(--forest);}
-.choice-row .footnote {margin-top:4px;}
-.result-list {display:grid;gap:16px;margin:16px 0;}
-.result-block {border-top:1px solid var(--line);padding:16px 0;display:grid;gap:10px;overflow-wrap:anywhere;}
-.result-heading {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;}
-.result-heading h3 {margin:0;}
-.result-block p {margin:0;line-height:1.5;}
-.result-block .pill {white-space:normal;}
-.evidence-list {margin:0;}
-.evidence-row {padding:10px 12px;display:grid;gap:5px;}
-.research-settings {margin:0;}
-.research-settings > :not(summary) {margin:12px;}
-.slot-list {display:flex;flex-wrap:wrap;gap:8px;}
-.workspace-shell button {cursor:pointer;white-space:normal;}
-.workspace-shell button:disabled {cursor:default;}
-@media(max-width:720px) {.workspace-columns {grid-template-columns:minmax(0,1fr);gap:24px;}.workspace-shell {padding:20px 14px;}.workspace-heading {align-items:flex-start;flex-wrap:wrap;}}
-@media(max-width:340px) {.field-grid {grid-template-columns:minmax(0,1fr);}.workspace-shell .settings-group {padding:12px;}}
 .header-link {color:#fffefa;font-size:11px;margin-left:6px;}
 /* Extension settings workspace; shared sidebar components keep their own scale. */
 body.settings-site {max-width:none;border:0;margin:0;font-size:16px;min-height:100vh;}

@@ -2,6 +2,8 @@
 
 Open **Restaurants** from the sidebar’s capability menu, or **Settings → Restaurant reservations**. The workspace opens in its own extension tab and uses your existing Chrome sessions on booking sites.
 
+Mobile 0.1.12 also exposes **Restaurants** in the shared Tools menu, with the same research form, source details, and verified booking destinations. Its latest downloaded shortlist is encrypted and available offline. Mobile opens the provider for manual availability checks; automatic signed-in page inspection requires the extension. See `../mobile-app/README.md` for offline behavior and limits. Extension 0.6.51 shares the registry and workspace components with this mobile release.
+
 ## Search
 
 - **A specific restaurant:** enter a name, including an approximate spelling, and a city. Research returns source-backed identities and addresses. A correction, multiple candidates, or a longer-travel location requires selecting the restaurant you meant.

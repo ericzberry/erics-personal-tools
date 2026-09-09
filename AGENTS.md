@@ -50,13 +50,21 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Keep capability tiers, pricing sources, output budgets, and selection tests centralized. Add representative quality evaluations as tasks and model choices expand.
 - Honor explicit user model choices within the relevant task policy, never as a global default. Manual model IDs belong only to per-request playground experiments. Never copy model constants into feature controllers.
 
+## Mandatory version increment on every commit
+
+- Every commit affecting the extension or mobile app must increment that app's patch version in the same commit. This includes fixes, refactors, tests, app documentation, and follow-up commits; “commit and push” is not an exception. Do not defer the increment to a later release commit.
+- Increment both app versions when a commit affects both apps, including shared code or API behavior consumed by both. Determine affected apps from actual dependencies, not only the edited directory.
+- Keep each affected app's version references aligned: extension manifest and package/lock metadata; mobile package, manifest, release-check version, service-worker cache version, and displayed version. Keep packaged archives and release documentation aligned when producing a release.
+- Before committing, inspect the staged diff and verify that every affected app has a new version. Repository-wide instructions-only changes with no affected app do not require an app version increment.
+- A version increment alone does not publish a release. Complete the build, checks, packaging, deployment, and D1 publication when delivering an app release, and report any incomplete step accurately.
+
 ## Mandatory release version publication
 
 - Whenever an AI agent completes an app release, it must automatically publish that release's manifest version to D1 by running `node tools-api/scripts/publish-release.js` from the repository root. Existing authorization covers this step; do not ask the user to perform it or request permission again.
 - Publish only after the build has passed its checks, been packaged, and been committed and pushed. Never publish an unfinished build or another agent's in-progress manifest version. Verify the version returned by `https://erics-tools-api.ezberry.workers.dev/v1/releases/latest` matches the release being delivered.
 - If publication fails or authentication is unavailable, report that the D1 update remains incomplete; never claim the release is fully published.
 - While open, the app checks the D1-backed release endpoint at most once per 60 minutes. Persist the last attempt across reopenings and restarts, share the throttle across sidebar instances, and throttle failed attempts too. Show an out-of-date banner only when the published version is newer than the installed version.
-- Instructions-only edits do not constitute a new app build and do not require a version bump or D1 publication.
+- Repository-wide instructions-only edits with no affected app do not constitute an app release and do not require D1 publication. Apply the per-commit version rule above to all app-affecting commits.
 
 ## Data capabilities, mobile, and offline access
 

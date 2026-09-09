@@ -1,8 +1,8 @@
 import * as UI from './ui.js';
 const {Workspace,WorkspaceColumns,FieldGrid,FormField:F,Form,FormStack,Section,Heading,Text,Note,Notice,Button,Link,Stack,Toggle,SettingsGroup,ActionGroup,Disclosure,ResultBlock,ChoiceRow,EvidenceList}=UI;
-export function RestaurantWorkspace() {
+export function RestaurantWorkspace({mobile=false}={}) {
   return Workspace([
-    Stack([Stack([Note('ERIC’S PERSONAL TOOLS'),Heading('Find a table',1),Text('A favorite restaurant, or somewhere worth discovering.')]),Link('AI settings','settings.html')],{className:'workspace-heading'}),
+    Stack([Stack([mobile?null:Note('ERIC’S PERSONAL TOOLS'),Heading('Find a table',1),Text('A favorite restaurant, or somewhere worth discovering.')]),mobile?null:Link('AI settings','settings.html')],{className:'workspace-heading'}),
     WorkspaceColumns([
       Section([
         Form([
@@ -26,7 +26,7 @@ export function RestaurantWorkspace() {
           Disclosure('Research settings',[
             F({id:'restaurant-limit',label:'Maximum restaurants',kind:'select',options:[{text:'6 restaurants',value:'6'},{text:'12 restaurants',value:'12'},{text:'24 restaurants',value:'24'}]}),
             F({id:'restaurant-connection',label:'OpenAI connection',kind:'select',options:[{text:'Loading connections…',value:''}]}),
-            Note('A suitable model is selected automatically. Research and page interpretation use your API credit. Booking pages open in temporary background tabs; their rendered booking content is sent to your saved OpenAI connection.'),
+            Note(mobile?'Research uses your saved OpenAI connection and API credit. Find connection details under Tools → AI connections.':'A suitable model is selected automatically. Research and page interpretation use your API credit. Booking pages open in temporary background tabs; their rendered booking content is sent to your saved OpenAI connection.'),
             ActionGroup([Button('Reload connections',{id:'restaurant-reload',variant:'secondary'})],{compact:true}),
             Note('',{id:'restaurant-connection-status',role:'status'})
           ],{className:'research-settings'}),
@@ -37,7 +37,7 @@ export function RestaurantWorkspace() {
       ]),
       Section([
         Heading('Your shortlist',2),
-        Note('Choose a restaurant and date to start. We’ll resolve the name, find booking providers, and check their live pages.',{id:'restaurant-empty'}),
+        Note(mobile?'Find restaurants online. Your latest shortlist, addresses, and sources stay available offline.':'Choose a restaurant and date to start. We’ll resolve the name, find booking providers, and check their live pages.',{id:'restaurant-empty'}),
         Notice('',{id:'restaurant-summary',hidden:true}),
         Notice('',{id:'restaurant-clarification',hidden:true}),
         Stack([],{id:'restaurant-candidates',className:'result-list'}),
@@ -46,6 +46,37 @@ export function RestaurantWorkspace() {
       ],{'aria-label':'Restaurant results'})
     ])
   ]);
+}
+
+// Mobile uses the same research form and candidate evidence. Booking providers
+// are opened explicitly: a web app cannot inspect another site's signed-in tab.
+export function MobileRestaurantWorkspace() {
+  const view=RestaurantWorkspace({mobile:true});
+  view.classList.add('workspace-shell--mobile');
+  const columns=view.querySelector('.workspace-columns');
+  const form=columns.firstElementChild,results=columns.lastElementChild;
+  const disclosure=Disclosure('Search restaurants',[form],{id:'restaurant-search-panel'});
+  disclosure.open=true;
+  columns.replaceChildren(results,disclosure);
+  // Keep success and cache errors visible even after collapsing the search form.
+  view.querySelector('.workspace-heading').after(view.querySelector('#restaurant-status'),view.querySelector('#restaurant-error'));
+  view.querySelector('#restaurant-check').remove();
+  view.querySelector('#restaurant-availability').remove();
+  return view;
+}
+
+export function MobileRestaurantCandidate(r,{search,links,expired=false}) {
+  return ResultBlock({title:r.name,meta:[r.neighborhood,r.borough,r.city].filter(Boolean).join(' · '),detail:r.reason,children:[
+    Note(r.address),
+    r.travel==='longer'?Notice('Longer travel from the UWS. Review the address before booking.'):r.travel==='unknown'?Notice('Neighborhood is unverified. Review the address before booking.'):null,
+    EvidenceList(r.evidence),
+    Disclosure('Booking pages',[
+      Note(`${search.date} · ${search.startTime}–${search.endTime} local time. Availability has not been checked. Confirm the date, time, and party size on the provider.`),
+      expired?Note('This search date has passed. Run a new search for current booking links.'):
+        links.length?Stack(links.map(link=>Link(`${link.provider} · ${link.size} people${link.time?` · near ${link.time}`:''}`,link.url)),{className:'booking-links'}):Note('No booking destination was verified.'),
+      Note('Opening providers and checking tables requires internet. The mobile app cannot automatically read their booking pages.')
+    ])
+  ]});
 }
 export function RestaurantCandidate(r,selected,onChange) {
   return ResultBlock({title:r.name,meta:[r.neighborhood,r.borough,r.city].filter(Boolean).join(' · '),detail:r.reason,children:[

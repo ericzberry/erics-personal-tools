@@ -6,6 +6,8 @@ import {offlineResource} from './shared/offline-resource.js';
 import {encryptedDeviceStore} from './shared/offline-storage.js';
 import {mobileCredentials, protectedStore, mobileRequest as cloudRequest} from './mobile-session.js';
 import {mountLibrary} from './shared/data-library.js';
+import {mountRestaurants} from './restaurants.js';
+import {restaurantCache} from './restaurant-cache.js';
 const root=document.getElementById('capabilities-root');
 root.replaceChildren(CapabilitiesView());
 // Connection maintenance is shown only from the app header’s Settings control.
@@ -13,10 +15,11 @@ const connectionRoot=document.getElementById('capability-settings');
 connectionRoot.parentElement.append(connectionRoot);
 connectionRoot.hidden=true;
 const ai=offlineResource({resource:'ai-metadata',path:'/v1/ai-connections',store:protectedStore(encryptedDeviceStore()),remote:async token=>({records:(await cloudRequest(token,'/v1/ai-connections')).connections}),normalize:value=>value,metadata:value=>value});
+const restaurantDownloads=restaurantCache({store:protectedStore(encryptedDeviceStore()),credentials:mobileCredentials});
 const credentials={
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token)await ai.disconnect(token);await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token){await restaurantDownloads.disconnect();await ai.disconnect(token);}await mobileCredentials.remove();}
 };
 const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai',load:async()=>{
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
@@ -30,9 +33,12 @@ for(const [kind,filename] of [['rules','espn-league-2026.json'],['rankings','ran
   await library.refresh();
 }
 const picker=document.getElementById('capability-picker');
+const restaurants=mountRestaurants(document.getElementById('capability-restaurants'),{credentials,request:cloudRequest,cache:restaurantDownloads,loadConnections:async()=>{
+  const result=await ai.request(await credentials.get(),'/v1/ai-connections');return result.records;
+}});
 function selectTool(){
   for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=picker.value!==capability.id;
-
+  if(picker.value==='restaurants')restaurants.open();
 }
 try { picker.value=localStorage.getItem('mobile-selected-tool')||CAPABILITIES[0].id; } catch { picker.value=CAPABILITIES[0].id; }
 if(!CAPABILITIES.some(tool=>tool.id===picker.value))picker.value=CAPABILITIES[0].id;

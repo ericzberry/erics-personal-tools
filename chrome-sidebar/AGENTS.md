@@ -14,7 +14,7 @@ The user requires every extension UI element to come from a reusable component.
 
 ## Release versions
 
-- Increment the extension patch version for every delivered update, including follow-up fixes. Keep the manifest, package metadata, release archive filename, and release documentation aligned.
+- Increment the extension patch version in every commit affecting the extension, including fixes, refactors, tests, app documentation, and follow-up commits. Follow the repository root's per-commit rule, including incrementing the mobile version when shared changes affect it. Keep the manifest, package metadata, release archive filename, and release documentation aligned.
 
 ## Layout and action structure
 
@@ -35,4 +35,4 @@ The user requires every extension UI element to come from a reusable component.
 - Publish only after the build has passed its checks, been packaged, and been committed and pushed. Never publish an unfinished build or another agent's in-progress manifest version. Verify the version returned by `https://erics-tools-api.ezberry.workers.dev/v1/releases/latest` matches the release being delivered.
 - If publication fails or authentication is unavailable, report that the D1 update remains incomplete; never claim the release is fully published.
 - While open, the app checks the D1-backed release endpoint at most once per 60 minutes. Persist the last attempt across reopenings and restarts, share the throttle across sidebar instances, and throttle failed attempts too. Show an out-of-date banner only when the published version is newer than the installed version.
-- Instructions-only edits do not constitute a new app build and do not require a version bump or D1 publication.
+- Repository-wide instructions-only edits with no affected app do not constitute an app release and do not require D1 publication. App-affecting commits still require a version increment under the repository root's per-commit rule.

@@ -9,13 +9,13 @@ export const mobileCredentials = {
   async set(value) { assertMobileAccess(); if (value !== token) throw Error('Disconnect this device before changing its access token.'); },
   async remove() { assertMobileAccess(); token = ''; parent.postMessage({type: 'mobile-disconnected'}, location.origin); }
 };
-export async function mobileRequest(value, path, {method = 'GET', value: body} = {}) {
+export async function mobileRequest(value, path, {method = 'GET', value: body, timeoutMs = 30000} = {}) {
   assertMobileAccess();
   if (!token || value !== token) throw Error('Unlock the mobile app first.');
   if (!/^\/(health|v1\/)/.test(path)) throw Error('Unknown mobile request.');
   const response = await fetch(path, {
     method, headers: {Authorization: `Bearer ${token}`, ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
-    body: body === undefined ? undefined : JSON.stringify(body), credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(30000)
+    body: body === undefined ? undefined : JSON.stringify(body), credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(timeoutMs)
   });
   assertMobileAccess();
   if (!response.ok) {
