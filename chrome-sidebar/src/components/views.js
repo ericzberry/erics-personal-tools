@@ -43,7 +43,7 @@ export function GmailView() {
     EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),Disclosure('Email text',[Text('',{id:'email-preview',className:'source-preview'})],{id:'email-source',hidden:true})
   ])],{id:'gmail-tool',className:'tool-page',hidden:true});
 }
-export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open Gmail or an ESPN draft. The sidebar follows your current tab.'),Link('Open Gmail ↗','https://mail.google.com/')])],{id:'home-tool',className:'tool-page',hidden:true});
+export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open a tool or a relevant website to get started.')])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     Link('AI providers & playground','settings.html'),
