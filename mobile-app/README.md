@@ -2,7 +2,7 @@
 
 Open https://erics-tools-api.ezberry.workers.dev/app/ in Safari, then Share → Add to Home Screen. Leave Open as Web App enabled if shown. Open the installed app once online and wait for Offline access: Ready before trying airplane mode.
 
-Version 0.1.3 uses the shared **Capabilities** dropdown: Travel wallet, league rules, player rankings, and AI connections. There is no featured travel callout. Reference data is bundled for offline use. Set up a mobile passkey using the same private access token as the extension, then download private records and AI connection metadata.
+Version 0.1.3 uses the shared **Tools** dropdown: Travel wallet, league rules, player rankings, and AI connections. There is no featured travel callout. Reference data is bundled for offline use. Set up a mobile passkey using the same private access token as the extension, then download private records and AI connection metadata.
 
 Downloaded travel numbers and notes are encrypted in IndexedDB and stay masked in the interface. Search and copy work offline. Adds, edits, and deletions are saved in a durable queue before a network attempt. Changes synchronize when opening/foregrounding, reconnecting, or refreshing. Conflicts retain the local version for explicit review; failed or uncertain requests do not discard pending changes. AI connection metadata can be read offline, while provider keys stay on the server and provider operations require internet.
 

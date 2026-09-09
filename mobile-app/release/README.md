@@ -9,3 +9,7 @@ Archives: `erics-tools-mobile-0.1.3.zip` and `../../chrome-sidebar/release/erics
 The combined mobile release also wraps the access token with a passkey, requires unlock after restart, and locks after 15 minutes of inactivity. Synthetic browser checks confirmed canceled unlock stays locked, locking removes private views, offline edits survive locking/reopening, pending changes prevent disconnect, and successful disconnect clears access. Real Apple biometric/PRF behavior remains a device verification step.
 
 Mobile 0.1.3 also fixes Cloudflare HTML canonicalization for the unlocked frame. Both exact frame routes allow same-origin framing, the .html route serves without redirecting, and the new shell cache replaces any previously cached restrictive frame response.
+
+## Tools label — mobile 0.1.4 / extension 0.6.44
+
+Renames the shared navigation label to Tools, with Choose a tool prompts. Updated AGENTS.md and current instructions to use the same name. Extension (132) and mobile (13) tests pass; shared UI reviewed at 280px and 390px.

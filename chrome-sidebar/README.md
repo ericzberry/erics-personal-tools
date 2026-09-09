@@ -203,7 +203,7 @@ Version 0.6.41 checks the public Worker release endpoint against D1 at most hour
 
 ## Data capabilities (0.6.43)
 
-Use the **Capabilities** dropdown to open Travel wallet, league rules, player rankings, or AI connections. Travel is an ordinary capability; there are no separate travel callouts on the home or settings screens. The mobile app uses the same catalog.
+Use the **Tools** dropdown to open Travel wallet, league rules, player rankings, or AI connections. Travel is an ordinary capability; there are no separate travel callouts on the home or settings screens. The mobile app uses the same catalog.
 
 Connect Travel wallet once with your private access token to download all records, including masked numbers and notes, into encrypted IndexedDB storage. Downloaded records can be searched, copied, added, edited, and marked for deletion offline. Changes persist before network requests and sync on refresh, reconnect, or foregrounding. Per-record revisions reject stale edits. Conflicts retain the device's changes until you choose the cloud version or explicitly keep the device's version. A lost successful response is reconciled before a retry.
 
