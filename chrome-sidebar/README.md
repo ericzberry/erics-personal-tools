@@ -185,3 +185,5 @@ Version 0.6.30 combines the current sidebar controls with the Cloudflare AI prov
 Version 0.6.31 polishes shared form spacing, shortens credential copy, and styles dropdown controls and their Chrome picker menus.
 
 Version 0.6.32 connects sidebar Credentials to the Worker and encrypted D1 connections. Enter the Worker API_TOKEN once per browser if not already connected. Save, replace, delete and refresh use the cloud API. Supported legacy local credentials migrate after connection, and local copies are removed only after acknowledgement. Failures or conflicts retain local keys.
+
+Version 0.6.33 distinguishes Worker authentication from saved provider keys. Sidebar save success requires a fresh cloud read confirming the provider record has a key; empty connections show No API key saved.

@@ -157,7 +157,7 @@ export const StickyGroup=children=>Stack(children,{className:'sticky-group'});
 export function CredentialRow(credential,{onEdit,onDelete}) {
   const edit=Button('Replace',{'aria-label':`Replace ${credential.name}`});edit.addEventListener('click',onEdit);
   const remove=Button('Delete',{'aria-label':`Delete ${credential.name}`});remove.addEventListener('click',onDelete);
-  return Stack([Stack([Strong(credential.name),Note('Key saved')]),ActionGroup([edit,remove])],{className:'credential-row'});
+  return Stack([Stack([Strong(credential.name),Note(credential.hasApiKey===false?'No API key saved':credential.hasApiKey===true?'API key saved in D1':'Key saved')]),ActionGroup([edit,remove])],{className:'credential-row'});
 }
 
 export function CredentialServiceOptions(services,savedNames=[]) {

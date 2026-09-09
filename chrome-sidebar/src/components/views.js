@@ -48,7 +48,8 @@ export function SettingsView() {
     Link('AI providers & playground','settings.html'),
     Disclosure('Credentials',[
       UI.FormStack([
-      Note('Encrypted in D1 · Synced through your Worker.'),
+      Note('API keys are encrypted in D1.'),
+      Note('Worker not connected.',{id:'credential-cloud-state',role:'status'}),
       Stack([
         UI.FormField({id:'credential-token',label:'Worker access token',kind:'password',placeholder:'Your Worker’s API_TOKEN'}),
         Button('Connect',{id:'credential-connect',variant:'primary'})

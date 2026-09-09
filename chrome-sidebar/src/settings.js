@@ -12,6 +12,7 @@ async function send(action,data={}){
 }
 function controls(){
   $('credential-connection').hidden=connected;
+  $('credential-cloud-state').textContent=connected?'Worker connected · Access token stays on this computer.':'Connect the Worker, then add your OpenAI API key below.';
   for(const id of ['save-credential','credential-name','credential-secret','credential-refresh','credential-disconnect'])$(id).disabled=busy||!connected;
   $('credential-connect').disabled=busy||!available;
 }
@@ -42,7 +43,7 @@ $('open-settings').addEventListener('click',()=>{showSettings(true);$('close-set
 });});
 $('close-settings').addEventListener('click',()=>{clearForm();$('credential-token').value='';showSettings(false);$('open-settings').focus();});
 $('credential-connect').addEventListener('click',()=>mutate(async()=>{
-  await send('connect',{token:$('credential-token').value});$('credential-token').value='';connected=true;feedback('Connected to D1.');await load();
+  await send('connect',{token:$('credential-token').value});$('credential-token').value='';connected=true;feedback('Worker connected. Add an API key below.');await load();
 }));
 $('credential-refresh').addEventListener('click',()=>mutate(async()=>{feedback('');await load();}));
 $('credential-disconnect').addEventListener('click',()=>mutate(async()=>{await send('disconnect');connected=false;records=[];clearForm();$('credential-list').replaceChildren();feedback('Disconnected. Keys remain in D1.');}));
@@ -53,6 +54,9 @@ $('save-credential').addEventListener('click',()=>mutate(async()=>{
   const name=$('credential-name').selectedOptions[0]?.textContent||provider;
   const result=await send('save',{id:existing?.id||crypto.randomUUID(),connection:{...existing,name:existing?.name||name,provider,apiKey,revision:existing?.revision??null}});
   if(!result.connection?.hasApiKey)throw Error('Cloud save was not confirmed.');
-  clearForm();await render();feedback('Saved in D1.');
+  await render();
+  const saved=records.find(record=>record.id===result.connection.id && record.provider===provider && record.hasApiKey);
+  if(!saved)throw Error('The Worker did not return the saved API key record. Your entry is still here; try Refresh.');
+  clearForm();feedback(`${saved.name} API key verified in D1.`);
 }));
 controls();
