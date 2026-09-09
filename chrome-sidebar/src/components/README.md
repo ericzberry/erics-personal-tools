@@ -18,3 +18,5 @@ Components accept data and return native elements. Mount them once where possibl
 If no component fits, add or extend a component here first. Add a reusable class or variant here when a visual difference is needed; never style feature IDs or add feature-local CSS. Inputs must have an associated label. Buttons must expose their action and loading/disabled state.
 
 The tests in `tests/components.test.js` enforce controller hooks, accessible fields, safe text rendering and the construction boundary. Test-only harness markup is not packaged with the extension.
+
+`Title` owns title typography through `.title-text`; `Heading` is its compatibility alias. `SectionTitle`, `ToolHeading`, and `SubPage` compose it. Use `Disclosure` with `titleHeading: true` for section titles; ordinary disclosure controls retain compact labels. Do not add page-specific title font overrides.

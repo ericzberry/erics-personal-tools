@@ -51,8 +51,8 @@ export function SettingsView() {
       ...Field({id:'credential-secret',label:'API key or secret',kind:'password',placeholder:'Enter a new key'}),
       Button('Save credential',{id:'save-credential',variant:'primary'}),
       Notice('',{id:'credential-status',hidden:true})
-    ],{className:'settings-panel',open:true}),
-    Disclosure('Draft',[DraftSettings(),RulesView(),DraftReset()],{className:'settings-panel'})
+    ],{className:'settings-panel',open:true,titleHeading:true}),
+    Disclosure('Draft',[DraftSettings(),RulesView(),DraftReset()],{className:'settings-panel',titleHeading:true})
   ]});
 }
 export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),SettingsView());}

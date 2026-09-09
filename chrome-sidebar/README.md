@@ -165,3 +165,5 @@ Version 0.6.25 adds the native right-click launcher.
 Version 0.6.26 adds a gear in the sidebar header that opens in-sidebar Settings. Credentials and Draft are subsections; draft capture, league rules, and reset controls live there. Credentials support named local secrets, replacement, and deletion. Secret inputs are masked and saved values are never rendered back into the UI. Storage access is restricted to trusted extension contexts before saving; values are not encrypted by this extension or synced. Saving credentials does not yet configure provider integrations.
 
 Version 0.6.27 replaces free-text service names with a dropdown for OpenAI, Anthropic, and Google Gemini. Existing saved service names remain selectable so older credentials can still be replaced.
+
+Version 0.6.28 unifies page and section titles through the shared Title component, using Bedford Bridges’ 20px Georgia typography. Settings, Credentials, Draft, Gmail, and other headings use the same type styling.

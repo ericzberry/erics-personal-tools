@@ -29,7 +29,6 @@ button, a, input, select, summary { -webkit-tap-highlight-color: transparent; }
 .eyebrow { margin: 0 0 13px; font-size: 9px; letter-spacing: 1.5px; font-weight: 600; color: var(--muted); }
 .tool-heading .eyebrow { display: flex; justify-content: space-between; gap: 10px; }
 .tool-heading .eyebrow span { font-weight: 400; letter-spacing: .8px; }
-h1 { font: 34px/1.13 Georgia, "Times New Roman", serif; letter-spacing: -1.2px; margin: 0; }
 .title-dot { color: var(--accent); }
 .subtitle { font-size: 11px; color: var(--muted); margin: 12px 0 0; line-height: 1.6; }
 .subtitle span { padding: 0 3px; color: #aaa995; }
@@ -49,7 +48,6 @@ input::placeholder { color: #72786f; }
 .metrics strong { display: block; font: 29px/1 Georgia, serif; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
 .metrics span { display: block; font-size: 8px; letter-spacing: .8px; color: var(--muted); }
 .section-title { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin: 24px 0 13px; }
-h2 { margin: 0; font: 23px/1.2 Georgia, serif; letter-spacing: -.4px; }
 .pill { display: inline-block; flex-shrink: 0; font-size: 8px; letter-spacing: .8px; border: 1px solid var(--line); border-radius: 5px; padding: 5px 7px; color: #5b6855; }
 .quiet { border: 0; background: transparent; font-size: 11px; color: var(--forest); padding: 7px 0 7px 8px; }
 .quiet:disabled { color: #7b8077; cursor: default; }
@@ -59,11 +57,9 @@ h2 { margin: 0; font: 23px/1.2 Georgia, serif; letter-spacing: -.4px; }
 .recommendation { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 17px; margin-top: 9px; }
 .recommendation--primary { border-top: 3px solid var(--forest); box-shadow: 0 5px 16px #173e3707; }
 .recommendation .eyebrow { color: #68794f; font-size: 9px; margin: 0 0 10px; }
-.recommendation h3 { font-size: 17px; line-height: 1.4; letter-spacing: -.3px; margin: 0; }
 .recommendation .pick-meta { font-size: 12px; }
 .recommendation:not(.recommendation--primary) { padding: 12px 16px; }
 .recommendation:not(.recommendation--primary) .eyebrow { display: none; }
-.recommendation:not(.recommendation--primary) h3 { font-size: 13px; }
 .recommendation ul { padding: 0 14px 0 26px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .recommendation li { margin: 8px 0; }
 .recommendation details { margin-bottom: 0; background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
@@ -87,11 +83,10 @@ th { font-size: 10px; font-weight: 500; color: var(--muted); }
 td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 td:first-child { width: 60%; }
 .tool-page { padding: 32px 22px 24px; }
-.tool-page h1 { font-size: 38px; }
 .button-link { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-radius: 9px; background: var(--forest); color: #fffefa; font-size: 12px; text-decoration: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 @media (min-width: 650px) { body { max-width: 440px; margin: auto; border-inline: 1px solid var(--line); min-height: 100vh; } }
-@media (max-width: 330px) { .app-header, .tool-heading, main, .tool-page { padding-left: 16px; padding-right: 16px; } h1 { font-size: 30px; } .pill { font-size: 7px; padding: 5px; } }
+@media (max-width: 330px) { .app-header, .tool-heading, main, .tool-page { padding-left: 16px; padding-right: 16px; } .pill { font-size: 7px; padding: 5px; } }
 @media (prefers-reduced-motion: no-preference) { button, a { transition: background-color .15s, color .15s; } }
 @media (hover: hover) { .quiet:hover { color: var(--accent); } summary:hover { background: #173e3705; } }
 
@@ -101,7 +96,6 @@ td:first-child { width: 60%; }
 .compact-brand { font: 17px Georgia, serif; white-space: nowrap; }
 .context-label { margin-left: auto; font-size: 11px; font-weight: 500; color: #d2ded2; }
 .tool-heading { padding: 12px 14px 0; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.tool-heading h1 { font-size: 20px; letter-spacing: -.4px; }
 .tool-heading .subtitle { margin: 0; font-size: 10px; white-space: nowrap; }
 main, .tool-page { padding: 12px 14px; }
 .next-pick-chip { display: flex; flex-direction: column; gap: 5px; padding: 11px 13px; border: 1px solid #d0d9c5; border-radius: 9px; background: #edf0e3; margin-bottom: 10px; }
@@ -114,20 +108,17 @@ select, input { padding: 8px 10px; }
 .metrics { margin: 12px 0; padding: 11px 0; }
 .metrics strong { font-size: 24px; margin-bottom: 5px; }
 .section-title { margin: 14px 0 8px; }
-h2 { font-size: 20px; }
 .footnote { margin: 8px 0; }
 .notice { margin: 8px 0; padding: 8px 10px; font-size: 11px; }
 .recommendation { padding: 12px; border-radius: 9px; margin-top: 7px; }
 .recommendation:not(.recommendation--primary) { padding: 9px 12px; }
 .recommendation .eyebrow { margin-bottom: 6px; }
-.recommendation h3 { font-size: 15px; }
 details { margin: 8px 0; border-radius: 8px; }
 summary { padding: 11px 12px; }
 .empty { padding: 16px 10px; margin: 10px 0; }
 th, td { padding: 8px 11px; }
-.tool-page h1 { font-size: 22px; letter-spacing: -.5px; }
 .tool-page .section-title:first-child { margin-top: 0; }
-.content-title { font: 600 14px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: 0; overflow-wrap: anywhere; }
+.content-title { overflow-wrap: anywhere; }
 .content-meta { overflow-wrap: anywhere; font-size: 10px; }
 .action-group { display: flex; gap: 8px; margin: 12px 0; }
 .button-primary, .button-secondary { padding: 9px 10px; border: 1px solid var(--forest); border-radius: 8px; background: var(--forest); color: var(--surface); font-size: 12px; }
@@ -139,7 +130,6 @@ th, td { padding: 8px 11px; }
 
 /* Draft source and reusable upload surface */
 .advisor > .section-title { margin-top: 16px; }
-.advisor > .section-title h2 { font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: 0; }
 .badge-subtle { border: 0; padding: 0; font-size: 8px; color: var(--muted); }
 .context-note { font-size: 10px; margin: 5px 0 9px; }
 .notice-subtle { background: #f0ece3; border: 1px solid #e5ded0; border-radius: 8px; padding: 9px 11px; color: #726044; font-size: 11px; }
@@ -173,7 +163,6 @@ th, td { padding: 8px 11px; }
 .recommendation-why { font-size: 12px; line-height: 1.45; margin: 8px 0 0; color: var(--ink); }
 .recommendation-outlook { font-size: 10px; line-height: 1.5; margin: 6px 0 0; color: var(--muted); }
 
-.sub-page h1 { font-size: 22px; letter-spacing: -.5px; }
 .sub-page > .section-title { margin-top: 0; }
 .sub-page details > label, .sub-page details > input, .sub-page details > select { margin: 8px 12px; width: calc(100% - 24px); }
 .selection-row { padding: 9px 0; border-bottom: 1px solid var(--line); }
@@ -190,7 +179,6 @@ th, td { padding: 8px 11px; }
 .recommendation-compact { padding: 8px 0 2px; }
 .recommendation-compact + .recommendation-compact { border-top: 1px solid #d4ddca; margin-top: 6px; }
 .recommendation-compact > div { display: flex; align-items: baseline; gap: 8px; }
-.recommendation-compact h3 { font-size: 14px; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
 .recommendation-number { font-size: 11px; color: var(--muted); }
 .recommendation-compact .pick-meta { margin: 2px 0 0 15px; }
 .recommendation-compact details { border: 0; background: transparent; margin: 3px 0 0 15px; overflow: visible; }
@@ -261,3 +249,7 @@ th, td { padding: 8px 11px; }
 .credential-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .credential-row > div:first-child { min-width: 0; overflow-wrap: anywhere; }
 .credential-row .action-group { display: flex; gap: 4px; }
+
+/* Every page and section heading shares the Bedford Bridges typography. */
+.title-text { margin: 0; font: 400 20px/1.13 Georgia, "Times New Roman", serif; letter-spacing: -.4px; overflow-wrap: anywhere; }
+summary > .title-text { display: inline; }

@@ -12,7 +12,8 @@ function element(tag, props={}, children=[]) {
 }
 export const Text=(text='',props={})=>element('p',{text,...props});
 export const Label=(text,props={})=>element('span',{text,...props});
-export const Heading=(text,level=2,props={})=>element(`h${level}`,{text,...props});
+export const Title=(text,level=2,{className='',...props}={})=>element(`h${level}`,{text,...props,className:`title-text ${className}`.trim()});
+export const Heading=Title;
 export const Strong=(text,props={})=>element('strong',{text,...props});
 export const Stack=(children=[],props={})=>element('div',props,children);
 export const Section=(children=[],props={})=>element('section',props,children);
@@ -25,7 +26,7 @@ export const Note=(text,props={})=>Text(text,{className:'footnote',...props});
 export const Badge=(text,props={})=>Label(text,{className:'pill',...props});
 export const Notice=(text='',props={})=>Text(text,{className:'notice',role:'status',...props});
 export const SectionTitle=(title,action,props={})=>Stack([Heading(title,props.level||2,{id:props.titleId}),action],{className:'section-title'});
-export const Disclosure=(title,children=[],props={})=>element('details',props,[element('summary',{text:title}),...children]);
+export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>element('details',props,[titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),...children]);
 export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false}) {
   const caption=element('label',{for:id,text:label,className:hiddenLabel?'sr-only':undefined});
   const control=kind==='select'?element('select',{id,disabled},options.map(o=>Option(o.text,o.value))):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled});
