@@ -18,3 +18,16 @@ test('public app assets retain their body, security headers and API authorizatio
  assert.equal((await worker.fetch(new Request('https://example.com/app'),env)).status,308);
  assert.equal((await worker.fetch(new Request('https://example.com/v1/ai-connections'),env)).status,401);
 });
+
+test('unlocked frame avoids asset canonical redirects and both exact routes allow only same-origin framing',async()=>{
+  const {default:worker}=await import('../src/index.js');
+  const env={ASSETS:{fetch:async request=>{
+    assert.equal(new URL(request.url).pathname,'/app/unlocked');
+    return new Response('<main>Unlocked tools</main>',{headers:{'Content-Type':'text/html'}});
+  }}};
+  for(const path of ['/app/unlocked.html','/app/unlocked']){
+    const response=await worker.fetch(new Request(`https://example.com${path}`),env);
+    assert.equal(response.status,200);assert.equal(response.headers.get('Location'),null);
+    assert.match(response.headers.get('Content-Security-Policy'),/frame-ancestors 'self'/);
+  }
+});

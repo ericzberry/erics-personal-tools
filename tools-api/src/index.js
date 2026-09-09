@@ -52,12 +52,15 @@ export default {
     if (url.pathname === '/app') return Response.redirect(`${url.origin}/app/`, 308);
     if (url.pathname.startsWith('/app/')) {
       if (!['GET', 'HEAD'].includes(request.method)) return json({error: 'Method not allowed.'}, 405);
-      const asset = await env.ASSETS.fetch(request);
+      // Serve the frame without the host's .html canonical redirect so its
+      // offline cache entry retains the intended frame policy and URL.
+      const assetRequest=url.pathname==='/app/unlocked.html'?new Request(new URL('/app/unlocked',url),request):request;
+      const asset = await env.ASSETS.fetch(assetRequest);
       const response = new Response(asset.body, asset);
       response.headers.set('Cache-Control', 'no-cache');
       response.headers.set('X-Content-Type-Options', 'nosniff');
       response.headers.set('Referrer-Policy', 'no-referrer');
-      response.headers.set('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors ${url.pathname === '/app/unlocked.html' ? "'self'" : "'none'"}; base-uri 'none'; form-action 'none'`);
+      response.headers.set('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors ${['/app/unlocked.html','/app/unlocked'].includes(url.pathname) ? "'self'" : "'none'"}; base-uri 'none'; form-action 'none'`);
       return response;
     }
     if(new URL(request.url).pathname==='/v1/releases/latest'){
