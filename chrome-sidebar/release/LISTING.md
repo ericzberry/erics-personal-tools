@@ -1,4 +1,4 @@
-# Eric's Personal Tools — 0.6.33
+# Eric's Personal Tools — 0.6.34
 
 Status: prepared locally; not uploaded or published. Google developer dashboard requires reauthentication.
 
@@ -7,7 +7,7 @@ Private → Trusted testers. Use the owner-provided tester account from the priv
 The trusted-testers list applies across this publisher account; review existing entries before publishing so the audience matches the request. Do not choose Public or Unlisted.
 
 ## Store description
-Your ESPN fantasy draft companion in Chrome's sidebar. Follow live practice or league picks, track your roster, and get one or two highlighted picks using fixed spreadsheet rankings, roster needs, and estimated availability at your next two turns. View saved league rules and a tiered board with ownership colors, inline manual corrections, and blue recommendation highlights and amber current-tier highlights in ESPN, plus prominent counts by roster position. A compact scarcity cue appears only when a starter is due and the last one or two current-tier RB or WR options are unlikely to last; blue recommendations retain priority. Recommendations pause when draft history is incomplete or disconnected. Combined Ranks provide the replacement-value proxy automatically. Configured for Old Timer’s League, 2026, ten-team half-PPR. Also summarize the current Gmail message or generate an editable reply using Chrome’s on-device AI. Requires a supported computer and Chrome 138+ for local generation. Not affiliated with ESPN or Google.
+Your ESPN fantasy draft companion in Chrome's sidebar. Follow live practice or league picks, track your roster, and get one or two highlighted picks using fixed spreadsheet rankings, roster needs, and estimated availability at your next two turns. View saved league rules and a tiered board with ownership colors, inline manual corrections, and blue recommendation highlights and amber current-tier highlights in ESPN, plus prominent counts by roster position. A compact scarcity cue appears only when a starter is due and the last one or two current-tier RB or WR options are unlikely to last; blue recommendations retain priority. Recommendations pause when draft history is incomplete or disconnected. Combined Ranks provide the replacement-value proxy automatically. Configured for Old Timer’s League, 2026, ten-team half-PPR. Summarize the current Gmail message with OpenAI through your Worker and D1 key, or generate an editable reply using Chrome’s on-device AI. Requires a supported computer and Chrome 138+ for local generation. Not affiliated with ESPN or Google.
 
 ## Single purpose
 Provide a contextual personal productivity sidebar for the current page: ESPN draft assistance and Gmail writing assistance. The broader product scope must be accurately reviewed under the store’s single-purpose policy.
@@ -25,7 +25,7 @@ Provide a contextual personal productivity sidebar for the current page: ESPN dr
 Open the sidebar to inspect saved league rules without signing in. Live capture requires an ESPN account and an active football draft or practice draft. Open or reload the draft room after installing. The draft is selected automatically. Settings contains the ESPN is capturing picks toggle. Switch it off for manual Me / Someone else buttons on the tier board, and on to hide those buttons and resume the live feed. After each pick, the count and available recommendations update. Completed, disconnected or incomplete drafts do not show actionable picks. No credentials are included in this submission.
 
 ## Submission checklist
-Upload erics-sidebar-0.6.33.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
+Upload erics-sidebar-0.6.34.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
 
 Install the approved store listing once on each computer while signed into the tester account. Subsequent approved versions of that same listing update automatically. Local draft storage does not sync between computers.
 
@@ -33,7 +33,7 @@ Sources: https://developer.chrome.com/docs/webstore/publish and https://develope
 
 ## Gmail reviewer flow
 
-Open and expand an email in Gmail, then open the sidebar. It shows the subject and sender of the latest expanded message. Choose Summarize or Generate reply. Chrome may download its local model on first use; unsupported hardware or browser versions show an explicit message. Generated text is editable and can be copied. No send, archive, delete, label, or Gmail API scopes are used. Switching messages clears the prior output.
+Open and expand an email in Gmail, then open the sidebar. It shows the subject and sender of the latest expanded message. Choose Summarize to send this message to OpenAI through your Worker using the saved D1 key. Generate reply uses Chrome’s local model, which may download on first use; unsupported hardware or browser versions show an explicit message. Generated text is editable and can be copied. No send, archive, delete, label, or Gmail API scopes are used. Switching messages clears the prior output.
 
 ## AI connection settings
 

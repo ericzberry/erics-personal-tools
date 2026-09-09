@@ -187,3 +187,6 @@ Version 0.6.31 polishes shared form spacing, shortens credential copy, and style
 Version 0.6.32 connects sidebar Credentials to the Worker and encrypted D1 connections. Enter the Worker API_TOKEN once per browser if not already connected. Save, replace, delete and refresh use the cloud API. Supported legacy local credentials migrate after connection, and local copies are removed only after acknowledgement. Failures or conflicts retain local keys.
 
 Version 0.6.33 distinguishes Worker authentication from saved provider keys. Sidebar save success requires a fresh cloud read confirming the provider record has a key; empty connections show No API key saved.
+
+Version 0.6.34 connects Gmail Summarize to the existing Worker generate endpoint and a saved OpenAI D1 connection. It uses the most recently updated OpenAI connection with a key, its configured model or gpt-4.1-mini, and at most three bullets. Reading email alone never sends it. Reply generation remains on-device. No Worker redeploy or schema change is needed.
+Default summary model reference: [OpenAI GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini).

@@ -1,3 +1,4 @@
+import {summarizeEmail} from './email-cloud.js';
 import {showTool} from './navigation.js';
 import {generateEmailText} from './email-ai.js';
 const $ = id => document.getElementById(id);
@@ -32,7 +33,7 @@ async function refresh() {
     if (current?.id !== tab.id || current?.url !== tab.url) {clearEmail();return;}
     const data = response?.email;
     clearEmail(data?.text ? data : null);
-    $('email-read-status').textContent = response?.error || data?.error || (email ? 'Latest expanded message · processed on this device' : 'Open a message, then expand it.');
+    $('email-read-status').textContent = response?.error || data?.error || (email ? 'Latest expanded message · Summaries via OpenAI' : 'Open a message, then expand it.');
     renderEmail();
   } catch {
     clearEmail(); renderEmail(); $('email-read-status').textContent = 'Reload Gmail to connect the extension.';
@@ -48,7 +49,7 @@ for (const [id, action] of [['summarize-email','summary'],['reply-email','reply'
     const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
     const fresh = tab && await chrome.tabs.sendMessage(tab.id,{type:'READ_CURRENT_EMAIL'});
     if (token !== generation || JSON.stringify(fresh?.email) !== JSON.stringify(source)) {clearEmail();await refresh();return;}
-    const text = await generateEmailText({email:source,action,signal:controller.signal,onProgress:message=>{if(token===generation)$('email-action-status').textContent=message;}});
+    const text = await (action==='summary'?summarizeEmail:generateEmailText)({email:source,action,signal:controller.signal,onProgress:message=>{if(token===generation)$('email-action-status').textContent=message;}});
     const [afterTab] = await chrome.tabs.query({active:true,currentWindow:true});
     const after = afterTab?.id === tab.id && await chrome.tabs.sendMessage(tab.id,{type:'READ_CURRENT_EMAIL'});
     if (JSON.stringify(after?.email) !== JSON.stringify(source)) {clearEmail();await refresh();return;}
