@@ -1,3 +1,11 @@
+import {mountTravel} from './shared/travel.js';
+import {cloudRequest} from './shared/cloud-storage.js';
+const credentials = {
+  async get(){return localStorage.getItem('travelAccessToken') || '';},
+  async set(token){localStorage.setItem('travelAccessToken',token);},
+  async remove(){localStorage.removeItem('travelAccessToken');}
+};
+mountTravel(document.getElementById('travel-root'),{credentials,request:cloudRequest});
 import {VERSION, checkRelease, newer} from './releases.js';
 const el = id => document.getElementById(id);
 let registration;
@@ -17,7 +25,7 @@ async function offlineSetup() {
     registration = await navigator.serviceWorker.register('/app/sw.js', {scope: '/app/', updateViaCache: 'none'});
     await Promise.race([navigator.serviceWorker.ready, new Promise((_, reject) => setTimeout(() => reject(Error('timeout')), 15000))]);
     el('offline-status').textContent = 'Ready';
-    el('offline-detail').textContent = 'This app can open without internet. There’s no content to sync yet.';
+    el('offline-detail').textContent = 'The app opens offline. Travel records require internet and are never cached on this device.';
   } catch {
     el('offline-status').textContent = 'Not ready';
     el('offline-detail').textContent = 'Reconnect and retry to save the app for offline use.';

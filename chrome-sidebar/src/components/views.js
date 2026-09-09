@@ -42,9 +42,10 @@ export function GmailView() {
     EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),Disclosure('Email text',[Text('',{id:'email-preview',className:'source-preview'})],{id:'email-source',hidden:true})
   ])],{id:'gmail-tool',className:'tool-page',hidden:true});
 }
-export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open Gmail or an ESPN draft. The sidebar follows your current tab.'),Link('Open Gmail ↗','https://mail.google.com/')])],{id:'home-tool',className:'tool-page',hidden:true});
+export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Link('Open travel wallet','travel.html'),Note('Open Gmail or an ESPN draft. The sidebar follows your current tab.'),Link('Open Gmail ↗','https://mail.google.com/')])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
+    Link('Travel wallet','travel.html'),
     Link('AI providers & playground','settings.html'),
     Disclosure('Credentials',[
       UI.FormStack([
@@ -75,7 +76,7 @@ export function AISettingsView() {
   const field=UI.FormField;
   return Stack([
     Section([Stack([UI.Strong('eb',{className:'settings-monogram'}),Heading('ericberry',1)],{className:'settings-brand'}),
-      Note('Personal settings'),Text('AI connections',{className:'settings-nav-current'}),
+      Note('Personal settings'),Link('Travel wallet','travel.html'),Text('AI connections',{className:'settings-nav-current'}),
       Note('Open here anytime: ericberry → Tab → Enter',{className:'settings-shortcut'})
     ],{className:'settings-rail'}),
     Main([

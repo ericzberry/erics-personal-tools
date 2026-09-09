@@ -2,7 +2,9 @@
 
 Open https://erics-tools-api.ezberry.workers.dev/app/ in Safari, then Share → Add to Home Screen. Leave Open as Web App enabled if shown. Open the installed app once online and wait for Offline access: Ready before trying airplane mode.
 
-This release is a deliberately empty app shell. It saves its own interface for offline opening. It does not yet fetch or synchronize personal records, and does not contain credentials or AI provider keys. The shell URL is public; existing personal API endpoints remain authenticated. Add device authentication and a record-specific offline sync model before adding private content. Safari can evict website storage, so offline caching is not a permanent backup.
+Version 0.1.1 adds a Travel wallet shared with the extension. Connect using the same private access token to save and manage loyalty, trusted traveler, passport, visa, and other travel numbers, traveler names, expiration dates, and private notes. Each record is encrypted in D1; list responses omit private numbers and notes. Copy actions retrieve the selected private value. Conflicting edits are rejected.
+
+The device remembers its access token in local browser storage until disconnected. The public app shell works offline, but travel records require internet and are not cached. Refresh records, foreground the app, or reconnect to load changes from your other device. Unsaved form input is retained after a failed save. Disconnect keeps cloud records; Delete removes a record across devices after confirmation. Safari can evict website storage, so you may need to reconnect.
 
 ## Development and deployment
 

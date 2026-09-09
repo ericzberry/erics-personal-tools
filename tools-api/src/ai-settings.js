@@ -13,7 +13,7 @@ export async function encryptSettings(value, id, env) {
   const ciphertext = await crypto.subtle.encrypt({name:'AES-GCM', iv, additionalData:new TextEncoder().encode(id)}, await encryptionKey(env), new TextEncoder().encode(JSON.stringify(value)));
   return JSON.stringify({v:1, iv:encode(iv), ciphertext:encode(ciphertext)});
 }
-async function decryptSettings(value, id, env) {
+export async function decryptSettings(value, id, env) {
   const envelope = JSON.parse(value);
   if (envelope.v !== 1) fail(503, 'Unrecognized settings format.');
   const plaintext = await crypto.subtle.decrypt({name:'AES-GCM', iv:decode(envelope.iv), additionalData:new TextEncoder().encode(id)}, await encryptionKey(env), decode(envelope.ciphertext));

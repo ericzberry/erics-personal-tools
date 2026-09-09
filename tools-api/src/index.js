@@ -1,3 +1,4 @@
+import {travel} from './travel.js';
 import {latestRelease} from './releases.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
@@ -82,6 +83,7 @@ export default {
         const input=JSON.parse(await readValue(request));
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
+      if (path === '/v1/travel' || path.startsWith('/v1/travel/')) return await travel(request, env, readValue, json);
       return await aiSettings(request, env, readValue, json);
     } catch (error) {
       return json({error: error.status ? error.message : 'Storage unavailable. Check the D1 binding and schema.'}, error.status || 503);

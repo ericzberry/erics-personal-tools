@@ -1,5 +1,5 @@
-const CACHE = 'erics-tools-shell-0.1.0';
-const SHELL = ['/app/', '/app/styles.css', '/app/app.js', '/app/releases.js', '/app/manifest.webmanifest', '/app/icon-192.png', '/app/icon-512.png'];
+const CACHE = 'erics-tools-shell-0.1.1';
+const SHELL = ['/app/', '/app/styles.css', '/app/app.js', '/app/releases.js', '/app/shared/travel.js', '/app/shared/cloud-storage.js', '/app/shared/components/ui.js', '/app/shared/components/travel.js', '/app/shared/components/travel.css', '/app/manifest.webmanifest', '/app/icon-192.png', '/app/icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
 });

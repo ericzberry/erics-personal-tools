@@ -10,3 +10,9 @@ await rm(new URL('./dist/', import.meta.url), {recursive: true, force: true});
 await mkdir(new URL('./dist/', import.meta.url), {recursive: true});
 await cp(new URL('./public/', import.meta.url), new URL('./dist/', import.meta.url), {recursive: true});
 console.log(`Built Eric’s Tools ${version}`);
+
+for (const file of ['travel.js','cloud-storage.js','components/ui.js','components/travel.js','components/travel.css']) {
+  const target = new URL(`./dist/app/shared/${file}`, import.meta.url);
+  await mkdir(new URL('./', target), {recursive:true});
+  await cp(new URL(`../chrome-sidebar/src/${file}`, import.meta.url), target);
+}

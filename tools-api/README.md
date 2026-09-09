@@ -37,3 +37,7 @@ The access token for this installation is in the ignored `.env.extension-token` 
 ## Verification
 
 Tests cover authentication, AES-GCM storage, masked responses, key retention/removal, destination changes, revision conflicts, validation and deletion. Node tests use SQLite and require Node 22.13+. The extension also tests the message boundary, page add/edit/delete flow and component architecture. Live checks use a temporary synthetic connection and remove it afterward; personal provider keys are not needed. Native Chrome registration of the options page and keyword requires reloading the installed extension.
+
+## Travel wallet
+
+Apply `npx wrangler d1 execute erics-personal-tools --remote --file travel-schema.sql` before deploying the travel endpoints. `GET /v1/travel` returns only record metadata; authenticated `GET /v1/travel/:id` retrieves a number and notes for copying. `PUT` and `DELETE` require the current revision (null for new records). Records use the existing AES-GCM encryption key with travel-specific authenticated context. The phone and extension use the same authenticated endpoints. Service-worker caching excludes all API responses.

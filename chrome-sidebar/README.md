@@ -200,3 +200,9 @@ Version 0.6.37 makes the email subject the single page title and fixes provider 
 Version 0.6.39 promotes Summarize to the primary action, grows editable results to fit all text, and fixes email summaries to lightweight GPT-4.1 mini regardless of other connection model settings.
 
 Version 0.6.41 checks the public Worker release endpoint against D1 at most hourly while the sidebar is open, persisting checks across reopenings. A compact banner announces newer builds. After packaging each release, run `node tools-api/scripts/publish-release.js` from the repository root to publish its manifest version to D1. This does not reload Chrome automatically.
+
+## Travel wallet (0.6.42)
+
+Open **Settings → Travel wallet** (also linked on the home screen and AI settings page). Save airline, hotel, rental-car, trusted traveler, passport, visa, and other travel numbers, with traveler names, expiration dates, and private notes. Connect the phone app with the same private access token to use the same records. Records refresh when reopening/foregrounding or reconnecting, and with **Refresh records**; unsaved edits are preserved. Stale saves/deletes are rejected so another device's changes are not overwritten.
+
+Travel records are AES-GCM encrypted in D1. Numbers and notes remain masked and are retrieved only for explicit copy actions. The extension reuses its existing cloud connection. Internet is required for travel records; no offline record cache is created. Disconnect removes the device's token, while Delete permanently removes the selected cloud record after confirmation.

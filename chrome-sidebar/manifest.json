@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Eric's Personal Tools",
-  "version": "0.6.41",
+  "version": "0.6.42",
   "description": "Personal AI connection settings, ESPN draft advice, and Gmail assistance.",
   "minimum_chrome_version": "116",
   "permissions": [

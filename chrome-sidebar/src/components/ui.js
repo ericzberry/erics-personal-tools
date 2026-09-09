@@ -72,7 +72,7 @@ export function EditableResult({id,titleId,copyId,fieldId,title='Summary',label=
 export function downloadFile({url,filename}) {const link=Link('',url,{download:filename});link.removeAttribute('target');link.click();}
 
 export const ActionGroup=(children,{compact=false,...props}={})=>Stack(children,{className:`action-group${compact?' action-group--compact':''}`,...props});
-export const SettingsGroup=({title,children=[]})=>Section([Heading(title,3,{className:'settings-group-title'}),...children],{className:'settings-group','aria-label':title});
+export const SettingsGroup=({title,children=[],level=3})=>Section([Heading(title,level,{className:'settings-group-title'}),...children],{className:'settings-group','aria-label':title});
 
 export function OwnershipActions(player,{owner=null,corrected=false,onSelect}) {
   const actions=ActionGroup(['me','other'].map(value=>{
