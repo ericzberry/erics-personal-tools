@@ -81,7 +81,8 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
     const result=await request(token,`/v1/travel/${selected?.id||newId}`,{method:'PUT',value});
     const savedId=selected?.id||newId;
     records=result.records||[result.record,...records.filter(r=>r.id!==result.record.id)];
-    if(mode==='editor')editId=savedId;
+    // An Add record page stays in creation mode. Selecting the saved ID here
+    // makes the next entry overwrite it, including after a foreground refresh.
     edit();loadEditor();render();onChanged();onSaved(savedId);status(result.syncMessage||'Saved. Available on your other devices when they refresh.');
   },'form-status');});
   // Refresh on foreground/reconnect, without overwriting an in-progress edit.

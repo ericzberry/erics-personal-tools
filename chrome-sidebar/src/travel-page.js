@@ -19,11 +19,6 @@ export function mountExtensionTravel(root, options={mode:'browse'}){
   const wallet=mountTravel(root,{
     credentials,request:offline.request,offline,connectionRoot:document.getElementById('travel-settings-connection')||Stack([]),...options,
     onOpenEditor:openTravelEditor,
-    onSaved:id=>{
-      // Keep a newly created record addressable if this editor is reloaded.
-      if(options.mode==='editor')history.replaceState(null,'',`?${new URLSearchParams({edit:id})}`);
-
-    },
     onChanged:()=>changes.publish(),
     onDone:async()=>{
       const tab=await globalThis.chrome?.tabs?.getCurrent?.();

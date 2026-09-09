@@ -1,3 +1,13 @@
+# Travel wallet save fix — mobile 0.1.15 / extension 0.6.54
+
+The Add record page stays in creation mode after saving and reloading. Each subsequent addition creates a separate record instead of replacing the previous entry. Explicit edits still update the selected record. Previously overwritten values are not restored by this update.
+
+Validation: travel editor, offline synchronization, restart, failed-save retry, and component checks; synthetic browser checks at normal and 280px widths.
+
+Archives: `erics-tools-mobile-0.1.15.zip` and `chrome-sidebar/release/erics-sidebar-0.6.54.zip`.
+
+---
+
 # Best card — mobile 0.1.14 / extension 0.6.53
 
 Adds the Best card tool with reviewed issuer research, AI purchase categories, deterministic cash/points comparisons, editable point values, caps, activation, channel restrictions, and explicit bonus requirements. Saved cards and manual comparisons work offline with encrypted storage, queued edits and conflict resolution. Existing restaurant functionality is retained.
