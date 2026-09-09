@@ -1,6 +1,6 @@
 {
   "name": "erics-chrome-sidebar",
-  "version": "0.6.34",
+  "version": "0.6.36",
   "private": true,
   "type": "module",
   "scripts": {

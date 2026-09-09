@@ -74,7 +74,7 @@ test('background pipeline saves picks and marks closed tab disconnected',async()
 });
 test('build excludes personal captures, tests and dependencies',()=>{
   const names=readdirSync(new URL('../dist/',import.meta.url));for(const name of ['data','tests','node_modules'])assert.ok(!names.includes(name));
-  const manifest=JSON.parse(readFileSync(new URL('../dist/manifest.json',import.meta.url)));assert.deepEqual(manifest.permissions,['sidePanel','contextMenus','storage']);assert.deepEqual(manifest.host_permissions,['<all_urls>']);
+  const manifest=JSON.parse(readFileSync(new URL('../dist/manifest.json',import.meta.url)));assert.deepEqual(manifest.permissions,['sidePanel','contextMenus','storage','scripting']);assert.deepEqual(manifest.host_permissions,['<all_urls>']);
 });
 test('practice picks flow through automatic selection into advice, excluding all taken players',async()=>{
   const {selectSession}=await import('../src/session-selection.js');

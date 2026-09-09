@@ -1,6 +1,6 @@
 # Eric’s Personal Tools privacy policy
 
-Updated September 9, 2026. Applies to version 0.6.34, including the AI connection settings page.
+Updated September 9, 2026. Applies to version 0.6.36, including the AI connection settings page.
 
 Eric’s Personal Tools displays contextual assistance alongside ESPN and Gmail. It checks the active tab’s URL to select the appropriate function; it does not retain browsing history.
 

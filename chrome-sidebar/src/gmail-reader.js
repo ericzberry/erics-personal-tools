@@ -11,7 +11,7 @@ var GmailReader = (() => {
     if (!sender) return null;
     const text = (body.innerText ?? body.textContent ?? '').trim();
     if (!text) return null;
-    if (text.length > 20000) return {error: 'This message is too long for local AI (20,000 character limit).'};
+    if (text.length > 20000) return {error: 'This message is too long to summarize (20,000 character limit).'};
     return {subject: subject.textContent.trim(), from: sender.getAttribute('email'), name: sender.textContent.trim(), text, url: href};
   }
   return {read};
