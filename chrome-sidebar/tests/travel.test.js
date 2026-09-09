@@ -22,8 +22,8 @@ test('travel wallet preserves failed edits, masks records, and confirms deletion
   await mountTravel(document.getElementById('app'),{credentials:{get:async()=> 'synthetic'},request,clipboard}).ready;
   const $=id=>document.getElementById(`travel-${id}`);
   assert.match($('list').textContent,/••••••••/);
-  $('list').querySelector('button').click();await tick();assert.equal(copied,'00123456');
-  const show=[...$('list').querySelectorAll('button')].find(b=>b.textContent==='Show number');
+  $('list').querySelector('[aria-label="Copy number for Synthetic airline"]').click();await tick();assert.equal(copied,'00123456');
+  const show=$('list').querySelector('.record-row-toggle');
   show.click();await tick();assert.match($('list').textContent,/00123456/);
   show.click();assert.doesNotMatch($('list').textContent,/00123456/);
   assert.equal($('cloud').open,false);assert.equal($('setup').hidden,true);
@@ -41,4 +41,23 @@ test('travel wallet preserves failed edits, masks records, and confirms deletion
   assert.match($('list').textContent,/No travel records yet/);
   const unsafe=TravelRecord({...record,name:'<img src=x onerror=alert(1)>'},{onEdit(){},onCopy(){},onCopyNotes(){},onDelete(){}});
   assert.equal(unsafe.querySelector('img'),null);
+});
+
+test('long travel lists reveal only the selected row and copy without expanding',async()=>{
+  const {window,document}=parseHTML('<html><body><main></main></body></html>');
+  globalThis.window=window;globalThis.document=document;
+  let reads=0,copies=0;
+  const list=document.querySelector('main');
+  for(let i=0;i<100;i++)list.append(TravelRecord({name:`Program ${i}`,category:'Airline',traveler:'Synthetic traveler'}, {
+    onShow:async()=>{reads++;return '00123456';},onCopy:()=>copies++,onEdit(){},onCopyNotes(){},onDelete(){}
+  }));
+  assert.equal(reads,0);
+  list.querySelector('[aria-label="Copy number for Program 0"]').click();
+  assert.equal(copies,1);assert.equal(reads,0);
+  const toggle=list.querySelector('.record-row-toggle');
+  toggle.click();await tick();
+  assert.equal(reads,1);assert.equal(toggle.getAttribute('aria-expanded'),'true');
+  assert.equal([...list.querySelectorAll('.record-row-content')].filter(n=>!n.hidden).length,1);
+  toggle.click();assert.equal(toggle.getAttribute('aria-expanded'),'false');
+  assert.doesNotMatch(list.textContent,/00123456/);
 });

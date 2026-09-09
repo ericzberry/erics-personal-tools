@@ -1,14 +1,14 @@
-import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong} from './ui.js';
+import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord} from './ui.js';
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
-export function TravelView({connection=true}={}) {
+export function TravelView({connection=true,mode='inline',editId=null}={}) {
   return Section([
-    Heading('Travel wallet',1),
+    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',hidden:mode!=='browse'}),Button('Done',{id:'travel-done',variant:'secondary',hidden:mode!=='editor'})],{compact:true}),
     Note('',{id:'travel-status',role:'status','aria-live':'polite'}),
-    SettingsGroup({title:'Your travel numbers',level:2,children:[
+    Stack([
       FormField({id:'travel-search',label:'Find a record',kind:'search',placeholder:'Program, traveler, or category'}),
       Stack([],{id:'travel-list',className:'travel-list'})
-    ]}),
-    Disclosure('Add or edit a record',[
+    ],{hidden:mode==='editor'}),
+    (mode==='editor'?(_title,children,props)=>Section(children,props):Disclosure)('Add or edit a record',[
       Note('Add airline, hotel, rental-car, trusted traveler, passport, visa, or other membership numbers.'),
       Form([
         Strong('New record',{id:'travel-editor-title'}),
@@ -16,28 +16,20 @@ export function TravelView({connection=true}={}) {
         FormField({id:'travel-name',label:'Program or document name',kind:'text',placeholder:'e.g. Delta SkyMiles'}),
         FormField({id:'travel-traveler',label:'Traveler (optional)',kind:'text'}),
         FormField({id:'travel-number',label:'Number',kind:'password'}),
-        Note('Use Show number or Copy number on a saved record.',{id:'travel-number-help'}),
+        Note('Tap a program to see its number, or use Copy in the list.',{id:'travel-number-help'}),
         FormField({id:'travel-expires',label:'Expiration date (optional)',kind:'date'}),
         FormField({id:'travel-notes',label:'Private notes (optional)',kind:'password'}),
         Note('On edit, blank number and notes fields keep their saved values. Use Clear notes to remove saved notes.'),
         ActionGroup([Button('Save record',{id:'travel-save',type:'submit',variant:'primary'}),Button('Cancel edits',{id:'travel-cancel',variant:'secondary'}),Button('Clear notes',{id:'travel-clear-notes',variant:'secondary'})],{compact:true}),
         Note('',{id:'travel-form-status',role:'status'})
       ],{id:'travel-form',className:'form-stack'})
-    ],{id:'travel-editor'}),
+    ],{id:'travel-editor',hidden:mode==='browse'}),
     ...(connection?[TravelConnection()]:[])
   ],{className:'travel-wallet'});
 }
 export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve}) {
   const number=Strong('••••••••',{className:'travel-number','aria-live':'polite'});
-  const show=Button('Show number',{variant:'secondary','aria-expanded':'false'});
-  let revealed=false;
-  show.addEventListener('click',async()=>{
-    if(revealed){number.textContent='••••••••';show.textContent='Show number';show.setAttribute('aria-expanded','false');revealed=false;return;}
-    const value=await onShow();
-    if(value===undefined)return;
-    number.textContent=value;show.textContent='Hide number';show.setAttribute('aria-expanded','true');revealed=true;
-  });
-  const copy=Button('Copy number',{variant:'secondary'}), edit=Button('Edit',{variant:'secondary'}), remove=Button('Delete',{variant:'danger'});
+  const copy=Button('Copy',{variant:'secondary','aria-label':`Copy number for ${record.name}`}), edit=Button('Edit',{variant:'secondary'}), remove=Button('Delete',{variant:'danger'});
   copy.addEventListener('click',onCopy);edit.addEventListener('click',onEdit);
   const confirm=Button('Delete from all devices',{variant:'danger'}), keep=Button('Keep record',{variant:'secondary'});
   const confirmation=Stack([Note('Permanently delete this travel record from all devices?'),ActionGroup([confirm,keep],{compact:true})],{hidden:true});
@@ -54,7 +46,18 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
     accept.addEventListener('click',()=>onResolve('cloud'));
     resolutions.append(Note('Changed on another device. Choose which version to use.'),ActionGroup([local,cloud],{compact:true}),warning);
   }
-  return Section([Strong(record.name),...(record.pending?[Note(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Waiting to sync')]:[]),Note([record.category,record.traveler,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),number,ActionGroup([copy,show],{compact:true}),Disclosure('Record details',[ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation]),resolutions],{className:'travel-record'});
+  return ExpandableRecord({
+    title:record.name,
+    subtitle:[record.traveler,record.pending?(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Waiting to sync'):''].filter(Boolean).join(' · '),
+    action:copy,
+    children:[number,Note([record.category,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],
+    onToggle:async open=>{
+      number.textContent='••••••••';
+      if(!open)return;
+      const value=await onShow();
+      if(value!==undefined)number.textContent=value;
+    }
+  });
 }
 
 export function TravelConnection(){return Stack([Disclosure('Connection settings',[
