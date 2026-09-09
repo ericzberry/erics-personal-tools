@@ -47,12 +47,14 @@ export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     Link('AI providers & playground','settings.html'),
     Disclosure('Credentials',[
-      Note('API keys and other secrets. Stored locally on this computer, not synced or encrypted by the extension. Saving a key does not connect a service yet.'),
+      UI.FormStack([
+      Note('Local keys · Not encrypted or synced.'),
       Stack([],{id:'credential-list'}),
-      ...Field({id:'credential-name',label:'Service',kind:'select',options:[{text:'Select a service',value:''},...credentialServices.map(name=>({text:name,value:name}))]}),
-      ...Field({id:'credential-secret',label:'API key or secret',kind:'password',placeholder:'Enter a new key'}),
+      UI.FormField({id:'credential-name',label:'Service',kind:'select',options:[{text:'Select a service',value:''},...credentialServices.map(name=>({text:name,value:name}))]}),
+      UI.FormField({id:'credential-secret',label:'API key or secret',kind:'password',placeholder:'Enter a new key'}),
       Button('Save credential',{id:'save-credential',variant:'primary'}),
       Notice('',{id:'credential-status',hidden:true})
+      ])
     ],{className:'settings-panel',open:true,titleHeading:true}),
     Disclosure('Draft',[DraftSettings(),RulesView(),DraftReset()],{className:'settings-panel',titleHeading:true})
   ]});

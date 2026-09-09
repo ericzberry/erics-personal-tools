@@ -181,3 +181,5 @@ Version 0.6.28 unifies page and section titles through the shared Title componen
 Version 0.6.29 shares PageHeader and PageBody across Settings, Fantasy, Gmail, and Home. Page insets and section spacing come from shared tokens, including header actions such as Back.
 
 Version 0.6.30 combines the current sidebar controls with the Cloudflare AI provider gateway. Open the separate AI providers & playground page from sidebar Settings or the extension’s Options menu. Local sidebar credentials remain separate from encrypted cloud connections.
+
+Version 0.6.31 polishes shared form spacing, shortens credential copy, and styles dropdown controls and their Chrome picker menus.

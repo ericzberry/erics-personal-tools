@@ -312,3 +312,31 @@ summary > .title-text { display: inline; }
 .sticky-group .context-note { margin-left: var(--page-inset); margin-right: var(--page-inset); }
 .settings-panel > :not(summary) { margin-left: var(--page-inset); margin-right: var(--page-inset); }
 .sub-page details > label, .sub-page details > input, .sub-page details > select { margin-left: var(--page-inset); margin-right: var(--page-inset); width: calc(100% - 2 * var(--page-inset)); }
+
+/* Shared form rhythm: labels stay with controls and cards retain bottom space. */
+.form-stack { display: grid; gap: var(--section-gap); padding: 0 0 var(--page-inset); }
+.form-stack > * { margin: 0; min-width: 0; }
+.form-stack > button { justify-self: start; }
+.form-field { display: grid; gap: 6px; min-width: 0; }
+.form-field > label { margin: 0; font-size: 11px; font-weight: 500; }
+.settings-panel .form-field > label { margin: 0; }
+.form-field > input, .form-field > select { margin: 0; width: 100%; min-height: 36px; }
+.settings-panel > summary { padding: var(--page-inset); }
+.credential-row { border-color: var(--line); }
+/* Native keyboard semantics, with a designed control and Chrome picker. */
+.select-control { appearance: none; cursor: pointer; padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23526b60' stroke-width='1.5'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; }
+.select-control:hover { border-color: #93aa9b; }
+.select-control:disabled { opacity: .55; cursor: default; }
+@supports (appearance: base-select) {
+  .select-control, .select-control::picker(select) { appearance: base-select; }
+  .select-control { background-image: none; padding-right: 10px; align-items: center; }
+  .select-control::picker-icon { color: var(--forest); }
+  .select-control::picker(select) { margin-top: 5px; padding: 5px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); box-shadow: 0 8px 24px #173e3720; }
+  .select-control option { padding: 9px 10px; border-radius: 6px; font-size: 12px; }
+  .select-control option:checked { background: var(--sage); color: var(--forest); font-weight: 600; }
+  .select-control option:hover, .select-control option:focus { background: #dce8d9; }
+}
+
+.form-stack .footnote { margin: 0; }

@@ -21,6 +21,7 @@ export const PageBody=children=>element('main',{className:'page-body'},children)
 export const Main=PageBody;
 export const Button=(text,{variant='quiet',...props}={})=>element('button',{type:'button',text,className:variant==='quiet'?'quiet':`button-${variant}`,...props});
 export const Link=(text,href,props={})=>element('a',{text,href,target:'_blank',rel:'noreferrer',...props});
+export const Select=({id,disabled=false,options=[]})=>element('select',{id,disabled,className:'select-control'},options.map(o=>Option(o.text,o.value)));
 export const Option=(text,value)=>element('option',{text,value});
 export const List=(children=[],props={})=>element('ol',props,children);
 export const Note=(text,props={})=>Text(text,{className:'footnote',...props});
@@ -30,7 +31,7 @@ export const SectionTitle=(title,action,props={})=>Stack([Heading(title,props.le
 export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>element('details',props,[titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),...children]);
 export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list}) {
   const caption=element('label',{for:id,text:label,className:hiddenLabel?'sr-only':undefined});
-  const control=kind==='select'?element('select',{id,disabled},options.map(o=>Option(o.text,o.value))):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
+  const control=kind==='select'?Select({id,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
   return [caption,control];
 }
 export function AppHeader({name='Eric’s tools',context='Draft advisor'}) {
@@ -164,6 +165,7 @@ export function CredentialServiceOptions(services,savedNames=[]) {
 }
 export const Form=(children,props={})=>element('form',props,children);
 export const Panel=(children,props={})=>Section(children,{className:'settings-card',...props});
+export const FormStack=children=>Stack(children,{className:'form-stack'});
 export const FormField=options=>Stack(Field(options),{className:'form-field'});
 export const ModelSuggestions=props=>element('datalist',props);
 export function setModelSuggestions(node,models){node.replaceChildren(...models.map(model=>Option(model.name,model.id)));}
