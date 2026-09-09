@@ -22,6 +22,7 @@ async function offlineSetup() {
     el('offline-status').textContent = 'Ready';
     el('offline-detail').textContent = 'Downloaded records and reference data work offline. Changes wait on this device until they can sync. Device storage is not a permanent backup.';
   } catch {
+    el('app-details').open = true;
     el('offline-status').textContent = 'Not ready';
     el('offline-detail').textContent = 'Reconnect and retry to save the app for offline use.';
     el('retry-offline').hidden = false;

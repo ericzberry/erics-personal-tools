@@ -1,3 +1,4 @@
+import {observeToolSize} from './tool-layout.js';
 import {initialize} from './mobile-session.js';
 let started = false;
 window.addEventListener('message', async event => {
@@ -12,9 +13,9 @@ window.addEventListener('message', async event => {
     if (tokenField) { tokenField.disabled = true; tokenField.closest('.form-field')?.setAttribute('hidden', ''); }
     const connect = document.getElementById('travel-connect');
     if (connect) connect.hidden = true;
-    document.getElementById('capability-picker')?.focus();
+    document.getElementById('capability-picker')?.focus({preventScroll:true});
   } catch {
-    document.getElementById('capabilities-root').textContent = 'Could not open your tools. Lock the app and unlock to try again.';
+    document.getElementById('capabilities-root').textContent = 'Could not open your tools. Reopen the app to try again.';
   }
 });
 if (parent !== window) parent.postMessage({type: 'mobile-ready'}, location.origin);
@@ -23,4 +24,4 @@ for (const type of ['pointerdown', 'keydown', 'input', 'scroll']) {
     if (event.isTrusted && !document.hidden) parent.postMessage({type: 'mobile-activity'}, location.origin);
   }, {capture: true, passive: true});
 }
-new ResizeObserver(() => parent.postMessage({type: 'mobile-size', height: Math.ceil(document.body.getBoundingClientRect().height)}, location.origin)).observe(document.body);
+observeToolSize(document.getElementById('capabilities-root'), height => parent.postMessage({type:'mobile-size',height},location.origin));

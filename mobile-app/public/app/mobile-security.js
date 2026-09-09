@@ -18,10 +18,6 @@ root.innerHTML = `
   <details id="lock-recovery" hidden><summary>Can’t use your passkey?</summary><p>Recover with your original access token and create a replacement passkey. Saved records and pending changes stay on this device. Keep that token somewhere safe; deleting your passkey can otherwise make unsynced data inaccessible.</p><button id="lock-recover" class="secondary" type="button">Recover access</button></details>
   <p id="lock-support" class="muted">On iPhone, use Apple Passwords on iOS 18 or later. Unlock with Face ID, Touch ID, or your device passcode. A full app restart also requires unlocking.</p>
 </section>
-<section id="mobile-session" class="mobile-session" aria-labelledby="session-title" hidden>
-  <div class="section-heading"><h2 id="session-title">Mobile app unlocked</h2><button id="lock-now" class="secondary" type="button">Lock now</button></div>
-  <p class="muted">Locks after 15 minutes of inactivity. Save edits before locking.</p>
-</section>
 <div id="mobile-private" hidden></div>`;
 const el = id => document.getElementById(id);
 let vault, token = '', frame = null, busy = false, epoch = 0, supported = false;
@@ -37,7 +33,6 @@ const session = idleSession({onLock: reason => {
   frame?.remove(); frame = null;
   el('mobile-private').replaceChildren();
   el('mobile-private').hidden = true;
-  el('mobile-session').hidden = true;
   root.querySelector('.mobile-lock').hidden = false;
   showGate();
   status('Your mobile app is locked.');
@@ -81,11 +76,11 @@ function open(value, attempt) {
   token = value;
   session.start();
   root.querySelector('.mobile-lock').hidden = true;
-  el('mobile-session').hidden = false;
   el('mobile-private').hidden = false;
   frame = document.createElement('iframe');
   frame.title = 'Your unlocked tools';
   frame.className = 'mobile-tools-frame';
+  frame.setAttribute('scrolling', 'no');
   frame.src = '/app/unlocked.html';
   el('mobile-private').replaceChildren(frame);
 }
@@ -124,7 +119,6 @@ el('lock-recover').addEventListener('click', () => {
   status('Enter your original token. Replacing the passkey preserves your downloaded data and pending changes.');
   el('lock-token').focus();
 });
-el('lock-now').addEventListener('click', () => { automatic.suppress(); session.lock(); });
 window.addEventListener('message', event => {
   if (!frame || event.source !== frame.contentWindow || event.origin !== location.origin || !session.check()) return;
   if (event.data?.type === 'mobile-ready') frame.contentWindow.postMessage({type: 'mobile-unlock', token}, location.origin);

@@ -10,6 +10,7 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Establish a clear reading order: heading, explanation/status, content or fields, then actions.
 - Keep the most important action visually dominant; normally use one primary action per form or task group.
 - Use progressive disclosure for secondary detail. Keep current status and necessary actions discoverable.
+- Put the selected tool and saved information first on mobile. Keep device and connection maintenance secondary, omit unlocked-state banners and manual lock controls, and let tool content use the page scroll instead of a small nested scrolling box.
 - Avoid redundant cards inside cards, gratuitous shadows, decorative icons, and oversized headings. Every visual boundary should explain a relationship.
 
 ## Controls and interaction
