@@ -1,3 +1,4 @@
+import {credentialServices} from '../credential-services.js';
 import * as UI from './ui.js';
 const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
 export function DraftView() {
@@ -46,7 +47,7 @@ export function SettingsView() {
     Disclosure('Credentials',[
       Note('API keys and other secrets. Stored locally on this computer, not synced or encrypted by the extension. Saving a key does not connect a service yet.'),
       Stack([],{id:'credential-list'}),
-      ...Field({id:'credential-name',label:'Service or name',kind:'text',placeholder:'e.g. OpenAI'}),
+      ...Field({id:'credential-name',label:'Service',kind:'select',options:[{text:'Select a service',value:''},...credentialServices.map(name=>({text:name,value:name}))]}),
       ...Field({id:'credential-secret',label:'API key or secret',kind:'password',placeholder:'Enter a new key'}),
       Button('Save credential',{id:'save-credential',variant:'primary'}),
       Notice('',{id:'credential-status',hidden:true})

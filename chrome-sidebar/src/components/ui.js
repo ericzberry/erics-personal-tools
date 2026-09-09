@@ -155,3 +155,7 @@ export function CredentialRow(credential,{onEdit,onDelete}) {
   const remove=Button('Delete',{'aria-label':`Delete ${credential.name}`});remove.addEventListener('click',onDelete);
   return Stack([Stack([Strong(credential.name),Note('Key saved')]),ActionGroup([edit,remove])],{className:'credential-row'});
 }
+
+export function CredentialServiceOptions(services,savedNames=[]) {
+  return [Option('Select a service',''),...[...new Set([...services,...savedNames])].map(name=>Option(name,name))];
+}

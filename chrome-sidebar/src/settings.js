@@ -1,6 +1,7 @@
 import {showSettings} from './navigation.js';
 import {credentialStore} from './credentials.js';
-import {CredentialRow,Note} from './components/ui.js';
+import {credentialServices} from './credential-services.js';
+import {CredentialServiceOptions,CredentialRow,Note} from './components/ui.js';
 const $=id=>document.getElementById(id);
 const store=globalThis.chrome?.storage?.local?credentialStore(chrome.storage.local):null;
 let editing=null,busy=false;
@@ -8,6 +9,9 @@ const feedback=text=>{$('credential-status').textContent=text;$('credential-stat
 function clearForm(){editing=null;$('credential-name').value='';$('credential-secret').value='';}
 async function render(){
   const credentials=store?await store.list():[];
+  const selection=$('credential-name').value;
+  $('credential-name').replaceChildren(...CredentialServiceOptions(credentialServices,credentials.map(c=>c.name)));
+  $('credential-name').value=selection;
   $('credential-list').replaceChildren(...(credentials.length?credentials.map(credential=>CredentialRow(credential,{
     onEdit:()=>{editing=credential.id;$('credential-name').value=credential.name;$('credential-secret').value='';$('credential-secret').focus();},
     onDelete:()=>mutate(async()=>{await store.remove(credential.id);if(editing===credential.id)clearForm();feedback('Credential deleted.');})
