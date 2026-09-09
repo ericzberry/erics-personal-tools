@@ -62,3 +62,36 @@ test('long travel lists reveal only the selected row and copy without expanding'
   toggle.click();assert.equal(toggle.getAttribute('aria-expanded'),'false');
   assert.doesNotMatch(list.textContent,/00123456/);
 });
+
+test('mobile record shows the cached number beside Copy without expanding or fetching',()=>{
+  const {document}=parseHTML('<html><body></body></html>');globalThis.document=document;
+  let reads=0,copies=0;
+  const row=TravelRecord({name:'Synthetic program',category:'Airline',number:'00123456'}, {
+    showNumber:true,onShow:()=>reads++,onCopy:()=>copies++,onEdit(){},onDelete(){},onCopyNotes(){}
+  });
+  const preview=row.querySelector('.record-number-line');
+  assert.match(preview.textContent,/00123456/);
+  preview.querySelector('button').click();assert.equal(copies,1);assert.equal(reads,0);
+  assert.equal(row.querySelector('.record-row-content').hidden,true);
+});
+
+test('travel records stay alphabetical when loaded, searched, and refreshed',async()=>{
+  const {window,document}=parseHTML('<html><body><main></main></body></html>');
+  globalThis.window=window;globalThis.document=document;
+  const records=['Delta','Alamo','alaska','AAA'].map((name,id)=>({id:String(id),name,category:'Airline'}));
+  const originalOrder=records.map(record=>record.name);
+  const wallet=mountTravel(document.querySelector('main'),{
+    credentials:{get:async()=> 'synthetic'},request:async()=>({records})
+  });
+  await wallet.ready;
+  const names=()=>[...document.querySelectorAll('#travel-list .record-row-toggle')].map(node=>node.textContent.trim());
+  assert.deepEqual(names(),['AAA','Alamo','alaska','Delta']);
+  assert.deepEqual(records.map(record=>record.name),originalOrder);
+  const search=document.getElementById('travel-search');
+  search.value='ala';search.dispatchEvent(new window.Event('input'));
+  assert.deepEqual(names(),['Alamo','alaska']);
+  search.value='';search.dispatchEvent(new window.Event('input'));
+  records.unshift({id:'new',name:'Bravo',category:'Airline'});
+  await wallet.refresh();
+  assert.deepEqual(names(),['AAA','Alamo','alaska','Bravo','Delta']);
+});

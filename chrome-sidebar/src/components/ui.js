@@ -189,7 +189,7 @@ export function ConnectionCard(connection, {selected=false,onSelect}={}) {
 export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true});
 
 // A compact list row with a separate quick action and optional inline details.
-export function ExpandableRecord({title,subtitle,action,children,onToggle}) {
+export function ExpandableRecord({title,subtitle,action,preview,children,onToggle}) {
   const toggle=Button('',{variant:'secondary',className:'record-row-toggle','aria-expanded':'false'});
   toggle.append(Strong(title),...(subtitle?[Note(subtitle)]:[]));
   const content=Stack(children,{className:'record-row-content',hidden:true});
@@ -198,7 +198,7 @@ export function ExpandableRecord({title,subtitle,action,children,onToggle}) {
     toggle.setAttribute('aria-expanded',String(!content.hidden));
     onToggle?.(!content.hidden);
   });
-  return Section([Stack([toggle,action],{className:'record-row-heading'}),content],{className:'record-row'});
+  return Section([Stack([toggle,action],{className:'record-row-heading'}),...(preview?[preview]:[]),content],{className:'record-row'});
 }
 
 export function CopyIconButton(label){

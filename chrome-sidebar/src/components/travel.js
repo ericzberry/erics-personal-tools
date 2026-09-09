@@ -47,7 +47,7 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
   }
   return ExpandableRecord({
     title:record.name,
-    subtitle:[record.traveler,record.pending?(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Waiting to sync'):''].filter(Boolean).join(' · '),
+    subtitle:[showNumber?'':record.traveler,record.pending?(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Waiting to sync'):''].filter(Boolean).join(' · '),
     action:showNumber?null:copy,
     preview:showNumber?Stack([number,copy],{className:'record-number-line'}):null,
     children:[...(showNumber?[]:[number]),Note([record.category,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],

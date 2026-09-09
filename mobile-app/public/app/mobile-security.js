@@ -22,7 +22,7 @@ root.innerHTML = `
 const el = id => document.getElementById(id);
 let vault, token = '', frame = null, busy = false, epoch = 0, supported = false;
 const automatic = autoUnlock({
-  eligible: () => supported && !document.hidden && !busy && !frame && !el('lock-unlock').hidden && el('lock-setup').hidden,
+  eligible: () => supported && !document.hidden && !busy && !frame && !!vault?.record() && el('lock-setup').hidden,
   unlock: () => unlock()
 });
 const status = text => { el('lock-status').textContent = text; };
@@ -35,8 +35,7 @@ const session = idleSession({onLock: reason => {
   el('mobile-private').hidden = true;
   root.querySelector('.mobile-lock').hidden = false;
   showGate();
-  status('Your mobile app is locked.');
-  if (!document.hidden) el('lock-unlock').focus();
+  status('');
   if (reason === 'idle' && !document.hidden) {
     automatic.background();
     queueMicrotask(() => automatic.request());
@@ -46,13 +45,15 @@ const session = idleSession({onLock: reason => {
 window.mobileAccessAllowed = () => session.check() && !document.hidden;
 function showGate() {
   const saved = !!vault.record();
-  el('lock-title').textContent = saved ? 'Mobile app locked' : 'Protect your mobile app';
+  el('lock-title').textContent = saved ? 'Opening your tools…' : 'Protect your mobile app';
   el('lock-detail').textContent = saved ? 'Unlock your saved data with your passkey. Downloaded records remain available offline.' : 'Use a passkey to protect your saved data, including offline copies. The app locks after 15 minutes without activity.';
   el('lock-setup').hidden = saved;
-  el('lock-unlock').hidden = !saved;
+  el('lock-unlock').hidden = true;
+  el('lock-detail').hidden = saved;
+  el('lock-support').hidden = saved;
   el('lock-finish').hidden = true;
   el('lock-restart').hidden = true;
-  el('lock-recovery').hidden = !saved;
+  el('lock-recovery').hidden = true;
   el('lock-recovery').open = false;
   el('lock-token').value = saved ? '' : vault.legacyToken();
   if (!saved && el('lock-token').value) status('Your existing connection is ready to protect. Create a passkey to continue.');
@@ -61,9 +62,11 @@ async function run(action) {
   if (busy) return;
   busy = true;
   for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = true;
-  status('Waiting for passkey verification…');
+  if(vault.record()){el('lock-unlock').hidden=true;el('lock-recovery').hidden=true;}
+  status('');
   try { await action(epoch); }
   catch (error) {
+    if(vault.record()){el('lock-title').textContent='Couldn’t open your tools';el('lock-unlock').textContent='Try again';el('lock-unlock').hidden=false;el('lock-recovery').hidden=false;}
     status(error.name === 'NotAllowedError' || error.name === 'AbortError' ? 'Passkey verification was canceled or timed out. Try again when you’re ready.' : error.message || 'Could not unlock. Try again.');
   } finally {
     busy = false;

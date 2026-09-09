@@ -25,7 +25,8 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   }
   function render(){
     const term=$('search').value.trim().toLowerCase();
-    const matches=records.filter(r=>`${r.name} ${r.category} ${r.traveler}`.toLowerCase().includes(term));
+    const matches=records.filter(r=>`${r.name} ${r.category} ${r.traveler}`.toLowerCase().includes(term))
+      .sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
     $('list').replaceChildren(...(matches.length?matches.map(record=>TravelRecord(record,{
       showNumber:showNumbers,
       onEdit:()=>{if(busy)return;if(mode==='browse'){run(async()=>{await onOpenEditor(record.id);status('Editor opened in a new tab.');});return;}if(dirty){status('Save or cancel your edits first.');return;}edit(record);$('editor').open=true;$('name').focus();},

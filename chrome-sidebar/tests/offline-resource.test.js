@@ -72,3 +72,17 @@ test('a shared browser lock serializes two windows without losing queued records
   await Promise.all(['one','two'].map(id=>create().request('token',`/v1/travel/${id}`,{method:'PUT',value:{...sample,id,revision:null}})));
   assert.equal((await create().request('token','/v1/travel')).records.length,2);
 });
+
+test('mobile number list opts in to cached numbers without exposing private notes or extra requests',async()=>{
+  const {travelOffline}=await import('../src/travel-offline.js');
+  let saved=null,online=true,calls=0;
+  const store={read:async()=>structuredClone(saved),write:async(_r,_t,value)=>{saved=structuredClone(value);},remove:async()=>{saved=null;}};
+  const remote=async()=>{calls++;return {records:[sample]};};
+  const options={store,remote,online:()=>online,locks:null};
+  const normal=await travelOffline(options).request('token','/v1/travel');
+  assert.equal(normal.records[0].number,undefined);assert.equal(normal.syncMessage,'');
+  online=false;const before=calls;
+  const mobile=await travelOffline({...options,includeNumbers:true}).request('token','/v1/travel');
+  assert.equal(mobile.records[0].number,'00123456');assert.equal(mobile.records[0].notes,undefined);
+  assert.equal(calls,before);assert.match(mobile.syncMessage,/Offline/);
+});

@@ -17,7 +17,7 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
     if(conflicts)return `${conflicts} conflicting change${conflicts===1?'':'s'}. Review the marked records; your local changes are safe.`;
     if(pending.length)return `${pending.length} change${pending.length===1?'':'s'} waiting to sync.${state.error?' '+state.error:''}`;
     if(state.error)return `Using the saved offline copy. ${state.error}`;
-    return online()?'Up to date.':'Offline · Your records are available.';
+    return online()?'':'Offline · Your records are available.';
   }
   async function sync(token,state){
     if(!online())return state;

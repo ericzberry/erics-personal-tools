@@ -240,3 +240,6 @@ Validation: 138 extension and 19 mobile tests pass; synthetic expanded/collapsed
 Saved records, deletions, and conflict resolutions notify open extension wallets through a private-data-free extension storage marker. Refresh requests received during another operation are coalesced and applied when it finishes; unsaved editor input remains protected. Browser previews retain BroadcastChannel support.
 
 Validation: 141 extension tests, 19 mobile tests, and 31 API tests passed. Synthetic two-window browser checks verified creation and rename propagation without reopening the wallet; compact Add record layout reviewed at 280px and 390px. Installed Chrome side-panel delivery was not directly exercised; extension storage delivery and busy-refresh behavior have regression coverage.
+
+
+The combined 0.6.49 / mobile 0.1.11 release also shows mobile numbers directly beside Copy, invokes saved passkeys without an extra app Unlock prompt, and removes routine up-to-date messages from shared data views. Final validation: 144 extension, 19 mobile, and 31 API tests pass. This includes the simplified record form and live sidebar propagation verified in the related tasks.

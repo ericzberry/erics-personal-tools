@@ -62,7 +62,7 @@ Touch form buttons and fields have a 44px minimum; expanded record actions have 
 
 A collapsed record is a compact row: 13px program name, optional 11px traveler, and a copy icon. Use a single fine separator. Expanded content follows the same left edge: 18px tabular number, 12px metadata, then the compact action group. Edit and Delete have matching size and weight; danger color reinforces the Delete label. The number remains the strongest element.
 
-Copy appears on row hover or keyboard focus. On touch, expanding the record exposes Copy. Icons retain accessible names and tooltips. A search field may use a visually hidden associated label and the visible placeholder “find record.” Routine successful synchronization has no banner; pending changes, errors, and offline state remain discoverable. Connection maintenance belongs in Settings.
+In the extension, Copy appears on row hover or keyboard focus. In the unlocked mobile wallet, show the number directly under its program name, with a permanently visible small Copy icon next to the number. Keep metadata and editing controls under the program disclosure. Mobile numbers use 15px text; do not add another traveler line to every collapsed mobile row. Icons retain accessible names and tooltips. A search field may use a visually hidden associated label and the visible placeholder “find record.” Routine successful synchronization has no banner; pending changes, errors, and offline state remain discoverable. Connection maintenance belongs in Settings.
 
 ### Implementation and scope
 
@@ -71,3 +71,5 @@ Copy appears on row hover or keyboard focus. On touch, expanding the record expo
 The wallet implements these tokens in `chrome-sidebar/src/components/travel.css`, shared unchanged by extension and mobile. This update applies the guide to the wallet; existing draft and Gmail screens keep their current styles until reviewed against the guide. New or revised controls should use this hierarchy rather than copying legacy one-off rules.
 
 Review both collapsed and expanded rows, forms, confirmations, hover, keyboard focus, disabled states, 280px sidebar and phone layouts. Use synthetic records only. A passing build alone is not a visual review.
+
+Configured mobile passkeys are invoked automatically on entry. Show only a brief opening state while the device verifies; show a retry control only after cancellation or failure. Native biometric or device-passcode verification remains in place. Do not display routine “Up to date” messages anywhere.

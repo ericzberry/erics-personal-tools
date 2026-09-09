@@ -46,6 +46,10 @@ Smaller search and entry text, a hidden accessible search label, and copy icons 
 
 Validation: 138 extension and 19 mobile tests pass; synthetic phone layout reviewed at 390px. Native iPhone behavior was not directly tested. Archive: `erics-tools-mobile-0.1.10.zip`.
 
-## Mobile 0.1.11 — consistent wallet controls
+## Mobile 0.1.11 — compact numbers and automatic entry
 
-Applies the shared control style guide to wallet record and form actions. Uses compact subtle Edit / Copy notes / Delete actions, consistent radii and focus treatment, and separate form/record touch sizes. See `../../docs/DESIGN.md` for roles and density rules. 138 extension and 19 mobile tests pass; synthetic narrow layouts reviewed. Native iPhone behavior remains unverified. Archive: `erics-tools-mobile-0.1.11.zip`.
+Unlocked Travel wallet shows each number directly, with a small Copy icon beside it. Numbers come from the authenticated encrypted device snapshot and remain available offline; notes remain hidden. Program disclosure retains details and editing. Configured passkeys are invoked automatically without an extra app-level Unlock prompt; failures expose Try again. Native verification and first-time setup remain required. Routine up-to-date messages are removed from shared data views.
+
+Includes the shared action style guide, simplified record form, and the extension's live-update relay. Validation: 144 extension, 19 mobile, and 31 API tests pass, including direct-number opt-in/offline access and lazy extension reveal. Synthetic browser checks cover 390px mobile, 280px sidebar, automatic saved-passkey reopen, offline numbers, and cancellation/retry. Real iPhone biometric behavior remains unverified.
+
+Archive: `erics-tools-mobile-0.1.11.zip`.

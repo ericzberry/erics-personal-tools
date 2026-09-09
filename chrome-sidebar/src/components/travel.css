@@ -70,3 +70,5 @@
   .travel-wallet .record-row-content button{min-height:32px}
   .travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]) .row-copy{opacity:1}
 }
+/* Unlocked mobile records keep the number and its copy action together. */
+.travel-wallet .record-number-line{display:flex;align-items:center;gap:4px;padding:0 0 6px}.travel-wallet .record-number-line .travel-number{font-size:15px;font-weight:500;letter-spacing:.01em}.travel-wallet .record-number-line .row-copy{opacity:1}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle{min-height:24px;padding:5px 0 0}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle strong{font-size:12px;color:var(--wallet-muted)}

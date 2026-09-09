@@ -23,8 +23,8 @@ const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai'
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
 async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else aiLibrary.clear();}catch{aiLibrary.clear();}}
-const offline=travelOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-mountTravel(document.getElementById('capability-travel'),{credentials,offline,request:offline.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
+const offline=travelOffline({includeNumbers:true,remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
+mountTravel(document.getElementById('capability-travel'),{credentials,offline,showNumbers:true,request:offline.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
 for(const [kind,filename] of [['rules','espn-league-2026.json'],['rankings','rankings-2026.json']]){
   const library=mountLibrary(document.getElementById(`capability-${kind}`),{kind,load:async()=>({value:await (await fetch(`/app/data/${filename}`)).json()})});
   await library.refresh();
