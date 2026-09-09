@@ -48,9 +48,14 @@ export function SettingsView() {
     Link('AI providers & playground','settings.html'),
     Disclosure('Credentials',[
       UI.FormStack([
-      Note('Local keys · Not encrypted or synced.'),
+      Note('Encrypted in D1 · Synced through your Worker.'),
+      Stack([
+        UI.FormField({id:'credential-token',label:'Worker access token',kind:'password',placeholder:'Your Worker’s API_TOKEN'}),
+        Button('Connect',{id:'credential-connect',variant:'primary'})
+      ],{id:'credential-connection',className:'form-stack'}),
+      ActionGroup([Button('Refresh',{id:'credential-refresh'}),Button('Disconnect',{id:'credential-disconnect'})]),
       Stack([],{id:'credential-list'}),
-      UI.FormField({id:'credential-name',label:'Service',kind:'select',options:[{text:'Select a service',value:''},...credentialServices.map(name=>({text:name,value:name}))]}),
+      UI.FormField({id:'credential-name',label:'Service',kind:'select',options:[{text:'Select a service',value:''},...AI_PROVIDERS.filter(p=>p.id!=='custom').map(p=>({text:p.name,value:p.id}))]}),
       UI.FormField({id:'credential-secret',label:'API key or secret',kind:'password',placeholder:'Enter a new key'}),
       Button('Save credential',{id:'save-credential',variant:'primary'}),
       Notice('',{id:'credential-status',hidden:true})

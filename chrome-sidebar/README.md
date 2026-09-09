@@ -183,3 +183,5 @@ Version 0.6.29 shares PageHeader and PageBody across Settings, Fantasy, Gmail, a
 Version 0.6.30 combines the current sidebar controls with the Cloudflare AI provider gateway. Open the separate AI providers & playground page from sidebar Settings or the extension’s Options menu. Local sidebar credentials remain separate from encrypted cloud connections.
 
 Version 0.6.31 polishes shared form spacing, shortens credential copy, and styles dropdown controls and their Chrome picker menus.
+
+Version 0.6.32 connects sidebar Credentials to the Worker and encrypted D1 connections. Enter the Worker API_TOKEN once per browser if not already connected. Save, replace, delete and refresh use the cloud API. Supported legacy local credentials migrate after connection, and local copies are removed only after acknowledgement. Failures or conflicts retain local keys.

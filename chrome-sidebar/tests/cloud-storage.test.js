@@ -7,10 +7,11 @@ function api(){let data={cloudConnection:{token}};return {runtime:{id:'extension
 test('cloud requests use the fixed host, omit cookies and reject redirects',async()=>{
  const result=await cloudRequest(token,'/health',{fetcher:async(url,options)=>{assert.equal(url,`${CLOUD_URL}/health`);assert.equal(options.credentials,'omit');assert.equal(options.redirect,'error');return Response.json({ok:true});}});assert.equal(result.ok,true);
 });
-test('only the installed settings page can access the bridge',()=>{
+test('only installed sidebar and settings pages can access the bridge',()=>{
  const chrome=api();
  assert.equal(isSettingsPage({id:'extension',url:chrome.runtime.getURL('settings.html')},chrome),true);
- for(const sender of [{id:'extension',url:'https://example.com'},{id:'other',url:chrome.runtime.getURL('settings.html')},{id:'extension',url:chrome.runtime.getURL('sidepanel.html')},{url:chrome.runtime.getURL('settings.html')}])assert.equal(isSettingsPage(sender,chrome),false);
+ assert.equal(isSettingsPage({id:'extension',url:chrome.runtime.getURL('sidepanel.html')},chrome),true);
+ for(const sender of [{id:'extension',url:'https://example.com'},{id:'other',url:chrome.runtime.getURL('settings.html')},{url:chrome.runtime.getURL('settings.html')}])assert.equal(isSettingsPage(sender,chrome),false);
  let listener,open;chrome.runtime.onMessage={addListener:fn=>{listener=fn;}};chrome.omnibox={setDefaultSuggestion:()=>{},onInputEntered:{addListener:fn=>{open=fn;}}};chrome.tabs={update:value=>assert.equal(value.url,chrome.runtime.getURL('settings.html'))};registerSettingsBridge(chrome);
  let result;listener({type:'ERIC_SETTINGS',action:'list'},{id:'extension',url:'https://mail.google.com/'},value=>{result=value;});assert.equal(result.ok,false);open('', 'currentTab');
 });

@@ -1,6 +1,6 @@
 # Eric’s Personal Tools privacy policy
 
-Updated September 8, 2026. Applies to version 0.6.31, including the AI connection settings page.
+Updated September 9, 2026. Applies to version 0.6.32, including the AI connection settings page.
 
 Eric’s Personal Tools displays contextual assistance alongside ESPN and Gmail. It checks the active tab’s URL to select the appropriate function; it does not retain browsing history.
 
@@ -21,3 +21,5 @@ Recommendations are passed locally to the captured ESPN draft tab via draft-capt
 The contextMenus permission adds a webpage right-click launcher. Clicking it opens the sidebar in that Chrome window; the launcher does not store or transmit the clicked page, link, or selected text.
 
 Credentials entered in Settings are stored in local Chrome extension storage, restricted to trusted extension contexts. They are not encrypted by the extension, synced, exported with draft diagnostics, or transmitted to a provider. Saved keys are not displayed in the credential list. You can replace or delete them; uninstalling clears extension storage. Saving a key does not yet activate a service integration.
+
+Sidebar Credentials now uses the same encrypted D1 connections. On connection or refresh, supported legacy local keys are uploaded over HTTPS and removed locally only after a confirmed save. Unrecognized keys and failed or conflicting transfers remain local for review. New sidebar keys are never saved locally. The Worker access token remains in trusted local storage.

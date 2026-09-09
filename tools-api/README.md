@@ -4,7 +4,7 @@ Worker: `https://erics-tools-api.ezberry.workers.dev`. Existing D1 database: `er
 
 The extension-only settings page is `chrome-sidebar/settings.html`. Open it with the `ericberry` address-bar keyword (Tab, Enter), the extension’s Options menu, or Settings in its sidebar header. Chrome must have the extension installed and enabled. It is not a hosted website or a custom URL scheme.
 
-The page uses extension messages. A service-worker bridge accepts only the exact installed settings page, keeps the extension access token in trusted local storage, and calls this fixed Worker. Other websites and content scripts cannot invoke settings operations. No `externally_connectable` or web-accessible page is declared.
+The page uses extension messages. A service-worker bridge accepts only the exact installed settings and sidebar pages, keeps the extension access token in trusted local storage, and calls this fixed Worker. Other websites and content scripts cannot invoke settings operations. No `externally_connectable` or web-accessible page is declared.
 
 ## Storage and API
 
