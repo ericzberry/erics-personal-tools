@@ -1,4 +1,4 @@
-# Eric's Personal Tools — 0.6.29
+# Eric's Personal Tools — 0.6.30
 
 Status: prepared locally; not uploaded or published. Google developer dashboard requires reauthentication.
 
@@ -25,7 +25,7 @@ Provide a contextual personal productivity sidebar for the current page: ESPN dr
 Open the sidebar to inspect saved league rules without signing in. Live capture requires an ESPN account and an active football draft or practice draft. Open or reload the draft room after installing. The draft is selected automatically. Settings contains the ESPN is capturing picks toggle. Switch it off for manual Me / Someone else buttons on the tier board, and on to hide those buttons and resume the live feed. After each pick, the count and available recommendations update. Completed, disconnected or incomplete drafts do not show actionable picks. No credentials are included in this submission.
 
 ## Submission checklist
-Upload erics-sidebar-0.6.29.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
+Upload erics-sidebar-0.6.30.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
 
 Install the approved store listing once on each computer while signed into the tester account. Subsequent approved versions of that same listing update automatically. Local draft storage does not sync between computers.
 
@@ -34,3 +34,7 @@ Sources: https://developer.chrome.com/docs/webstore/publish and https://develope
 ## Gmail reviewer flow
 
 Open and expand an email in Gmail, then open the sidebar. It shows the subject and sender of the latest expanded message. Choose Summarize or Generate reply. Chrome may download its local model on first use; unsupported hardware or browser versions show an explicit message. Generated text is editable and can be copied. No send, archive, delete, label, or Gmail API scopes are used. Switching messages clears the prior output.
+
+## AI connection settings
+
+Options opens the extension-only AI settings page and prompt playground. Provider credentials are encrypted in the owner’s Cloudflare D1 database. Fetch models, Test connection and Run prompt make requests through the Worker to the selected provider; tests and prompts may incur provider charges. Local sidebar credentials remain separate and are not automatically uploaded. No provider keys or cloud access tokens are bundled.

@@ -23,7 +23,7 @@ The prepared build is in `dist/`. Run `npm run build` to regenerate it (Node.js 
 
 The reader watches rendered pick messages and the roster team selector. Changes trigger a read after 300 ms, with a 5-second heartbeat. Actual latency depends on ESPN and Chrome scheduling. Keep the draft tab open. Background throttling or an ESPN layout change can delay or break capture. Existing history can only be recovered if ESPN renders it; missing picks are flagged. Commissioner rollback handling is tested with fixtures, not a live league undo.
 
-The extension does not submit picks, modify ESPN, read cookies, or access private application state. It requests `sidePanel`, `contextMenus`, `storage`, and `<all_urls>` host access, as requested for future personal tools. Content scripts run only on ESPN football draft rooms and `https://mail.google.com/*`. Chrome still restricts protected browser pages and requires separate user enablement for file URLs or incognito access. It makes no external network calls of its own. The UI uses Chrome's [Side Panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel).
+The extension does not submit picks, modify ESPN, read cookies, or access private application state. It requests `sidePanel`, `contextMenus`, `storage`, and `<all_urls>` host access, as requested for future personal tools. Content scripts run only on ESPN football draft rooms and `https://mail.google.com/*`. Chrome still restricts protected browser pages and requires separate user enablement for file URLs or incognito access. It can refresh the public ESPN catalog and, when configured, manage AI connection settings through the owner’s Cloudflare Worker. The UI uses Chrome's [Side Panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel).
 
 ## Validation
 
@@ -41,7 +41,17 @@ For a visual preview, run `npm run preview` and open `http://127.0.0.1:8765/side
 
 This sub-project has its own manifest, source, config, tests, and build. Rules live in `config/espn-league-2026.json`. Local captures in `data/` are ignored and excluded from builds, as are tests and dependencies. The full practice verification is saved locally as `data/practice-validation.json`.
 
-There is no sync server yet. Hosting, authentication, protocol, and scope remain TBD. A future server belongs in a separate sub-project; the JSON draft snapshot can be its input.
+The Cloudflare settings API lives in `../tools-api`. Its Worker is `erics-tools-api`, bound as `DB` to D1 database `erics-personal-tools`. It stores AI connections; ESPN data is not uploaded.
+
+## Personal settings page (0.6.17)
+
+Reload the unpacked extension, then type `ericberry` in Chrome’s address bar, press Tab, then Enter. This keyword opens the extension’s `settings.html` page; it is not a domain, and it only works while the extension is installed and enabled. You can also right-click the extension icon → Options, use Chrome’s Extension options button, or click Settings in the sidebar header.
+
+The page supports fourteen named AI providers plus custom compatible services, optional default model/API URL, and encrypted API keys. See `../tools-api/PROVIDERS.md` for the full list. On first use, expand Cloud connection and enter the existing extension access token (not an AI provider key). If previously connected, the saved token is reused. The page communicates only through a restricted extension service-worker message handler, which sends authenticated requests to the fixed Cloudflare host. No external website or content script can use this handler.
+
+Connection keys are encrypted in D1 with AES-GCM using a separate Worker secret. List/save responses contain only a `hasApiKey` indicator. A blank key on edit keeps the existing key; an explicit toggle removes it. Changing provider or API URL clears the old key unless a new key is entered. Saves/deletes use revisions to reject stale edits. Settings persist across devices after connecting each extension with the same access token. Reload connections to fetch changes made elsewhere.
+
+After saving a connection, use Fetch models, Test connection, or the prompt playground. Tests send a small generation request and can use provider credit. Choose a text model from the suggestions or enter its ID; Z.AI/GLM and Perplexity use manual IDs. The playground sends text through the extension and Worker using the encrypted saved key. It shows text output, usage where available, and timeout/limit errors without automatic retries. This does not change Gmail’s on-device AI behavior. The earlier ESPN cloud backup controls and endpoints have been removed. Existing local drafts remain local.
 
 ## Recommendation engine
 
@@ -169,3 +179,5 @@ Version 0.6.27 replaces free-text service names with a dropdown for OpenAI, Anth
 Version 0.6.28 unifies page and section titles through the shared Title component, using Bedford Bridges’ 20px Georgia typography. Settings, Credentials, Draft, Gmail, and other headings use the same type styling.
 
 Version 0.6.29 shares PageHeader and PageBody across Settings, Fantasy, Gmail, and Home. Page insets and section spacing come from shared tokens, including header actions such as Back.
+
+Version 0.6.30 combines the current sidebar controls with the Cloudflare AI provider gateway. Open the separate AI providers & playground page from sidebar Settings or the extension’s Options menu. Local sidebar credentials remain separate from encrypted cloud connections.

@@ -28,9 +28,9 @@ export const Badge=(text,props={})=>Label(text,{className:'pill',...props});
 export const Notice=(text='',props={})=>Text(text,{className:'notice',role:'status',...props});
 export const SectionTitle=(title,action,props={})=>Stack([Heading(title,props.level||2,{id:props.titleId}),action],{className:'section-title'});
 export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>element('details',props,[titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),...children]);
-export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false}) {
+export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list}) {
   const caption=element('label',{for:id,text:label,className:hiddenLabel?'sr-only':undefined});
-  const control=kind==='select'?element('select',{id,disabled},options.map(o=>Option(o.text,o.value))):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled});
+  const control=kind==='select'?element('select',{id,disabled},options.map(o=>Option(o.text,o.value))):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
   return [caption,control];
 }
 export function AppHeader({name='Eric’s tools',context='Draft advisor'}) {
@@ -161,4 +161,18 @@ export function CredentialRow(credential,{onEdit,onDelete}) {
 
 export function CredentialServiceOptions(services,savedNames=[]) {
   return [Option('Select a service',''),...[...new Set([...services,...savedNames])].map(name=>Option(name,name))];
+}
+export const Form=(children,props={})=>element('form',props,children);
+export const Panel=(children,props={})=>Section(children,{className:'settings-card',...props});
+export const FormField=options=>Stack(Field(options),{className:'form-field'});
+export const ModelSuggestions=props=>element('datalist',props);
+export function setModelSuggestions(node,models){node.replaceChildren(...models.map(model=>Option(model.name,model.id)));}
+export const OutputText=props=>element('pre',{className:'ai-output',...props});
+export function ConnectionCard(connection, {selected=false,onSelect}={}) {
+  const button=Button('',{className:'connection-card','aria-pressed':String(selected),'aria-label':`Edit ${connection.name}`});
+  button.append(Stack([Strong(connection.name),Label(connection.provider,{className:'provider-tag'})],{className:'connection-heading'}),
+    Label(connection.model||'No default model',{className:'connection-model'}),
+    Label(connection.hasApiKey?'API key saved':'No API key',{className:'connection-key'}));
+  button.addEventListener('click',()=>onSelect(connection));
+  return button;
 }

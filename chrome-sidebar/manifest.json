@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Eric's Personal Tools",
-  "version": "0.6.29",
-  "description": "A personal sidebar for live ESPN draft advice and on-device Gmail summaries and reply drafts.",
+  "version": "0.6.30",
+  "description": "Personal AI connection settings, ESPN draft advice, and on-device Gmail assistance.",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",
@@ -57,5 +57,12 @@
   },
   "host_permissions": [
     "<all_urls>"
-  ]
+  ],
+  "options_ui": {
+    "page": "settings.html",
+    "open_in_tab": true
+  },
+  "omnibox": {
+    "keyword": "ericberry"
+  }
 }

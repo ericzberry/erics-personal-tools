@@ -17,6 +17,55 @@
   background: var(--paper);
   color-scheme: light;
 }
+.header-link {color:#fffefa;font-size:11px;margin-left:6px;}
+/* Extension settings workspace; shared sidebar components keep their own scale. */
+body.settings-site {max-width:none;border:0;margin:0;font-size:16px;min-height:100vh;}
+.settings-shell {display:grid;grid-template-columns:230px minmax(0,1fr);min-height:100vh;}
+.settings-rail {padding:36px 24px;background:var(--forest);color:var(--surface);display:flex;flex-direction:column;align-items:stretch;}
+.settings-brand {display:flex;align-items:center;gap:12px;}
+.settings-brand h1 {font-size:27px;letter-spacing:-.6px;}
+.settings-monogram {display:grid;place-items:center;width:40px;height:40px;border:1px solid #789189;border-radius:12px;font:24px Georgia,serif;}
+.settings-rail .footnote {color:#c2d1c9;font-size:14px;margin:22px 0;}
+.settings-nav-current {background:#ffffff12;border-left:3px solid #bece9c;padding:12px 14px;font-size:15px;margin-top:36px;border-radius:0 8px 8px 0;}
+.settings-shortcut {margin-top:auto;padding-top:70px;color:#c2d1c9;font-size:13px;line-height:1.8;}
+.settings-shell > main {width:100%;max-width:1160px;padding:42px 48px 28px;margin:0 auto;}
+.settings-heading {display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px;}
+.settings-heading h1 {font-size:34px;letter-spacing:-.8px;}
+.settings-intro {font-size:16px;color:var(--muted);margin:10px 0 0;}
+.settings-site .pill {font-size:12px;letter-spacing:0;padding:7px 10px;border-radius:20px;}
+.settings-site .pill-connected {background:#e3eddf;color:#245138;border-color:#bed0b9;}
+.settings-site summary {font-size:14px;padding:14px 18px;}
+.connection-setup {padding:0 18px 12px;max-width:680px;}
+.settings-site .footnote {font-size:14px;line-height:1.65;}
+.settings-site .notice {font-size:14px;padding:12px 14px;}
+.settings-columns {display:grid;grid-template-columns:minmax(230px,.9fr) minmax(300px,1.2fr);gap:28px;align-items:start;margin-top:30px;}
+.settings-site h2 {font-size:23px;}
+.settings-site .section-title {margin:0 0 12px;}
+.settings-card {background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px;box-shadow:0 8px 24px #173e3705;}
+.settings-site .form-field {margin:18px 0;}
+.settings-site label {font-size:14px;margin-bottom:8px;}
+.settings-site input,.settings-site select {font-size:15px;padding:11px 12px;}
+.settings-site .quiet {font-size:14px;padding:8px 4px;}
+.settings-site .button-primary,.settings-site .button-secondary {font-size:14px;padding:11px 14px;}
+.settings-site .action-group {flex-wrap:wrap;gap:12px;}
+.settings-site .toggle-field {font-size:14px;margin:16px 0;}
+.connection-list {display:grid;gap:12px;margin-top:14px;}
+.connection-card {display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);padding:19px;border-radius:12px;color:var(--ink);font:inherit;}
+.connection-card[aria-pressed=true] {border-color:var(--forest);box-shadow:inset 3px 0 var(--forest);background:#f0f4ed;}
+.connection-card:hover {border-color:#7b9689;}
+.connection-heading {display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;width:100%;}
+.connection-heading strong {font-size:16px;overflow-wrap:anywhere;}
+.provider-tag {font-size:12px;text-transform:capitalize;color:var(--muted);}
+.connection-model {font-size:14px;overflow-wrap:anywhere;}
+.connection-key {font-size:13px;color:var(--muted);}
+.settings-empty {font-size:15px;line-height:1.7;color:var(--muted);padding:30px 22px;border:1px dashed #bcc8b9;border-radius:12px;margin-top:20px;}
+.settings-footer {font-size:13px;color:var(--muted);margin-top:28px;line-height:1.6;}
+.playground-card {margin-top:28px;}
+.settings-site .editable-output {font-size:15px;min-height:80px;}
+.ai-output {white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:20px;margin-top:18px;max-height:650px;overflow:auto;}
+@media(max-width:1000px) {.settings-shell {grid-template-columns:180px minmax(0,1fr);}.settings-shell > main {padding:30px 24px;}.settings-columns {gap:18px;}.settings-card {padding:20px;}}
+@media(max-width:800px) {.settings-shell {display:block;}.settings-rail {padding:16px 24px;}.settings-rail > .footnote,.settings-nav-current,.settings-shortcut {display:none;}.settings-brand h1 {font-size:23px;}.settings-monogram {width:32px;height:32px;font-size:20px;}.settings-columns {grid-template-columns:1fr;}.settings-heading {align-items:flex-start;}.settings-heading h1 {font-size:29px;}}
+@media(max-width:400px) {.settings-shell > main {padding:24px 16px;}.settings-heading {flex-wrap:wrap;}.settings-card {padding:18px;}}
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 280px; }
 button, input, select { font: inherit; }

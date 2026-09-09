@@ -1,5 +1,6 @@
 import {credentialServices} from '../credential-services.js';
 import * as UI from './ui.js';
+import {AI_PROVIDERS} from '../ai-providers.js';
 const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
 export function DraftView() {
   const draft=Section([
@@ -44,6 +45,7 @@ export function GmailView() {
 export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open Gmail or an ESPN draft. The sidebar follows your current tab.'),Link('Open Gmail ↗','https://mail.google.com/')])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
+    Link('AI providers & playground','settings.html'),
     Disclosure('Credentials',[
       Note('API keys and other secrets. Stored locally on this computer, not synced or encrypted by the extension. Saving a key does not connect a service yet.'),
       Stack([],{id:'credential-list'}),
@@ -56,3 +58,67 @@ export function SettingsView() {
   ]});
 }
 export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),SettingsView());}
+
+export function AISettingsView() {
+  const field=UI.FormField;
+  return Stack([
+    Section([Stack([UI.Strong('eb',{className:'settings-monogram'}),Heading('ericberry',1)],{className:'settings-brand'}),
+      Note('Personal settings'),Text('AI connections',{className:'settings-nav-current'}),
+      Note('Open here anytime: ericberry → Tab → Enter',{className:'settings-shortcut'})
+    ],{className:'settings-rail'}),
+    Main([
+      Stack([Stack([Heading('AI connections',1),Text('Your providers, models, and API keys.',{className:'settings-intro'})]),
+        Badge('Not connected',{id:'settings-connection-badge'})],{className:'settings-heading'}),
+      Disclosure('Cloud connection',[
+        Stack([Note('Connect this browser to your personal settings. Use your extension access token here; add AI provider keys below.'),
+          field({id:'settings-token',label:'Extension access token',kind:'password',placeholder:'Paste your private token'}),
+          ActionGroup([Button('Connect',{id:'settings-connect',variant:'primary'}),Button('Disconnect this browser',{id:'settings-disconnect'})]),
+          Note('',{id:'settings-cloud-status',role:'status'})],{className:'connection-setup'})
+      ],{id:'settings-cloud'}),
+      Notice('',{id:'settings-status',role:'status',hidden:true}),
+      Stack([
+        Section([SectionTitle('Saved connections',Button('+ Add',{id:'connection-add'})),
+          Button('Reload connections',{id:'connection-reload'}),
+          Text('Connect your browser to load your AI settings.',{id:'connections-empty',className:'settings-empty'}),
+          Stack([],{id:'connection-list',className:'connection-list'})],{className:'settings-library'}),
+        UI.Panel([
+          SectionTitle('Add connection',undefined,{titleId:'connection-editor-title'}),
+          UI.Form([
+            field({id:'ai-name',label:'Connection name',kind:'text',placeholder:'e.g. Writing assistant'}),
+            field({id:'ai-provider',label:'Provider',kind:'select',options:AI_PROVIDERS.map(provider=>({text:provider.name,value:provider.id}))}),
+            Stack([field({id:'ai-format',label:'API format',kind:'select',options:[{text:'OpenAI Chat Completions',value:'chat'},{text:'OpenAI Responses',value:'responses'},{text:'Anthropic Messages',value:'anthropic'}]})],{id:'ai-format-field',hidden:true}),
+            field({id:'ai-model',label:'Default model (optional)',kind:'text',placeholder:'Model ID',list:'provider-model-list'}),
+            field({id:'ai-base-url',label:'API base URL (optional)',kind:'url',placeholder:'https://…'}),
+            Note('',{id:'ai-endpoint-help'}),
+            field({id:'ai-key',label:'API key',kind:'password',placeholder:'Paste your provider’s key'}),
+            Note('Keys are stored encrypted. Saved keys are never displayed.',{id:'ai-key-help'}),
+            UI.Toggle({id:'ai-clear-key',label:'Remove the saved API key',checked:false}),
+            ActionGroup([Button('Save connection',{id:'connection-save',variant:'primary',type:'submit'}),Button('Cancel',{id:'connection-cancel'})]),
+            Button('Remove connection',{id:'connection-remove',hidden:true}),
+            Stack([Notice('Remove this connection and its saved API key?'),
+              ActionGroup([Button('Yes, remove',{id:'connection-confirm-remove',variant:'secondary'}),Button('Keep connection',{id:'connection-keep'})])
+            ],{id:'connection-remove-confirm',hidden:true})
+          ],{id:'connection-form'})
+        ],{className:'settings-card settings-editor'})
+      ],{className:'settings-columns'}),
+      UI.Panel([
+        SectionTitle('Try a connection',Button('Fetch models',{id:'connection-models'})),
+        Note('Select a saved connection above. Tests and prompts use that provider’s API credit.',{id:'playground-context'}),
+        UI.ModelSuggestions({id:'provider-model-list'}),
+        Note('',{id:'model-list-status',role:'status'}),
+        UI.Form([
+          field({id:'playground-model',label:'Model',kind:'text',placeholder:'Type or choose a model ID',list:'provider-model-list'}),
+          ActionGroup([Button('Test connection',{id:'connection-test',variant:'secondary'})]),
+          field({id:'playground-system',label:'Instructions (optional)',kind:'textarea',rows:2}),
+          field({id:'playground-prompt',label:'Your prompt',kind:'textarea',rows:4}),
+          field({id:'playground-limit',label:'Output token limit',kind:'select',options:[512,1024,2048,4096,8192].map(value=>({text:String(value),value:String(value)}))}),
+          ActionGroup([Button('Run prompt',{id:'playground-run',type:'submit',variant:'primary'}),Button('Copy response',{id:'playground-copy'})])
+        ],{id:'playground-form'}),
+        Note('',{id:'playground-status',role:'status'}),
+        UI.OutputText({id:'playground-output',hidden:true})
+      ],{className:'settings-card playground-card'}),
+      Note('Prompts go through your Worker to the selected provider. Prompts and responses are not saved by this app.',{className:'settings-footer'})
+    ])
+  ],{className:'settings-shell'});
+}
+export function mountSettings(root) {root.replaceChildren(AISettingsView());}

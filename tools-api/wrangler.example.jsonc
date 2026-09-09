@@ -1,0 +1,20 @@
+{
+  "name": "erics-tools-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-08",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "erics-personal-tools",
+      "database_id": "REPLACE_WITH_EXISTING_DATABASE_ID"
+    }
+  ],
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  }
+}

@@ -1,8 +1,10 @@
 import {registerSidebarLauncher} from './components/sidebar-launcher.js';
 registerSidebarLauncher(chrome);
 import {pageAdvice} from './page-advice.js';
+import {registerSettingsBridge} from './settings-bridge.js';
 import {validateSnapshot, mergeSnapshot, sessionKey} from './draft-state.js';
 chrome.sidePanel.setPanelBehavior({openPanelOnActionClick: true}).catch(console.error);
+registerSettingsBridge(chrome);
 let pending = Promise.resolve();
 function enqueue(action) {
   pending = pending.catch(console.error).then(action);
