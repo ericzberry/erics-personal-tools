@@ -51,7 +51,6 @@ function edit(connection=null) {
   $('ai-name').value=connection?.name||'';
   $('ai-provider').value=connection?.provider||'openai';
   $('ai-format').value=connection?.apiFormat||providerFor(connection?.provider)?.format||'chat';
-  $('ai-model').value=connection?.model||'';
   $('ai-base-url').value=connection?.baseUrl||'';
   $('ai-key').value='';$('ai-clear-key').checked=false;
   $('ai-clear-key').closest('label').hidden=!connection?.hasApiKey;
@@ -59,7 +58,7 @@ function edit(connection=null) {
   $('ai-key-help').textContent=connection?.hasApiKey?'Leave blank to keep your saved key. Changing provider or API URL clears it unless you enter a new key.':'Keys are stored encrypted. Saved keys are never displayed.';
   $('connection-remove').hidden=!connection;
   $('connection-remove-confirm').hidden=true;
-  $('playground-model').value=connection?.model||'';
+  $('playground-model').value='';
   $('playground-limit').value='2048';
   $('playground-output').textContent='';$('playground-output').hidden=true;
   $('playground-status').textContent='';$('model-list-status').textContent='';
@@ -92,7 +91,7 @@ $('ai-provider').addEventListener('change',endpointHint);
 $('connection-form').addEventListener('submit',event=>{
   event.preventDefault();run(async()=>{
     const name=$('ai-name').value.trim();if (!name) throw Error('Give this connection a name.');
-    const connection={name,provider:$('ai-provider').value,model:$('ai-model').value.trim(),baseUrl:$('ai-base-url').value.trim(),apiFormat:$('ai-format').value,revision:selected?.revision??null};
+    const connection={name,provider:$('ai-provider').value,baseUrl:$('ai-base-url').value.trim(),apiFormat:$('ai-format').value,revision:selected?.revision??null};
     const key=$('ai-key').value.trim();
     if ($('ai-clear-key').checked && key) throw Error('Either enter a new key or remove the saved key.');
     if (key || $('ai-clear-key').checked) connection.apiKey=key;
@@ -123,7 +122,7 @@ $('connection-models').addEventListener('click',()=>run(async()=>{
   try{
     const result=await send('models',{id:selected.id});
     setModelSuggestions($('provider-model-list'),result.models);
-    $('model-list-status').textContent=result.manual?result.message:`${result.models.length} models loaded${result.partial?' (partial list)':''}. Type in either model field to choose. ${result.message||''}`;
+    $('model-list-status').textContent=result.manual?result.message:`${result.models.length} models loaded${result.partial?' (partial list)':''}. Choose a model for this playground request. ${result.message||''}`;
   }catch(error){$('model-list-status').textContent='Could not fetch models. You can enter a model ID manually.';throw error;}
 }));
 $('connection-test').addEventListener('click',()=>run(async()=>{

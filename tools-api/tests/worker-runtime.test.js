@@ -8,7 +8,7 @@ test('provider request options work in Cloudflare runtime and redirects never fo
  export default {async fetch(request){
    let calls=0;
    try {
-     const result=await generate({provider:'openai',apiKey:'synthetic',model:'gpt-4.1-mini'}, {messages:[{role:'user',content:'Summarize'}]}, async(url,options)=>{
+     const result=await generate({provider:'openai',apiKey:'synthetic',model:'gpt-4.1-mini'}, {model:'gpt-4.1-mini',messages:[{role:'user',content:'Summarize'}]}, async(url,options)=>{
        calls++; new Request(url,options);
        if(request.url.endsWith('/redirect'))return new Response(null,{status:302,headers:{Location:'https://example.com'}});
        return Response.json({output:[{type:'message',content:[{type:'output_text',text:'Summary'}]}]});

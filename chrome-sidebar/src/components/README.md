@@ -24,3 +24,11 @@ The tests in `tests/components.test.js` enforce controller hooks, accessible fie
 `PageHeader` and `PageBody` own page spacing with `--page-inset` and `--section-gap`. `ToolHeading` and `Main` delegate to them. Compose new screens with these modules; do not add feature-specific outer padding.
 
 `SettingsGroup` provides a titled, bounded settings section. `ActionGroup(children, {compact: true})` keeps maintenance actions adjacent and allows wrapping. Use secondary buttons for maintenance and danger buttons for destructive actions.
+
+Use `settings-panel--compact` on a settings disclosure for tighter insets, group spacing, and field rhythm while retaining full control sizes. Credentials starts collapsed.
+
+`SettingsList`, `SettingsItem`, and `SettingsLink` compose flat settings navigation. Items use native disclosures, compact heading typography, dividers, and trailing chevrons; links use a trailing external-link indicator. Use these for top-level settings categories instead of separate cards.
+
+`CapabilityNavigation` renders the shared expandable navigation from `src/capabilities.js`. Keep feature-specific actions inside their screens. The controller distinguishes Current tab automatic mode from explicit capability selection; Escape closes the list and returns focus to its summary.
+
+`Workspace`, `WorkspaceColumns`, `FieldGrid`, `ChoiceRow`, `EvidenceList`, and `ResultBlock` provide reusable search-workspace layouts and source-backed results. Restaurant screens are composed in `restaurant-views.js` and exported through `views.js`. `SettingsGroup` accepts an optional heading level to preserve page hierarchy.

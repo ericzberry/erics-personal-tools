@@ -37,3 +37,14 @@ The access token for this installation is in the ignored `.env.extension-token` 
 ## Verification
 
 Tests cover authentication, AES-GCM storage, masked responses, key retention/removal, destination changes, revision conflicts, validation and deletion. Node tests use SQLite and require Node 22.13+. The extension also tests the message boundary, page add/edit/delete flow and component architecture. Live checks use a temporary synthetic connection and remove it afterward; personal provider keys are not needed. Native Chrome registration of the options page and keyword requires reloading the installed extension.
+
+
+## Rewards sync
+
+`GET /v1/rewards` returns `{entries, revision, updatedAt}`; `PUT /v1/rewards` accepts `{entries, revision}`. This single-owner wallet lives in `rewards_wallet`, encrypted with the existing `SETTINGS_ENCRYPTION_KEY` and protected by `API_TOKEN`. A stale revision returns 409. Entries are validated, IDs must be unique, the request limit is 64 KB, and at most 500 entries are accepted. Emptying the list removes its saved entries. No bank or airline API connections are created.
+
+The extension migrates legacy device records only after acknowledgement and refreshes the D1 wallet when opened and once a minute while visible outside editing. Apply the additive schema before deploying the Worker.
+
+## Restaurant research
+
+`POST /v1/ai-connections/<uuid>/restaurants` accepts `{search}` and uses the saved OpenAI key and central restaurant research policy. It requires live web-search sources, filters ungrounded restaurant/booking URLs, and returns an explicitly bounded shortlist. It never returns live reservation inventory from web snippets. The extension separately reads rendered booking pages, with `restaurant.availability` handling uncertain layouts through the existing generate endpoint. Research has a 120-second provider timeout; other requests retain their existing limits. See [reservation behavior and validation](../chrome-sidebar/RESTAURANTS.md).

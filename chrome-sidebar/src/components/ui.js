@@ -1,3 +1,4 @@
+import {capabilities} from '../capabilities.js';
 // All DOM construction lives here. Features compose components and supply data.
 function element(tag, props={}, children=[]) {
   const node=document.createElement(tag);
@@ -34,8 +35,22 @@ export function Field({id,label,kind='search',options=[],hiddenLabel=false,place
   const control=kind==='select'?Select({id,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
   return [caption,control];
 }
-export function AppHeader({name='Eric’s tools',context='Draft advisor'}) {
-  return element('header',{className:'app-header'},[element('img',{className:'mark',src:'icons/icon-32.png',width:24,height:24,alt:''}),Label(name,{className:'compact-brand'}),Strong(context,{id:'current-function',className:'context-label'}),Button('⚙',{id:'open-settings',className:'settings-gear','aria-label':'Open settings',title:'Settings','aria-expanded':'false','aria-controls':'settings-tool'})]);
+export function CapabilityNavigation(items){
+  const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong('Current tab',{id:'current-function'})]);
+  const rows=items.map(item=>{
+    const props={id:`navigate-${item.id}`,className:'capability-item'};
+    const children=[Strong(item.label),Label(item.description)];
+    return item.href?element('a',{...props,href:item.href,target:'_blank',rel:'noreferrer'},children):element('button',{...props,type:'button'},children);
+  });
+  const nav=element('nav',{'aria-label':'Tools',className:'capability-list'},[...rows,Button('Settings',{id:'open-settings',className:'capability-settings','aria-controls':'settings-tool','aria-expanded':'false'})]);
+  const disclosure=element('details',{id:'app-navigation',className:'capability-navigation'},[summary,nav]);
+  disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'){disclosure.open=false;summary.focus();}});
+  return disclosure;
+}
+export function AppHeader({name='Eric’s tools'}={}) {
+  return element('header',{className:'app-header app-header--navigation'},[
+    Stack([element('img',{className:'mark',src:'icons/icon-32.png',width:24,height:24,alt:''}),Label(name,{className:'compact-brand'})],{className:'app-brand'}),CapabilityNavigation(capabilities)
+  ]);
 }
 export const PageHeader=({title,subtitle,action,titleId})=>Stack([Title(title,1,{id:titleId}),action||(subtitle?Label(subtitle,{className:'subtitle'}):null)],{className:'tool-heading'});
 export const ToolHeading=(title,subtitle)=>PageHeader({title,subtitle});
@@ -72,7 +87,7 @@ export function EditableResult({id,titleId,copyId,fieldId,title='Summary',label=
 export function downloadFile({url,filename}) {const link=Link('',url,{download:filename});link.removeAttribute('target');link.click();}
 
 export const ActionGroup=(children,{compact=false,...props}={})=>Stack(children,{className:`action-group${compact?' action-group--compact':''}`,...props});
-export const SettingsGroup=({title,children=[]})=>Section([Heading(title,3,{className:'settings-group-title'}),...children],{className:'settings-group','aria-label':title});
+export const SettingsGroup=({title,children=[],level=3})=>Section([Heading(title,level,{className:'settings-group-title'}),...children],{className:'settings-group','aria-label':title});
 
 export function OwnershipActions(player,{owner=null,corrected=false,onSelect}) {
   const actions=ActionGroup(['me','other'].map(value=>{
@@ -174,16 +189,41 @@ export const Form=(children,props={})=>element('form',props,children);
 export const Panel=(children,props={})=>Section(children,{className:'settings-card',...props});
 export const FormStack=children=>Stack(children,{className:'form-stack'});
 export const FormField=options=>Stack(Field(options),{className:'form-field'});
+
+// Reusable layouts for searchable workspaces and evidence-backed results.
+export const Workspace=children=>Stack(children,{className:'workspace-shell'});
+export const WorkspaceColumns=children=>Stack(children,{className:'workspace-columns'});
+export const FieldGrid=children=>Stack(children,{className:'field-grid'});
+export function ChoiceRow({title,description,checked=false,onChange}) {
+  const input=element('input',{type:'checkbox','aria-label':title});input.checked=checked;
+  input.addEventListener('change',()=>onChange(input.checked));
+  return element('label',{className:'choice-row'},[input,Stack([Strong(title),Note(description)])]);
+}
+export function EvidenceList(sources) {
+  return Disclosure('Sources & rating details',sources.map(s=>Stack([Link(s.title,s.url),Note(s.detail),Note(s.published)],{className:'evidence-row'})),{className:'evidence-list'});
+}
+export function ResultBlock({title,meta,status,detail,children=[]}) {
+  return Section([Stack([Heading(title,3),status?Badge(status):null],{className:'result-heading'}),Note(meta),detail?Text(detail):null,...children],{className:'result-block'});
+}
 export const ModelSuggestions=props=>element('datalist',props);
 export function setModelSuggestions(node,models){node.replaceChildren(...models.map(model=>Option(model.name,model.id)));}
 export const OutputText=props=>element('pre',{className:'ai-output',...props});
 export function ConnectionCard(connection, {selected=false,onSelect}={}) {
   const button=Button('',{className:'connection-card','aria-pressed':String(selected),'aria-label':`Edit ${connection.name}`});
   button.append(Stack([Strong(connection.name),Label(connection.provider,{className:'provider-tag'})],{className:'connection-heading'}),
-    Label(connection.model||'No default model',{className:'connection-model'}),
+    Label('Models chosen per task',{className:'connection-model'}),
     Label(connection.hasApiKey?'API key saved':'No API key',{className:'connection-key'}));
   button.addEventListener('click',()=>onSelect(connection));
   return button;
+}
+
+export const SettingsList=children=>Stack(children,{className:'settings-list'});
+export const SettingsItem=(title,children=[])=>Disclosure(title,children,{className:'settings-panel settings-panel--compact settings-item',titleHeading:true});
+export const SettingsLink=(title,href)=>Link(title,href,{className:'settings-link'});
+
+// Flat saved-record pattern shared by personal trackers.
+export function RecordRow({title,detail,notes='',actions=[]}) {
+  return Section([Strong(title),Note(detail),notes?Text(notes):null,ActionGroup(actions,{compact:true})],{className:'record-row'});
 }
 
 export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true});

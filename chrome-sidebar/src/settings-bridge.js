@@ -3,7 +3,7 @@ const releaseChecks=new WeakMap();
 import {migrateCredentials} from './credential-migration.js';
 import {cloudRequest, CONNECTION_KEY} from './cloud-storage.js';
 export function isSettingsPage(sender, chromeApi) {
-  return sender?.id === chromeApi.runtime.id && ['settings.html','sidepanel.html'].some(path=>sender.url === chromeApi.runtime.getURL(path));
+  return sender?.id === chromeApi.runtime.id && ['settings.html','sidepanel.html','restaurants.html'].some(path=>sender.url === chromeApi.runtime.getURL(path));
 }
 export async function settingsAction(message, chromeApi, request = cloudRequest) {
   const storage = chromeApi.storage.local;
@@ -27,16 +27,19 @@ export async function settingsAction(message, chromeApi, request = cloudRequest)
     return {connected:true};
   }
   if (message.action === 'migrate') return migrateCredentials(storage,token,request);
+  if(message.action==='rewards-list')return request(token,'/v1/rewards');
+  if(message.action==='rewards-save')return request(token,'/v1/rewards',{method:'PUT',value:{entries:message.entries,revision:message.revision}});
   if (message.action === 'list') return request(token, '/v1/ai-connections');
-  if (!['save', 'remove','models','test','generate'].includes(message.action) || !/^[a-f0-9-]{36}$/.test(message.id || '')) throw Error('Unknown settings action.');
+  if (!['save', 'remove','models','test','generate','restaurants'].includes(message.action) || !/^[a-f0-9-]{36}$/.test(message.id || '')) throw Error('Unknown settings action.');
+  if(message.action==='restaurants')return request(token,`/v1/ai-connections/${message.id}/restaurants`,{method:'POST',value:{model:message.model,search:message.search},timeoutMs:130000});
   if(message.action==='models')return request(token,`/v1/ai-connections/${message.id}/models`);
   if(message.action==='test')return request(token,`/v1/ai-connections/${message.id}/test`,{method:'POST',value:{model:message.model}});
-  if(message.action==='generate')return request(token,`/v1/ai-connections/${message.id}/generate`,{method:'POST',value:{model:message.model,messages:message.messages,maxTokens:message.maxTokens}});
+  if(message.action==='generate')return request(token,`/v1/ai-connections/${message.id}/generate`,{method:'POST',value:{task:message.task,model:message.model,messages:message.messages,maxTokens:message.maxTokens}});
   if (message.action === 'remove') return request(token, `/v1/ai-connections/${message.id}`, {method:'DELETE', value:{revision:message.revision}});
   const data = message.connection;
   if (!data || typeof data !== 'object') throw Error('Connection settings are required.');
   // Never allow callers to turn this into a general network or storage proxy.
-  const value = {name:data.name, provider:data.provider, model:data.model, baseUrl:data.baseUrl, apiFormat:data.apiFormat, revision:data.revision};
+  const value = {name:data.name, provider:data.provider, baseUrl:data.baseUrl, apiFormat:data.apiFormat, revision:data.revision};
   if (typeof data.apiKey === 'string') value.apiKey = data.apiKey;
   return request(token, `/v1/ai-connections/${message.id}`, {method:'PUT', value});
 }

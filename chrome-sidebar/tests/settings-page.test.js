@@ -46,7 +46,7 @@ test('page connects, saves, preserves a masked key on edit, and removes through 
  assert.equal($('settings-token').value,'');assert.equal($('connection-save').disabled,false);
  $('ai-name').value='My AI';$('ai-key').value='provider-secret';
  $('connection-form').dispatchEvent(new window.Event('submit',{cancelable:true}));await settle();
- assert.equal(connections.length,1);assert.equal(connections[0].hasApiKey,true);assert.equal($('ai-key').value,'');assert.equal(document.body.textContent.includes('provider-secret'),false);
+ assert.equal(connections.length,1);assert.equal(connections[0].model,undefined);assert.equal($('ai-model'),null);assert.equal(connections[0].hasApiKey,true);assert.equal($('ai-key').value,'');assert.equal(document.body.textContent.includes('provider-secret'),false);
  $('ai-name').value='Renamed';$('connection-form').dispatchEvent(new window.Event('submit',{cancelable:true}));await settle();
  assert.equal(messages.filter(item=>item.action==='save').at(-1).connection.apiKey,undefined);assert.equal(connections[0].hasApiKey,true);
  $('connection-models').click();await settle();assert.equal($('provider-model-list').children.length,1);

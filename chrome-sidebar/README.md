@@ -197,6 +197,29 @@ Version 0.6.36 reconnects already-open Gmail tabs after extension updates. The s
 
 Version 0.6.37 makes the email subject the single page title and fixes provider requests for Cloudflare Workers: manual redirects are rejected explicitly. Requires redeploying tools-api. Runtime regression tests now exercise the actual Workers Request implementation.
 
+Version 0.6.37 starts Credentials collapsed and reduces section padding, group gaps, and label spacing while preserving button and input sizes.
+
+Version 0.6.38 uses a flat settings list with subtle dividers, compact section labels, and trailing chevrons. Credentials and Draft remain collapsed by default; the AI settings link uses the same row structure.
+
 Version 0.6.39 promotes Summarize to the primary action, grows editable results to fit all text, and fixes email summaries to lightweight GPT-4.1 mini regardless of other connection model settings.
 
+
+Version 0.6.39 adds a Rewards button available from every sidebar context. It opens a persistent rewards hub for manually entered points, miles, credits, discounts, eligibility notes, official source links, and use-by dates. Next actions highlights deadlines within 30 days (including passed deadlines to verify), activation requirements, and balances last updated at least 30 days ago. Search, edit, mark used, and confirmed deletion are supported. Back returns to the active tab's tool. Entries remain in local Chrome storage; there is no automatic account sync, offer discovery, cross-device sync, or background notification. Recurring benefits require a separate entry for each period. No card numbers or login credentials are needed.
+
+Rewards validation: existing architecture and behavior suite plus deadline, validation, and navigation tests pass. Browser preview checked at 380px and 280px with a synthetic long benefit name; saving, marking used, and persistence after reload verified. Installed extension verification remains pending reload.
+
+Version 0.6.40 removes connection default models. Gmail summaries, restaurant research, and booking-page interpretation use central task policies, reviewed model costs, capability levels, and provider model availability. Playground model selection applies only to that request. Deploy the updated Worker before using this extension release. See `../tools-api/MODEL_ROUTING.md`.
+
+
+Version 0.6.41 replaces the standalone Rewards button with a shared Capabilities navigation. Current tab follows Gmail and ESPN; choosing Rewards, Gmail, or Fantasy football keeps that capability open until another is selected. Restaurants and Settings are also available from the same navigation. New destinations belong in `src/capabilities.js`, not in separate header buttons.
+
+Rewards now sync through the existing Worker connection into an encrypted D1 wallet. Each save uses a revision to reject stale updates. Refresh runs on opening Rewards and every minute while visible and the editor is closed; explicit Refresh keeps form text intact. On conflict, refresh and review before saving again. Existing device-local records migrate with stable IDs and are removed locally only after cloud acknowledgement. Cloud failure preserves local migration data and form input. Connect each browser in Settings → Credentials. Preview mode remains local and is explicitly labeled. This syncs saved account and benefit records; balances are still manually entered. The D1 table and Worker were deployed with this update; reloading the installed extension is required for migration.
+
+Navigation and rewards validation: narrow 280px and standard 380px browser previews, Settings return, and Escape dismissal checked; API encryption/revision and migration-recovery tests pass.
+
 Version 0.6.41 checks the public Worker release endpoint against D1 at most hourly while the sidebar is open, persisting checks across reopenings. A compact banner announces newer builds. After packaging each release, run `node tools-api/scripts/publish-release.js` from the repository root to publish its manifest version to D1. This does not reload Chrome automatically.
+
+
+Version 0.6.42 renames the navigation label to Tools and replaces the text chevron with a centered CSS chevron in a dedicated grid column. Long destination names wrap without displacing the indicator.
+
+Version 0.6.43 adds the Restaurants workspace: source-backed name/category discovery, city and neighborhood filters, UWS travel defaults, exact and flexible party sizes, live booking-page checks, explicit name clarification, evidence links, cancellation, and manual page rechecks. Open Restaurants from the capability menu. The Worker research endpoint is deployed. See [reservation usage and validation](RESTAURANTS.md).

@@ -13,7 +13,7 @@ export async function encryptSettings(value, id, env) {
   const ciphertext = await crypto.subtle.encrypt({name:'AES-GCM', iv, additionalData:new TextEncoder().encode(id)}, await encryptionKey(env), new TextEncoder().encode(JSON.stringify(value)));
   return JSON.stringify({v:1, iv:encode(iv), ciphertext:encode(ciphertext)});
 }
-async function decryptSettings(value, id, env) {
+export async function decryptSettings(value, id, env) {
   const envelope = JSON.parse(value);
   if (envelope.v !== 1) fail(503, 'Unrecognized settings format.');
   const plaintext = await crypto.subtle.decrypt({name:'AES-GCM', iv:decode(envelope.iv), additionalData:new TextEncoder().encode(id)}, await encryptionKey(env), decode(envelope.ciphertext));
@@ -39,7 +39,7 @@ function normalize(input, previous) {
   // Changing destinations must never silently carry over another provider’s key.
   if (previous && (previous.provider !== input.provider || previous.baseUrl !== baseUrl || (previous.apiFormat||providerFor(previous.provider)?.format)!==apiFormat) && input.apiKey === undefined) apiKey = '';
   return {name:field(input.name, 'the connection name', 100, true), provider:input.provider,
-    model:field(input.model ?? '', 'the model', 240), baseUrl, apiFormat, apiKey};
+    baseUrl, apiFormat, apiKey};
 }
 export async function savedConnection(id,env) {
   const row=await env.DB.prepare('SELECT value FROM ai_connections WHERE id = ?').bind(id).first();
@@ -47,7 +47,7 @@ export async function savedConnection(id,env) {
   return decryptSettings(row.value,id,env);
 }
 async function publicRecord(row, env) {
-  const {apiKey, ...value} = await decryptSettings(row.value, row.id, env);
+  const {apiKey, model:legacyModel, ...value} = await decryptSettings(row.value, row.id, env);
   return {...value, id:row.id, hasApiKey:!!apiKey, revision:row.revision, updatedAt:row.updated_at};
 }
 export async function aiSettings(request, env, readValue, json) {

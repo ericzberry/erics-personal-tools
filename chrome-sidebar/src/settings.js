@@ -41,7 +41,7 @@ $('open-settings').addEventListener('click',()=>{showSettings(true);$('close-set
   feedback('');connected=(await send('status')).connected;
   if(connected)await load();else feedback('Connect to your Worker to save and load keys.');
 });});
-$('close-settings').addEventListener('click',()=>{clearForm();$('credential-token').value='';showSettings(false);$('open-settings').focus();});
+$('close-settings').addEventListener('click',()=>{clearForm();$('credential-token').value='';showSettings(false);$('navigation-toggle').focus();});
 $('credential-connect').addEventListener('click',()=>mutate(async()=>{
   await send('connect',{token:$('credential-token').value});$('credential-token').value='';connected=true;feedback('Worker connected. Add an API key below.');await load();
 }));

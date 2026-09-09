@@ -1,6 +1,8 @@
 import {latestRelease} from './releases.js';
+import {rewardsSettings} from './rewards.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
+import {discoverRestaurants} from './restaurants.js';
 const MAX_BYTES = 64 * 1024;
 const json = (value, status = 200) => Response.json(value, {
   status, headers: {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}
@@ -59,15 +61,17 @@ export default {
         await env.DB.prepare('SELECT id FROM ai_connections LIMIT 1').all();
         return json({ok: true, service: 'erics-tools-api', version: 2});
       }
-      const operation=/^\/v1\/ai-connections\/([a-f0-9-]{36})\/(models|test|generate)$/.exec(path);
+      const operation=/^\/v1\/ai-connections\/([a-f0-9-]{36})\/(models|test|generate|restaurants)$/.exec(path);
       if(operation){
         const [,id,action]=operation;
         if(request.method!==(action==='models'?'GET':'POST'))return json({error:'Method not allowed.'},405);
         const connection=await savedConnection(id,env);
         if(action==='models')return json(await listModels(connection));
         const input=JSON.parse(await readValue(request));
+        if(action==='restaurants')return json(await discoverRestaurants(connection,input));
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
+      if(path==='/v1/rewards')return await rewardsSettings(request,env,readValue,json);
       return await aiSettings(request, env, readValue, json);
     } catch (error) {
       return json({error: error.status ? error.message : 'Storage unavailable. Check the D1 binding and schema.'}, error.status || 503);

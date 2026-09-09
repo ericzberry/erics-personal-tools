@@ -1,9 +1,20 @@
-let currentTool='football',settingsOpen=false;
+import {capabilities} from './capabilities.js';
+let currentTool='football',selection='auto',settingsOpen=false;
+const $=id=>document.getElementById(id);
 function render(){
-  for(const key of ['football','gmail','home'])document.getElementById(`${key}-tool`).hidden=settingsOpen||key!==currentTool;
-  document.getElementById('settings-tool').hidden=!settingsOpen;
-  document.getElementById('current-function').textContent=settingsOpen?'Settings':{football:'Draft advisor',gmail:'Gmail',home:'Personal tools'}[currentTool];
-  document.getElementById('open-settings').setAttribute('aria-expanded',String(settingsOpen));
+  const active=selection==='auto'?currentTool:selection;
+  for(const key of ['football','gmail','home','rewards'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
+  $('settings-tool').hidden=!settingsOpen;
+  $('current-function').textContent=settingsOpen?'Settings':selection==='auto'?'Current tab':capabilities.find(item=>item.id===selection)?.label;
+  $('open-settings').setAttribute('aria-expanded',String(settingsOpen));
+  for(const item of capabilities){const node=$(`navigate-${item.id}`);if(!settingsOpen&&selection===item.id)node.setAttribute('aria-current','page');else node.removeAttribute('aria-current');}
 }
+function closeNavigation(){ $('app-navigation').open=false; }
 export function showTool(tool){currentTool=tool;render();}
-export function showSettings(open){settingsOpen=open;render();}
+export function showSettings(open){settingsOpen=open;closeNavigation();render();}
+export function selectCapability(id){selection=id;settingsOpen=false;closeNavigation();render();$('navigation-toggle').focus();}
+export function showRewards(open){selectCapability(open?'rewards':'auto');}
+export function initializeNavigation(){
+  for(const item of capabilities)if(!item.href)$(`navigate-${item.id}`).addEventListener('click',()=>selectCapability(item.id));
+  render();
+}

@@ -23,3 +23,11 @@ The contextMenus permission adds a webpage right-click launcher. Clicking it ope
 Credentials entered in Settings are stored in local Chrome extension storage, restricted to trusted extension contexts. They are not encrypted by the extension, synced, exported with draft diagnostics, or transmitted to a provider. Saved keys are not displayed in the credential list. You can replace or delete them; uninstalling clears extension storage. Saving a key does not yet activate a service integration.
 
 Sidebar Credentials now uses the same encrypted D1 connections. On connection or refresh, supported legacy local keys are uploaded over HTTPS and removed locally only after a confirmed save. Unrecognized keys and failed or conflicting transfers remain local for review. New sidebar keys are never saved locally. The Worker access token remains in trusted local storage.
+
+
+Rewards tracking (0.6.41): User-entered program names, balances, benefits, dates, source URLs, and notes are saved locally on the device. The extension does not connect to card or airline accounts or transmit these entries to the Worker. Source links open only when clicked.
+
+
+Rewards cloud sync (0.6.41, supersedes local-only rewards storage): Rewards account/program names, balances, benefits, notes, and dates sync to the owner's authenticated Cloudflare Worker and D1 database. Wallet contents are encrypted with AES-GCM using the existing settings encryption key; revision and update timestamps are stored separately. Existing local rewards are uploaded upon connection and removed locally after confirmation. No bank or airline credentials are collected and no live financial account connections are made.
+
+Restaurant searches send the requested restaurant/category, city/neighborhood, date, time window and party sizes to the owner's saved OpenAI connection through the authenticated Worker. User-started availability checks also send bounded rendered booking-page text and controls when model interpretation is needed. Search preferences are stored locally. Reservation credentials and cookies are not extracted; the app uses the browser's existing sessions to display booking pages. Temporary checker tabs are closed. It does not submit bookings or payments. Search results are observations and are not stored as a recurring monitor.

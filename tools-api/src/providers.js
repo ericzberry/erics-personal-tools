@@ -1,3 +1,4 @@
+import {chooseTaskModel,taskPolicy} from './model-policy.js';
 import {providerFor} from '../../chrome-sidebar/src/ai-providers.js';
 const fail=(status,message)=>{throw {status,message};};
 export function providerConfig(connection) {
@@ -14,7 +15,7 @@ export function providerConfig(connection) {
   return {...provider,baseUrl:url.href.replace(/\/+$/,''),format};
 }
 export function generationInput(input,connection) {
-  const model=input.model||connection.model;
+  const model=input.model;
   if (typeof model!=='string' || !model.trim() || model.length>240) fail(400,'Choose a model or enter its model ID.');
   if (!Array.isArray(input.messages) || !input.messages.length || input.messages.length>40) fail(400,'Provide between 1 and 40 text messages.');
   let length=0;
@@ -46,12 +47,12 @@ async function boundedJSON(response) {
   }
   try{return JSON.parse(text+decoder.decode());}catch{fail(502,'The provider returned an unreadable response. Check the API URL.');}
 }
-async function upstream(connection,config,path,body,fetcher) {
+export async function providerJSON(connection,config,path,body,fetcher,timeoutMs=25000) {
   if (!connection.apiKey) fail(400,'Save an API key for this connection first.');
   const headers={'Content-Type':'application/json',...(config.format==='anthropic'?{'x-api-key':connection.apiKey,'anthropic-version':'2023-06-01'}:{Authorization:`Bearer ${connection.apiKey}`})};
   try {
     const response=await fetcher(config.baseUrl+path,{method:body?'POST':'GET',headers,body:body?JSON.stringify(body):undefined,
-      redirect:'manual',signal:AbortSignal.timeout(25000)});
+      redirect:'manual',signal:AbortSignal.timeout(timeoutMs)});
     if(response.status>=300&&response.status<400){await response.body?.cancel();fail(502,'The provider returned a redirect. Check its API URL; credentials were not forwarded.');}
     if(!response.ok){await response.body?.cancel();
       const reason=response.status===401||response.status===403?'rejected the API key or model access':response.status===429?'reported a rate limit or exhausted quota':response.status===402?'requires available credit':response.status===404?'could not find this endpoint or model':response.status>=500?'is temporarily unavailable':'rejected the request; check the model and API URL';
@@ -60,9 +61,10 @@ async function upstream(connection,config,path,body,fetcher) {
     return await boundedJSON(response);
   }catch(error){
     if(error.status)throw error;
-    fail(error.name==='TimeoutError'||error.name==='AbortError'?504:502,error.name==='TimeoutError'||error.name==='AbortError'?'The provider took longer than 25 seconds. The request was not retried; it may still be billed.':'Could not reach the provider. Check its API URL. Redirects are not followed.');
+    fail(error.name==='TimeoutError'||error.name==='AbortError'?504:502,error.name==='TimeoutError'||error.name==='AbortError'?`The provider took longer than ${timeoutMs/1000} seconds. The request was not retried; it may still be billed.`:'Could not reach the provider. Check its API URL. Redirects are not followed.');
   }
 }
+const upstream=providerJSON;
 const redact=(text,key)=>typeof text==='string'?(key?text.split(key).join('[redacted]'):text):'';
 const numeric=value=>typeof value==='number'&&Number.isFinite(value)?value:null;
 export async function listModels(connection,fetcher=fetch) {
@@ -75,8 +77,19 @@ export async function listModels(connection,fetcher=fetch) {
   return {models,partial:!!data.has_more||list.length>2000,message:'Model availability can depend on your account. Choose a text-generation model.'};
 }
 export async function generate(connection,input,fetcher=fetch) {
+  let routing;
+  if(input.task){
+    if(input.model)fail(400,'Task requests choose their own model. Remove the model override.');
+    if(taskPolicy(input.task,input).web)fail(400,'Use the research endpoint for tasks that require web search.');
+    // Validate before contacting the provider.
+    generationInput({...input,model:'task-validation'},connection);
+    routing=await routeTask(connection,input.task,input,fetcher);
+    input={...input,model:routing.model.id,maxTokens:routing.maxTokens,routingReasoning:!!routing.model.reasoning};
+  }
   const config=providerConfig(connection),normalized=generationInput(input,connection);
   const {path,body}=generationRequest(config,normalized),started=Date.now();
+  if(config.format==='responses'&&routing?.model.reasoningEffort)body.reasoning={effort:routing.model.reasoningEffort};
+  else if(input.routingReasoning&&config.format==='responses')body.reasoning={effort:'minimal'};
   const data=await upstream(connection,config,path,body,fetcher);
   if(!data||typeof data!=='object'||data.error)fail(502,'The provider returned an error or invalid response. Check the selected model and API URL.');
   if(config.format==='responses'&&!Array.isArray(data.output)||config.format==='anthropic'&&!Array.isArray(data.content)||config.format==='chat'&&!data.choices?.[0]?.message)fail(502,'The provider returned an incompatible response. Check the API format and model.');
@@ -91,7 +104,13 @@ export async function generate(connection,input,fetcher=fetch) {
     text=typeof message?.content==='string'?message.content:Array.isArray(message?.content)?message.content.filter(item=>item.type==='text').map(item=>item.text).join('\n'):message?.refusal||'';
     stopReason=data.choices?.[0]?.finish_reason;
   }
-  return {text:redact(text,connection.apiKey),model:normalized.model,provider:config.id,durationMs:Date.now()-started,
+  return {...(routing?{routing:{task:routing.policy.task,level:routing.policy.level,estimatedCost:routing.estimatedCost}}:{}),text:redact(text,connection.apiKey),model:normalized.model,provider:config.id,durationMs:Date.now()-started,
     stopReason:redact(stopReason,connection.apiKey),usage:{inputTokens:numeric(usage.input_tokens??usage.prompt_tokens),outputTokens:numeric(usage.output_tokens??usage.completion_tokens)},
     warning:!text?'The provider returned no text. Try a higher output limit or another text model.':['length','max_tokens','max_output_tokens'].includes(stopReason)?'The output limit was reached; this response may be incomplete.':null};
+}
+
+export async function routeTask(connection,task,input,fetcher=fetch) {
+  taskPolicy(task,input);
+  const availability=await listModels(connection,fetcher);
+  return chooseTaskModel({provider:connection.provider,available:availability.models,task,input});
 }

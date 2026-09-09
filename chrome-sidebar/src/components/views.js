@@ -42,11 +42,13 @@ export function GmailView() {
     EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),Disclosure('Email text',[Text('',{id:'email-preview',className:'source-preview'})],{id:'email-source',hidden:true})
   ])],{id:'gmail-tool',className:'tool-page',hidden:true});
 }
-export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open Gmail or an ESPN draft. The sidebar follows your current tab.'),Link('Open Gmail ↗','https://mail.google.com/')])],{id:'home-tool',className:'tool-page',hidden:true});
+export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open Gmail or an ESPN draft. The sidebar follows your current tab.'),Link('Open Gmail ↗','https://mail.google.com/'),UI.SettingsLink('Find a restaurant reservation','restaurants.html')])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
-    Link('AI providers & playground','settings.html'),
-    Disclosure('Credentials',[
+    UI.SettingsList([
+    UI.SettingsLink('AI providers & playground','settings.html'),
+    UI.SettingsLink('Restaurant reservations','restaurants.html'),
+    UI.SettingsItem('Credentials',[
       UI.FormStack([
       Note('API keys are encrypted in D1.'),
       UI.SettingsGroup({title:'Cloud connection',children:[
@@ -65,11 +67,12 @@ export function SettingsView() {
       ])]}),
       Notice('',{id:'credential-status',hidden:true})
       ])
-    ],{className:'settings-panel',open:true,titleHeading:true}),
-    Disclosure('Draft',[DraftSettings(),RulesView(),DraftReset()],{className:'settings-panel',titleHeading:true})
+    ]),
+    UI.SettingsItem('Draft',[DraftSettings(),RulesView(),DraftReset()])
+    ])
   ]});
 }
-export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),SettingsView());}
+export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),RewardsView(),SettingsView());}
 
 export function AISettingsView() {
   const field=UI.FormField;
@@ -79,7 +82,7 @@ export function AISettingsView() {
       Note('Open here anytime: ericberry → Tab → Enter',{className:'settings-shortcut'})
     ],{className:'settings-rail'}),
     Main([
-      Stack([Stack([Heading('AI connections',1),Text('Your providers, models, and API keys.',{className:'settings-intro'})]),
+      Stack([Stack([Heading('AI connections',1),Text('Your providers and API keys. Models are chosen per task.',{className:'settings-intro'})]),
         Badge('Not connected',{id:'settings-connection-badge'})],{className:'settings-heading'}),
       Disclosure('Cloud connection',[
         Stack([Note('Connect this browser to your personal settings. Use your extension access token here; add AI provider keys below.'),
@@ -99,7 +102,7 @@ export function AISettingsView() {
             field({id:'ai-name',label:'Connection name',kind:'text',placeholder:'e.g. Writing assistant'}),
             field({id:'ai-provider',label:'Provider',kind:'select',options:AI_PROVIDERS.map(provider=>({text:provider.name,value:provider.id}))}),
             Stack([field({id:'ai-format',label:'API format',kind:'select',options:[{text:'OpenAI Chat Completions',value:'chat'},{text:'OpenAI Responses',value:'responses'},{text:'Anthropic Messages',value:'anthropic'}]})],{id:'ai-format-field',hidden:true}),
-            field({id:'ai-model',label:'Default model (optional)',kind:'text',placeholder:'Model ID',list:'provider-model-list'}),
+            Note('Each task has its own model policy, balancing capability and cost. Provider access is stored here.'),
             field({id:'ai-base-url',label:'API base URL (optional)',kind:'url',placeholder:'https://…'}),
             Note('',{id:'ai-endpoint-help'}),
             field({id:'ai-key',label:'API key',kind:'password',placeholder:'Paste your provider’s key'}),
@@ -134,3 +137,32 @@ export function AISettingsView() {
   ],{className:'settings-shell'});
 }
 export function mountSettings(root) {root.replaceChildren(AISettingsView());}
+
+export function RewardsView(){
+  const field=(key,label,kind='text',options)=>UI.FormField({id:`reward-${key}`,label,kind,options});
+  return SubPage({id:'rewards-tool',title:'Rewards & benefits',backId:'close-rewards',children:[
+    Note('Your points, miles, credits, and discounts in one place. Accounts and benefits sync across your connected browsers; balances and offers are entered manually.'),
+    UI.SettingsGroup({title:'Cloud sync',children:[Notice('Loading rewards…',{id:'rewards-status'}),ActionGroup([Button('Refresh rewards',{id:'rewards-refresh',variant:'secondary'}),Button('Connection settings',{id:'rewards-connect',variant:'secondary'})],{compact:true})]}),
+    UI.SettingsGroup({title:'Next actions',children:[Note('Deadlines within 30 days, activation steps, and balances due for review.'),Stack([],{id:'rewards-actions'})]}),
+    UI.SettingsGroup({title:'Your wallet',children:[
+      UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
+      Stack([],{id:'rewards-list'})]}),
+    Disclosure('Add or edit a reward',[
+      Note('Add each card or airline balance, then add its benefits separately. Include discounts from work, memberships, and other sources. Do not enter account numbers or passwords.'),
+      UI.Form([
+        field('kind','Entry type','select',[{text:'Points or miles balance',value:'balance'},{text:'Credit, discount, or offer',value:'benefit'}]),
+        field('name','Program or benefit name'),field('source','Card, airline, or benefit source'),
+        field('value','Balance or benefit (e.g. 42,000 miles or $50 credit)'),
+        field('due','Expiration or use-by date (optional)','date'),
+        field('state','Status','select',[{text:'Available',value:'available'},{text:'Needs activation',value:'activation'},{text:'Used',value:'used'}]),
+        field('url','Official account or offer URL (optional)','url'),
+        UI.FormField({id:'reward-notes',label:'Terms, eligibility, and next step (optional)',kind:'textarea',rows:3}),
+        Notice('',{id:'reward-form-status'}),
+        ActionGroup([Button('Save reward',{id:'reward-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'reward-cancel',variant:'secondary'})])
+      ],{id:'reward-form'})
+    ],{id:'reward-editor'}),
+    Note('Actions cover your saved entries only. Check official terms before using a benefit. Recurring credits need a new entry for each period; no automatic discovery or background alerts yet.')
+  ]});
+}
+
+export {RestaurantWorkspace,RestaurantCandidate,ReservationResult} from './restaurant-views.js';

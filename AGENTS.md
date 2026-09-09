@@ -40,6 +40,13 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Exercise relevant interactions and run the existing architecture and behavior checks. Add tests for meaningful behavior changes, not superficial markup duplication.
 - Fix visible defects before packaging. If a visual or live-environment check could not be completed, state that limit accurately.
 
+## AI model selection
+
+- Connections store provider access, not default models. Production features identify their task and use the central task policy to choose a model.
+- Select the least expensive available, reviewed candidate that meets the task's capability and tool requirements. Increase requirements for more complex inputs; never silently lower them to save cost.
+- Keep capability tiers, pricing sources, output budgets, and selection tests centralized. Add representative quality evaluations as tasks and model choices expand.
+- Honor explicit user model choices within the relevant task policy, never as a global default. Manual model IDs belong only to per-request playground experiments. Never copy model constants into feature controllers.
+
 ## Mandatory release version publication
 
 - Whenever an AI agent completes an app release, it must automatically publish that release's manifest version to D1 by running `node tools-api/scripts/publish-release.js` from the repository root. Existing authorization covers this step; do not ask the user to perform it or request permission again.

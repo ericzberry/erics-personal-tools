@@ -74,3 +74,27 @@ test('provider routes use only encrypted saved credentials and never caller-supp
   assert.equal(JSON.parse(requests.at(-1).options.body).input[0].content,'Reply with just OK.');
  }finally{globalThis.fetch=previousFetch;}
 });
+
+test('connection saves discard legacy model preferences and public records omit them',async()=>{
+ const env=environment();
+ const response=await call(env,path,'PUT',{...data,model:'legacy-default'});
+ const saved=(await response.json()).connection;
+ assert.equal(response.status,200);assert.equal(saved.model,undefined);assert.equal(saved.hasApiKey,true);
+ const listed=await (await call(env,'/v1/ai-connections')).json();
+ assert.equal(listed.connections[0].model,undefined);
+});
+
+test('rewards sync is authenticated, encrypted, revision protected, and validates entries',async()=>{
+ const env=environment(),url='/v1/rewards';
+ assert.equal((await call(env,url,'GET',undefined,'wrong')).status,401);
+ assert.deepEqual(await (await call(env,url)).json(),{entries:[],revision:null});
+ const entry={id,kind:'balance',name:'Synthetic airline',source:'Synthetic source',value:'42,000 miles',due:'',state:'available',url:'https://example.com',notes:'',updatedAt:'2026-09-09T12:00:00Z'};
+ const response=await call(env,url,'PUT',{entries:[entry],revision:null});assert.equal(response.status,200);
+ const saved=await response.json();assert.equal(saved.entries[0].value,entry.value);
+ assert.equal(env.sql.prepare('SELECT value FROM rewards_wallet').get().value.includes(entry.value),false);
+ assert.deepEqual((await (await call(env,url)).json()).entries,saved.entries);
+ assert.equal((await call(env,url,'PUT',{entries:[],revision:null})).status,409);
+ for(const entries of [[entry,entry],[{...entry,url:'javascript:alert(1)'}],[{...entry,id:'bad'}],[{...entry,updatedAt:'bad'}]])assert.equal((await call(env,url,'PUT',{entries,revision:saved.revision})).status,400);
+ assert.equal((await call(env,url,'PUT',{entries:[],revision:saved.revision})).status,200);
+ assert.deepEqual((await (await call(env,url)).json()).entries,[]);
+});
