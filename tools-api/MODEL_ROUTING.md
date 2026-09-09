@@ -37,3 +37,6 @@ Estimates use prompt characters / 3, output budgets, a reasoning allowance, and 
 5. Deploy the Worker before reloading the new extension. The old Worker does not understand task IDs. Retain manual model selection only in the playground.
 
 Do not use a model's self-reported confidence as a quality gate, or blindly escalate after timeouts: the prior request may already be billable.
+# Card rewards tasks
+
+`cards.category` uses level 1, 500 output tokens, no web tool, and a $0.01 estimated request ceiling. It only classifies a merchant/purchase; it cannot supply reward rates. `cards.research` uses level 2, 4,000 output tokens, live web search, and a $0.10 estimated request ceiling. Both use the existing reviewed catalog and availability checks. Issuer research is a draft requiring owner review, including caps and point values. Fixtures test ambiguous category handling, output validation and rejection of research without source evidence. The calculation suite covers cash/points equivalence, caps, ties, activation, channel restrictions, expiration and explicit eligibility confirmation.

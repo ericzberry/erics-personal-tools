@@ -1,3 +1,13 @@
+# Best card — mobile 0.1.13 / extension 0.6.52
+
+Adds the Best card tool with reviewed issuer research, AI purchase categories, deterministic cash/points comparisons, editable point values, caps, activation, channel restrictions, and explicit bonus requirements. Saved cards and manual comparisons work offline with encrypted storage, queued edits and conflict resolution. Existing restaurant functionality is retained.
+
+Archives: `erics-tools-mobile-0.1.13.zip` and `chrome-sidebar/release/erics-sidebar-0.6.52.zip`.
+
+Validation: calculation, API authentication/encryption/revision, model routing and source evidence tests; synthetic browser checks at 280px and 390px, category suggestions, eligibility-driven rankings, queued offline saves and reopening, and the mobile Tools dropdown. Native iPhone passkey hardware and the installed Chrome extension require device verification. Issuer research uses live AI and must be reviewed against the card terms.
+
+---
+
 # Mobile 0.1.12 — Restaurants
 
 Adds Restaurants to Tools: source-backed restaurant/category research, the extension's search criteria, provider links for the selected dates, times, and party sizes, and an encrypted offline download of the latest shortlist. Saved results appear before the search form. Mobile does not claim live availability or inspect other sites' signed-in tabs; users check tables on the provider. Includes the on-device passkey transport preference and the per-commit app-version rule.

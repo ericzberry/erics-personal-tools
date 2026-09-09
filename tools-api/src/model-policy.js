@@ -8,6 +8,8 @@ export const MODEL_CATALOG = [
   {id:'gpt-5-mini',provider:'openai',level:3,input:0.25,output:2,context:400000,reasoning:true,web:true}
 ];
 export const TASK_POLICIES = {
+  'cards.category':{label:'Purchase category',level:1,outputTokens:500,web:false,maxCost:0.01},
+  'cards.research':{label:'Card issuer research',level:2,outputTokens:4000,web:true,maxCost:0.10},
   'email.summary':{label:'Email summary',model:'gpt-5.6-terra',level:3,outputTokens:700,web:false,maxCost:0.04},
   'restaurant.availability':{label:'Reservation page interpretation',level:2,outputTokens:2000,web:false,maxCost:0.05},
   'restaurant.research':{label:'Restaurant research',level:2,outputTokens:7000,web:true,maxCost:0.15}

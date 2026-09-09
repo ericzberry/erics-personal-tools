@@ -1,6 +1,7 @@
 // Shared data destinations used by desktop and mobile.
 export const CAPABILITIES = [
   {id:'travel',label:'Travel wallet',href:'travel.html'},
+  {id:'cards',label:'Best card',href:'cards.html'},
   {id:'rules',label:'League rules',href:'data.html?capability=rules'},
   {id:'rankings',label:'Player rankings',href:'data.html?capability=rankings'},
   {id:'ai',label:'AI connections',href:'settings.html'},

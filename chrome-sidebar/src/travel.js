@@ -64,6 +64,7 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   }));
   $('disconnect').addEventListener('click',()=>run(async()=>{
     if(dirty)throw Error('Save or cancel your edits before disconnecting.');
+    await credentials.beforeDisconnect?.();
     await offline?.disconnect(token);await credentials.remove();token='';records=[];$('cloud').open=true;edit();$('token').value='';render();status('Disconnected from this device. Cloud records remain saved.');onConnectionChange();
   }));
   $('refresh').addEventListener('click',()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before refreshing.');const message=await refresh();if(mode!=='editor')edit();status(message);}));
