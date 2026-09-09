@@ -21,8 +21,8 @@ test('sidebar Add and Edit launch the editor without an inline form or local wri
   assert.equal($('editor').hidden,true);
 });
 test('separate editor loads the chosen revision, preserves failed input and refreshes only clean edits',async()=>{
-  const {root,$,window}=setup();let current={...record},fail=true,writes=[],saved=[];
-  const wallet=mountTravel(root,{mode:'editor',editId:'abc',credentials:{get:async()=> 'test'},onSaved:id=>saved.push(id),request:async(_token,_path,options)=>{
+  const {root,$,window}=setup();let current={...record},fail=true,writes=[],saved=[],changes=0;
+  const wallet=mountTravel(root,{mode:'editor',editId:'abc',credentials:{get:async()=> 'test'},onSaved:id=>saved.push(id),onChanged:()=>changes++,request:async(_token,_path,options)=>{
     if(options?.method==='PUT'){writes.push(options.value);if(fail)throw Error('Save failed');current={...current,...options.value,revision:'two'};return {record:current};}
     return {records:[current]};
   }});
@@ -31,9 +31,9 @@ test('separate editor loads the chosen revision, preserves failed input and refr
   $('name').value='Updated';$('form').dispatchEvent(new window.Event('input'));
   current={...current,name:'Other device'};wallet.refresh();await tick();assert.equal($('name').value,'Updated');
   $('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();
-  assert.equal($('name').value,'Updated');assert.equal(writes[0].revision,'one');assert.equal(writes[0].number,undefined);
+  assert.equal(changes,0);assert.equal($('name').value,'Updated');assert.equal(writes[0].revision,'one');assert.equal(writes[0].number,undefined);
   fail=false;$('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();
-  assert.deepEqual(saved,['abc']);assert.equal($('name').value,'Updated');assert.equal(wallet.isDirty(),false);
+  assert.equal(changes,1);assert.deepEqual(saved,['abc']);assert.equal($('name').value,'Updated');assert.equal(wallet.isDirty(),false);
   $('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();assert.equal(writes.at(-1).revision,'two');
 });
 test('missing editor record cannot silently create a replacement',async()=>{
@@ -41,4 +41,15 @@ test('missing editor record cannot silently create a replacement',async()=>{
   await mountTravel(root,{mode:'editor',editId:'deleted',credentials:{get:async()=> 'test'},request:async()=>{calls++;return {records:[]};}}).ready;
   assert.equal($('save').disabled,true);assert.match($('form-status').textContent,/no longer available/);
   $('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();assert.equal(calls,1);
+});
+test('change notifications during a busy refresh are coalesced and applied afterwards',async()=>{
+  const {root,$}=setup();let release,calls=0;
+  const wallet=mountTravel(root,{mode:'browse',credentials:{get:async()=> 'test'},request:async()=>{
+    calls++;if(calls===2)await new Promise(resolve=>{release=resolve;});
+    return {records:[{...record,name:calls>=3?'Live updated airline':'Original airline'}]};
+  }});
+  await wallet.ready;
+  const refreshing=wallet.refresh();await tick();
+  wallet.refresh();wallet.refresh();release();await refreshing;await tick();
+  assert.equal(calls,3);assert.match($('list').textContent,/Live updated airline/);
 });

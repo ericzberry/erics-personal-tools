@@ -1,3 +1,4 @@
+import {travelChanges} from './travel-changes.js';
 import {Stack} from './components/ui.js';
 import {openTravelEditor,travelPageMode} from './travel-navigation.js';
 import {travelOffline} from './travel-offline.js';
@@ -12,23 +13,23 @@ const credentials = {
 };
 const offline=travelOffline();
 export function mountExtensionTravel(root, options={mode:'browse'}){
-  const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('travel-record-changes'):null;
+  const changes=travelChanges(()=>wallet.refresh());
   const wallet=mountTravel(root,{
     credentials,request:offline.request,offline,connectionRoot:document.getElementById('travel-settings-connection')||Stack([]),...options,
     onOpenEditor:openTravelEditor,
     onSaved:id=>{
       // Keep a newly created record addressable if this editor is reloaded.
       if(options.mode==='editor')history.replaceState(null,'',`?${new URLSearchParams({edit:id})}`);
-      channel?.postMessage({type:'saved'});
+
     },
+    onChanged:()=>changes.publish(),
     onDone:async()=>{
       const tab=await globalThis.chrome?.tabs?.getCurrent?.();
       if(tab?.id!==undefined)await chrome.tabs.remove(tab.id);
       else window.close();
     }
   });
-  if(channel)channel.onmessage=event=>{if(event.data?.type==='saved')wallet.refresh();};
-  window.addEventListener('pagehide',()=>channel?.close(),{once:true});
+  window.addEventListener('pagehide',()=>changes.close(),{once:true});
   return wallet;
 }
 const root=document.getElementById('travel-root');

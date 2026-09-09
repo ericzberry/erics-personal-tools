@@ -234,3 +234,9 @@ Validation: 138 extension tests and 19 mobile tests pass. Synthetic 30-record UI
 Defines control roles, sizes, typography, spacing, focus, and touch behavior in `docs/DESIGN.md`, linked from repository instructions. Shared Button supports an explicit compact size. Wallet Edit, Copy notes, and Delete use matching compact subtle actions; form and confirmation actions retain the appropriate stronger treatment. Replaces accumulated wallet overrides with one token-based stylesheet shared with mobile 0.1.11.
 
 Validation: 138 extension and 19 mobile tests pass; synthetic expanded/collapsed records reviewed at 280px and 390px. Native installed Chrome and iPhone behavior remain unverified. Archive: `release/erics-sidebar-0.6.49.zip`.
+
+### Live wallet updates (included in 0.6.49)
+
+Saved records, deletions, and conflict resolutions notify open extension wallets through a private-data-free extension storage marker. Refresh requests received during another operation are coalesced and applied when it finishes; unsaved editor input remains protected. Browser previews retain BroadcastChannel support.
+
+Validation: 141 extension tests, 19 mobile tests, and 31 API tests passed. Synthetic two-window browser checks verified creation and rename propagation without reopening the wallet; compact Add record layout reviewed at 280px and 390px. Installed Chrome side-panel delivery was not directly exercised; extension storage delivery and busy-refresh behavior have regression coverage.
