@@ -1,8 +1,8 @@
-# Best card — mobile 0.1.13 / extension 0.6.52
+# Best card — mobile 0.1.14 / extension 0.6.53
 
 Adds the Best card tool with reviewed issuer research, AI purchase categories, deterministic cash/points comparisons, editable point values, caps, activation, channel restrictions, and explicit bonus requirements. Saved cards and manual comparisons work offline with encrypted storage, queued edits and conflict resolution. Existing restaurant functionality is retained.
 
-Archives: `erics-tools-mobile-0.1.13.zip` and `chrome-sidebar/release/erics-sidebar-0.6.52.zip`.
+Archives: `erics-tools-mobile-0.1.14.zip` and `chrome-sidebar/release/erics-sidebar-0.6.53.zip`.
 
 Validation: calculation, API authentication/encryption/revision, model routing and source evidence tests; synthetic browser checks at 280px and 390px, category suggestions, eligibility-driven rankings, queued offline saves and reopening, and the mobile Tools dropdown. Native iPhone passkey hardware and the installed Chrome extension require device verification. Issuer research uses live AI and must be reviewed against the card terms.
 
