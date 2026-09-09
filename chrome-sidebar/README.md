@@ -167,3 +167,5 @@ Version 0.6.26 adds a gear in the sidebar header that opens in-sidebar Settings.
 Version 0.6.27 replaces free-text service names with a dropdown for OpenAI, Anthropic, and Google Gemini. Existing saved service names remain selectable so older credentials can still be replaced.
 
 Version 0.6.28 unifies page and section titles through the shared Title component, using Bedford Bridges’ 20px Georgia typography. Settings, Credentials, Draft, Gmail, and other headings use the same type styling.
+
+Version 0.6.29 shares PageHeader and PageBody across Settings, Fantasy, Gmail, and Home. Page insets and section spacing come from shared tokens, including header actions such as Back.

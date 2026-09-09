@@ -1,5 +1,7 @@
 /* Eric’s Personal Tools · Forest & Paper */
 :root {
+  --page-inset: 14px;
+  --section-gap: 12px;
   --paper: #f7f6f2;
   --surface: #fffefa;
   --ink: #203b33;
@@ -163,7 +165,6 @@ th, td { padding: 8px 11px; }
 .recommendation-why { font-size: 12px; line-height: 1.45; margin: 8px 0 0; color: var(--ink); }
 .recommendation-outlook { font-size: 10px; line-height: 1.5; margin: 6px 0 0; color: var(--muted); }
 
-.sub-page > .section-title { margin-top: 0; }
 .sub-page details > label, .sub-page details > input, .sub-page details > select { margin: 8px 12px; width: calc(100% - 24px); }
 .selection-row { padding: 9px 0; border-bottom: 1px solid var(--line); }
 .selection-row .footnote { margin: 3px 0; font-size: 10px; }
@@ -253,3 +254,12 @@ th, td { padding: 8px 11px; }
 /* Every page and section heading shares the Bedford Bridges typography. */
 .title-text { margin: 0; font: 400 20px/1.13 Georgia, "Times New Roman", serif; letter-spacing: -.4px; overflow-wrap: anywhere; }
 summary > .title-text { display: inline; }
+
+/* Page modules own spacing; feature screens never supply their own insets. */
+.tool-page, .sub-page { padding: 0; }
+.tool-heading { padding: var(--section-gap) var(--page-inset) 0; }
+.page-body { padding: var(--section-gap) var(--page-inset); }
+.sticky-group .roster-count-card { margin-left: var(--page-inset); margin-right: var(--page-inset); }
+.sticky-group .context-note { margin-left: var(--page-inset); margin-right: var(--page-inset); }
+.settings-panel > :not(summary) { margin-left: var(--page-inset); margin-right: var(--page-inset); }
+.sub-page details > label, .sub-page details > input, .sub-page details > select { margin-left: var(--page-inset); margin-right: var(--page-inset); width: calc(100% - 2 * var(--page-inset)); }

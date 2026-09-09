@@ -17,7 +17,8 @@ export const Heading=Title;
 export const Strong=(text,props={})=>element('strong',{text,...props});
 export const Stack=(children=[],props={})=>element('div',props,children);
 export const Section=(children=[],props={})=>element('section',props,children);
-export const Main=children=>element('main',{},children);
+export const PageBody=children=>element('main',{className:'page-body'},children);
+export const Main=PageBody;
 export const Button=(text,{variant='quiet',...props}={})=>element('button',{type:'button',text,className:variant==='quiet'?'quiet':`button-${variant}`,...props});
 export const Link=(text,href,props={})=>element('a',{text,href,target:'_blank',rel:'noreferrer',...props});
 export const Option=(text,value)=>element('option',{text,value});
@@ -35,7 +36,8 @@ export function Field({id,label,kind='search',options=[],hiddenLabel=false,place
 export function AppHeader({name='Eric’s tools',context='Draft advisor'}) {
   return element('header',{className:'app-header'},[element('img',{className:'mark',src:'icons/icon-32.png',width:24,height:24,alt:''}),Label(name,{className:'compact-brand'}),Strong(context,{id:'current-function',className:'context-label'}),Button('⚙',{id:'open-settings',className:'settings-gear','aria-label':'Open settings',title:'Settings','aria-expanded':'false','aria-controls':'settings-tool'})]);
 }
-export const ToolHeading=(title,subtitle)=>Stack([Heading(title,1),Label(subtitle,{className:'subtitle'})],{className:'tool-heading'});
+export const PageHeader=({title,subtitle,action})=>Stack([Title(title,1),action||(subtitle?Label(subtitle,{className:'subtitle'}):null)],{className:'tool-heading'});
+export const ToolHeading=(title,subtitle)=>PageHeader({title,subtitle});
 export const Highlight=({id,valueId,label,value})=>Stack([Label(label),Strong(value,{id:valueId})],{id,className:'next-pick-chip',role:'status'});
 export const StatusCard=({statusId,detailId,dotId,status,detail,links=[]})=>Stack([Stack([Label('',{id:dotId,className:'dot'}),Strong(status,{id:statusId})],{className:'status-label'}),Text(detail,{id:detailId}),...links.map(l=>Link(l.text,l.href))],{className:'status-card'});
 export const Metrics=items=>Stack(items.map(item=>Stack([Strong(item.value,{id:item.id}),Label(item.label)])),{className:'metrics'});
@@ -76,7 +78,7 @@ export function SelectionRow(player,options) {
   const {owner}=options,actions=OwnershipActions(player,options);
   return Stack([Stack([Strong(player.name,{className:'pick-name'}),Note(`${player.position} · ${player.nflTeam} · ${player.rank?`Rank #${player.rank}`:'Not in your ranks'} · ${player.espnId!==undefined?`ESPN ${player.espnId}`:'Unmatched — refresh ESPN'}${owner?` · ${owner==='me'?'Yours':'Taken'}`:''}`)]),actions],{className:'selection-row'});
 }
-export const SubPage=({id,title,backId,children=[]})=>Section([SectionTitle(title,Button('← Back',{id:backId}),{level:1}),...children],{id,hidden:true,className:'sub-page'});
+export const SubPage=({id,title,backId,children=[]})=>Section([PageHeader({title,action:Button('← Back',{id:backId})}),Main(children)],{id,hidden:true,className:'sub-page'});
 
 // Shared, keyboard-accessible tabs. Selection is owned here and survives content updates.
 export function Tabs({id,label,items}) {
