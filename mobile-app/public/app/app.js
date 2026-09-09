@@ -2,8 +2,15 @@ import './mobile-security.js';
 import {VERSION, checkRelease, newer} from './releases.js';
 const el = id => document.getElementById(id);
 let registration;
+function setSettings(open) {
+  el('app-settings').hidden = !open;
+  el('toggle-settings').setAttribute('aria-expanded', String(open));
+  el('install').hidden = open || navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  document.querySelector('.mobile-tools-frame')?.contentWindow.postMessage({type:'mobile-settings',open},location.origin);
+}
+el('toggle-settings').addEventListener('click', () => setSettings(el('app-settings').hidden));
 function connection() { el('connection').textContent = navigator.onLine ? 'Online' : 'Offline'; }
-function installed() { el('install').hidden = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches; }
+function installed() { el('install').hidden = !el('app-settings').hidden || navigator.standalone === true || matchMedia('(display-mode: standalone)').matches; }
 async function releases() {
   if (!navigator.onLine) return;
   try {
@@ -22,7 +29,7 @@ async function offlineSetup() {
     el('offline-status').textContent = 'Ready';
     el('offline-detail').textContent = 'Downloaded records and reference data work offline. Changes wait on this device until they can sync. Device storage is not a permanent backup.';
   } catch {
-    el('app-details').open = true;
+    setSettings(true);
     el('offline-status').textContent = 'Not ready';
     el('offline-detail').textContent = 'Reconnect and retry to save the app for offline use.';
     el('retry-offline').hidden = false;

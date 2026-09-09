@@ -31,3 +31,5 @@ Mobile 0.1.5 starts passkey verification automatically when a configured app ope
 Mobile 0.1.6 puts saved content directly below Tools, remembers the selected tool, and sizes the private frame to its content for a single page scroll. Connection maintenance follows the content; offline setup details are collapsed under App details, opening automatically if setup fails. The unlocked banner and manual lock button are removed; passkey and inactivity protection remain.
 
 Mobile 0.1.8 shares compact expandable wallet rows for long lists: Copy stays visible, tapping a program reveals its number and actions, and adding or editing stays inline. The extension opens its editor in a separate tab.
+
+Mobile 0.1.9 moves cloud connection maintenance and offline details into Settings at the top of the app. The tool view omits the introductory helper text and empty divider. Closing Settings restores the selected tool and any form input.

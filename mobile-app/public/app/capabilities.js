@@ -8,9 +8,10 @@ import {mobileCredentials, protectedStore, mobileRequest as cloudRequest} from '
 import {mountLibrary} from './shared/data-library.js';
 const root=document.getElementById('capabilities-root');
 root.replaceChildren(CapabilitiesView());
-// Saved content comes before connection maintenance in the mobile reading order.
-const connectionRoot=document.getElementById('capability-connection');
+// Connection maintenance is shown only from the app header’s Settings control.
+const connectionRoot=document.getElementById('capability-settings');
 connectionRoot.parentElement.append(connectionRoot);
+connectionRoot.hidden=true;
 const ai=offlineResource({resource:'ai-metadata',path:'/v1/ai-connections',store:protectedStore(encryptedDeviceStore()),remote:async token=>({records:(await cloudRequest(token,'/v1/ai-connections')).connections}),normalize:value=>value,metadata:value=>value});
 const credentials={
   get:()=>mobileCredentials.get(),
@@ -31,7 +32,7 @@ for(const [kind,filename] of [['rules','espn-league-2026.json'],['rankings','ran
 const picker=document.getElementById('capability-picker');
 function selectTool(){
   for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=picker.value!==capability.id;
-  document.getElementById('capability-intro').hidden=!!picker.value;
+
 }
 try { picker.value=localStorage.getItem('mobile-selected-tool')||CAPABILITIES[0].id; } catch { picker.value=CAPABILITIES[0].id; }
 if(!CAPABILITIES.some(tool=>tool.id===picker.value))picker.value=CAPABILITIES[0].id;
@@ -40,6 +41,15 @@ picker.addEventListener('change',()=>{
   selectTool();
   try { localStorage.setItem('mobile-selected-tool',picker.value); } catch { /* Selection remains usable without storage. */ }
 });
+export function showSettings(open){
+  root.querySelector('.capability-navigation').hidden=open;
+  connectionRoot.hidden=!open;
+  if(open)for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=true;
+  else selectTool();
+  const disclosure=document.getElementById('travel-cloud');
+  disclosure.open=true;
+  disclosure.querySelector('summary').hidden=true;
+}
 await connectionChanged();
 window.addEventListener('online',connectionChanged);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)connectionChanged();});

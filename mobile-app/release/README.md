@@ -31,3 +31,11 @@ Travel records now offer Show number / Hide number alongside Copy number. Connec
 Validation: 133 extension, 19 mobile, and 31 API tests pass. Synthetic browser checks verified narrow layouts, reveal after offline reopening, a queued edit surviving reload, and successful reconnect synchronization. Real iPhone biometric and OS clipboard behavior remain unverified.
 
 Archive: `erics-tools-mobile-0.1.7.zip`.
+
+## Mobile 0.1.9 — header Settings
+
+Moves offline details and connection maintenance behind the header Settings button. Removes the tool helper text and navigation divider. Selected tools and input survive Settings toggles.
+
+Validation: 19 mobile, 138 extension, and 31 API tests passed; mobile build passed. Synthetic browser review at 280px and 390px verified Settings, hidden maintenance on the tool view, and preserved search input. Native iPhone rendering was not directly tested.
+
+Archive: `erics-tools-mobile-0.1.9.zip`.

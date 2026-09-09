@@ -1,12 +1,17 @@
 import {observeToolSize} from './tool-layout.js';
 import {initialize} from './mobile-session.js';
 let started = false;
+let tools;
+window.addEventListener('message',event=>{
+  if(event.source===parent && event.origin===location.origin && event.data?.type==='mobile-settings')tools?.showSettings(event.data.open===true);
+});
 window.addEventListener('message', async event => {
   if (started || window.parent === window || event.source !== parent || event.origin !== location.origin || event.data?.type !== 'mobile-unlock' || typeof event.data.token !== 'string') return;
   started = true;
   initialize(event.data.token);
   try {
-    await import('./capabilities.js');
+    tools=await import('./capabilities.js');
+    tools.showSettings(parent.document.getElementById('toggle-settings').getAttribute('aria-expanded')==='true');
     // The connection is already established by the passkey. Keep maintenance
     // and disconnect controls, but never offer a second plaintext token store.
     const tokenField = document.getElementById('travel-token');
