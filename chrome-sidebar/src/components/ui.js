@@ -37,7 +37,7 @@ export function Field({id,label,kind='search',options=[],hiddenLabel=false,place
 export function AppHeader({name='Eric’s tools',context='Draft advisor'}) {
   return element('header',{className:'app-header'},[element('img',{className:'mark',src:'icons/icon-32.png',width:24,height:24,alt:''}),Label(name,{className:'compact-brand'}),Strong(context,{id:'current-function',className:'context-label'}),Button('⚙',{id:'open-settings',className:'settings-gear','aria-label':'Open settings',title:'Settings','aria-expanded':'false','aria-controls':'settings-tool'})]);
 }
-export const PageHeader=({title,subtitle,action})=>Stack([Title(title,1),action||(subtitle?Label(subtitle,{className:'subtitle'}):null)],{className:'tool-heading'});
+export const PageHeader=({title,subtitle,action,titleId})=>Stack([Title(title,1,{id:titleId}),action||(subtitle?Label(subtitle,{className:'subtitle'}):null)],{className:'tool-heading'});
 export const ToolHeading=(title,subtitle)=>PageHeader({title,subtitle});
 export const Highlight=({id,valueId,label,value})=>Stack([Label(label),Strong(value,{id:valueId})],{id,className:'next-pick-chip',role:'status'});
 export const StatusCard=({statusId,detailId,dotId,status,detail,links=[]})=>Stack([Stack([Label('',{id:dotId,className:'dot'}),Strong(status,{id:statusId})],{className:'status-label'}),Text(detail,{id:detailId}),...links.map(l=>Link(l.text,l.href))],{className:'status-card'});

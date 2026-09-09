@@ -194,3 +194,5 @@ Default summary model reference: [OpenAI GPT-4.1 mini](https://developers.openai
 Version 0.6.35 organizes Credentials into Cloud connection, Saved credentials, and Add or replace a key. Maintenance actions use adjacent bordered buttons, destructive actions have a distinct style, and shared sections keep related controls together. Repository agent guidance now defines UI/UX standards for grouping, hierarchy, spacing, accessibility, responsive layouts, and visual review.
 
 Version 0.6.36 reconnects already-open Gmail tabs after extension updates. The sidebar injects its reader only on Gmail when the connection is missing; retries are bounded and existing listeners are replaced. Adds scripting permission for this recovery.
+
+Version 0.6.37 makes the email subject the single page title and fixes provider requests for Cloudflare Workers: manual redirects are rejected explicitly. Requires redeploying tools-api. Runtime regression tests now exercise the actual Workers Request implementation.

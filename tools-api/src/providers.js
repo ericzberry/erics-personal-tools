@@ -51,7 +51,8 @@ async function upstream(connection,config,path,body,fetcher) {
   const headers={'Content-Type':'application/json',...(config.format==='anthropic'?{'x-api-key':connection.apiKey,'anthropic-version':'2023-06-01'}:{Authorization:`Bearer ${connection.apiKey}`})};
   try {
     const response=await fetcher(config.baseUrl+path,{method:body?'POST':'GET',headers,body:body?JSON.stringify(body):undefined,
-      redirect:'error',credentials:'omit',signal:AbortSignal.timeout(25000)});
+      redirect:'manual',signal:AbortSignal.timeout(25000)});
+    if(response.status>=300&&response.status<400){await response.body?.cancel();fail(502,'The provider returned a redirect. Check its API URL; credentials were not forwarded.');}
     if(!response.ok){await response.body?.cancel();
       const reason=response.status===401||response.status===403?'rejected the API key or model access':response.status===429?'reported a rate limit or exhausted quota':response.status===402?'requires available credit':response.status===404?'could not find this endpoint or model':response.status>=500?'is temporarily unavailable':'rejected the request; check the model and API URL';
       fail(response.status===429?429:502,`${config.name} ${reason} (HTTP ${response.status}).`);

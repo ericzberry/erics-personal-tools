@@ -11,7 +11,7 @@ for(const provider of AI_PROVIDERS){
   const result=await generate(connection,input,async(url,options)=>{
    const config=providerConfig(connection),body=JSON.parse(options.body);
    assert.equal(url,config.baseUrl+(config.format==='responses'?'/responses':config.format==='anthropic'?'/messages':'/chat/completions'));
-   assert.equal(options.redirect,'error');assert.equal(options.credentials,'omit');assert.equal(options.method,'POST');
+   assert.equal(options.redirect,'manual');assert.equal(options.credentials,undefined);assert.equal(options.method,'POST');
    assert.equal(body.model,input.model);
    if(config.format==='anthropic'){assert.equal(options.headers['x-api-key'],key);assert.equal(options.headers['anthropic-version'],'2023-06-01');assert.equal(body.system,'Be brief.');assert.equal(body.messages.some(m=>m.role==='system'),false);}
    else assert.equal(options.headers.Authorization,`Bearer ${key}`);

@@ -37,7 +37,7 @@ export function RulesView() {
   return Disclosure('League rules',[SectionTitle('The rulebook',Badge('SAVED RULES')),Note('Saved September 8, 2026 · Settings won’t update automatically.'),...Field({id:'search-rules',label:'Search rules',placeholder:'Search scoring, waivers, roster…',hiddenLabel:true}),Stack([],{id:'rules'}),Text('No matching rules.',{id:'no-rules',hidden:true})],{id:'rules-view'});
 }
 export function GmailView() {
-  return Section([UI.PageHeader({title:'Current email',action:Button('Refresh',{id:'refresh-email'})}),Main([Heading('Open an email in Gmail',2,{id:'email-subject',className:'content-title'}),Note('',{id:'email-from',className:'footnote content-meta'}),Note('',{id:'email-read-status',role:'status'}),
+  return Section([UI.PageHeader({title:'Open an email in Gmail',titleId:'email-subject',action:Button('Refresh',{id:'refresh-email'})}),Main([Note('',{id:'email-from',className:'footnote content-meta'}),Note('',{id:'email-read-status',role:'status'}),
     ActionGroup([Button('Summarize',{id:'summarize-email',variant:'secondary',disabled:true}),Button('Generate reply',{id:'reply-email',variant:'primary',disabled:true})]),Note('',{id:'email-action-status',role:'status'}),
     EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),Disclosure('Email text',[Text('',{id:'email-preview',className:'source-preview'})],{id:'email-source',hidden:true})
   ])],{id:'gmail-tool',className:'tool-page',hidden:true});
