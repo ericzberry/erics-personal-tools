@@ -1,3 +1,4 @@
+import {Stack} from './components/ui.js';
 import {openTravelEditor,travelPageMode} from './travel-navigation.js';
 import {travelOffline} from './travel-offline.js';
 import {mountTravel} from './travel.js';
@@ -13,7 +14,7 @@ const offline=travelOffline();
 export function mountExtensionTravel(root, options={mode:'browse'}){
   const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('travel-record-changes'):null;
   const wallet=mountTravel(root,{
-    credentials,request:offline.request,offline,...options,
+    credentials,request:offline.request,offline,connectionRoot:document.getElementById('travel-settings-connection')||Stack([]),...options,
     onOpenEditor:openTravelEditor,
     onSaved:id=>{
       // Keep a newly created record addressable if this editor is reloaded.

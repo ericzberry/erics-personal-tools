@@ -39,3 +39,9 @@ Moves offline details and connection maintenance behind the header Settings butt
 Validation: 19 mobile, 138 extension, and 31 API tests passed; mobile build passed. Synthetic browser review at 280px and 390px verified Settings, hidden maintenance on the tool view, and preserved search input. Native iPhone rendering was not directly tested.
 
 Archive: `erics-tools-mobile-0.1.9.zip`.
+
+## Mobile 0.1.10 — compact travel controls
+
+Smaller search and entry text, a hidden accessible search label, and copy icons disclosed on hover, keyboard focus, or expanded touch rows. Removes routine up-to-date messages. Connection controls remain in header Settings. Shared extension update: 0.6.48.
+
+Validation: 138 extension and 19 mobile tests pass; synthetic phone layout reviewed at 390px. Native iPhone behavior was not directly tested. Archive: `erics-tools-mobile-0.1.10.zip`.

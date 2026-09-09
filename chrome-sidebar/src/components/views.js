@@ -47,6 +47,7 @@ export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     Link('AI providers & playground','settings.html'),
+    Stack([],{id:'travel-settings-connection',className:'travel-wallet connection-only'}),
     Disclosure('Credentials',[
       UI.FormStack([
       Note('API keys are encrypted in D1.'),

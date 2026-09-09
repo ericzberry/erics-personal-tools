@@ -21,6 +21,7 @@ test('travel wallet preserves failed edits, masks records, and confirms deletion
   };
   await mountTravel(document.getElementById('app'),{credentials:{get:async()=> 'synthetic'},request,clipboard}).ready;
   const $=id=>document.getElementById(`travel-${id}`);
+  assert.equal($('status').textContent,'');
   assert.match($('list').textContent,/••••••••/);
   $('list').querySelector('[aria-label="Copy number for Synthetic airline"]').click();await tick();assert.equal(copied,'00123456');
   const show=$('list').querySelector('.record-row-toggle');

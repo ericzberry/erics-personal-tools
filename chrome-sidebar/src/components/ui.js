@@ -200,3 +200,9 @@ export function ExpandableRecord({title,subtitle,action,children,onToggle}) {
   });
   return Section([Stack([toggle,action],{className:'record-row-heading'}),content],{className:'record-row'});
 }
+
+export function CopyIconButton(label){
+  const button=Button('',{className:'icon-button row-copy','aria-label':label,title:label});
+  button.append(element('span',{className:'copy-glyph','aria-hidden':'true'}));
+  return button;
+}

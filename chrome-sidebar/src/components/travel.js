@@ -1,13 +1,13 @@
-import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord} from './ui.js';
+import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord,CopyIconButton} from './ui.js';
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
 export function TravelView({connection=true,mode='inline',editId=null}={}) {
   return Section([
-    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',hidden:mode!=='browse'}),Button('Done',{id:'travel-done',variant:'secondary',hidden:mode!=='editor'})],{compact:true}),
+    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',className:'button-primary button-compact',hidden:mode!=='browse'}),Button('Done',{id:'travel-done',variant:'secondary',hidden:mode!=='editor'})],{compact:true}),
     Note('',{id:'travel-status',role:'status','aria-live':'polite'}),
     Stack([
-      FormField({id:'travel-search',label:'Find a record',kind:'search',placeholder:'Program, traveler, or category'}),
+      FormField({id:'travel-search',label:'Find record',hiddenLabel:true,kind:'search',placeholder:'find record'}),
       Stack([],{id:'travel-list',className:'travel-list'})
-    ],{hidden:mode==='editor'}),
+    ],{hidden:mode==='editor',className:'record-search'}),
     (mode==='editor'?(_title,children,props)=>Section(children,props):Disclosure)('Add or edit a record',[
       Note('Add airline, hotel, rental-car, trusted traveler, passport, visa, or other membership numbers.'),
       Form([
@@ -29,7 +29,7 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
 }
 export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve}) {
   const number=Strong('••••••••',{className:'travel-number','aria-live':'polite'});
-  const copy=Button('Copy',{variant:'secondary','aria-label':`Copy number for ${record.name}`}), edit=Button('Edit',{variant:'secondary'}), remove=Button('Delete',{variant:'danger'});
+  const copy=CopyIconButton(`Copy number for ${record.name}`), edit=Button('Edit',{variant:'secondary'}), remove=Button('Delete',{variant:'danger'});
   copy.addEventListener('click',onCopy);edit.addEventListener('click',onEdit);
   const confirm=Button('Delete from all devices',{variant:'danger'}), keep=Button('Keep record',{variant:'secondary'});
   const confirmation=Stack([Note('Permanently delete this travel record from all devices?'),ActionGroup([confirm,keep],{compact:true})],{hidden:true});

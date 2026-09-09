@@ -5,7 +5,7 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   if(connectionRoot)connectionRoot.replaceChildren(TravelConnection());
   const $=id=>root.querySelector(`#travel-${id}`)||connectionRoot?.querySelector(`#travel-${id}`);
   let token='', records=[], selected=null, newId=crypto.randomUUID(), busy=false, dirty=false, clearNotes=false, feedbackTarget='status', editorMissing=mode==='editor'&&!!editId;
-  const status=(text,target=feedbackTarget)=>{$(target).textContent=text;};
+  const status=(text,target=feedbackTarget)=>{$(target).textContent=['Up to date.','Travel records are up to date.','Connected. Travel records are up to date.'].includes(text)?'':text||'';};
   function controls(){
     for(const node of $('form').querySelectorAll('input,select,button'))node.disabled=busy||!token||editorMissing;
     $('add').disabled=busy||!token;
@@ -32,7 +32,7 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
       onCopy:()=>copy(record,'number'),onCopyNotes:()=>copy(record,'notes'),
       onResolve:choice=>run(async()=>{if(dirty)throw Error('Save or cancel your edits first.');const result=await offline.resolve(token,record.id,choice);records=result.records;edit();render();status(result.syncMessage);}),
       onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting.');const result=await request(token,`/v1/travel/${record.id}`,{method:'DELETE',value:{revision:record.revision}});records=result.records||records.filter(r=>r.id!==record.id);if(selected?.id===record.id)edit();render();status(result.syncMessage||'Record deleted from all devices.');})
-    })):[Note(!token?'Connect to load your travel wallet.':records.length?'No matching records.':mode==='browse'?'No travel records yet. Choose Add record to get started.':'No travel records yet. Add your first one below.')]));
+    })):[Note(!token?'Connect in Settings to load your travel wallet.':records.length?'No matching records.':mode==='browse'?'No travel records yet. Choose Add record to get started.':'No travel records yet. Add your first one below.')]));
     controls();
   }
   async function run(action,target='status'){if(busy)return;feedbackTarget=target;busy=true;controls();status('Working…');try{await action();}catch(error){status(error.message||'Could not connect. Check your internet connection and try again.');}finally{busy=false;controls();feedbackTarget='status';}}
@@ -97,6 +97,6 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
     if(token&&!busy)run(async()=>status(await refresh()));else if(!token)status('This device was disconnected in another window.');
   });
   render();
-  const ready=run(async()=>{token=await credentials.get();$('cloud').open=!token;status(token?await refresh():'Connect once to download your records for offline use.');});
+  const ready=run(async()=>{token=await credentials.get();$('cloud').open=!token;status(token?await refresh():'Connect in Settings to download your records.');});
   return {ready,isDirty:()=>dirty,refresh:reload};
 }
