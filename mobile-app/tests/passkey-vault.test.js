@@ -9,11 +9,14 @@ function fixture() {
     async create({publicKey}) {
       assert.equal(publicKey.authenticatorSelection.userVerification, 'required');
       assert.equal(publicKey.authenticatorSelection.residentKey, 'required');
+      assert.equal(publicKey.authenticatorSelection.authenticatorAttachment, 'platform');
       return {id: encode(new TextEncoder().encode(`passkey-${++counter}`)), getClientExtensionResults: () => ({prf: {enabled: supported}})};
     },
     async get({publicKey}) {
       if (cancel) throw new DOMException('Canceled', 'NotAllowedError');
       assert.equal(publicKey.userVerification, 'required');
+      assert.equal(publicKey.allowCredentials.length, 1);
+      assert.deepEqual(publicKey.allowCredentials[0].transports, ['internal']);
       const auth = new Uint8Array(37); auth.set(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('example.com')))); auth[32] = flags;
       return {id: encode(publicKey.allowCredentials[0].id), response: {authenticatorData: auth, clientDataJSON: new TextEncoder().encode(JSON.stringify({type: 'webauthn.get', origin: wrongOrigin ? 'https://evil.example' : 'https://example.com', challenge: encode(publicKey.challenge)}))}, getClientExtensionResults: () => ({prf: supported ? {results: {first: seed.slice().buffer}} : {}})};
     }

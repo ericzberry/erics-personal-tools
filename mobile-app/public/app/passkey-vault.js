@@ -39,7 +39,9 @@ export function passkeyVault({storage = globalThis.localStorage, credentials = g
   async function evaluate(saved) {
     const challenge = random(32);
     const result = await credentials.get({publicKey: {
-      challenge, rpId, allowCredentials: [{type: 'public-key', id: decode(saved.id)}],
+      // Enrollment requires a platform passkey. Keep unlocking on this device
+      // too, so Safari need not offer external security-key transports.
+      challenge, rpId, allowCredentials: [{type: 'public-key', id: decode(saved.id), transports: ['internal']}],
       userVerification: 'required', timeout: 60000,
       extensions: {prf: {eval: {first: decode(saved.salt)}}}
     }});
