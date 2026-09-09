@@ -1,3 +1,4 @@
+import {CapabilityPicker} from './capabilities.js';
 import {credentialServices} from '../credential-services.js';
 import * as UI from './ui.js';
 import {AI_PROVIDERS} from '../ai-providers.js';
@@ -42,12 +43,12 @@ export function GmailView() {
     EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),Disclosure('Email text',[Text('',{id:'email-preview',className:'source-preview'})],{id:'email-source',hidden:true})
   ])],{id:'gmail-tool',className:'tool-page',hidden:true});
 }
-export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open Gmail or an ESPN draft. The sidebar follows your current tab.'),Link('Open Gmail ↗','https://mail.google.com/'),UI.SettingsLink('Find a restaurant reservation','restaurants.html')])],{id:'home-tool',className:'tool-page',hidden:true});
+export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open a tool or a relevant website to get started.')])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     UI.SettingsList([
     UI.SettingsLink('AI providers & playground','settings.html'),
-    UI.SettingsLink('Restaurant reservations','restaurants.html'),
+    Stack([],{id:'travel-settings-connection',className:'travel-wallet connection-only'}),
     UI.SettingsItem('Credentials',[
       UI.FormStack([
       Note('API keys are encrypted in D1.'),
@@ -72,13 +73,13 @@ export function SettingsView() {
     ])
   ]});
 }
-export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),RewardsView(),SettingsView());}
+export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),SettingsView());}
 
 export function AISettingsView() {
   const field=UI.FormField;
   return Stack([
     Section([Stack([UI.Strong('eb',{className:'settings-monogram'}),Heading('ericberry',1)],{className:'settings-brand'}),
-      Note('Personal settings'),Text('AI connections',{className:'settings-nav-current'}),
+      Note('Personal settings'),CapabilityPicker(),Text('AI connections',{className:'settings-nav-current'}),
       Note('Open here anytime: ericberry → Tab → Enter',{className:'settings-shortcut'})
     ],{className:'settings-rail'}),
     Main([

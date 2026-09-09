@@ -1,3 +1,4 @@
+import {travel} from './travel.js';
 import {latestRelease} from './releases.js';
 import {rewardsSettings} from './rewards.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
@@ -49,9 +50,26 @@ async function readValue(request) {
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname === '/app') return Response.redirect(`${url.origin}/app/`, 308);
+    if (url.pathname.startsWith('/app/')) {
+      if (!['GET', 'HEAD'].includes(request.method)) return json({error: 'Method not allowed.'}, 405);
+      // Serve the frame without the host's .html canonical redirect so its
+      // offline cache entry retains the intended frame policy and URL.
+      const assetRequest=url.pathname==='/app/unlocked.html'?new Request(new URL('/app/unlocked',url),request):request;
+      const asset = await env.ASSETS.fetch(assetRequest);
+      const response = new Response(asset.body, asset);
+      response.headers.set('Cache-Control', 'no-cache');
+      response.headers.set('X-Content-Type-Options', 'nosniff');
+      response.headers.set('Referrer-Policy', 'no-referrer');
+      response.headers.set('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors ${['/app/unlocked.html','/app/unlocked'].includes(url.pathname) ? "'self'" : "'none'"}; base-uri 'none'; form-action 'none'`);
+      return response;
+    }
     if(new URL(request.url).pathname==='/v1/releases/latest'){
       if(request.method!=='GET')return json({error:'Method not allowed.'},405);
-      try{return await latestRelease(env);}catch{return json({error:'Release unavailable.'},503);}
+      const app = url.searchParams.get('app') || 'chrome-sidebar';
+      if (!['chrome-sidebar', 'mobile-app'].includes(app)) return json({error:'Unknown app.'},400);
+      try{return await latestRelease(env, app);}catch{return json({error:'Release unavailable.'},503);}
     }
     // Extension pages use their host permission. No cross-origin website access is granted.
     if (!await authorized(request, env.API_TOKEN)) return json({error: 'Unauthorized.'}, 401);
@@ -72,6 +90,7 @@ export default {
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
       if(path==='/v1/rewards')return await rewardsSettings(request,env,readValue,json);
+      if (path === '/v1/travel' || path.startsWith('/v1/travel/')) return await travel(request, env, readValue, json);
       return await aiSettings(request, env, readValue, json);
     } catch (error) {
       return json({error: error.status ? error.message : 'Storage unavailable. Check the D1 binding and schema.'}, error.status || 503);

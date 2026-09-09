@@ -1,3 +1,4 @@
+import {travelOffline} from './travel-offline.js';
 import {releaseChecker} from './release-check.js';
 const releaseChecks=new WeakMap();
 import {migrateCredentials} from './credential-migration.js';
@@ -13,6 +14,8 @@ export async function settingsAction(message, chromeApi, request = cloudRequest)
     return releaseChecks.get(storage)();
   }
   if (message.action === 'disconnect') {
+    const token=(await storage.get(CONNECTION_KEY))[CONNECTION_KEY]?.token;
+    if(token&&globalThis.indexedDB)await travelOffline().disconnect(token);
     await storage.remove(CONNECTION_KEY); return {connected:false};
   }
   const saved = (await storage.get(CONNECTION_KEY))[CONNECTION_KEY];
@@ -23,6 +26,7 @@ export async function settingsAction(message, chromeApi, request = cloudRequest)
     const health = await request(next, '/health');
     if (!health.ok || health.service !== 'erics-tools-api' || health.version !== 2) throw Error('Update the cloud settings service before connecting.');
     await request(next, '/v1/ai-connections');
+    if(token&&token!==next&&globalThis.indexedDB)await travelOffline().disconnect(token);
     await storage.set({[CONNECTION_KEY]:{token:next}});
     return {connected:true};
   }

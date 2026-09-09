@@ -1,0 +1,102 @@
+import {TravelView,TravelRecord,TravelConnection} from './components/travel.js';
+import {Note} from './components/ui.js';
+export function mountTravel(root,{credentials,request,offline,connectionRoot,onConnectionChange=()=>{},mode='inline',showNumbers=false,editId=null,onOpenEditor=()=>{},onSaved=()=>{},onChanged=()=>{},onDone=()=>{},clipboard=globalThis.navigator?.clipboard}) {
+  root.replaceChildren(TravelView({connection:!connectionRoot,mode,editId}));
+  if(connectionRoot)connectionRoot.replaceChildren(TravelConnection());
+  const $=id=>root.querySelector(`#travel-${id}`)||connectionRoot?.querySelector(`#travel-${id}`);
+  let token='', records=[], selected=null, newId=crypto.randomUUID(), busy=false, dirty=false, feedbackTarget='status', editorMissing=mode==='editor'&&!!editId, refreshPending=false;
+  const status=(text,target=feedbackTarget)=>{$(target).textContent=text||'';};
+  function controls(){
+    for(const node of $('form').querySelectorAll('input,select,button'))node.disabled=busy||!token||editorMissing;
+    $('add').disabled=busy||!token;
+    for(const node of $('list').querySelectorAll('button'))node.disabled=busy||!token;
+    $('setup').hidden=!!token;
+    $('connect').disabled=busy; $('token').disabled=busy;
+    $('refresh').disabled=busy||!token;$('disconnect').disabled=busy||!token;
+    $('connection').textContent=token?'Connected · Shared with your other connected devices.':'Connect with the same private access token on each device.';
+  }
+  function edit(record=null){
+    selected=record;newId=crypto.randomUUID();dirty=false;
+    for(const field of ['name'])$(field).value=record?.[field]||'';
+    $('category').value=record?.category||'Airline';$('number').value='';$('notes').value='';
+    $('number').placeholder=record?'Saved — leave blank to keep':'';
+    $('notes').placeholder=record?.hasNotes?'Saved — leave blank to keep':'';
+    $('editor-title').textContent=record?`Editing ${record.name}`:'New record';
+  }
+  function render(){
+    const term=$('search').value.trim().toLowerCase();
+    const matches=records.filter(r=>`${r.name} ${r.category} ${r.traveler}`.toLowerCase().includes(term))
+      .sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
+    $('list').replaceChildren(...(matches.length?matches.map(record=>TravelRecord(record,{
+      showNumber:showNumbers,
+      onEdit:()=>{if(busy)return;if(mode==='browse'){run(async()=>{await onOpenEditor(record.id);status('Editor opened in a new tab.');});return;}if(dirty){status('Save or cancel your edits first.');return;}edit(record);$('editor').open=true;$('name').focus();},
+      onShow:async()=>{let value;await run(async()=>{value=(await request(token,`/v1/travel/${record.id}`)).record.number;status('');});return value;},
+      onCopy:()=>copy(record,'number'),onCopyNotes:()=>copy(record,'notes'),
+      onResolve:choice=>run(async()=>{if(dirty)throw Error('Save or cancel your edits first.');const result=await offline.resolve(token,record.id,choice);records=result.records;edit();render();onChanged();status(result.syncMessage);}),
+      onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting.');const result=await request(token,`/v1/travel/${record.id}`,{method:'DELETE',value:{revision:record.revision}});records=result.records||records.filter(r=>r.id!==record.id);if(selected?.id===record.id)edit();render();onChanged();status(result.syncMessage||'Record deleted from all devices.');})
+    })):[Note(!token?'Connect in Settings to load your travel wallet.':records.length?'No matching records.':mode==='browse'?'No travel records yet. Choose Add record to get started.':'No travel records yet. Add your first one below.')]));
+    controls();
+  }
+  async function run(action,target='status'){if(busy)return;feedbackTarget=target;busy=true;controls();status('Working…');try{await action();}catch(error){status(error.message||'Could not connect. Check your internet connection and try again.');}finally{busy=false;controls();feedbackTarget='status';if(refreshPending&&!dirty){refreshPending=false;reload();}}}
+  async function copy(record,field){
+    // Start clipboard work during the click so Safari preserves user activation.
+    if(!clipboard?.write || typeof ClipboardItem==='undefined') {status('Copy is unavailable in this browser. Open the installed app or extension in a supported browser.');return;}
+    await run(async()=>{
+      const value=request(token,`/v1/travel/${record.id}`).then(result=>new Blob([result.record[field]],{type:'text/plain'}));
+      await clipboard.write([new ClipboardItem({'text/plain':value})]);status(`${field==='number'?'Number':'Notes'} copied.`);
+    });
+  }
+  function loadEditor(){
+    if(mode!=='editor')return;
+    const record=editId?records.find(record=>record.id===editId):null;
+    editorMissing=!!editId&&!record;
+    edit(record);
+    if(editorMissing)status('This record is no longer available. Return to the wallet and choose another record.','form-status');
+  }
+  $('add').addEventListener('click',()=>run(async()=>{await onOpenEditor();status('Editor opened in a new tab.');}));
+  async function refresh(){const result=await request(token,'/v1/travel');records=result.records;if(!dirty)loadEditor();render();onConnectionChange();return result.syncMessage??'';}
+  $('connect').addEventListener('click',()=>run(async()=>{
+    if(dirty)throw Error('Save or cancel your edits before reconnecting.');
+    const next=$('token').value.trim()||await credentials.get();
+    if(token&&next!==token&&await offline?.hasPending(token))throw Error('Sync or resolve pending changes before changing access tokens.');
+    const result=await request(next,'/v1/travel');if(token&&next!==token)await offline?.disconnect(token);await credentials.set(next);token=next;records=result.records;
+    $('token').value='';$('cloud').open=false;edit();loadEditor();render();status(result.syncMessage??'');onConnectionChange();
+  }));
+  $('disconnect').addEventListener('click',()=>run(async()=>{
+    if(dirty)throw Error('Save or cancel your edits before disconnecting.');
+    await offline?.disconnect(token);await credentials.remove();token='';records=[];$('cloud').open=true;edit();$('token').value='';render();status('Disconnected from this device. Cloud records remain saved.');onConnectionChange();
+  }));
+  $('refresh').addEventListener('click',()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before refreshing.');const message=await refresh();if(mode!=='editor')edit();status(message);}));
+  $('search').addEventListener('input',render);
+  $('form').addEventListener('input',()=>{dirty=true;});
+  $('cancel').addEventListener('click',()=>{edit();loadEditor();$('editor').open=false;status('Edits canceled.','form-status');});
+  $('form').addEventListener('submit',event=>{event.preventDefault();if(mode==='browse'||editorMissing)return;run(async()=>{
+    const value={revision:selected?.revision??null};
+    for(const field of ['name','category'])value[field]=$(field).value.trim();
+    if(!value.name || value.name.length>100)throw Error('Enter a program or document name up to 100 characters.');
+    const number=$('number').value.trim(), notes=$('notes').value.trim();
+    if(!selected&&!number)throw Error('Enter your travel number.');
+    if(number)value.number=number;if(notes)value.notes=notes;
+    const result=await request(token,`/v1/travel/${selected?.id||newId}`,{method:'PUT',value});
+    const savedId=selected?.id||newId;
+    records=result.records||[result.record,...records.filter(r=>r.id!==result.record.id)];
+    if(mode==='editor')editId=savedId;
+    edit();loadEditor();render();onChanged();onSaved(savedId);status(result.syncMessage||'Saved. Available on your other devices when they refresh.');
+  },'form-status');});
+  // Refresh on foreground/reconnect, without overwriting an in-progress edit.
+  const reload=()=>{if(!token||dirty)return;if(busy){refreshPending=true;return;}return run(async()=>{status(await refresh());});};
+  window.addEventListener('online',reload);
+  window.addEventListener('focus',reload);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();else render();});
+  window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
+  credentials.subscribe?.(async()=>{
+    const current=await credentials.get();
+    if(current===token)return;
+    token=current;records=[];edit();$('cloud').open=!token;render();
+    onConnectionChange();
+    if(token&&!busy)run(async()=>status(await refresh()));else if(!token)status('This device was disconnected in another window.');
+  });
+  render();
+  const ready=run(async()=>{token=await credentials.get();$('cloud').open=!token;status(token?await refresh():'Connect in Settings to download your records.');});
+  return {ready,isDirty:()=>dirty,refresh:reload};
+}

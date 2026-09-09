@@ -69,4 +69,4 @@ $('copy-email-output').addEventListener('click',async()=>{
 });
 $('refresh-email').addEventListener('click',refresh);
 if (extension) {refresh();setInterval(refresh,1500);chrome.tabs.onActivated.addListener(refresh);chrome.tabs.onUpdated.addListener(refresh);}
-else {showTool(new URL(location.href).searchParams.get('tool')==='gmail'?'gmail':'football');$('email-read-status').textContent='Preview · open the extension on Gmail to read a message.';renderEmail();}
+else {const previewTool=new URL(location.href).searchParams.get('tool');showTool(['gmail','home'].includes(previewTool)?previewTool:'football');$('email-read-status').textContent='Preview · open the extension on Gmail to read a message.';renderEmail();}

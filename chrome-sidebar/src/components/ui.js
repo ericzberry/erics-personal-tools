@@ -20,7 +20,7 @@ export const Stack=(children=[],props={})=>element('div',props,children);
 export const Section=(children=[],props={})=>element('section',props,children);
 export const PageBody=children=>element('main',{className:'page-body'},children);
 export const Main=PageBody;
-export const Button=(text,{variant='quiet',...props}={})=>element('button',{type:'button',text,className:variant==='quiet'?'quiet':`button-${variant}`,...props});
+export const Button=(text,{variant='quiet',size,className,...props}={})=>element('button',{type:'button',text,className:[className||(variant==='quiet'?'quiet':`button-${variant}`),size?`button--${size}`:''].filter(Boolean).join(' '),...props});
 export const Link=(text,href,props={})=>element('a',{text,href,target:'_blank',rel:'noreferrer',...props});
 export const Select=({id,disabled=false,options=[]})=>element('select',{id,disabled,className:'select-control'},options.map(o=>Option(o.text,o.value)));
 export const Option=(text,value)=>element('option',{text,value});
@@ -227,3 +227,22 @@ export function RecordRow({title,detail,notes='',actions=[]}) {
 }
 
 export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true});
+
+// A compact list row with a separate quick action and optional inline details.
+export function ExpandableRecord({title,subtitle,action,preview,children,onToggle}) {
+  const toggle=Button('',{variant:'secondary',className:'record-row-toggle','aria-expanded':'false'});
+  toggle.append(Strong(title),...(subtitle?[Note(subtitle)]:[]));
+  const content=Stack(children,{className:'record-row-content',hidden:true});
+  toggle.addEventListener('click',()=>{
+    content.hidden=!content.hidden;
+    toggle.setAttribute('aria-expanded',String(!content.hidden));
+    onToggle?.(!content.hidden);
+  });
+  return Section([Stack([toggle,action],{className:'record-row-heading'}),...(preview?[preview]:[]),content],{className:'record-row'});
+}
+
+export function CopyIconButton(label){
+  const button=Button('',{className:'icon-button row-copy','aria-label':label,title:label});
+  button.append(element('span',{className:'copy-glyph','aria-hidden':'true'}));
+  return button;
+}

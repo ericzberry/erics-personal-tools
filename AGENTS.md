@@ -10,9 +10,12 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Establish a clear reading order: heading, explanation/status, content or fields, then actions.
 - Keep the most important action visually dominant; normally use one primary action per form or task group.
 - Use progressive disclosure for secondary detail. Keep current status and necessary actions discoverable.
+- Put the selected tool and saved information first on mobile. Keep device and connection maintenance secondary, omit unlocked-state banners and manual lock controls, and let tool content use the page scroll instead of a small nested scrolling box.
 - Avoid redundant cards inside cards, gratuitous shadows, decorative icons, and oversized headings. Every visual boundary should explain a relationship.
 
 ## Controls and interaction
+
+- Follow the action roles, density sizes, and state rules in [docs/DESIGN.md](docs/DESIGN.md). Use shared component variants; do not independently resize feature buttons.
 
 - Make buttons visibly interactive. Use consistent primary, secondary, quiet, and destructive variants; reserve quiet text actions for clearly established contexts.
 - Keep related buttons adjacent with a consistent gap. Use content-width actions unless equal widths serve a deliberate choice or layout.
@@ -54,3 +57,13 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - If publication fails or authentication is unavailable, report that the D1 update remains incomplete; never claim the release is fully published.
 - While open, the app checks the D1-backed release endpoint at most once per 60 minutes. Persist the last attempt across reopenings and restarts, share the throttle across sidebar instances, and throttle failed attempts too. Show an out-of-date banner only when the published version is newer than the installed version.
 - Instructions-only edits do not constitute a new app build and do not require a version bump or D1 publication.
+
+## Data capabilities, mobile, and offline access
+
+- Every capability that stores or presents personal/reference data must also be available in the mobile app. Build mobile parity with the capability; do not deliver an extension-only data feature or an online-only mobile shell for it.
+- Data that does not inherently require a live service must remain usable offline after its first successful download. Save the actual records and required reference assets, not only the app shell. Keep online-only actions (generation, live capture, external requests) separate from offline data access.
+- Use a shared capabilities registry and the general Tools dropdown for navigation. Add features such as Travel wallet as ordinary entries; do not add special home-page callouts, one-off feature links, or new function tabs.
+- Reuse shared components and data adapters across extension and mobile. Persist private records in encrypted device storage, keep secret values masked, and never put authenticated responses in the service-worker shell cache.
+- Support durable offline changes with per-record revisions, a pending-change queue, reconnect/foreground synchronization, explicit sync status, and conflict resolution. Never overwrite newer cloud data or discard unsynced changes silently.
+- Disconnecting a device must explain and clear its private offline copies while leaving cloud records intact. Require pending changes to be synchronized or explicitly resolved before disconnecting. Browser storage can be evicted; do not present a device cache as a permanent backup.
+- Verify a cold offline reopen, access to private values without a network request, queued edits surviving a restart, reconnection, conflicts, and cache clearing. Check the general Tools dropdown at mobile and narrow sidebar widths.

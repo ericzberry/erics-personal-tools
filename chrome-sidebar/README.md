@@ -223,3 +223,47 @@ Version 0.6.41 checks the public Worker release endpoint against D1 at most hour
 Version 0.6.42 renames the navigation label to Tools and replaces the text chevron with a centered CSS chevron in a dedicated grid column. Long destination names wrap without displacing the indicator.
 
 Version 0.6.43 adds the Restaurants workspace: source-backed name/category discovery, city and neighborhood filters, UWS travel defaults, exact and flexible party sizes, live booking-page checks, explicit name clarification, evidence links, cancellation, and manual page rechecks. Open Restaurants from the capability menu. The Worker research endpoint is deployed. See [reservation usage and validation](RESTAURANTS.md).
+## Data capabilities (0.6.43)
+
+Use the **Tools** dropdown to open Travel wallet, league rules, player rankings, or AI connections. Travel is an ordinary capability; there are no separate travel callouts on the home or settings screens. The mobile app uses the same catalog.
+
+Connect Travel wallet once with your private access token to download all records, including masked numbers and notes, into encrypted IndexedDB storage. Downloaded records can be searched, copied, added, edited, and marked for deletion offline. Changes persist before network requests and sync on refresh, reconnect, or foregrounding. Per-record revisions reject stale edits. Conflicts retain the device's changes until you choose the cloud version or explicitly keep the device's version. A lost successful response is reconciled before a retry.
+
+Cloud and device copies are encrypted with AES-GCM. Device encryption is unlocked by the device's saved access token. Disconnect clears the local copy and token but leaves cloud records; pending changes must first be synced or resolved. Browser storage is not a permanent backup. The phone includes bundled league rules and player rankings, plus encrypted offline AI connection metadata; provider keys remain on the server and provider requests require internet. Live draft capture remains an extension action.
+
+## Travel wallet in the sidebar (0.6.46)
+
+Travel wallet opens directly from Tools in the extension sidebar. Show number reveals a selected record inline; Hide number masks it again, and Copy number remains available. Records come first, editing and record maintenance use disclosures, and Connection settings stay collapsed after connecting. Shared mobile UI (0.1.7) has the same controls. Sync messages no longer emphasize device storage.
+
+Validation: 133 extension tests (including component architecture, reveal/hide, edit failure preservation, deletion confirmation, and sidebar selection), 19 mobile tests, and 31 API tests pass. Synthetic browser checks covered 280px sidebar and 390px phone layouts, inline reveal, offline reopening, queued edits surviving reload and syncing on reconnect, long record names, and connected settings. Native Chrome installation and real iPhone biometric/clipboard behavior were not directly tested.
+
+Archive: `release/erics-sidebar-0.6.46.zip`.
+
+## Separate travel record editor (0.6.47)
+
+Travel wallet keeps the compact searchable record list in the sidebar. Add record and Edit open a dedicated extension tab; saved changes refresh the viewing list. The editor reloads the selected record by ID, preserves failed edits, and keeps numbers masked. Done closes the editor after changes are saved or canceled. Mobile keeps its inline editor and shares the compact rows.
+
+Archive: `release/erics-sidebar-0.6.47.zip`.
+
+## Compact wallet controls (0.6.48)
+
+Makes Add record, search, and entry text smaller. Search uses only the visible placeholder “find record” with an accessible hidden label. Copy uses a small icon shown on row hover or keyboard focus; touch users can reveal it by expanding the row. Routine up-to-date messages are omitted. Wallet connection controls live in sidebar Settings and are absent from browse and editor pages; mobile retains its header Settings.
+
+Validation: 138 extension tests and 19 mobile tests pass. Synthetic 30-record UI reviewed at 280px sidebar and 390px mobile, including hover icons, keyboard access, and Settings navigation. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.48.zip`.
+
+## Shared control style guide (0.6.49)
+
+Defines control roles, sizes, typography, spacing, focus, and touch behavior in `docs/DESIGN.md`, linked from repository instructions. Shared Button supports an explicit compact size. Wallet Edit, Copy notes, and Delete use matching compact subtle actions; form and confirmation actions retain the appropriate stronger treatment. Replaces accumulated wallet overrides with one token-based stylesheet shared with mobile 0.1.11.
+
+Validation: 138 extension and 19 mobile tests pass; synthetic expanded/collapsed records reviewed at 280px and 390px. Native installed Chrome and iPhone behavior remain unverified. Archive: `release/erics-sidebar-0.6.49.zip`.
+
+### Live wallet updates (included in 0.6.49)
+
+Saved records, deletions, and conflict resolutions notify open extension wallets through a private-data-free extension storage marker. Refresh requests received during another operation are coalesced and applied when it finishes; unsaved editor input remains protected. Browser previews retain BroadcastChannel support.
+
+Validation: 141 extension tests, 19 mobile tests, and 31 API tests passed. Synthetic two-window browser checks verified creation and rename propagation without reopening the wallet; compact Add record layout reviewed at 280px and 390px. Installed Chrome side-panel delivery was not directly exercised; extension storage delivery and busy-refresh behavior have regression coverage.
+
+
+The combined 0.6.49 / mobile 0.1.11 release also shows mobile numbers directly beside Copy, invokes saved passkeys without an extra app Unlock prompt, and removes routine up-to-date messages from shared data views. Final validation: 144 extension, 19 mobile, and 31 API tests pass. This includes the simplified record form and live sidebar propagation verified in the related tasks.
+
+Version 0.6.50 merges restaurant reservations, rewards and central model routing with the latest mobile/offline and travel-wallet updates. One Tools menu includes all extension destinations; travel remains in the sidebar and restaurants opens its workspace. This supersedes the local reservation-only 0.6.43 package.

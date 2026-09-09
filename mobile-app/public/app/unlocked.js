@@ -1,0 +1,32 @@
+import {observeToolSize} from './tool-layout.js';
+import {initialize} from './mobile-session.js';
+let started = false;
+let tools;
+window.addEventListener('message',event=>{
+  if(event.source===parent && event.origin===location.origin && event.data?.type==='mobile-settings')tools?.showSettings(event.data.open===true);
+});
+window.addEventListener('message', async event => {
+  if (started || window.parent === window || event.source !== parent || event.origin !== location.origin || event.data?.type !== 'mobile-unlock' || typeof event.data.token !== 'string') return;
+  started = true;
+  initialize(event.data.token);
+  try {
+    tools=await import('./capabilities.js');
+    tools.showSettings(parent.document.getElementById('toggle-settings').getAttribute('aria-expanded')==='true');
+    // The connection is already established by the passkey. Keep maintenance
+    // and disconnect controls, but never offer a second plaintext token store.
+    const tokenField = document.getElementById('travel-token');
+    if (tokenField) { tokenField.disabled = true; tokenField.closest('.form-field')?.setAttribute('hidden', ''); }
+    const connect = document.getElementById('travel-connect');
+    if (connect) connect.hidden = true;
+    document.getElementById('capability-picker')?.focus({preventScroll:true});
+  } catch {
+    document.getElementById('capabilities-root').textContent = 'Could not open your tools. Reopen the app to try again.';
+  }
+});
+if (parent !== window) parent.postMessage({type: 'mobile-ready'}, location.origin);
+for (const type of ['pointerdown', 'keydown', 'input', 'scroll']) {
+  document.addEventListener(type, event => {
+    if (event.isTrusted && !document.hidden) parent.postMessage({type: 'mobile-activity'}, location.origin);
+  }, {capture: true, passive: true});
+}
+observeToolSize(document.getElementById('capabilities-root'), height => parent.postMessage({type:'mobile-size',height},location.origin));

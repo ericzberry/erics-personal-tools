@@ -3,7 +3,7 @@ let currentTool='football',selection='auto',settingsOpen=false;
 const $=id=>document.getElementById(id);
 function render(){
   const active=selection==='auto'?currentTool:selection;
-  for(const key of ['football','gmail','home','rewards'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
+  for(const key of ['football','gmail','home','rewards','travel'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
   $('settings-tool').hidden=!settingsOpen;
   $('current-function').textContent=settingsOpen?'Settings':selection==='auto'?'Current tab':capabilities.find(item=>item.id===selection)?.label;
   $('open-settings').setAttribute('aria-expanded',String(settingsOpen));
@@ -18,3 +18,5 @@ export function initializeNavigation(){
   for(const item of capabilities)if(!item.href)$(`navigate-${item.id}`).addEventListener('click',()=>selectCapability(item.id));
   render();
 }
+
+export function selectTool(tool){selectCapability(tool||'auto');}

@@ -1,4 +1,4 @@
-# Eric's Personal Tools — 0.6.42
+# Eric's Personal Tools — 0.6.50
 
 Status: prepared locally; not uploaded or published. Google developer dashboard requires reauthentication.
 
@@ -7,7 +7,7 @@ Private → Trusted testers. Use the owner-provided tester account from the priv
 The trusted-testers list applies across this publisher account; review existing entries before publishing so the audience matches the request. Do not choose Public or Unlisted.
 
 ## Store description
-Your ESPN fantasy draft companion in Chrome's sidebar. Follow live practice or league picks, track your roster, and get one or two highlighted picks using fixed spreadsheet rankings, roster needs, and estimated availability at your next two turns. View saved league rules and a tiered board with ownership colors, inline manual corrections, and blue recommendation highlights and amber current-tier highlights in ESPN, plus prominent counts by roster position. A compact scarcity cue appears only when a starter is due and the last one or two current-tier RB or WR options are unlikely to last; blue recommendations retain priority. Recommendations pause when draft history is incomplete or disconnected. Combined Ranks provide the replacement-value proxy automatically. Configured for Old Timer’s League, 2026, ten-team half-PPR. Summarize the current Gmail message with OpenAI through your Worker and D1 key, or generate an editable reply using Chrome’s on-device AI. Requires a supported computer and Chrome 138+ for local generation. Not affiliated with ESPN or Google.
+Choose data tools from the Tools dropdown. Save and copy travel loyalty and document numbers offline, sync changes across connected devices, and view saved league rules and rankings. Your ESPN fantasy draft companion in Chrome's sidebar. Follow live practice or league picks, track your roster, and get one or two highlighted picks using fixed spreadsheet rankings, roster needs, and estimated availability at your next two turns. View saved league rules and a tiered board with ownership colors, inline manual corrections, and blue recommendation highlights and amber current-tier highlights in ESPN, plus prominent counts by roster position. A compact scarcity cue appears only when a starter is due and the last one or two current-tier RB or WR options are unlikely to last; blue recommendations retain priority. Recommendations pause when draft history is incomplete or disconnected. Combined Ranks provide the replacement-value proxy automatically. Configured for Old Timer’s League, 2026, ten-team half-PPR. Summarize the current Gmail message with OpenAI through your Worker and D1 key, or generate an editable reply using Chrome’s on-device AI. Requires a supported computer and Chrome 138+ for local generation. Not affiliated with ESPN or Google.
 
 ## Single purpose
 Provide a contextual personal productivity sidebar for the current page: ESPN draft assistance and Gmail writing assistance. The broader product scope must be accurately reviewed under the store’s single-purpose policy.
@@ -25,7 +25,7 @@ Provide a contextual personal productivity sidebar for the current page: ESPN dr
 Open the sidebar to inspect saved league rules without signing in. Live capture requires an ESPN account and an active football draft or practice draft. Open or reload the draft room after installing. The draft is selected automatically. Settings contains the ESPN is capturing picks toggle. Switch it off for manual Me / Someone else buttons on the tier board, and on to hide those buttons and resume the live feed. After each pick, the count and available recommendations update. Completed, disconnected or incomplete drafts do not show actionable picks. No credentials are included in this submission.
 
 ## Submission checklist
-Upload erics-sidebar-0.6.42.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
+Upload erics-sidebar-0.6.50.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
 
 Install the approved store listing once on each computer while signed into the tester account. Subsequent approved versions of that same listing update automatically. Local draft storage does not sync between computers.
 
@@ -38,16 +38,3 @@ Open and expand an email in Gmail, then open the sidebar. It shows the subject a
 ## AI connection settings
 
 Options opens the extension-only AI settings page and prompt playground. Provider credentials are encrypted in the owner’s Cloudflare D1 database. Fetch models, Test connection and Run prompt make requests through the Worker to the selected provider; tests and prompts may incur provider charges. Local sidebar credentials remain separate and are not automatically uploaded. No provider keys or cloud access tokens are bundled.
-
-
-0.6.42 adds local, manual rewards and benefits tracking with balances, discounts, activation steps, and deadline-based next actions. No automatic sync or offer discovery.
-
-
-0.6.42 uses a single Capabilities navigation for current-tab mode, Rewards, Gmail, Fantasy football, Restaurants, and Settings. Rewards records sync across connected browsers using encrypted D1 storage; balances and offers remain manually entered. Existing local entries migrate after cloud acknowledgement. Backend deployed; extension package prepared locally.
-
-
-Version 0.6.42 renames the navigation label to Tools and replaces the text chevron with a centered CSS chevron in a dedicated grid column. Long destination names wrap without displacing the indicator.
-
-## 0.6.43 — Restaurant reservations
-
-Find restaurants by name or editorial category, with city/neighborhood filters and UWS travel preferences. Check date, time window, and fixed/flexible party sizes on verified booking pages. Includes source-backed clarification and explicit needs-attention outcomes. Booking is completed manually on the provider. See ../RESTAURANTS.md for tested coverage and limitations.

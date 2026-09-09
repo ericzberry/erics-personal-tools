@@ -8,10 +8,10 @@ export async function cloudRequest(token, path, {method = 'GET', value, fetcher 
     method, headers: {Authorization: `Bearer ${token}`, ...(body ? {'Content-Type': 'application/json'} : {})},
     body, credentials: 'omit', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(timeoutMs)
   });
-  if (response.status === 401) throw Error('Access token was rejected. Check the Worker’s API_TOKEN secret.');
+  if (response.status === 401) throw Object.assign(Error('Access token was rejected. Check the Worker’s API_TOKEN secret.'),{status:401});
   if (response.status === 404) throw Error('The settings API has not been deployed yet.');
   let result;
   try {result = await response.json();} catch {throw Error('The Worker is responding, but the storage API has not been deployed yet.');}
-  if (!response.ok) throw Error(result.error || `Cloud settings are unavailable (${response.status}).`);
+  if (!response.ok) throw Object.assign(Error(result.error || `Cloud settings are unavailable (${response.status}).`),{status:response.status});
   return result;
 }
