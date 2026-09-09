@@ -55,7 +55,7 @@ test('validates sender origin, league, overall number and team',()=>{
 });
 test('background pipeline saves picks and marks closed tab disconnected',async()=>{
   let listener,closed,data={};
-  globalThis.chrome={sidePanel:{setPanelBehavior:async()=>{}},runtime:{onMessage:{addListener(fn){listener=fn;}}},storage:{local:{get:async()=>structuredClone(data),set:async v=>{data=structuredClone(v);}}},tabs:{onRemoved:{addListener(fn){closed=fn;}}}};
+  globalThis.chrome={contextMenus:{onClicked:{addListener(){}}},sidePanel:{setPanelBehavior:async()=>{}},runtime:{onInstalled:{addListener(){}},onMessage:{addListener(fn){listener=fn;}}},storage:{local:{get:async()=>structuredClone(data),set:async v=>{data=structuredClone(v);}}},tabs:{onRemoved:{addListener(fn){closed=fn;}}}};
   const originalFetch=globalThis.fetch;globalThis.fetch=async url=>({ok:true,json:async()=>JSON.parse(readFileSync(url,'utf8'))});
   await import('../src/background.js');const s=complete();
   const result=await new Promise(resolve=>listener({type:'DRAFT_SNAPSHOT',snapshot:s},{url,tab:{id:123},frameId:0},resolve));

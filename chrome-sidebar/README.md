@@ -23,7 +23,7 @@ The prepared build is in `dist/`. Run `npm run build` to regenerate it (Node.js 
 
 The reader watches rendered pick messages and the roster team selector. Changes trigger a read after 300 ms, with a 5-second heartbeat. Actual latency depends on ESPN and Chrome scheduling. Keep the draft tab open. Background throttling or an ESPN layout change can delay or break capture. Existing history can only be recovered if ESPN renders it; missing picks are flagged. Commissioner rollback handling is tested with fixtures, not a live league undo.
 
-The extension does not submit picks, modify ESPN, read cookies, or access private application state. It requests `sidePanel`, `storage`, and `<all_urls>` host access, as requested for future personal tools. Content scripts run only on ESPN football draft rooms and `https://mail.google.com/*`. Chrome still restricts protected browser pages and requires separate user enablement for file URLs or incognito access. It makes no external network calls of its own. The UI uses Chrome's [Side Panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel).
+The extension does not submit picks, modify ESPN, read cookies, or access private application state. It requests `sidePanel`, `contextMenus`, `storage`, and `<all_urls>` host access, as requested for future personal tools. Content scripts run only on ESPN football draft rooms and `https://mail.google.com/*`. Chrome still restricts protected browser pages and requires separate user enablement for file URLs or incognito access. It makes no external network calls of its own. The UI uses Chrome's [Side Panel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel).
 
 ## Validation
 
@@ -155,3 +155,9 @@ Version 0.6.23 reserves the final available selections for a missing starting de
 
 
 Version 0.6.24 adds Reset draft data at the very bottom. Reset this draft creates an empty manual board for the current session, clears its corrections, draft position and progress, and switches live capture off so ESPN history cannot immediately refill it. Other drafts, rankings and settings are preserved. Re-enabling capture uses ESPN history again; this is a board reset, not deletion of ESPN’s draft.
+
+### Open on any computer
+
+After installing or updating the extension, right-click a webpage and choose **Open Eric’s Personal Tools**. This native menu is created on each installation and does not depend on a saved keyboard shortcut or extension URL. The toolbar icon also opens the sidebar. Uses Chrome’s [documented context-menu side-panel launcher](https://developer.chrome.com/docs/extensions/reference/api/sidePanel#programmatically_open_the_side_panel_on_user_interaction).
+
+Version 0.6.25 adds the native right-click launcher.
