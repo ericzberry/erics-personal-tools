@@ -2,9 +2,11 @@
 // Every entry in both lists needs an `icon`: a 24x24 stroked SVG path drawn with
 // currentColor. The mobile launcher and the sidebar Tools menu both render one
 // per entry, so a capability without an icon is incomplete in either host.
-// `section` groups an entry under a heading in both hosts; entries without one
-// stay in the main, unlabelled group.
+// `section` groups an entry under a named group in both hosts; entries without
+// one stay in the main, unlabelled group. A named section needs an icon here
+// because the sidebar presents it as a menu row that opens to reveal its tools.
 export const MISC_SECTION='Misc';
+const SECTION_ICONS=new Map([[MISC_SECTION,'M6 12h.01 M12 12h.01 M18 12h.01']]);
 export const CAPABILITIES = [
   {id:'travel',label:'Travel wallet',href:'travel.html',icon:'M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z M9 8V5h6v3'},
   {id:'rewards',label:'Rewards & benefits',href:'rewards.html',icon:'M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.3-4.8-2.5-4.8 2.5.9-5.3L4.2 9.7l5.4-.8L12 4Z'},
@@ -24,7 +26,7 @@ export function capabilitySections(items=CAPABILITIES){
     if(!groups.has(title))groups.set(title,[]);
     groups.get(title).push(item);
   }
-  return [...groups].filter(([,list])=>list.length).map(([title,list])=>({title,items:list}));
+  return [...groups].filter(([,list])=>list.length).map(([title,list])=>({title,icon:title?SECTION_ICONS.get(title):null,items:list}));
 }
 // Gmail is not listed: it appears on its own when the active tab is Gmail.
 export const capabilities=[

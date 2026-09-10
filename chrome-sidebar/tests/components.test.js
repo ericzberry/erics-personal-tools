@@ -32,11 +32,16 @@ test('every Tools entry carries an icon and the sidebar menu renders one per row
   assert.ok(doc.querySelector('#open-settings svg'));
   // Gmail follows the active tab; AI connections and League rules left the menu.
   for(const id of ['navigate-gmail','navigate-ai','navigate-rules'])assert.equal(doc.getElementById(id),null);
-  // Fantasy football sits under its own Misc heading, after the ungrouped tools.
-  const headings=[...doc.querySelectorAll('.capability-list .capability-group')].map(node=>node.textContent);
-  assert.deepEqual(headings,['Misc']);
-  const misc=[];for(let node=doc.querySelector('.capability-group').nextElementSibling;node?.classList.contains('capability-item');node=node.nextElementSibling)misc.push(node.id);
-  assert.deepEqual(misc,['navigate-rankings','navigate-football']);
+  // Misc is one closed row after the ungrouped tools; its tools appear only once opened.
+  const branches=[...doc.querySelectorAll('.capability-list .capability-submenu')];
+  assert.equal(branches.length,1);
+  const [misc]=branches;
+  assert.equal(misc.hasAttribute('open'),false);
+  assert.equal(misc.querySelector('summary').id,'navigate-section-misc');
+  assert.equal(misc.querySelector('summary .capability-text > strong').textContent,'Misc');
+  assert.ok(misc.querySelector('summary svg'));
+  assert.equal(misc.previousElementSibling.id,'navigate-restaurants');
+  assert.deepEqual([...misc.querySelectorAll('.capability-item:not(.capability-item--branch)')].map(node=>node.id),['navigate-rankings','navigate-football']);
 });
 
 test('shared cards and tables treat external text as text, not markup',()=>{

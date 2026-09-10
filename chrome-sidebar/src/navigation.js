@@ -7,7 +7,11 @@ function render(){
   $('settings-tool').hidden=!settingsOpen;
   $('current-function').textContent=settingsOpen?'Settings':selection==='auto'?'Current tab':capabilities.find(item=>item.id===selection)?.label;
   $('open-settings').setAttribute('aria-expanded',String(settingsOpen));
-  for(const item of capabilities){const node=$(`navigate-${item.id}`);if(!settingsOpen&&selection===item.id)node.setAttribute('aria-current','page');else node.removeAttribute('aria-current');}
+  for(const item of capabilities){
+    const node=$(`navigate-${item.id}`);
+    if(!settingsOpen&&selection===item.id){node.setAttribute('aria-current','page');node.closest('.capability-submenu')?.setAttribute('open','');}
+    else node.removeAttribute('aria-current');
+  }
 }
 function closeNavigation(){ $('app-navigation').open=false; }
 export function showTool(tool){currentTool=tool;render();}

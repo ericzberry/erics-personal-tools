@@ -75,16 +75,26 @@ function capabilityRow(item){
   const children=[Glyph(item.icon,{size:16}),Stack([Strong(item.label)],{className:'capability-text'})];
   return item.href?element('a',{...props,href:item.href,target:'_blank',rel:'noreferrer'},children):element('button',{...props,type:'button'},children);
 }
+// A named section is a single row that opens to reveal its tools, so the menu
+// stays short until someone asks for the extras.
+function capabilityBranch(title,icon,entries){
+  const row=element('summary',{id:`navigate-section-${title.toLowerCase()}`,className:'capability-item capability-item--branch'},[Glyph(icon,{size:16}),Stack([Strong(title)],{className:'capability-text'})]);
+  return element('details',{className:'capability-submenu'},[row,...entries.map(capabilityRow)]);
+}
 export function CapabilityNavigation(items){
   const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong('Current tab',{id:'current-function'})]);
-  const rows=capabilitySections(items).flatMap(({title,items:entries})=>[
-    ...(title?[Title(title,2,{className:'capability-group'})]:[]),
-    ...entries.map(capabilityRow)
-  ]);
+  const rows=capabilitySections(items).flatMap(({title,icon,items:entries})=>
+    title?[capabilityBranch(title,icon,entries)]:entries.map(capabilityRow));
   const settings=element('button',{id:'open-settings',type:'button',className:'capability-settings','aria-controls':'settings-tool','aria-expanded':'false'},[Glyph(SETTINGS_GLYPH,{size:16}),Stack([Strong('Settings')],{className:'capability-text'})]);
   const nav=element('nav',{'aria-label':'Tools',className:'capability-list'},[...rows,settings]);
   const disclosure=element('details',{id:'app-navigation',className:'capability-navigation'},[summary,nav]);
-  disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'){disclosure.open=false;summary.focus();}});
+  // Escape leaves the open section first, then the menu itself.
+  disclosure.addEventListener('keydown',event=>{
+    if(event.key!=='Escape')return;
+    const branch=event.target.closest?.('.capability-submenu[open]');
+    if(branch){branch.open=false;branch.querySelector('summary').focus();return;}
+    disclosure.open=false;summary.focus();
+  });
   return disclosure;
 }
 // Mobile Tools menu: the same icon grid, collapsed behind a dropdown once a
