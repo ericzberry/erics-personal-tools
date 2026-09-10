@@ -87,6 +87,29 @@ export function sharedVault(options){
   return shared;
 }
 
+// One unlocked session per browser, not per page. Finance and Personal each
+// open in their own extension tab, so a key held only in one page's memory
+// means a fresh passkey check for every navigation and a reload that throws
+// the unlock away. The derived key is kept in `chrome.storage.session`: memory
+// only, gone when the browser closes, and readable by this extension's own
+// pages but never by a web page or content script. That is what makes one
+// prompt cover the whole idle window, an unlock in one tab open the others,
+// and Lock now close all of them at once. A page host without that area (the
+// mobile app, where every tool already shares one page) simply gets no store.
+export const SESSION_KEY='vault-session';
+// Writing on every interaction would be pointless churn; the stored stamp only
+// has to be fresh enough that a new page inherits a sane remainder.
+const REFRESH_MS=60000;
+export function vaultSessionStore(area=globalThis.chrome?.storage?.session,changes=globalThis.chrome?.storage?.onChanged){
+  if(!area?.get)return null;
+  return {
+    async read(){try{return (await area.get(SESSION_KEY))[SESSION_KEY]||null;}catch{return null;}},
+    write(value){try{return Promise.resolve(area.set({[SESSION_KEY]:value})).catch(()=>{});}catch{return Promise.resolve();}},
+    clear(){try{return Promise.resolve(area.remove(SESSION_KEY)).catch(()=>{});}catch{return Promise.resolve();}},
+    subscribe(callback){changes?.addListener?.((updates,name)=>{if(name==='session'&&updates[SESSION_KEY])callback(updates[SESSION_KEY].newValue||null);});}
+  };
+}
+
 export function secretVault({
   credentials = globalThis.navigator?.credentials,
   origin = globalThis.location?.origin,
@@ -94,10 +117,12 @@ export function secretVault({
   // already the API host. Only an extension page has to name it explicitly.
   rpId = globalThis.location?.protocol === 'chrome-extension:' ? VAULT_RP_ID : (globalThis.location?.hostname || VAULT_RP_ID),
   subtle = globalThis.crypto?.subtle,
-  now, onLock = () => {}
+  now, onLock = () => {},
+  store = vaultSessionStore()
 } = {}) {
-  let key = null, raw = null;
-  const session = idleSession({now, onLock: reason => { key = null; if (raw) { raw.fill(0); raw = null; } onLock(reason); }});
+  const clock = now || Date.now;
+  let key = null, raw = null, pending = null, stamp = 0;
+  const session = idleSession({now, onLock: reason => { key = null; if (raw) { raw.fill(0); raw = null; } stamp = 0; store?.clear(); onLock(reason); }});
   async function fromPasskey() {
     const challenge = random(32);
     const assertion = await credentials.get({publicKey: {
@@ -118,25 +143,54 @@ export function secretVault({
     if (!seed || seed.byteLength !== 32) throw Error('This browser or passkey provider cannot derive encryption keys (PRF). Unlock with your recovery code, or use Apple Passwords on iOS 18 / macOS 15 or later.');
     try { return await stretch(seed); } finally { new Uint8Array(seed).fill(0); }
   }
-  async function adopt(next) {
+  async function adopt(next, {at = clock(), persist = true} = {}) {
     if (raw) raw.fill(0);
     raw = next;
     key = await keyFrom(raw);
-    session.start();
+    session.start(at);
+    stamp = at;
+    if (persist) store?.write({key: encode(raw), at});
     return key;
   }
+  // A stored session is adopted, never trusted blindly: an expired or damaged
+  // record is cleared rather than opening the sections it was meant to guard.
+  async function restore(saved) {
+    if (!saved || typeof saved.at !== 'number' || typeof saved.key !== 'string') return false;
+    if (clock() < saved.at || clock() - saved.at >= IDLE_MS) { store?.clear(); return false; }
+    let bytes;
+    try { bytes = decode(saved.key); } catch { store?.clear(); return false; }
+    if (bytes.length !== 32) { store?.clear(); return false; }
+    await adopt(bytes, {at: saved.at, persist: false});
+    return true;
+  }
+  // Reading the stored session is asynchronous, so every entry point settles it
+  // first. Without that a page would prompt for a passkey it already holds.
+  const ready = (async () => {
+    if (!store) return;
+    await restore(await store.read());
+    store.subscribe(async value => {
+      if (!value) { if (session.check()) { key = null; if (raw) { raw.fill(0); raw = null; } stamp = 0; session.lock('remote'); } return; }
+      if (key && raw && value.key === encode(raw)) { if (value.at > stamp) { session.start(value.at); stamp = value.at; } return; }
+      await restore(value);
+    });
+  })();
   return {
     idleMs: IDLE_MS,
+    // Settles once any session stored by another page has been adopted.
+    ready,
     available: () => !!(globalThis.isSecureContext && globalThis.PublicKeyCredential && credentials?.get),
     // True while the key is held and the session has not gone idle.
     unlocked: () => session.check() && !!key,
-    touch: () => session.touch(),
+    touch() { session.touch(); if (key && clock() - stamp >= REFRESH_MS) { stamp = clock(); store?.write({key: encode(raw), at: stamp}); } },
     lock: () => session.lock(),
     // Returns the live key, prompting for the passkey only when the session is
-    // locked or has been idle past its window.
+    // locked or has been idle past its window. Concurrent callers — two gated
+    // sections opening at once — share one prompt rather than stacking two.
     async key() {
-      if (session.check() && key) { session.touch(); return key; }
-      return adopt(await fromPasskey());
+      await ready;
+      if (session.check() && key) { this.touch(); return key; }
+      if (!pending) pending = (async () => adopt(await fromPasskey()))().finally(() => { pending = null; });
+      return pending;
     },
     async unlockWithRecoveryCode(code) { return adopt(recoveryBytes(code)); },
     recoveryCode() {
