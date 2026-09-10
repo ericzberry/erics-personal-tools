@@ -91,7 +91,12 @@ createServer(async (req, res) => {
       const amount=Number(((description.match(/\$\s*([\d,.]+)/)||[])[1]||'').replace(/,/g,''))||null;
       res.end(JSON.stringify({merchant:match?.[2]||'',category:match?.[1]||'Other',channel:/amazon|online/.test(description)?'Online':'Direct',amount,confidence:description.includes('uncertain')?'low':'high',reason:'Synthetic reading of the description.'}));return;
     }
-    if(url.pathname.endsWith('/card-research')){res.end(JSON.stringify({card:{...cards[0],name:'Researched Synthetic Card'}}));return;}
+    if(url.pathname.endsWith('/card-research')){
+      let text='';for await(const data of req)text+=data;const name=JSON.parse(text||'{}').name||'';
+      // A loose name answers with the synthetic products it could be; an exact one ingests.
+      if(/^\s*synthetic\s*$/i.test(name)){res.end(JSON.stringify({matches:[{name:'Synthetic Cash Card (United States)',note:'No annual fee · 2% back'},{name:'Synthetic Points Card (United States)',note:'$95 annual fee · 3x dining'}]}));return;}
+      res.end(JSON.stringify({card:{...(/points/i.test(name)?cards[2]:cards[0]),name:`Researched ${name}`}}));return;
+    }
     if(url.pathname==='/v1/cards/snapshot'){res.end(JSON.stringify({records:cards}));return;}
     if(url.pathname.startsWith('/v1/cards/')){
       const cardId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');const previous=cards.find(c=>c.id===cardId);

@@ -5,39 +5,72 @@ const field=(key,label,kind='text',values,extra={})=>FormField({id:`cards-${key}
 const button=(label,key,variant='secondary',props={})=>Button(label,{id:`cards-${key}`,variant,...props});
 export function CardsView(){
   return Stack([
-    Heading('Best card',1),Note('Describe a purchase to compare rewards across your saved cards. No card numbers needed.'),
+    Heading('Best card',1),
     Notice('',{id:'cards-status'}),
     Section([Heading('Your purchase',2),Form([
       field('purchase','What are you buying, and where?','textarea',undefined,{className:'purchase-intake',rows:3}),
-      Note('Anything works: “gas”, “pharmacy”, “Amazon”, “dinner at Cote”, “$180 at Saks”. Include an amount for dollar estimates.'),
       ActionGroup([button('Find best card','compare','primary',{type:'submit'})]),
       Notice('',{id:'cards-purchase-status'}),
       Stack([],{id:'cards-reading'}),
       Disclosure('Adjust what AI read',[
         field('category','Reward category','select',[{value:'',text:'Not selected'},...options(PURCHASE_CATEGORIES)]),
         field('channel','Purchase method','select',options(PURCHASE_CHANNELS)),
-        field('amount','Purchase amount (USD, optional)','number'),
-        Note('Your issuer determines how the transaction actually codes. Comparisons use the values here.')
+        field('amount','Purchase amount (USD, optional)','number')
       ],{id:'cards-adjust',hidden:true}),
       Stack([],{id:'cards-conditions'}),Stack([],{id:'cards-results',className:'comparison-results'})
     ],{id:'cards-purchase-form',className:'form-stack'})],{className:'settings-group'}),
-    Section([Heading('Your cards',2),Note('Saved terms and manual comparisons work offline. AI requires internet.'),Stack([],{id:'cards-list'}),ActionGroup([button('Add card','add','primary',{size:'compact'}),button('Refresh cards','refresh','secondary',{size:'compact'})])],{className:'settings-group'}),
-    Disclosure('Add or edit a card',[Form([
-      field('name','Full card name and country'),
-      ActionGroup([button('Look up issuer terms','research')]),
-      Notice('',{id:'cards-research-status'}),
-      field('unit','Reward type','select',[{value:'cash',text:'Cash back (%)'},{value:'points',text:'Points or miles per dollar'}]),
-      field('base','Base reward rate','number'),field('cpp','Redemption value (cents per point)','number'),
-      Note('Cash back uses 1. For points, enter your own redemption value before comparing.'),
-      Heading('Bonus categories',3),Note('Enter total rates. For capped bonuses, enter remaining eligible spend in USD; leave blank only for unlimited bonuses. Caps are not tracked automatically. Keep inactive bonuses off until enrolled.'),
-      Stack([],{id:'cards-rules'}),ActionGroup([button('Add bonus category','add-rule','secondary',{size:'compact'})]),
-      field('source','Issuer terms URL'),field('checked','Terms reviewed on','date'),
-      field('notes','Limits, exclusions, and shared caps','textarea'),
-      Notice('',{id:'cards-form-status'}),
-      ActionGroup([button('Save reviewed card','save','primary',{type:'submit'}),button('Cancel edit','cancel')])
-    ],{id:'cards-form',className:'form-stack'})],{id:'cards-editor'}),
-    Disclosure('AI connection',[Note('Choose a saved OpenAI connection for issuer research. Reading your purchase description uses the central task model policy.'),field('connection','Saved AI connection','select',[]),button('Refresh connections','connections'),Notice('',{id:'cards-ai-status'})])
+    Section([Heading('Your cards',2),Stack([],{id:'cards-list'}),ActionGroup([button('Add card','add','primary',{size:'compact'}),button('Refresh cards','refresh','secondary',{size:'compact'})])],{className:'settings-group'}),
+    Disclosure('Add or edit a card',[
+      Form([
+        field('find','Which card do you have?','text',undefined,{placeholder:'chase sapphire, amex gold, my citi 2% card'}),
+        ActionGroup([button('Find card and rewards','research','primary',{type:'submit'})]),
+        Notice('',{id:'cards-research-status'}),
+        Stack([],{id:'cards-matches'}),Stack([],{id:'cards-summary'})
+      ],{id:'cards-find-form',className:'form-stack'}),
+      Form([
+        Disclosure('Card terms',[
+          field('name','Full card name and country'),
+          field('unit','Reward type','select',[{value:'cash',text:'Cash back (%)'},{value:'points',text:'Points or miles per dollar'}]),
+          field('base','Base reward rate','number'),field('cpp','Redemption value (cents per point)','number'),
+          Note('Cash back uses 1. For points, enter your own redemption value before comparing.'),
+          Heading('Bonus categories',3),Note('Enter total rates. For capped bonuses, enter remaining eligible spend in USD; leave blank only for unlimited bonuses.'),
+          Stack([],{id:'cards-rules'}),ActionGroup([button('Add bonus category','add-rule','secondary',{size:'compact'})]),
+          field('source','Issuer terms URL'),field('checked','Terms reviewed on','date'),
+          field('notes','Limits, exclusions, and shared caps','textarea')
+        ],{id:'cards-details'}),
+        Notice('',{id:'cards-form-status'}),
+        ActionGroup([button('Save card','save','primary',{type:'submit'}),button('Cancel edit','cancel')])
+      ],{id:'cards-form',className:'form-stack'})
+    ],{id:'cards-editor'}),
+    Disclosure('AI connection',[field('connection','Saved AI connection','select',[]),button('Refresh connections','connections'),Notice('',{id:'cards-ai-status'})])
   ],{className:'travel-wallet card-tool'});
+}
+// A rough name can name more than one real card, so research answers with the
+// products it could be. Choosing one is the only way a card gets researched.
+export function CardMatches(matches,onPick){
+  if(!matches.length)return [];
+  return [Note('Which one do you have?'),...matches.map(match=>{
+    const pick=Button(match.name,{variant:'secondary',size:'compact'});
+    pick.addEventListener('click',()=>onPick(match.name));
+    return Section([pick,...(match.note?[Note(match.note)]:[])],{className:'card-match'});
+  })];
+}
+// What research put in the form, so the owner can check every rate it ingested
+// without opening the terms below.
+export function CardIngest(card){
+  if(!card)return [];
+  const rules=rewardRules(card.rules||'[]');
+  const rate=value=>`${value}${card.unit==='cash'?'%':'×'}`;
+  const detail=rule=>[`${rate(rule.rate)} ${rule.category}`,rule.channel==='Any'?'':rule.channel,
+    rule.active?'':'needs activation',rule.remaining===null?'':`enter your remaining $${rule.remaining} cap`,
+    rule.end?`through ${rule.end}`:'',rule.condition].filter(Boolean).join(' · ');
+  return [Section([
+    Strong(card.name),
+    Note(`${rate(card.base)} base · ${rules.length} bonus ${rules.length===1?'category':'categories'}${card.unit==='points'?` · ${card.cpp>0?`${card.cpp}¢ per point`:'redemption value needed'}`:''}`),
+    ...rules.map(rule=>Note(detail(rule),{className:'footnote card-ingest-rule'})),
+    ...(card.notes?[Note(card.notes)]:[]),
+    ...(card.source?[Link('Issuer terms used',card.source)]:[])
+  ],{className:'purchase-reading card-ingest'})];
 }
 export function BonusRule(rule={},index,onRemove){
   const prefix=`cards-rule-${index}`;

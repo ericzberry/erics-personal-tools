@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Eric's Personal Tools",
-  "version": "0.6.70",
+  "version": "0.6.71",
   "description": "Personal restaurant reservation searches, travel wallet, AI settings, ESPN draft advice, and Gmail assistance.",
   "minimum_chrome_version": "116",
   "permissions": [

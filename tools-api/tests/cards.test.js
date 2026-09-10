@@ -53,6 +53,18 @@ test('issuer research requires web evidence and rejects incomplete or ungrounded
  assert.equal((await researchCard(connection,{name:'Synthetic Cash'},fetcher)).card.base,2);
  evidence=false;await assert.rejects(researchCard(connection,{name:'Synthetic Cash'},fetcher),e=>e.status===502);
 });
+test('a loose card name returns the products it could be instead of guessed terms',async()=>{
+ let searched=true,reply={matches:[{name:'Synthetic Cash Card (United States)',note:'No annual fee'},{name:'Synthetic Cash Plus (United States)',note:'$95 annual fee'}]};
+ const fetcher=async url=>url.endsWith('/models')?Response.json({data:[{id:'gpt-5-mini'}]}):Response.json({status:'completed',output:[...(searched?[{type:'web_search_call',action:{sources:[{url:fixture.source}]}}]:[]),{type:'message',content:[{type:'output_text',text:JSON.stringify(reply)}]}]});
+ const result=await researchCard(connection,{name:'synthetic'},fetcher);
+ assert.deepEqual(result.matches.map(m=>m.name),['Synthetic Cash Card (United States)','Synthetic Cash Plus (United States)']);
+ // No rates come back with an unresolved identity, so nothing can be ingested by mistake.
+ assert.equal(result.card,undefined);
+ // Alternatives still have to come from a search, and a malformed list is not a choice.
+ searched=false;await assert.rejects(researchCard(connection,{name:'synthetic'},fetcher),e=>e.status===502);
+ searched=true;reply={matches:[{name:'Only one'}]};
+ await assert.rejects(researchCard(connection,{name:'synthetic'},fetcher),e=>e.status===502);
+});
 test('issuer evidence ignores tracking and fragments but preserves product-defining query parameters',()=>{
  assert.equal(issuerSourceKey('https://issuer.example/terms/?utm_source=openai#terms'),issuerSourceKey('https://issuer.example/terms'));
  assert.notEqual(issuerSourceKey('https://issuer.example/terms?product=a'),issuerSourceKey('https://issuer.example/terms?product=b'));

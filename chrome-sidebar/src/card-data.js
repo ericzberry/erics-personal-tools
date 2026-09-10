@@ -19,6 +19,13 @@ export function rewardRules(value){
     return {category:rule.category,channel:rule.channel,rate:number(rule.rate,100,'bonus rate'),remaining:rule.remaining===null?null:number(rule.remaining,10000000,'remaining eligible spend'),active:rule.active,end,condition:text(rule.condition??'',500,'bonus conditions')};
   });
 }
+export const CARD_MATCH_LIMIT=6;
+// Research answers a rough card name with either one identified product or a
+// short list of real ones. The owner picks which card they hold; AI never does.
+export function parseCardMatches(value){
+  if(!Array.isArray(value)||value.length<2||value.length>CARD_MATCH_LIMIT)fail('AI did not return a usable list of matching cards.');
+  return value.map(match=>({name:text(match?.name,120,'card name',true),note:text(match?.note??'',200,'what makes the card different')}));
+}
 export function normalizeCard(input,previous={}){
   const get=key=>input[key]??previous[key];
   const unit=get('unit');if(!['cash','points'].includes(unit))fail('Choose cash back or points.');

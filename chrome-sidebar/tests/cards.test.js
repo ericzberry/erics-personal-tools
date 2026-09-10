@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeCard,compareCards,parseClassification,parsePurchaseIntent} from '../src/card-data.js';
+import {normalizeCard,compareCards,parseClassification,parsePurchaseIntent,parseCardMatches} from '../src/card-data.js';
 import {cardsOffline} from '../src/cards-offline.js';
 const bonus=(extra={})=>({category:'Dining',channel:'Any',rate:3,remaining:null,active:true,end:'',condition:'',...extra});
 const card=(extra={})=>({id:'card',...normalizeCard({name:'Synthetic card',unit:'cash',base:1,cpp:1,rules:JSON.stringify([bonus()]),checked:'2026-09-09',...extra})});
@@ -43,6 +43,14 @@ test('a purchase with no stated amount is compared on effective rate',()=>{
   assert.equal(capped.rate,5);assert.ok(capped.warnings.some(w=>w.includes('$25')));
   // An exhausted bonus still falls back to the base rate.
   assert.equal(compareCards([card({rules:JSON.stringify([bonus({rate:5,remaining:0})])})],{category:'Dining',channel:'Direct'})[0].rate,1);
+});
+test('an ambiguous card name returns named alternatives, never a guess',()=>{
+  const matches=parseCardMatches([{name:'Synthetic Preferred (United States)',note:'$95 annual fee'},{name:'Synthetic Reserve (United States)'}]);
+  assert.deepEqual(matches.map(m=>m.name),['Synthetic Preferred (United States)','Synthetic Reserve (United States)']);
+  assert.equal(matches[1].note,'');
+  // One candidate is not a choice, and neither an empty list nor a long one is usable.
+  for(const value of [[],[{name:'Only one'}],Array.from({length:7},()=>({name:'Card'})),'matches',null])assert.throws(()=>parseCardMatches(value));
+  for(const value of [[{name:''},{name:'Card'}],[{name:'x'.repeat(121)},{name:'Card'}],[{name:'Card',note:'x'.repeat(201)},{name:'Other'}]])assert.throws(()=>parseCardMatches(value));
 });
 test('card queue survives cold offline reopen, reconciles writes and conflicts, and clears on disconnect',async()=>{
   let saved=null,connected=true,cloud=[],calls=0;

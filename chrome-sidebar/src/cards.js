@@ -1,4 +1,4 @@
-import {CardsView,BonusRule,SavedCard,PurchaseConditions,PurchaseReading,ComparisonResults} from './components/cards.js';
+import {CardsView,BonusRule,SavedCard,CardMatches,CardIngest,PurchaseConditions,PurchaseReading,ComparisonResults} from './components/cards.js';
 import {Note,Option} from './components/ui.js';
 import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent} from './card-data.js';
 export function mountCards(root,{credentials,offline,remote}){
@@ -32,7 +32,33 @@ export function mountCards(root,{credentials,offline,remote}){
   });}
   function renderRules(values){$('rules').replaceChildren(...values.map((value,index)=>BonusRule(value,index,()=>{const current=rules();current.splice(index,1);renderRules(current);dirty=true;})));controls();}
   function populate(card){for(const field of fields)$(field).value=card[field]??'';renderRules(rewardRules(card.rules||'[]'));}
-  function edit(card=null){selected=card;newId=crypto.randomUUID();populate(card||{name:'',unit:'cash',base:'',cpp:1,rules:'[]',checked:'',source:'',notes:''});dirty=false;status('','form-status');status('','research-status');}
+  function edit(card=null){
+    selected=card;newId=crypto.randomUUID();populate(card||{name:'',unit:'cash',base:'',cpp:1,rules:'[]',checked:'',source:'',notes:''});dirty=false;
+    // The intake is for finding a card, so it never carries over; a saved card
+    // opens straight to its terms because there is nothing left to find.
+    $('find').value='';$('matches').replaceChildren();$('summary').replaceChildren();$('details').open=Boolean(card);
+    status('','form-status');status('','research-status');
+  }
+  // One rough name is enough. Research identifies the exact product and fills in
+  // every rate it found; when several real cards fit the name it asks which one
+  // rather than guessing, and nothing is saved until the owner saves it.
+  async function ingest(name){
+    const result=await ai('card-research',{name});
+    if(result.matches){
+      $('summary').replaceChildren();
+      $('matches').replaceChildren(...CardMatches(result.matches,choice=>run(()=>ingest(choice),'research-status')));
+      status('That name fits more than one card. Choose the one you hold.','research-status');return;
+    }
+    const card=normalizeCard(result.card);
+    $('matches').replaceChildren();populate(card);dirty=true;
+    $('summary').replaceChildren(...CardIngest(card));
+    // Only a points card still needs something from the owner, so only it opens
+    // the terms; everything else is ready to save after a look at the summary.
+    $('details').open=card.unit==='points';
+    status(card.unit==='points'
+      ?'Found these rewards. Add your redemption value in cents per point, then save.'
+      :'Found these rewards. Check them against the issuer terms, then save.','research-status');
+  }
   function render(){
     $('list').replaceChildren(...(records.length?records.map(card=>SavedCard(card,{
       onEdit:()=>{if(dirty){status('Save or cancel your current edit first.','form-status');return;}edit(card);$('editor').open=true;$('name').focus();},
@@ -51,10 +77,17 @@ export function mountCards(root,{credentials,offline,remote}){
     try{const result=await remote(token,'/v1/ai-connections');const previous=$('connection').value;$('connection').replaceChildren(Option('Choose a connection',''),...result.connections.filter(c=>c.hasApiKey).map(c=>Option(`${c.name} · ${c.provider}`,c.id)));if(result.connections.some(c=>c.id===previous))$('connection').value=previous;else if(result.connections.filter(c=>c.hasApiKey).length===1)$('connection').value=result.connections.find(c=>c.hasApiKey).id;status(result.connections.some(c=>c.hasApiKey)?'':'Save an AI connection in Settings to enable category suggestions.','ai-status');}
     catch(error){status(error.message,'ai-status');}
   }
+  // Both AI calls fall back to something the owner can do by hand, so an
+  // unavailable model opens the controls that replace it: the reading for a
+  // purchase, the card terms for a card.
+  function fallback(action){
+    if(action==='card-category'){$('adjust').hidden=false;$('adjust').open=true;return 'Set the category below to compare your saved cards offline.';}
+    $('details').open=true;return 'Open Card terms below to enter this card yourself.';
+  }
   async function ai(action,value){
     if(!token)throw Error('Connect in Settings first.');
-    if(globalThis.navigator?.onLine===false){$('adjust').hidden=false;$('adjust').open=true;throw Error('AI needs internet. Set the category below to compare your saved cards offline.');}
-    const id=$('connection').value;if(!id){$('adjust').hidden=false;$('adjust').open=true;throw Error('Choose a saved AI connection below, or set the category yourself.');}
+    if(globalThis.navigator?.onLine===false)throw Error(`AI needs internet. ${fallback(action)}`);
+    const id=$('connection').value;if(!id)throw Error(`Choose a saved AI connection below. ${fallback(action)}`);
     const current=generation;
     const result=await remote(token,`/v1/ai-connections/${id}/${action}`,{method:'POST',value,timeoutMs:130000});
     if(current!==generation)throw Error('Connection changed. Try again.');return result;
@@ -90,16 +123,17 @@ export function mountCards(root,{credentials,offline,remote}){
   $('amount').addEventListener('input',()=>{clearResults();manualReading();});
   for(const key of ['category','channel'])$(key).addEventListener('change',()=>{clearResults();manualReading();});
   $('conditions').addEventListener('change',()=>{try{comparison();}catch(error){status(error.message,'purchase-status');}});
-  $('add').addEventListener('click',()=>{if(dirty){status('Save or cancel your current edit first.','form-status');return;}edit();$('editor').open=true;$('name').focus();});
+  $('add').addEventListener('click',()=>{if(dirty){status('Save or cancel your current edit first.','form-status');return;}edit();$('editor').open=true;$('find').focus();});
   $('add-rule').addEventListener('click',()=>{const values=rules();if(values.length>=20){status('Save up to 20 bonus categories.','form-status');return;}renderRules([...values,{}]);dirty=true;});
   $('unit').addEventListener('change',()=>{if($('unit').value==='cash')$('cpp').value='1';else $('cpp').value='';controls();});
   $('form').addEventListener('input',()=>dirty=true);
   $('cancel').addEventListener('click',()=>{edit();$('editor').open=false;});
-  $('research').addEventListener('click',()=>run(async()=>{
-    // Keep existing edited terms until a complete, validated result is available.
-    const result=await ai('card-research',{name:$('name').value.trim()});populate(normalizeCard(result.card));dirty=true;
-    status('Review the issuer source, card variant, rates, activation, remaining caps, and exclusions below. Set your point value if needed, then save.','research-status');
-  },'research-status'));
+  $('find-form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
+    const query=$('find').value.trim();
+    if(!query)throw Error('Say which card you have. A rough name is enough.');
+    // Existing edited terms survive until a complete, validated result replaces them.
+    await ingest(query);
+  },'research-status');});
   $('form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
     const card=normalizeCard({...Object.fromEntries(fields.map(key=>[key,$(key).value])),rules:JSON.stringify(rules())});
     if(card.unit==='points'&&card.cpp<=0)throw Error('Enter your redemption value in cents per point.');
