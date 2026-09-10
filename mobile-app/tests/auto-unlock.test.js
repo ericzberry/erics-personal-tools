@@ -30,7 +30,7 @@ test('Lock now stays locked until another visit; failures allow a later foregrou
 });
 
 test('idle expiry is distinguishable from deliberate locking', async () => {
-  const {idleSession, IDLE_MS} = await import('../public/app/passkey-vault.js');
+  const {idleSession, IDLE_MS} = await import('../../chrome-sidebar/src/idle-session.js');
   let now = 0; const reasons = [];
   const session = idleSession({now: () => now, onLock: reason => reasons.push(reason)});
   session.start(); now = IDLE_MS; session.check();

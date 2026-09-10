@@ -1,20 +1,25 @@
 import {Stack,Section,Heading,Note,Notice,Form,FormField,Button,ActionGroup,Disclosure,Link,Strong} from './ui.js';
 import {PURCHASE_CATEGORIES,PURCHASE_CHANNELS,rewardRules} from '../card-data.js';
 const options=values=>values.map(value=>({value,text:value}));
-const field=(key,label,kind='text',values)=>FormField({id:`cards-${key}`,label,kind,options:values});
+const field=(key,label,kind='text',values,extra={})=>FormField({id:`cards-${key}`,label,kind,options:values,...extra});
 const button=(label,key,variant='secondary',props={})=>Button(label,{id:`cards-${key}`,variant,...props});
 export function CardsView(){
   return Stack([
     Heading('Best card',1),Note('Describe a purchase to compare rewards across your saved cards. No card numbers needed.'),
     Notice('',{id:'cards-status'}),
     Section([Heading('Your purchase',2),Form([
-      field('purchase','What are you buying, and where?'),
-      field('amount','Purchase amount (USD)','number'),
-      field('channel','Purchase method','select',options(PURCHASE_CHANNELS)),
-      field('category','Reward category','select',[{value:'',text:'Let AI suggest a category'},...options(PURCHASE_CATEGORIES)]),
-      Note('AI suggests the merchant category. Your issuer determines how the transaction actually codes.'),
-      ActionGroup([button('Find best card','compare','primary',{type:'submit'}),button('Suggest category','classify')]),
-      Notice('',{id:'cards-purchase-status'}),Stack([],{id:'cards-conditions'}),Stack([],{id:'cards-results',className:'comparison-results'})
+      field('purchase','What are you buying, and where?','textarea',undefined,{className:'purchase-intake',rows:3}),
+      Note('Anything works: “gas”, “pharmacy”, “Amazon”, “dinner at Cote”, “$180 at Saks”. Include an amount for dollar estimates.'),
+      ActionGroup([button('Find best card','compare','primary',{type:'submit'})]),
+      Notice('',{id:'cards-purchase-status'}),
+      Stack([],{id:'cards-reading'}),
+      Disclosure('Adjust what AI read',[
+        field('category','Reward category','select',[{value:'',text:'Not selected'},...options(PURCHASE_CATEGORIES)]),
+        field('channel','Purchase method','select',options(PURCHASE_CHANNELS)),
+        field('amount','Purchase amount (USD, optional)','number'),
+        Note('Your issuer determines how the transaction actually codes. Comparisons use the values here.')
+      ],{id:'cards-adjust',hidden:true}),
+      Stack([],{id:'cards-conditions'}),Stack([],{id:'cards-results',className:'comparison-results'})
     ],{id:'cards-purchase-form',className:'form-stack'})],{className:'settings-group'}),
     Section([Heading('Your cards',2),Note('Saved terms and manual comparisons work offline. AI requires internet.'),Stack([],{id:'cards-list'}),ActionGroup([button('Add card','add','primary',{size:'compact'}),button('Refresh cards','refresh','secondary',{size:'compact'})])],{className:'settings-group'}),
     Disclosure('Add or edit a card',[Form([
@@ -31,7 +36,7 @@ export function CardsView(){
       Notice('',{id:'cards-form-status'}),
       ActionGroup([button('Save reviewed card','save','primary',{type:'submit'}),button('Cancel edit','cancel')])
     ],{id:'cards-form',className:'form-stack'})],{id:'cards-editor'}),
-    Disclosure('AI connection',[Note('Choose a saved OpenAI connection for issuer research. Purchase classification uses the central task model policy.'),field('connection','Saved AI connection','select',[]),button('Refresh connections','connections'),Notice('',{id:'cards-ai-status'})])
+    Disclosure('AI connection',[Note('Choose a saved OpenAI connection for issuer research. Reading your purchase description uses the central task model policy.'),field('connection','Saved AI connection','select',[]),button('Refresh connections','connections'),Notice('',{id:'cards-ai-status'})])
   ],{className:'travel-wallet card-tool'});
 }
 export function BonusRule(rule={},index,onRemove){
@@ -72,13 +77,44 @@ export function PurchaseConditions(cards,purchase){
   return fields.length?[Note('Confirm only the requirements that this purchase meets. The comparison updates when you check a box.'),...fields]:[];
 }
 const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(value);
+const percent=value=>`${value.toFixed(2)}%`;
+// What AI read out of the description, shown before the recommendation so the
+// reading can be checked and corrected before any number is trusted.
+export function PurchaseReading(reading){
+  if(!reading)return [];
+  const detail=[reading.merchant,reading.category,reading.channel,reading.amount===null?null:money(reading.amount)].filter(Boolean).join(' · ');
+  return [Section([
+    Strong(detail),
+    ...(reading.reason?[Note(reading.reason)]:[]),
+    ...(reading.confidence==='low'?[Note('Low confidence in this reading. Check the category before relying on the result.',{className:'footnote purchase-reading-warning'})]:[]),
+    Note(reading.manual?'You set these values.':'Read from your description. Adjust below to change it.')
+  ],{className:'purchase-reading'})];
+}
+const near=(a,b)=>Math.abs(a-b)<0.000001;
+// The winning program is always computed from saved terms, never chosen by AI.
+// Each row therefore names the reward program that applied and how far apart the
+// cards actually are.
 export function ComparisonResults(rows){
   if(!rows.length)return [Note('Add a card with reviewed reward rates to compare. Conflicted or deleted cards are excluded.')];
-  const top=rows[0].dollars;
-  return [Heading('Estimated rewards',2),Note('Based on saved terms and the selected category. Excludes interest, fees, signup bonuses, and unentered offers. Comparing does not deduct spending caps.'),...rows.map(row=>Section([
-    Strong(`${Math.abs(row.dollars-top)<0.000001?(rows.filter(r=>Math.abs(r.dollars-top)<0.000001).length>1?'Tied best · ':'Best return · '):''}${row.name}`),
-    Heading(`${money(row.dollars)} · ${row.rate.toFixed(2)}%`,3),
-    Note(row.unit==='points'?`${row.earned.toFixed(2)} points × ${row.cpp}¢ redemption value`:'Estimated cash back'),
-    Disclosure('Calculation and conditions',[Note(row.matched?`${row.matched.rate}${row.unit==='cash'?'%':'×'} bonus${row.matched.remaining===null?'':` on up to $${row.matched.remaining} remaining eligible spend`}; ${row.base}${row.unit==='cash'?'%':'×'} base on the rest.`:`${row.base}${row.unit==='cash'?'%':'×'} base rate used.`),...row.warnings.map(w=>Note(w)),...(row.source?[Link('Issuer terms',row.source)]:[])])
-  ],{className:Math.abs(row.dollars-top)<0.000001?'comparison-result comparison-best':'comparison-result'}))];
+  const top=rows[0].dollars,tied=rows.filter(row=>near(row.dollars,top)).length>1,runnerUp=rows.find(row=>!near(row.dollars,top));
+  const estimated=rows[0].estimated;
+  const program=row=>row.matched
+    ?`${row.matched.rate}${row.unit==='cash'?'%':'×'} ${row.matched.category} bonus${row.matched.channel==='Any'?'':` · ${row.matched.channel} only`}`
+    :`${row.base}${row.unit==='cash'?'%':'×'} base rate · no bonus program matched`;
+  const why=row=>{
+    if(!near(row.dollars,top))return `Behind by ${percent(rows[0].rate-row.rate)}${estimated?` · ${money(top-row.dollars)} less`:''}.`;
+    if(tied)return 'Tied at the same effective rate. Either card earns the same here.';
+    if(!runnerUp)return 'The only card with reviewed terms that applies to this purchase.';
+    return `Beats ${runnerUp.name} by ${percent(row.rate-runnerUp.rate)}${estimated?` · ${money(row.dollars-runnerUp.dollars)} more`:''}.`;
+  };
+  return [Heading('Recommended card',2),
+    Note(estimated?'Computed from your saved terms and the reading above. Excludes interest, fees, signup bonuses, and unentered offers. Comparing does not deduct spending caps.':'Effective rates from your saved terms. Add an amount to your description for dollar estimates. Excludes interest, fees, signup bonuses, and unentered offers.'),
+    ...rows.map(row=>Section([
+      Strong(`${near(row.dollars,top)?(tied?'Tied best · ':'Best return · '):''}${row.name}`),
+      Heading(estimated?`${money(row.dollars)} · ${percent(row.rate)}`:percent(row.rate),3),
+      Note(program(row)),
+      Note(why(row),{className:'footnote comparison-why'}),
+      ...(estimated&&row.unit==='points'?[Note(`${row.earned.toFixed(2)} points × ${row.cpp}¢ redemption value`)]:[]),
+      Disclosure('Calculation and conditions',[Note(row.matched?`${row.matched.rate}${row.unit==='cash'?'%':'×'} bonus${row.matched.remaining===null?'':` on up to $${row.matched.remaining} remaining eligible spend`}; ${row.base}${row.unit==='cash'?'%':'×'} base on the rest.`:`${row.base}${row.unit==='cash'?'%':'×'} base rate used.`),...row.warnings.map(w=>Note(w)),...(row.source?[Link('Issuer terms',row.source)]:[])])
+    ],{className:near(row.dollars,top)?'comparison-result comparison-best':'comparison-result'}))];
 }

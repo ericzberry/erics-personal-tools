@@ -2,9 +2,13 @@
 
 Choose **Best card** from Tools in the extension or unlocked mobile app. Add your full card name and country, then look up issuer terms using a saved OpenAI connection or enter rates manually. Research produces a draft: review the exact card variant, issuer link, reward type, base rate, bonus categories, enrollment, remaining caps and exclusions before saving. No card account numbers, security codes or bank credentials are collected.
 
-Describe the merchant and purchase, enter the amount in USD, and choose how you are paying. Find best card asks AI for a category when none is selected. Low-confidence suggestions pause for review. You can always select or change the category yourself, including offline. Confirm any applicable bonus requirements; unconfirmed requirements are excluded. Changing the purchase description clears the earlier category and result.
+The whole intake is one description box. Write the purchase at whatever level of detail you have — `gas`, `pharmacy`, `Amazon`, `dinner at Cote`, `$180 at Saks` — and select Find best card. AI reads that description into a merchant, a reward category, a purchase method and an amount if you stated one, and the reading is shown above the result. Adjust what AI read reveals those three values as ordinary controls; correcting any of them replaces the reading and recomputes. A low-confidence reading still returns a result, marked as low confidence in both the reading and the status. Changing the description clears the earlier reading and result. Confirm any applicable bonus requirements; unconfirmed requirements are excluded.
 
-The application computes rewards from saved rates rather than asking AI to choose the winner. Cash back and points are compared as estimated dollars using the owner's cents-per-point valuation. It displays ties, bonus caps and base-rate fallback. It does not combine overlapping bonuses. Expired, inactive, wrong-channel and unconfirmed bonuses are excluded. Conflicted cards and pending deletions are excluded until resolved.
+An amount is optional. With one, results are estimated dollars; without one, results are effective rates over the same reference spend for every card, and a remaining bonus cap is disclosed rather than blended, because it cannot be applied to an unknown amount.
+
+Offline, or with no saved AI connection, Find best card explains that AI is unavailable and opens the same controls so a category can be set by hand. The comparison itself never needs the network.
+
+The application computes rewards from saved rates rather than asking AI to choose the winner: AI reads the purchase, and saved terms decide the card. Each result names the reward program that applied — the matching bonus, or the base rate when no bonus matched — and how far it is from the next card in points and dollars. Cash back and points are compared as estimated dollars using the owner's cents-per-point valuation. It displays ties, bonus caps and base-rate fallback. It does not combine overlapping bonuses. Expired, inactive, wrong-channel and unconfirmed bonuses are excluded. Conflicted cards and pending deletions are excluded until resolved.
 
 ## Limits
 
@@ -16,7 +20,7 @@ Remaining spending caps are entered manually and are not decremented by comparis
 
 Cards use the shared encrypted IndexedDB adapter, authenticated encrypted D1 records and per-record revisions. Saved rules remain available after a cold offline reopen. Offline changes are queued before attempting network access and synchronize on reconnect or foreground. Conflicts offer Keep my change or Use cloud version. Disconnect is blocked while card changes remain pending; successful disconnect removes device card copies and retains cloud records. Device storage is a cache, not a permanent backup. API responses are excluded from service-worker shell caching.
 
-Only the purchase description goes to the category model. Issuer research sends the supplied card name. Provider keys remain on the Worker. `cards.category` and `cards.research` select models through the central task policy. Research requires web sources and source URL membership in the provider's reported evidence; the owner still reviews the returned terms.
+Only the purchase description goes to the reading model; saved card names and terms never leave the device for it. Issuer research sends the supplied card name. Provider keys remain on the Worker. `cards.category` and `cards.research` select models through the central task policy. Research requires web sources and source URL membership in the provider's reported evidence; the owner still reviews the returned terms.
 
 ## API and deployment
 

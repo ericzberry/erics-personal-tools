@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeCard,compareCards,parseClassification} from '../src/card-data.js';
+import {normalizeCard,compareCards,parseClassification,parsePurchaseIntent} from '../src/card-data.js';
 import {cardsOffline} from '../src/cards-offline.js';
 const bonus=(extra={})=>({category:'Dining',channel:'Any',rate:3,remaining:null,active:true,end:'',condition:'',...extra});
 const card=(extra={})=>({id:'card',...normalizeCard({name:'Synthetic card',unit:'cash',base:1,cpp:1,rules:JSON.stringify([bonus()]),checked:'2026-09-09',...extra})});
@@ -20,9 +20,29 @@ test('bonuses never stack or count without activation, valid date, channel and c
 });
 test('rates, dates, source URLs and category output reject malformed values',()=>{
   for(const extra of [{name:''},{base:-1},{base:Infinity},{cpp:'invalid',unit:'points'},{source:'javascript:alert(1)'},{checked:'2026-02-30'},{rules:'{}'},{rules:JSON.stringify([bonus({remaining:-10})])}])assert.throws(()=>card(extra));
-  for(const amount of ['',-1,0,Infinity])assert.throws(()=>compareCards([card()],{...purchase,amount}));
+  for(const amount of [-1,0,Infinity,'not a number'])assert.throws(()=>compareCards([card()],{...purchase,amount}));
   assert.throws(()=>parseClassification({category:'Invented',confidence:'high',reason:''}));
   assert.equal(parseClassification({category:'Other',confidence:'low',reason:'Merchant uncertain'}).confidence,'low');
+});
+test('a free-text reading keeps merchant, method and amount but never invents them',()=>{
+  const read=extra=>parsePurchaseIntent({category:'Dining',confidence:'high',reason:'Restaurant',...extra});
+  assert.deepEqual(read({merchant:'Cote',channel:'In store',amount:'400'}),{category:'Dining',confidence:'high',reason:'Restaurant',merchant:'Cote',channel:'In store',amount:400});
+  // A vague description yields no merchant, no amount, and the neutral method.
+  assert.deepEqual(read({}),{category:'Dining',confidence:'high',reason:'Restaurant',merchant:'',channel:'Direct',amount:null});
+  // A malformed extra is dropped rather than failing the whole reading.
+  for(const extra of [{amount:'free'},{amount:-5},{amount:0},{channel:'Invented'}])assert.equal(read(extra).category,'Dining');
+  assert.equal(read({amount:'free'}).amount,null);assert.equal(read({channel:'Invented'}).channel,'Direct');
+  assert.throws(()=>parsePurchaseIntent({category:'Invented',confidence:'high',reason:''}));
+});
+test('a purchase with no stated amount is compared on effective rate',()=>{
+  const rateOnly=compareCards([card({name:'Bonus'}),card({name:'Base',rules:'[]'})],{category:'Dining',channel:'Direct',amount:''},'2026-09-09');
+  assert.deepEqual(rateOnly.map(row=>row.rate),[3,1]);
+  assert.deepEqual(rateOnly.map(row=>row.estimated),[false,false]);
+  // Without an amount a cap cannot be applied, so the bonus is scored in full and the cap disclosed.
+  const capped=compareCards([card({rules:JSON.stringify([bonus({rate:5,remaining:25})])})],{category:'Dining',channel:'Direct'},'2026-09-09')[0];
+  assert.equal(capped.rate,5);assert.ok(capped.warnings.some(w=>w.includes('$25')));
+  // An exhausted bonus still falls back to the base rate.
+  assert.equal(compareCards([card({rules:JSON.stringify([bonus({rate:5,remaining:0})])})],{category:'Dining',channel:'Direct'})[0].rate,1);
 });
 test('card queue survives cold offline reopen, reconciles writes and conflicts, and clears on disconnect',async()=>{
   let saved=null,connected=true,cloud=[],calls=0;

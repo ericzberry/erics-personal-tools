@@ -38,3 +38,14 @@ Use `settings-panel--compact` on a settings disclosure for tighter insets, group
 `Select` now composes `FormattedSelect` from `select.js`. The native select retains the controller ID and value, while the shared trigger and option list handle keyboard and pointer interaction. `Field` supplies the visible label; editable model suggestions use `FormattedSuggestions`, retaining custom input. `select.css` and `tokens.css` are included in every host and the mobile offline shell.
 
 `components/rewards.js` and `rewards-tool.js` share Rewards presentation and behavior between sidebar, full tab, and mobile. `rewards-offline.js` queues encrypted per-record changes and merges them through the existing wallet revision API. Inline delete confirmation replaces the browser dialog.
+
+`ProtectedField` and `MaskedValue` present values that are encrypted on the
+device before they are saved — today a card number on a rewards entry. The
+resting state is masked: `MaskedValue` renders the last four digits, and a full
+number appears only after `secret-vault.js` has been unlocked, in a monospaced
+run so digits can be read back without miscounting. `ProtectedField` leaves its
+inputs empty while a value is stored, because an empty input means "keep what is
+saved"; removing a stored value is a separate, explicit action supplied by the
+controller into the field's `-actions` group. Never render a protected value
+through an ordinary `Field` or `RecordRow` detail line.
+

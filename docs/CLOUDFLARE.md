@@ -36,6 +36,14 @@ Preserve the existing origin restrictions, mobile security headers, request vali
 
 D1 stores durable application data here, including encrypted settings and wallets, plus public release metadata. It is not a temporary webhook inbox. Do not apply pending-only retention to saved records or delete cloud data when a device disconnects.
 
+Protected values inside the rewards wallet (today, card numbers) are a distinct
+category: the device seals them with a key derived from the user's passkey
+before they are sent, so the Worker's own encryption wraps text it has no key
+for. Never add a route, log line, or AI call that expects to read one, and never
+attempt server-side migration of their contents — only the device can re-seal
+them. Records keep the last four digits in the clear as a display hint; nothing
+else about the number leaves the device. Security codes (CVV) are never stored.
+
 For each new data category, document its owner, purpose, encryption requirements, retention, and deletion behavior. Temporary processing data, if introduced, needs its own lifecycle; acknowledge or remove pending work only after confirmed processing. Keep unrelated capabilities' records and synchronization state isolated.
 
 Use the existing database and checked-in schema files. Provide an explicit upgrade for existing installations and test preservation of populated records, not just initialization of an empty database. Apply required additive schema changes before deploying dependent code. Avoid dropping or rewriting data as a deployment shortcut.

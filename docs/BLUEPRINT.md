@@ -65,6 +65,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `offline-storage.js` (encrypted IndexedDB), `cloud-storage.js` (`CLOUD_URL`,
   `cloudRequest`, `CONNECTION_KEY`), `travel-changes.js` (cross-window change
   notification), `private-disconnect.js`.
+- **Device-held secrets** — `secret-vault.js` (WebAuthn PRF key derivation,
+  sealed envelopes, and the recovery code for values the Worker must not be able
+  to read) and `idle-session.js` (the canonical 15-minute inactivity gate, used
+  by both the mobile app lock and the vault).
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
   `rewards-sync.js`. The `*-data.js` modules own validation and are also imported
@@ -98,7 +102,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 
 - `index.html` → `app.js` — the outer, locked shell: passkey unlock, release check,
   service worker registration. `mobile-security.js`, `passkey-vault.js`,
-  `auto-unlock.js` own locking; `releases.js` holds `VERSION`.
+  `auto-unlock.js` own locking (the inactivity gate itself is the shared
+  `idle-session.js`); `releases.js` holds `VERSION`.
 - `unlocked.html` → `unlocked.js` — the disposable unlocked frame that actually runs
   the tools; `mobile-session.js` guards access to it, `tool-layout.js` sizes it.
 - `capabilities.js` — mounts capabilities from the shared registry;
@@ -133,6 +138,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 | Change a control's look | `chrome-sidebar/src/components/ui.js` + `styles.css`/`tokens.css` — never in a feature controller |
 | Add a dropdown | `components/select.js` via `FormField({kind:'select'})` |
 | Change stored record shape | the `*-data.js` validator (shared by app and Worker), the matching `*-schema.sql` with an upgrade path, and the offline adapter's revision/normalize |
+| Add a value the cloud must not be able to read | `chrome-sidebar/src/secret-vault.js` — seal on the device, store the envelope in the record, and keep only a safe hint (such as last four digits) in the clear |
 | Add or change an AI call | `tools-api/src/model-policy.js` for the task policy, `src/providers.js` for provider differences |
 | Change offline/sync behavior | `chrome-sidebar/src/offline-resource.js` (shared by every capability) |
 | Change what mobile ships | `mobile-app/build.js` shared list **and** `sw.js` `SHELL` |

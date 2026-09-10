@@ -1,19 +1,31 @@
-import {CardsView,BonusRule,SavedCard,PurchaseConditions,ComparisonResults} from './components/cards.js';
+import {CardsView,BonusRule,SavedCard,PurchaseConditions,PurchaseReading,ComparisonResults} from './components/cards.js';
 import {Note,Option} from './components/ui.js';
-import {normalizeCard,rewardRules,compareCards,normalizePurchase,parseClassification} from './card-data.js';
+import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent} from './card-data.js';
 export function mountCards(root,{credentials,offline,remote}){
   root.replaceChildren(CardsView());
   const $=key=>root.querySelector(`#cards-${key}`);
   const fields=['name','unit','base','cpp','source','checked','notes'];
   for(const input of root.querySelectorAll('input[type=number]')){input.min='0';input.step='any';}
-  let token='',records=[],selected=null,newId=crypto.randomUUID(),busy=false,dirty=false,conditionKey='',generation=0;
+  let token='',records=[],selected=null,newId=crypto.randomUUID(),busy=false,dirty=false,conditionKey='',generation=0,reading=null,readFrom='';
   const status=(message,target='status')=>{$(target).textContent=message||'';};
   function controls(){
     for(const control of root.querySelectorAll('input,select,textarea,button'))control.disabled=busy||!token;
-    for(const key of ['research','classify','connections'])$(key).disabled=busy||!token||globalThis.navigator?.onLine===false;
+    for(const key of ['research','connections'])$(key).disabled=busy||!token||globalThis.navigator?.onLine===false;
     $('cpp').disabled=busy||!token||$('unit').value==='cash';
   }
   function clearResults(){conditionKey='';$('conditions').replaceChildren();$('results').replaceChildren();status('','purchase-status');}
+  function clearReading(){reading=null;readFrom='';$('reading').replaceChildren();$('adjust').hidden=true;$('adjust').open=false;$('category').value='';$('amount').value='';$('channel').value='Direct';}
+  // The reading is the only thing between the description and the comparison, so
+  // it is always shown and always editable, whether AI or the owner supplied it.
+  // Once the controls are revealed they stay reachable, even with no reading yet.
+  function showReading(){$('reading').replaceChildren(...PurchaseReading(reading));if(reading)$('adjust').hidden=false;}
+  function manualReading(){
+    // An owner correction replaces AI's confidence and explanation but keeps the
+    // merchant it recognized, which the description still supports.
+    reading=$('category').value?{merchant:reading?.merchant||'',category:$('category').value,channel:$('channel').value,
+      amount:$('amount').value===''?null:Number($('amount').value),confidence:'high',reason:'',manual:true}:null;
+    showReading();
+  }
   function rules(){return [...$('rules').querySelectorAll('[data-rule]')].map(row=>{
     const input=key=>row.querySelector(`[id$="-${key}"]`).value;
     return {category:input('category'),rate:input('rate'),channel:input('channel'),remaining:input('remaining')===''?null:input('remaining'),active:input('active')==='true',end:input('end'),condition:input('condition')};
@@ -41,18 +53,23 @@ export function mountCards(root,{credentials,offline,remote}){
   }
   async function ai(action,value){
     if(!token)throw Error('Connect in Settings first.');
-    if(globalThis.navigator?.onLine===false)throw Error('AI needs internet. Choose a category to compare your saved cards offline.');
-    const id=$('connection').value;if(!id)throw Error('Choose a saved AI connection below.');
+    if(globalThis.navigator?.onLine===false){$('adjust').hidden=false;$('adjust').open=true;throw Error('AI needs internet. Set the category below to compare your saved cards offline.');}
+    const id=$('connection').value;if(!id){$('adjust').hidden=false;$('adjust').open=true;throw Error('Choose a saved AI connection below, or set the category yourself.');}
     const current=generation;
     const result=await remote(token,`/v1/ai-connections/${id}/${action}`,{method:'POST',value,timeoutMs:130000});
     if(current!==generation)throw Error('Connection changed. Try again.');return result;
   }
-  async function classify(){
-    const result=parseClassification(await ai('card-category',{purchase:$('purchase').value.trim()}));
-    $('category').value=result.category;clearResults();status(`${result.category} · ${result.confidence} confidence. ${result.reason} Confirm or change the category.`, 'purchase-status');
+  async function readPurchase(){
+    const description=$('purchase').value.trim();
+    if(!description)throw Error('Describe what you are buying.');
+    const result=parsePurchaseIntent(await ai('card-category',{purchase:description}));
+    reading={...result,manual:false};readFrom=description;
+    $('category').value=result.category;$('channel').value=result.channel;$('amount').value=result.amount===null?'':String(result.amount);
+    clearResults();showReading();
     return result;
   }
   function comparison(){
+    if(!$('category').value)throw Error('Choose a reward category to compare your saved cards.');
     const input=normalizePurchase({amount:$('amount').value,category:$('category').value,channel:$('channel').value});
     if(records.some(c=>!c.deleting&&!c.conflict&&c.unit==='points'&&c.cpp<=0))throw Error('Enter a redemption value above 0 for each points card before comparing.');
     const key=JSON.stringify([input.category,input.channel,records]);
@@ -61,13 +78,17 @@ export function mountCards(root,{credentials,offline,remote}){
     $('results').replaceChildren(...ComparisonResults(compareCards(records,{...input,confirmed})));controls();
   }
   $('purchase-form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
-    if(!$('category').value){const result=await classify();if(result.confidence==='low'){status(`${result.reason} Confirm the suggested category or choose another, then select Find best card.`,'purchase-status');return;}}
-    comparison();if(!$('purchase-status').textContent.includes('confidence'))status('Compared using the selected category.','purchase-status');
+    // A changed description invalidates the previous reading; an owner-adjusted
+    // reading is kept, so re-comparing never overwrites a manual correction.
+    if(!reading||(!reading.manual&&readFrom!==$('purchase').value.trim()))await readPurchase();
+    comparison();
+    // The reading and the result speak for themselves; only a shaky reading needs a notice.
+    status(reading.confidence==='low'?'Compared, but the reading is low confidence. Check the category below.':'','purchase-status');
   },'purchase-status');});
-  $('classify').addEventListener('click',()=>run(classify,'purchase-status'));
-  for(const key of ['purchase','category','channel','amount'])$(key).addEventListener('input',()=>{
-    if(key==='purchase')$('category').value='';clearResults();
-  });
+  $('purchase').addEventListener('input',()=>{clearReading();clearResults();});
+  // The formatted select dispatches both input and change; the number field only input.
+  $('amount').addEventListener('input',()=>{clearResults();manualReading();});
+  for(const key of ['category','channel'])$(key).addEventListener('change',()=>{clearResults();manualReading();});
   $('conditions').addEventListener('change',()=>{try{comparison();}catch(error){status(error.message,'purchase-status');}});
   $('add').addEventListener('click',()=>{if(dirty){status('Save or cancel your current edit first.','form-status');return;}edit();$('editor').open=true;$('name').focus();});
   $('add-rule').addEventListener('click',()=>{const values=rules();if(values.length>=20){status('Save up to 20 bonus categories.','form-status');return;}renderRules([...values,{}]);dirty=true;});
@@ -87,7 +108,7 @@ export function mountCards(root,{credentials,offline,remote}){
     records=result.records;edit();$('editor').open=false;clearResults();render();status(result.syncMessage||'Card saved.');
   },'form-status');});
   async function refresh(){
-    const next=await credentials.get();if(next!==token){generation++;token=next;records=[];edit();clearResults();render();}
+    const next=await credentials.get();if(next!==token){generation++;token=next;records=[];edit();clearReading();clearResults();render();}
     if(!token){status('Connect in Settings to download your cards.');return;}
     const result=await request('/v1/cards');records=result.records;clearResults();render();status(result.syncMessage);await connectionList();
   }
@@ -97,6 +118,6 @@ export function mountCards(root,{credentials,offline,remote}){
   window.addEventListener('online',reload);window.addEventListener('offline',()=>{controls();status('Offline · Saved cards and manual comparisons are available.');});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
-  credentials.subscribe?.(()=>{generation++;token='';records=[];edit();clearResults();render();reload();});
-  render();const ready=run(refresh);return {ready,refresh:reload,clear:()=>{generation++;token='';records=[];edit();clearResults();render();}};
+  credentials.subscribe?.(()=>{generation++;token='';records=[];edit();clearReading();clearResults();render();reload();});
+  render();const ready=run(refresh);return {ready,refresh:reload,clear:()=>{generation++;token='';records=[];edit();clearReading();clearResults();render();}};
 }

@@ -95,6 +95,17 @@ test('rewards sync is authenticated, encrypted, revision protected, and validate
  assert.deepEqual((await (await call(env,url)).json()).entries,saved.entries);
  assert.equal((await call(env,url,'PUT',{entries:[],revision:null})).status,409);
  for(const entries of [[entry,entry],[{...entry,url:'javascript:alert(1)'}],[{...entry,id:'bad'}],[{...entry,updatedAt:'bad'}]])assert.equal((await call(env,url,'PUT',{entries,revision:saved.revision})).status,400);
+ // Card numbers must arrive already sealed by the device. The API has no key
+ // for them and must refuse anything it could actually read.
+ const sealed=JSON.stringify({v:1,iv:'aaaa',ciphertext:'bbbb'});
+ for(const bad of [{secret:'4111111111111111',secretHint:'1111'},{secret:sealed},{secretHint:'1111'},{secret:sealed,secretHint:'11'}])
+   assert.equal((await call(env,url,'PUT',{entries:[{...entry,...bad}],revision:saved.revision})).status,400);
+ const protectedSave=await call(env,url,'PUT',{entries:[{...entry,secret:sealed,secretHint:'1111'}],revision:saved.revision});
+ assert.equal(protectedSave.status,200);
+ const protectedEntries=(await protectedSave.json()).entries;
+ assert.equal(protectedEntries[0].secret,sealed);
+ assert.equal(env.sql.prepare('SELECT value FROM rewards_wallet').get().value.includes('bbbb'),false,'the envelope is encrypted again at rest');
+ saved.revision=(await (await call(env,url)).json()).revision;
  assert.equal((await call(env,url,'PUT',{entries:[],revision:saved.revision})).status,200);
  assert.deepEqual((await (await call(env,url)).json()).entries,[]);
 });

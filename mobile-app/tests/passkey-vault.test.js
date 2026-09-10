@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {passkeyVault, idleSession, IDLE_MS, VAULT_KEY, LEGACY_KEY, encode} from '../public/app/passkey-vault.js';
+import {passkeyVault, VAULT_KEY, LEGACY_KEY, encode} from '../public/app/passkey-vault.js';
+import {idleSession, IDLE_MS} from '../../chrome-sidebar/src/idle-session.js';
 const token = 'synthetic-private-token-at-least-32-characters';
 function fixture() {
   const data = new Map(), storage = {getItem: key => data.get(key) || null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key)};

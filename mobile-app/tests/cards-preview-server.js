@@ -8,7 +8,11 @@ const token = 'synthetic-private-token-at-least-32-characters';
 const id = '11111111-1111-4111-8111-111111111111';
 let records = [{id, name: 'Synthetic airline', category: 'Airline', traveler: 'Test traveler', number: '000123456', notes: 'Synthetic private note', expires: '', revision: 'first', updatedAt: new Date().toISOString()}];
 let apiCalls = 0;
-let cards=[{id:'22222222-2222-4222-8222-222222222222',name:'Synthetic Everyday Cash',unit:'cash',base:2,cpp:1,rules:'[]',checked:'2026-09-09',source:'https://example.com/terms',notes:'Synthetic terms for testing only.',revision:'first'}, {id:'33333333-3333-4333-8333-333333333333',name:'Synthetic Dining Points',unit:'points',base:1,cpp:1.5,rules:JSON.stringify([{category:'Dining',channel:'Any',rate:3,remaining:50,active:true,end:'',condition:'Eligible restaurant purchase'}]),checked:'2026-09-09',source:'',notes:'',revision:'first'}];
+let rewards={entries:[
+  {id:'55555555-5555-4555-8555-555555555555',kind:'benefit',name:'Synthetic dining credit',source:'Synthetic Card',value:'$50 credit',due:'2026-10-15',state:'available',url:'',notes:'Synthetic terms for testing only.',secret:'',secretHint:'',updatedAt:new Date().toISOString()},
+  {id:'66666666-6666-4666-8666-666666666666',kind:'balance',name:'Synthetic airline miles',source:'Synthetic Airline',value:'42,000 miles',due:'',state:'available',url:'',notes:'',secret:'',secretHint:'',updatedAt:new Date().toISOString()}
+],revision:'first'};
+let cards=[{id:'22222222-2222-4222-8222-222222222222',name:'Synthetic Everyday Cash',unit:'cash',base:2,cpp:1,rules:'[]',checked:'2026-09-09',source:'https://example.com/terms',notes:'Synthetic terms for testing only.',revision:'first'}, {id:'33333333-3333-4333-8333-333333333333',name:'Synthetic Dining Points',unit:'points',base:1,cpp:1.5,rules:JSON.stringify([{category:'Dining',channel:'Any',rate:3,remaining:50,active:true,end:'',condition:'Eligible restaurant purchase'}]),checked:'2026-09-09',source:'',notes:'',revision:'first'}, {id:'44444444-4444-4444-8444-444444444444',name:'Synthetic Everyday Points',unit:'points',base:1,cpp:1.2,rules:JSON.stringify([{category:'Gas',channel:'Any',rate:4,remaining:null,active:true,end:'',condition:''},{category:'Department stores',channel:'Any',rate:3,remaining:null,active:true,end:'',condition:''}]),checked:'2026-09-09',source:'',notes:'',revision:'first'}];
 const fixture = `
 const fixtureEncode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
 let canceled = false, unsupported = false, offset = 0;
@@ -25,11 +29,13 @@ Object.defineProperty(navigator, 'credentials', {value: {
   async get({publicKey}) {
     if (canceled) {canceled=false;throw new DOMException('Synthetic cancellation','NotAllowedError');}
     const auth=new Uint8Array(37);auth.set(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(location.hostname))));auth[32]=5;
-    const seed=await crypto.subtle.digest('SHA-256',publicKey.allowCredentials[0].id);
-    return {id:fixtureEncode(publicKey.allowCredentials[0].id),response:{authenticatorData:auth,clientDataJSON:new TextEncoder().encode(JSON.stringify({type:'webauthn.get',origin:location.origin,challenge:fixtureEncode(publicKey.challenge)}))},getClientExtensionResults:()=>({prf:unsupported?{}:{results:{first:seed}}})};
+    const handle=publicKey.allowCredentials?.[0]?.id||new TextEncoder().encode('synthetic-discoverable-passkey');
+    const seed=await crypto.subtle.digest('SHA-256',handle);
+    return {id:fixtureEncode(handle),response:{authenticatorData:auth,clientDataJSON:new TextEncoder().encode(JSON.stringify({type:'webauthn.get',origin:location.origin,challenge:fixtureEncode(publicKey.challenge)}))},getClientExtensionResults:()=>({prf:unsupported?{}:{results:{first:seed}}})};
   }
 }});
 if (!window.PublicKeyCredential) window.PublicKeyCredential=function(){};
+window.addEventListener('message',event=>{if(event.data?.type==='fixture-idle')offset+=event.data.ms;});
 window.addEventListener('DOMContentLoaded',()=>{
   if(parent!==window)return;
   const panel=document.createElement('section'); panel.setAttribute('aria-label','Synthetic test controls'); panel.style.cssText='margin:24px;padding:16px;border:1px dashed #777';
@@ -55,6 +61,12 @@ createServer(async (req, res) => {
     if(url.pathname==='/cards-fixture.js'){
       res.setHeader('Content-Type','text/javascript');res.end(`import {mountCards} from '/app/shared/cards.js';import {cardsOffline} from '/app/shared/cards-offline.js';import {CapabilityPicker} from '/app/shared/components/capabilities.js';const token='${token}';const remote=async(_t,path,options={})=>{const response=await fetch(path,{method:options.method||'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:options.value?JSON.stringify(options.value):undefined});const value=await response.json();if(!response.ok)throw Object.assign(Error(value.error||'Synthetic failure'),{status:response.status});return value;};document.getElementById('navigation').replaceChildren(CapabilityPicker());mountCards(document.getElementById('root'),{credentials:{get:async()=>token},offline:cardsOffline({remote}),remote});`);return;
     }
+    if(url.pathname==='/rewards-preview'){
+      res.setHeader('Content-Type','text/html');res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><script src="/app/fixture.js"></script><link rel="stylesheet" href="/app/styles.css"><link rel="stylesheet" href="/app/shared/components/travel.css"><link rel="stylesheet" href="/app/shared/components/capabilities.css"></head><body class="shell unlocked-tools"><main id="root"></main><script type="module" src="/rewards-fixture.js"></script></body></html>`);return;
+    }
+    if(url.pathname==='/rewards-fixture.js'){
+      res.setHeader('Content-Type','text/javascript');res.end(`import {mountRewards} from '/app/shared/rewards-tool.js';import {rewardsOffline} from '/app/shared/rewards-offline.js';const token='${token}';const remote=async(_t,path,options={})=>{const response=await fetch(path,{method:options.method||'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:options.value?JSON.stringify(options.value):undefined});const value=await response.json();if(!response.ok)throw Object.assign(Error(value.error||'Synthetic failure'),{status:response.status});return value;};const tool=mountRewards(document.getElementById('root'),{credentials:{get:async()=>token},offline:rewardsOffline({remote})});window.previewTool=tool;tool.refresh();`);return;
+    }
     if (url.pathname === '/fixture-count') {res.end(JSON.stringify({apiCalls}));return;}
     if (url.pathname.startsWith('/app/')) {
       const response = await worker.fetch(new Request(url), {ASSETS:{fetch:async () => {
@@ -73,13 +85,22 @@ createServer(async (req, res) => {
     if (req.headers.authorization !== 'Bearer ' + token) {res.statusCode=401;res.end('{}');return;}
     if (url.pathname === '/health') {res.end('{"ok":true}');return;}
     if (url.pathname === '/v1/ai-connections') {res.end(JSON.stringify({connections:[{id,name:'Synthetic AI',provider:'openai',hasApiKey:true}]}));return;}
-    if(url.pathname.endsWith('/card-category')){let text='';for await(const data of req)text+=data;const value=JSON.parse(text);res.end(JSON.stringify({category:'Dining',confidence:value.purchase.includes('uncertain')?'low':'high',reason:'Synthetic restaurant category'}));return;}
+    if(url.pathname.endsWith('/card-category')){
+      let text='';for await(const data of req)text+=data;const description=JSON.parse(text).purchase.toLowerCase();
+      const match=[['gas','Gas','Gas station'],['pharmacy','Drugstores','Pharmacy'],['saks','Department stores','Saks Fifth Avenue'],['amazon','Online shopping','Amazon'],['cote','Dining','Cote'],['dinner','Dining','Restaurant'],['restaurant','Dining','Restaurant']].find(([term])=>description.includes(term));
+      const amount=Number(((description.match(/\$\s*([\d,.]+)/)||[])[1]||'').replace(/,/g,''))||null;
+      res.end(JSON.stringify({merchant:match?.[2]||'',category:match?.[1]||'Other',channel:/amazon|online/.test(description)?'Online':'Direct',amount,confidence:description.includes('uncertain')?'low':'high',reason:'Synthetic reading of the description.'}));return;
+    }
     if(url.pathname.endsWith('/card-research')){res.end(JSON.stringify({card:{...cards[0],name:'Researched Synthetic Card'}}));return;}
     if(url.pathname==='/v1/cards/snapshot'){res.end(JSON.stringify({records:cards}));return;}
     if(url.pathname.startsWith('/v1/cards/')){
       const cardId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');const previous=cards.find(c=>c.id===cardId);
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end(JSON.stringify({error:'Changed elsewhere'}));return;}
       cards=cards.filter(c=>c.id!==cardId);if(req.method==='PUT'){const record={...value,id:cardId,revision:crypto.randomUUID()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
+    }
+    if(url.pathname==='/v1/rewards'){
+      if(req.method==='PUT'){let text='';for await(const data of req)text+=data;const value=JSON.parse(text);if(value.revision!==rewards.revision){res.statusCode=409;res.end('{}');return;}rewards={entries:value.entries,revision:crypto.randomUUID()};}
+      res.end(JSON.stringify(rewards));return;
     }
     if (url.pathname === '/v1/travel/snapshot') {res.end(JSON.stringify({records}));return;}
     if (url.pathname.startsWith('/v1/travel/')) {

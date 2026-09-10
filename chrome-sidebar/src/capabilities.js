@@ -28,7 +28,7 @@ export function capabilitySections(items=CAPABILITIES){
 }
 // Gmail is not listed: it appears on its own when the active tab is Gmail.
 export const capabilities=[
-  {id:'auto',label:'Current tab',description:'Follow Gmail and ESPN automatically',icon:'M6 3l11.5 7.6-4.8 1.4 2.6 5.4-2.7 1.3-2.6-5.4L6 16.4V3Z'},
+  {id:'auto',label:'Current tab',icon:'M6 3l11.5 7.6-4.8 1.4 2.6 5.4-2.7 1.3-2.6-5.4L6 16.4V3Z'},
   ...CAPABILITIES.map(({href,...rest})=>['travel','rewards'].includes(rest.id)?rest:{...rest,href}),
-  {id:'football',label:'Fantasy football',description:'Draft board and roster advice',section:MISC_SECTION,icon:'M7.5 4h9v5a4.5 4.5 0 0 1-9 0V4Z M12 13.5V17 M8.5 20h7'}
+  {id:'football',label:'Fantasy football',section:MISC_SECTION,icon:'M7.5 4h9v5a4.5 4.5 0 0 1-9 0V4Z M12 13.5V17 M8.5 20h7'}
 ];

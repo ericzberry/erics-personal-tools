@@ -390,8 +390,6 @@ summary > .title-text { display: inline; }
 .capability-settings .glyph { color: var(--muted); }
 .capability-text { display: grid; gap: 3px; min-width: 0; }
 .capability-text > strong { font-size: 13px; }
-.capability-text > span { font-size: 11px; color: var(--muted); }
-.capability-text > span:empty { display: none; }
 .capability-item[aria-current='page'] { background: var(--sage); box-shadow: inset 3px 0 var(--forest); }
 .capability-item[aria-current='page'] .capability-text > strong::after { content: ' · Selected'; font-weight: 400; }
 .capability-item:hover, .capability-settings:hover { background: var(--sage); }

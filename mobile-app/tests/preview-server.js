@@ -27,17 +27,21 @@ Object.defineProperty(navigator, 'credentials', {value: {
   async get({publicKey}) {
     if (canceled) {canceled=false;throw new DOMException('Synthetic cancellation','NotAllowedError');}
     const auth=new Uint8Array(37);auth.set(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(location.hostname))));auth[32]=5;
-    const seed=await crypto.subtle.digest('SHA-256',publicKey.allowCredentials[0].id);
-    return {id:fixtureEncode(publicKey.allowCredentials[0].id),response:{authenticatorData:auth,clientDataJSON:new TextEncoder().encode(JSON.stringify({type:'webauthn.get',origin:location.origin,challenge:fixtureEncode(publicKey.challenge)}))},getClientExtensionResults:()=>({prf:unsupported?{}:{results:{first:seed}}})};
+    // The secret vault asks without allowCredentials (a discoverable passkey);
+    // its seed must stay stable so every device derives the same key.
+    const handle=publicKey.allowCredentials?.[0]?.id||new TextEncoder().encode('synthetic-discoverable-passkey');
+    const seed=await crypto.subtle.digest('SHA-256',handle);
+    return {id:fixtureEncode(handle),response:{authenticatorData:auth,clientDataJSON:new TextEncoder().encode(JSON.stringify({type:'webauthn.get',origin:location.origin,challenge:fixtureEncode(publicKey.challenge)}))},getClientExtensionResults:()=>({prf:unsupported?{}:{results:{first:seed}}})};
   }
 }});
 if (!window.PublicKeyCredential) window.PublicKeyCredential=function(){};
+window.addEventListener('message',event=>{if(event.data?.type==='fixture-idle')offset+=event.data.ms;});
 window.addEventListener('DOMContentLoaded',()=>{
   if(parent!==window)return;
   const panel=document.createElement('section'); panel.setAttribute('aria-label','Synthetic test controls'); panel.style.cssText='margin:24px;padding:16px;border:1px dashed #777';
   const title=document.createElement('h2');title.textContent='Synthetic test controls';panel.append(title);
   for(const [label,action] of [
-    ['Simulate 15 minutes idle',()=>{offset+=900001;}],
+    ['Simulate 15 minutes idle',()=>{offset+=900001;for(const f of document.querySelectorAll('iframe'))f.contentWindow.postMessage({type:'fixture-idle',ms:900001},location.origin);}],
     ['Cancel next passkey',()=>{canceled=true;}],
     ['Disable passkey encryption',()=>{unsupported=true;}],
     ['Go offline',()=>{localStorage.setItem('fixture-offline','yes');window.dispatchEvent(new Event('offline'));for(const f of document.querySelectorAll('iframe'))f.contentWindow.dispatchEvent(new Event('offline'));}],

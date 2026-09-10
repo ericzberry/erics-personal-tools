@@ -2,10 +2,16 @@
 .card-tool textarea {font:inherit;min-height:96px;width:100%;padding:8px;border:1px solid var(--wallet-control-line);border-radius:var(--control-radius);background:var(--wallet-surface);color:var(--wallet-ink);resize:vertical}
 .card-tool .settings-group+.settings-group {border-top:1px solid var(--wallet-line);padding-top:16px}
 .card-tool .bonus-rule {display:grid;gap:12px;padding:12px 0;border-top:1px solid var(--wallet-line)}
+.card-tool .purchase-intake textarea {min-height:56px}
+.card-tool .purchase-reading {display:grid;gap:4px;margin:8px 0;padding:10px 12px;border-left:2px solid var(--wallet-forest);border-radius:0 6px 6px 0;background:var(--wallet-surface)}
+.card-tool .purchase-reading strong {overflow-wrap:anywhere}
+.card-tool .purchase-reading-warning {color:#8a5a1f}
+.card-tool #cards-adjust {margin:0 0 8px}
 .card-tool .comparison-results {display:grid;gap:12px}
+.card-tool .comparison-why {color:var(--wallet-ink)}
 .card-tool .comparison-result {padding:12px 0;border-top:1px solid var(--wallet-line);display:grid;gap:4px}
 .card-tool .comparison-best {background:var(--wallet-hover);padding:12px;border-radius:6px}
 .card-tool input[type=checkbox] {width:20px;min-height:20px;justify-self:start;accent-color:var(--wallet-forest)}
-.card-tool .notice:empty {display:none}
+.card-tool .notice:empty, .card-tool #cards-reading:empty, .card-tool #cards-conditions:empty, .card-tool #cards-results:empty {display:none}
 .card-tool a {color:var(--wallet-forest);overflow-wrap:anywhere}
 @media(max-width:400px){.card-tool{padding:14px}}

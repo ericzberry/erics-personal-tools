@@ -1,5 +1,6 @@
 import {autoUnlock} from './auto-unlock.js';
-import {passkeyVault, idleSession, VAULT_KEY} from './passkey-vault.js';
+import {passkeyVault, VAULT_KEY} from './passkey-vault.js';
+import {idleSession} from './shared/idle-session.js';
 const root = document.getElementById('capabilities-root');
 root.innerHTML = `
 <section class="mobile-lock" aria-labelledby="lock-title">

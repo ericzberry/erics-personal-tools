@@ -71,7 +71,8 @@ export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',
 }
 function capabilityRow(item){
   const props={id:`navigate-${item.id}`,className:'capability-item'};
-  const children=[Glyph(item.icon,{size:16}),Stack([Strong(item.label),Label(item.description)],{className:'capability-text'})];
+  // Menu rows are labels only: no explanatory text under an entry.
+  const children=[Glyph(item.icon,{size:16}),Stack([Strong(item.label)],{className:'capability-text'})];
   return item.href?element('a',{...props,href:item.href,target:'_blank',rel:'noreferrer'},children):element('button',{...props,type:'button'},children);
 }
 export function CapabilityNavigation(items){
@@ -235,7 +236,7 @@ export function CredentialServiceOptions(services,savedNames=[]) {
 export const Form=(children,props={})=>element('form',props,children);
 export const Panel=(children,props={})=>Section(children,{className:'settings-card',...props});
 export const FormStack=children=>Stack(children,{className:'form-stack'});
-export const FormField=options=>Stack(Field(options),{className:'form-field'});
+export const FormField=({className='',...options})=>Stack(Field(options),{className:`form-field ${className}`.trim()});
 
 // Reusable layouts for searchable workspaces and evidence-backed results.
 export const Workspace=children=>Stack(children,{className:'workspace-shell'});
@@ -292,4 +293,28 @@ export function CopyIconButton(label){
   const button=Button('',{className:'icon-button row-copy','aria-label':label,title:label});
   button.append(element('span',{className:'copy-glyph','aria-hidden':'true'}));
   return button;
+}
+
+// Values that stay sealed until the device vault is unlocked. The masked form
+// carries only the last four digits, which are safe to render at any time.
+export const MaskedValue=(text,props={})=>Label(text,{className:'masked-value',...props});
+// Editor group for a value encrypted on the device before it is saved. The
+// inputs are left empty when a value already exists: an empty input means
+// "keep what is stored", never "erase it".
+export function ProtectedField({id,label,help,numberLabel='Card number',expiryLabel='Expiration (MM/YY, optional)'}) {
+  const number=FormField({id:`${id}-number`,label:numberLabel,kind:'password'});
+  const expiry=FormField({id:`${id}-expiry`,label:expiryLabel,kind:'text'});
+  for(const [field,mode,pattern] of [[number,'numeric','[0-9 ]*'],[expiry,'numeric','[0-9/]*']]) {
+    const input=field.querySelector('input');
+    input.setAttribute('inputmode',mode);
+    input.setAttribute('autocomplete','off');
+    input.setAttribute('pattern',pattern);
+  }
+  return Stack([
+    Stack([Label(label,{className:'protected-title'}),Badge('Encrypted on device')],{className:'protected-heading'}),
+    Text('',{id:`${id}-state`,className:'protected-state',role:'status',hidden:true}),
+    ActionGroup([],{id:`${id}-actions`,compact:true}),
+    number,expiry,
+    Note(help,{id:`${id}-help`})
+  ],{id,className:'protected-field'});
 }

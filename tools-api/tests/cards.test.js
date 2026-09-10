@@ -32,11 +32,17 @@ test('cards API authenticates, encrypts, validates and rejects stale per-record 
  assert.equal((await call(path,'DELETE',{revision:saved.revision})).status,200);
  assert.equal((await (await call('/v1/cards')).json()).records.length,0);
 });
-test('category classification uses the task policy and validates AI output',async()=>{
- let body;
- const fetcher=async(url,options)=>url.endsWith('/models')?Response.json({data:[{id:'gpt-4o-mini'}]}):(body=JSON.parse(options.body),Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:'{"category":"Dining","confidence":"medium","reason":"Restaurant purchase"}'}]}]}));
- assert.equal((await classifyPurchase(connection,{purchase:'Dinner at a restaurant'},fetcher)).category,'Dining');
- assert.equal(body.model,'gpt-4o-mini');assert.ok(!body.instructions.includes('Synthetic Cash'));
+test('a free-text description is read into merchant, category, method and amount',async()=>{
+ let body,reply='{"merchant":"Cote","category":"Dining","channel":"In store","amount":400,"confidence":"medium","reason":"Korean steakhouse"}';
+ const fetcher=async(url,options)=>url.endsWith('/models')?Response.json({data:[{id:'gpt-4o-mini'}]}):(body=JSON.parse(options.body),Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:reply}]}]}));
+ const reading=await classifyPurchase(connection,{purchase:'dinner at Cote, $400'},fetcher);
+ assert.deepEqual([reading.merchant,reading.category,reading.channel,reading.amount],['Cote','Dining','In store',400]);
+ assert.equal(body.model,'gpt-4o-mini');
+ // Only the description reaches the model; saved card names never do.
+ assert.ok(!JSON.stringify(body).includes('Synthetic Cash'));
+ // A bare description still reads, with no invented merchant, method or amount.
+ reply='{"merchant":"","category":"Gas","confidence":"high","reason":"Fuel"}';
+ assert.deepEqual(Object.values(await classifyPurchase(connection,{purchase:'gas'},fetcher)).slice(0,6),['Gas','high','Fuel','','Direct',null]);
  await assert.rejects(classifyPurchase(connection,{purchase:''},fetcher));
  const invalid=async url=>url.endsWith('/models')?Response.json({data:[{id:'gpt-4o-mini'}]}):Response.json({output:[{type:'message',content:[{type:'output_text',text:'{"category":"Wrong"}'}]}]});
  await assert.rejects(classifyPurchase(connection,{purchase:'Purchase'},invalid),e=>e.status===502);

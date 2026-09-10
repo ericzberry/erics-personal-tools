@@ -39,6 +39,7 @@ The catalogue below describes existing exports, not a promise that each componen
 | Research results | `ResultBlock`, `EvidenceList`, `OutputText` | Separate evidence, generated conclusions, and operation status |
 | Editable generated output | `EditableResult` | Keep editing and copying available; preserve edits across async work |
 | Upload | `UploadField` with `attachFileDrop` | Shared browse/drop handling, validation, and inline feedback |
+| Values sealed on the device | `ProtectedField`, `MaskedValue` | Masked by default; the editor's empty input means keep, never erase |
 | Specialized domain presentation | Existing modules such as `travel.js`, `restaurant-views.js`, and draft components | Reuse the relevant view rather than duplicating its rows in another host |
 
 ## Add or extend in this order

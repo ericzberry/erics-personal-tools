@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateReward,nextActions} from '../src/rewards-data.js';
+import {validateReward,nextActions,luhnValid} from '../src/rewards-data.js';
 const base={id:'a',kind:'balance',name:'Test airline',source:'Test program',value:'40,000 miles',state:'available'};
 const now=new Date(2026,8,9,12);
 test('rewards validate dates, required fields, and safe account links',()=>{
@@ -49,4 +49,27 @@ test('capability navigation uses one registry, supports pinned tools, and defaul
  selectCapability('auto');assert.equal(document.getElementById('football-tool').hidden,false);
  assert.equal(document.getElementById('navigate-travel').hasAttribute('aria-current'),false);
  assert.equal(document.getElementById('app-navigation').open,false);
+});
+
+test('the API only accepts an opaque sealed envelope and a four-digit hint, never raw digits',()=>{
+  const sealed=JSON.stringify({v:1,iv:'aaaa',ciphertext:'bbbb'});
+  const entry=validateReward({...base,secret:sealed,secretHint:'4321'});
+  assert.equal(entry.secret,sealed);
+  assert.equal(entry.secretHint,'4321');
+  assert.equal(validateReward(base).secret,'');
+  // A plaintext number, an unsealed envelope, or a hint on its own must fail
+  // before anything reaches storage.
+  assert.throws(()=>validateReward({...base,secret:'4111111111111111',secretHint:'1111'}),/encrypted on your device/);
+  assert.throws(()=>validateReward({...base,secret:JSON.stringify({v:2,iv:'a',ciphertext:'b'}),secretHint:'1111'}),/encrypted on your device/);
+  assert.throws(()=>validateReward({...base,secret:sealed,secretHint:'12'}),/last four digits/);
+  assert.throws(()=>validateReward({...base,secretHint:'4321'}),/together/);
+  assert.throws(()=>validateReward({...base,secret:sealed}),/together/);
+  assert.throws(()=>validateReward({...base,secret:JSON.stringify({v:1,iv:'a',ciphertext:'b'.repeat(5000)}),secretHint:'1111'}),/encrypted on your device/);
+});
+
+test('a card number typo is caught before it is sealed',()=>{
+  assert.equal(luhnValid('4111111111111111'),true);
+  assert.equal(luhnValid('378282246310005'),true);
+  assert.equal(luhnValid('4111111111111112'),false);
+  for(const bad of ['','1234','4111-1111-1111-1111','41111111111111111111'])assert.equal(luhnValid(bad),false);
 });

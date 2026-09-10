@@ -1,8 +1,9 @@
-// Mobile-only local encryption. PRF unwraps the existing API credential; it is
+// Mobile-only local encryption. The inactivity gate lives in the shared
+// idle-session module; this file owns only the passkey envelope.
+// PRF unwraps the existing API credential; it is
 // not a server login assertion. Neither the credential nor PRF output is saved.
 export const VAULT_KEY = 'mobilePasskeyVault.v1';
 export const LEGACY_KEY = 'travelAccessToken';
-export const IDLE_MS = 15 * 60 * 1000;
 const bytes = value => new TextEncoder().encode(value);
 export const encode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 export const decode = value => Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), char => char.charCodeAt(0));
@@ -12,18 +13,6 @@ const aad = record => bytes(JSON.stringify([record.version, record.id, record.rp
 async function wrappingKey(seed, salt) {
   const material = await crypto.subtle.importKey('raw', seed, 'HKDF', false, ['deriveKey']);
   return crypto.subtle.deriveKey({name: 'HKDF', hash: 'SHA-256', salt: decode(salt), info: bytes('erics-tools/mobile/passkey-vault/v1')}, material, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
-}
-export function idleSession({now = Date.now, onLock = () => {}} = {}) {
-  let active = false, last = 0;
-  return {
-    start() { active = true; last = now(); },
-    check() {
-      if (active && (now() < last || now() - last >= IDLE_MS)) this.lock('idle');
-      return active;
-    },
-    touch() { if (this.check()) last = now(); },
-    lock(reason = 'manual') { const wasActive = active; active = false; last = 0; if (wasActive) onLock(reason); }
-  };
 }
 export function passkeyVault({storage = globalThis.localStorage, credentials = globalThis.navigator?.credentials, origin = globalThis.location?.origin, rpId = globalThis.location?.hostname} = {}) {
   let pending = null;
