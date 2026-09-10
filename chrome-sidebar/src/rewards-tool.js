@@ -47,8 +47,8 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
     $('reward-secret-actions').replaceChildren(...(saved?[
       shown?vaultAction('Hide number',()=>{revealed.delete(editing.id);renderSecret();render();})
         :vaultAction('Show number',()=>reveal({id:editing.id,secret:editing.secret})),
-      vaultAction('Remove saved number',()=>{clearSecret=true;renderSecret();},'danger-subtle')
-    ]:clearSecret?[vaultAction('Keep saved number',()=>{clearSecret=false;renderSecret();})]:[]));
+      vaultAction('Remove number',()=>{clearSecret=true;renderSecret();},'danger-subtle')
+    ]:clearSecret?[vaultAction('Keep number',()=>{clearSecret=false;renderSecret();})]:[]));
   }
   function renderVault(){
     const open=vault.unlocked(),available=vault.available();

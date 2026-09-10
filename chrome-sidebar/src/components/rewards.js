@@ -28,8 +28,8 @@ export function RewardsView(){
         field('state','Status','select',[{text:'Available',value:'available'},{text:'Needs activation',value:'activation'},{text:'Used',value:'used'}]),
         field('url','Official account or offer URL (optional)','url'),
         UI.FormField({id:'reward-notes',label:'Terms, eligibility, and next step (optional)',kind:'textarea',rows:3}),
-        UI.ProtectedField({id:'reward-secret',label:'Card number (optional)',
-          help:'Encrypted with your passkey before it leaves this device, so the cloud stores only unreadable text. Never enter the security code (CVV). Leave blank to keep any number already saved.'}),
+        UI.ProtectedField({id:'reward-secret',label:'Card details (optional)',
+          help:'Encrypted with your passkey before it leaves this device, so the cloud stores only unreadable text. Never enter the security code (CVV).'}),
         Notice('',{id:'reward-form-status'}),
         ActionGroup([Button('Save reward',{id:'reward-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'reward-cancel',variant:'secondary'})])
       ],{id:'reward-form',className:'form-stack'})
