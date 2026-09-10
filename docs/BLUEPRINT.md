@@ -39,7 +39,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `rewards.html` | `src/rewards.js` | Rewards & benefits |
 | `cards.html` | `src/cards-page.js` | Best card |
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
-| `data.html` | `src/data-page.js` | Read-only reference data (`?capability=rankings` or league rules) |
+| `data.html` | `src/data-page.js` | Read-only player rankings reference data |
 
 Not page-mounted: `src/background.js` (service worker: settings bridge, draft
 state, release checks, launcher) and the content scripts
@@ -102,7 +102,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - `unlocked.html` → `unlocked.js` — the disposable unlocked frame that actually runs
   the tools; `mobile-session.js` guards access to it, `tool-layout.js` sizes it.
 - `capabilities.js` — mounts capabilities from the shared registry;
-  `tool-navigation.js`/`.css` render the alphabetical launcher.
+  `tool-navigation.js`/`.css` render the home-screen icon grid and, once a tool
+  is open, the same grid inside the Tools dropdown.
 - `restaurants.js` + `restaurant-cache.js` — mobile restaurant view and its
   read-only download cache.
 - `sw.js` — offline shell cache; its cache name carries the version.

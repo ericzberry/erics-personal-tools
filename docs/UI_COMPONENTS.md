@@ -22,7 +22,7 @@ The catalogue below describes existing exports, not a promise that each componen
 
 | Need | Existing component | Guidance |
 | --- | --- | --- |
-| App identity and tool selection | `AppHeader`, `CapabilityNavigation` | Use the capabilities registry and general Tools navigation |
+| App identity and tool selection | `AppHeader`, `CapabilityNavigation`, `CapabilityMenu`, `CapabilityLauncher` | Use the capabilities registry and general Tools navigation; a registry `section` groups entries under a heading in both hosts |
 | Page heading and body | `PageHeader`, `PageBody`; `ToolHeading` and `Main` aliases | One page title; shared insets and section rhythm |
 | Section heading or secondary view | `SectionTitle`, `SubPage`, `Section` | Name the group and provide a meaningful return path |
 | Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceColumns`, `FieldGrid` | Compose layout before introducing new wrappers |

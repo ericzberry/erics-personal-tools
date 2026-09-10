@@ -41,9 +41,12 @@ test('capability navigation uses one registry, supports pinned tools, and defaul
  const {document}=parseHTML('<html><body><div id="app"></div></body></html>');globalThis.document=document;mountApp(document.getElementById('app'));
  const {initializeNavigation,selectCapability,showTool}=await import('../src/navigation.js');initializeNavigation();
  assert.equal(document.getElementById('open-rewards'),null);
- selectCapability('gmail');showTool('football');assert.equal(document.getElementById('gmail-tool').hidden,false);
- assert.equal(document.getElementById('navigate-gmail').getAttribute('aria-current'),'page');
+ // Gmail is not a menu entry: it appears on its own when the tab is Gmail.
+ assert.equal(document.getElementById('navigate-gmail'),null);
+ showTool('gmail');assert.equal(document.getElementById('gmail-tool').hidden,false);
+ selectCapability('travel');showTool('football');assert.equal(document.getElementById('travel-tool').hidden,false);
+ assert.equal(document.getElementById('navigate-travel').getAttribute('aria-current'),'page');
  selectCapability('auto');assert.equal(document.getElementById('football-tool').hidden,false);
- assert.equal(document.getElementById('navigate-gmail').hasAttribute('aria-current'),false);
+ assert.equal(document.getElementById('navigate-travel').hasAttribute('aria-current'),false);
  assert.equal(document.getElementById('app-navigation').open,false);
 });

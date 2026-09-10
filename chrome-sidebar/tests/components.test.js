@@ -28,8 +28,15 @@ test('every Tools entry carries an icon and the sidebar menu renders one per row
     assert.equal(glyph.querySelector('path').getAttribute('d'),item.icon);
   }
   // The label, not the icon, names each row.
-  assert.equal(doc.querySelector('#navigate-gmail .capability-text > strong').textContent,'Gmail');
+  assert.equal(doc.querySelector('#navigate-travel .capability-text > strong').textContent,'Travel wallet');
   assert.ok(doc.querySelector('#open-settings svg'));
+  // Gmail follows the active tab; AI connections and League rules left the menu.
+  for(const id of ['navigate-gmail','navigate-ai','navigate-rules'])assert.equal(doc.getElementById(id),null);
+  // Fantasy football sits under its own Misc heading, after the ungrouped tools.
+  const headings=[...doc.querySelectorAll('.capability-list .capability-group')].map(node=>node.textContent);
+  assert.deepEqual(headings,['Misc']);
+  const misc=[];for(let node=doc.querySelector('.capability-group').nextElementSibling;node?.classList.contains('capability-item');node=node.nextElementSibling)misc.push(node.id);
+  assert.deepEqual(misc,['navigate-rankings','navigate-football']);
 });
 
 test('shared cards and tables treat external text as text, not markup',()=>{

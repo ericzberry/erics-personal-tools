@@ -2,7 +2,7 @@ import {rosterCounts,currentTierPlayers,pickCountdown} from './draft-presentatio
 import {fetchEspnCatalog, reconcileRankings, reconcileSession, correctionPlayers} from './espn-catalog.js';
 import {createManualDraft, applyManualDraft, setManualPick, setManualProgress, resetManualDraft} from './manual-draft.js';
 import {playerKey} from './player-identity.js';
-import {downloadFile,Disclosure, DataTable, RosterCounts, TieredRankings, SelectionRow} from './components/ui.js';
+import {downloadFile, RosterCounts, TieredRankings, SelectionRow} from './components/ui.js';
 import {selectSession} from './session-selection.js';
 import {sessionKey} from './draft-state.js';
 import {recommend} from './recommendations.js';
@@ -17,18 +17,6 @@ const tierStates=new Map();
 const liveSession=()=>reconcileSession(selectSession(sessions,selected),catalog);
 const currentKey=()=>liveSession()?sessionKey(liveSession()):(selected==='auto'?'league:2026:182527585':selected);
 const effectiveSession=()=>reconcileSession(applyManualDraft(liveSession(),manualDrafts[currentKey()]),catalog);
-const human = text => text.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
-const nullLabels = {seasonAcquisitionLimit:'No limit',limit:'No limit',matchupTiebreaker:'None',homeFieldAdvantage:'None'};
-const valueLabel = (key,v) => v === null ? (nullLabels[key] || 'Not set') : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : typeof v === 'string' && key === 'deadline' ? new Date(v).toLocaleString('en-US',{timeZone:'America/New_York',dateStyle:'medium',timeStyle:'short'})+' ET' : typeof v === 'string' ? human(v) : String(v);
-function group(title, headers, rows) {
-  $('rules').append(Disclosure(title,[DataTable(headers,rows)]));
-}
-function renderRules() {
-  group('Roster positions',['Position','Slots','Maximum'],config.roster.positions.map(p=>[p.label,p.slots,p.maximum]));
-  for (const [category,entries] of Object.entries(config.scoring)) group(category,['Scoring event','Points'],entries.map(e=>[e.label,e.points]));
-  for (const [key,title] of Object.entries({league:'League settings',draft:'Draft rules',roster:'Roster size',players:'Player rules',transactions:'Waivers & lineups',trades:'Trades',keepers:'Keepers',regularSeason:'Regular season',playoffs:'Playoffs'}))
-    group(title,['Rule','Setting'],Object.entries(config[key]).filter(([,v])=>!Array.isArray(v)).map(([k,v])=>[human(k),valueLabel(k,v)]));
-}
 function renderDraft() {
   const s=effectiveSession();const live=s?.connected && Date.now()-s.lastSeenAt<15000;
   const warning=s?.missing?.length?`${s.missing.length} earlier pick(s) missing. Open ESPN’s Pick History or reload the draft room to recover available history.`:s?.rejected?'Some ESPN pick entries could not be read. Check ESPN’s pick history.':'';
@@ -138,9 +126,8 @@ $('save-manual-progress').addEventListener('click',()=>{
   const clock=$('manual-clock').value.trim(),slot=$('manual-slot').value;
   changeManual(r=>setManualProgress(r,clock?Number(clock):null,slot?Number(slot):null),'Draft progress saved.');
 });
-$('search-rules').addEventListener('input',()=>{const query=$('search-rules').value.toLowerCase();let matches=0;for(const d of $('rules').children){const match=d.textContent.toLowerCase().includes(query);d.hidden=!match;if(query)d.open=match;if(match)matches++;}$('no-rules').hidden=matches>0;});
 try {
-  const response=await fetch('./config/espn-league-2026.json');if(!response.ok)throw Error('League rules could not be loaded.');config=await response.json();renderRules();
+  const response=await fetch('./config/espn-league-2026.json');if(!response.ok)throw Error('League settings could not be loaded.');config=await response.json();
   const ranksResponse=await fetch('./config/rankings-2026.json');if(!ranksResponse.ok)throw Error('Rankings could not be loaded.');sourceRankings=await ranksResponse.json();
   const catalogResponse=await fetch('./config/espn-players-2026.json');if(!catalogResponse.ok)throw Error('ESPN player list could not be loaded.');useCatalog(await catalogResponse.json());
   if(extension){

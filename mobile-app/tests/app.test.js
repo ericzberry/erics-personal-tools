@@ -11,7 +11,8 @@ test('offline shell includes every shared module and bundled reference dataset',
       assert.ok(paths.includes(dependency),`${path}: missing offline dependency ${dependency}`);
     }
   }
-  assert.ok(paths.includes('/app/data/espn-league-2026.json'));
+  // League rules were removed, so their dataset is no longer shipped offline.
+  assert.ok(!paths.includes('/app/data/espn-league-2026.json'));
   assert.ok(paths.includes('/app/data/rankings-2026.json'));
   assert.ok(!paths.some(path=>path.startsWith('/v1/')));
 });

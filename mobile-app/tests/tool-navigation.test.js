@@ -2,35 +2,45 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML} from '../../chrome-sidebar/node_modules/linkedom/esm/index.js';
 import {mountToolNavigation} from '../dist/app/tool-navigation.js';
-import {CAPABILITIES} from '../dist/app/shared/capabilities.js';
+import {CAPABILITIES,capabilitySections} from '../dist/app/shared/capabilities.js';
 
 const alphabetical=[...CAPABILITIES].sort((a,b)=>a.label.localeCompare(b.label));
 
-function setup(storage){
+function setup(){
   const {document,window}=parseHTML('<html><body><div id="previous"></div><p id="outside">Content</p></body></html>');
   globalThis.document=document;
   const selections=[];let settings=0;
-  const nav=mountToolNavigation(document.getElementById('previous'),{storage,onSelect:id=>selections.push(id),onSettings:()=>settings++});
+  const nav=mountToolNavigation(document.getElementById('previous'),{onSelect:id=>selections.push(id),onSettings:()=>settings++});
   return {document,window,nav,selections,get settings(){return settings;}};
 }
+const toolTiles=nav=>[...nav.querySelectorAll('.launcher-tile')].filter(tile=>!['navigate-home','open-settings'].includes(tile.id));
 
-test('mobile opens on an alphabetized icon launcher, not a dropdown',()=>{
-  const ctx=setup({getItem:()=>null,setItem(){}});
-  const {nav}=ctx;
-  const tools=[...nav.querySelectorAll('.launcher-tile:not(.launcher-tile--settings)')];
-  assert.deepEqual(tools.map(tile=>tile.id),alphabetical.map(item=>`navigate-${item.id}`));
-  assert.deepEqual(tools.map(tile=>tile.querySelector('.launcher-label').textContent),alphabetical.map(item=>item.label));
-  // Every tool is reachable on the first screen; nothing is hidden behind a menu.
-  assert.equal(tools.length,CAPABILITIES.length);
-  assert.equal(nav.querySelectorAll('select,a,details,summary').length,0);
-  assert.equal(nav.querySelector('#navigation-toggle'),null);
-  assert.equal(nav.querySelector('#current-function'),null);
-  assert.equal(nav.tagName.toLowerCase(),'nav');
-  assert.equal(nav.getAttribute('aria-label'),'Tools');
+test('the app opens on a home screen whose icons are shown in place',()=>{
+  const {nav,selections}=setup();
+  assert.deepEqual(selections,[null]);
+  assert.equal(nav.tagName.toLowerCase(),'details');
+  // Home shows the grid itself, so the dropdown is open and its toggle hidden.
+  assert.equal(nav.open,true);
+  assert.equal(nav.querySelector('#navigation-toggle').hidden,true);
+  assert.equal(nav.querySelector('#navigate-home').getAttribute('aria-current'),'page');
+  assert.equal(nav.querySelector('#current-function').textContent,'Home');
+});
+
+test('tools are alphabetical inside their section, with Fantasy items under Misc',()=>{
+  const {nav}=setup();
+  const tiles=toolTiles(nav);
+  const ordered=capabilitySections(alphabetical).flatMap(group=>group.items);
+  assert.deepEqual(tiles.map(tile=>tile.id),ordered.map(item=>`navigate-${item.id}`));
+  assert.deepEqual(tiles.map(tile=>tile.querySelector('.launcher-label').textContent),ordered.map(item=>item.label));
+  assert.equal(tiles.length,CAPABILITIES.length);
+  assert.deepEqual([...nav.querySelectorAll('.launcher-group-title')].map(node=>node.textContent),['Misc']);
+  assert.deepEqual([...nav.querySelectorAll('.launcher-group .launcher-tile')].map(tile=>tile.id),['navigate-rankings']);
+  // League rules and AI connections are no longer tools.
+  for(const id of ['navigate-rules','navigate-ai'])assert.equal(nav.querySelector(`#${id}`),null);
 });
 
 test('every capability ships an icon so the launcher can render it',()=>{
-  const {nav}=setup({getItem:()=>null,setItem(){}});
+  const {nav}=setup();
   for(const item of CAPABILITIES){
     assert.ok(item.icon,`${item.id} has no icon`);
     const glyph=nav.querySelector(`#navigate-${item.id} svg`);
@@ -40,33 +50,31 @@ test('every capability ships an icon so the launcher can render it',()=>{
   }
 });
 
-test('the launcher restores the saved tool, switches in place, and persists the choice',()=>{
-  const saved=new Map([['mobile-selected-tool','rules']]);
-  const ctx=setup({getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)});
-  const {nav,selections}=ctx;
-  assert.deepEqual(selections,['rules']);
-  assert.equal(nav.querySelector('[aria-current="page"]').id,'navigate-rules');
+test('opening a tool collapses the icons into the dropdown, and Home brings them back',()=>{
+  const {nav,selections}=setup();
   nav.querySelector('#navigate-cards').click();
   assert.equal(selections.at(-1),'cards');
-  assert.equal(saved.get('mobile-selected-tool'),'cards');
+  assert.equal(nav.open,false);
+  assert.equal(nav.querySelector('#navigation-toggle').hidden,false);
+  assert.equal(nav.querySelector('#current-function').textContent,'Best card');
   assert.equal(nav.querySelectorAll('[aria-current="page"]').length,1);
   assert.equal(nav.querySelector('[aria-current="page"]').id,'navigate-cards');
-});
-
-test('stale desktop choices and unavailable preference storage fall back to Travel wallet',()=>{
-  assert.deepEqual(setup({getItem:()=>'gmail',setItem(){}}).selections,['travel']);
-  assert.deepEqual(setup({getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}}).selections,['travel']);
+  nav.querySelector('#navigate-home').click();
+  assert.equal(selections.at(-1),null);
+  assert.equal(nav.open,true);
+  assert.equal(nav.querySelector('#navigation-toggle').hidden,true);
+  assert.equal(nav.querySelector('[aria-current="page"]').id,'navigate-home');
 });
 
 test('Settings stays a separate maintenance action, not a tool',()=>{
-  const ctx=setup({getItem:()=>null,setItem(){}});
+  const ctx=setup();
   const settings=ctx.nav.querySelector('#open-settings');
   assert.ok(settings);
   assert.equal(settings.getAttribute('aria-controls'),'capability-settings');
   assert.ok(settings.classList.contains('launcher-tile--settings'));
   settings.click();
   assert.equal(ctx.settings,1);
-  // Choosing Settings must not change or persist the selected tool.
+  // Choosing Settings must not change the selected screen.
   assert.equal(ctx.selections.length,1);
-  assert.equal(ctx.nav.querySelector('[aria-current="page"]').id,'navigate-travel');
+  assert.equal(ctx.nav.querySelector('[aria-current="page"]').id,'navigate-home');
 });

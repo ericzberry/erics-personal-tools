@@ -18,4 +18,4 @@ for (const file of shared) {
   await cp(new URL(`../chrome-sidebar/src/${file}`, import.meta.url), target);
 }
 await mkdir(new URL('./dist/app/data/',import.meta.url),{recursive:true});
-for(const file of ['espn-league-2026.json','rankings-2026.json'])await cp(new URL(`../chrome-sidebar/config/${file}`,import.meta.url),new URL(`./dist/app/data/${file}`,import.meta.url));
+await cp(new URL('../chrome-sidebar/config/rankings-2026.json',import.meta.url),new URL('./dist/app/data/rankings-2026.json',import.meta.url));

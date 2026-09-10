@@ -383,6 +383,8 @@ summary > .title-text { display: inline; }
 .capability-toggle::after { content: ''; display: block; width: 6px; height: 6px; box-sizing: border-box; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-1.5px) rotate(45deg); }
 .capability-navigation[open] .capability-toggle::after { transform: translateY(1.5px) rotate(225deg); }
 .capability-list { display: grid; padding: 0 8px 8px; }
+.capability-group { margin: 0; font-family: inherit; padding: 10px 8px 4px; border-top: 1px solid var(--line); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.capability-group + .capability-item { border-top: 0; }
 .capability-item, .capability-settings { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; text-align: left; padding: 10px 8px; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--ink); background: transparent; text-decoration: none; white-space: normal; overflow-wrap: anywhere; font: inherit; }
 .capability-item .glyph, .capability-settings .glyph { margin-top: 1px; color: var(--forest); }
 .capability-settings .glyph { color: var(--muted); }

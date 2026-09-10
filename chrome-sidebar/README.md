@@ -1,6 +1,6 @@
 # Eric's Chrome sidebar
 
-A standalone Chrome extension within `erics-personal-tools`. Its first tool is ESPN fantasy football: saved league rules and draft-pick tracking.
+A standalone Chrome extension within `erics-personal-tools`. Its first tool is ESPN fantasy football: saved league settings and draft-pick tracking.
 
 ## Install
 
@@ -15,7 +15,6 @@ The prepared build is in `dist/`. Run `npm run build` to regenerate it (Node.js 
 
 ## Included
 
-- All saved league rules, searchable: 53 scoring entries, 23 roster-position settings, waivers, trades, keepers, and playoffs.
 - A read-only ESPN draft reader capturing player, position, NFL team, fantasy team, round, pick within round, and overall pick.
 - Separate real-league and practice sessions; team/player filters; local persistence and JSON export.
 - Duplicate suppression, missing-pick reporting, rollback handling, and a disconnected indicator after 15 seconds without a heartbeat.
@@ -172,7 +171,7 @@ After installing or updating the extension, right-click a webpage and choose **O
 
 Version 0.6.25 adds the native right-click launcher.
 
-Version 0.6.26 adds a gear in the sidebar header that opens in-sidebar Settings. Credentials and Draft are subsections; draft capture, league rules, and reset controls live there. Credentials support named local secrets, replacement, and deletion. Secret inputs are masked and saved values are never rendered back into the UI. Storage access is restricted to trusted extension contexts before saving; values are not encrypted by this extension or synced. Saving credentials does not yet configure provider integrations.
+Version 0.6.26 adds a gear in the sidebar header that opens in-sidebar Settings. Credentials and Draft are subsections; draft capture and reset controls live there. Credentials support named local secrets, replacement, and deletion. Secret inputs are masked and saved values are never rendered back into the UI. Storage access is restricted to trusted extension contexts before saving; values are not encrypted by this extension or synced. Saving credentials does not yet configure provider integrations.
 
 Version 0.6.27 replaces free-text service names with a dropdown for OpenAI, Anthropic, and Google Gemini. Existing saved service names remain selectable so older credentials can still be replaced.
 
@@ -225,11 +224,11 @@ Version 0.6.42 renames the navigation label to Tools and replaces the text chevr
 Version 0.6.43 adds the Restaurants workspace: source-backed name/category discovery, city and neighborhood filters, UWS travel defaults, exact and flexible party sizes, live booking-page checks, explicit name clarification, evidence links, cancellation, and manual page rechecks. Open Restaurants from the capability menu. The Worker research endpoint is deployed. See [reservation usage and validation](RESTAURANTS.md).
 ## Data capabilities (0.6.43)
 
-Use the **Tools** dropdown to open Travel wallet, league rules, player rankings, or AI connections. Travel is an ordinary capability; there are no separate travel callouts on the home or settings screens. The mobile app uses the same catalog.
+Use the **Tools** dropdown to open Travel wallet, Rewards & benefits, Best card, Restaurants, or the **Misc** section holding Player rankings and Fantasy football. Gmail is not listed: it opens by itself when the active tab is Gmail. AI connections lives in Settings, and League rules was removed. Travel is an ordinary capability; there are no separate travel callouts on the home or settings screens. The mobile app uses the same catalog and sections.
 
 Connect Travel wallet once with your private access token to download all records, including masked numbers and notes, into encrypted IndexedDB storage. Downloaded records can be searched, copied, added, edited, and marked for deletion offline. Changes persist before network requests and sync on refresh, reconnect, or foregrounding. Per-record revisions reject stale edits. Conflicts retain the device's changes until you choose the cloud version or explicitly keep the device's version. A lost successful response is reconciled before a retry.
 
-Cloud and device copies are encrypted with AES-GCM. Device encryption is unlocked by the device's saved access token. Disconnect clears the local copy and token but leaves cloud records; pending changes must first be synced or resolved. Browser storage is not a permanent backup. The phone includes bundled league rules and player rankings, plus encrypted offline AI connection metadata; provider keys remain on the server and provider requests require internet. Live draft capture remains an extension action.
+Cloud and device copies are encrypted with AES-GCM. Device encryption is unlocked by the device's saved access token. Disconnect clears the local copy and token but leaves cloud records; pending changes must first be synced or resolved. Browser storage is not a permanent backup. The phone includes bundled player rankings, plus encrypted offline AI connection metadata reachable from Settings; provider keys remain on the server and provider requests require internet. Live draft capture remains an extension action.
 
 ## Travel wallet in the sidebar (0.6.46)
 
@@ -267,6 +266,14 @@ Validation: 141 extension tests, 19 mobile tests, and 31 API tests passed. Synth
 The combined 0.6.49 / mobile 0.1.11 release also shows mobile numbers directly beside Copy, invokes saved passkeys without an extra app Unlock prompt, and removes routine up-to-date messages from shared data views. Final validation: 144 extension, 19 mobile, and 31 API tests pass. This includes the simplified record form and live sidebar propagation verified in the related tasks.
 
 Version 0.6.50 merges restaurant reservations, rewards and central model routing with the latest mobile/offline and travel-wallet updates. One Tools menu includes all extension destinations; travel remains in the sidebar and restaurants opens its workspace. This supersedes the local reservation-only 0.6.43 package.
+
+## Tools menu sections and a mobile home screen (0.6.65 / mobile 0.1.24)
+
+Both hosts read one grouped registry. Registry entries carry an optional `section`, and a **Misc** section now holds Fantasy football and Player rankings; everything else stays in the main, unlabelled group. Gmail left the Tools menu — it opens by itself when the active tab is Gmail, which is what Current tab always did. AI connections is reached from Settings in both hosts rather than as a tool of its own, and League rules is gone: its capability, its data page, its Settings rulebook, and its bundled mobile dataset. The draft engine still reads `config/espn-league-2026.json` for scoring and roster logic.
+
+Mobile opens on a home screen that is the icon grid itself. Choosing a tool collapses that grid behind a **Tools** dropdown holding the same icons plus Home, so a tool keeps the screen; the home screen no longer competes with it for vertical space, and no tool selection is restored across launches.
+
+Validation: 182 extension, 26 mobile tests pass. The sidebar Tools menu and Settings were reviewed in the synthetic harness at 400px and 320px; the mobile home screen, an open tool with its collapsed and expanded dropdown, and AI connections inside Settings were reviewed in the unlocked mobile shell at 375px. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.65.zip`.
 
 ## Travel wallet record list (0.6.61 / mobile 0.1.20)
 

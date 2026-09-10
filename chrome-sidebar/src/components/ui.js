@@ -1,5 +1,5 @@
 import {FormattedSelect,FormattedSuggestions} from './select.js';
-import {capabilities,capabilitiesByName} from '../capabilities.js';
+import {capabilities,capabilitiesByName,capabilitySections} from '../capabilities.js';
 // All DOM construction lives here. Features compose components and supply data.
 function element(tag, props={}, children=[]) {
   const node=document.createElement(tag);
@@ -53,25 +53,45 @@ export function Field({id,label,kind='search',options=[],hiddenLabel=false,place
   if(kind==='select'){const trigger=control.querySelector('button');trigger.setAttribute('aria-labelledby',`${id}-label`);caption.addEventListener('click',()=>trigger.focus());}
   return [caption,list?FormattedSuggestions(control,list,label):control];
 }
-// Flat grid of small tool icons, alphabetical by label. Used where the whole
-// tool list should be visible at a glance instead of hidden behind a dropdown.
+// Grid of small tool icons, alphabetical by label within each section. Used
+// where the whole tool list should be visible at a glance: the mobile home
+// screen, and the mobile Tools dropdown once a tool is open.
 const SETTINGS_GLYPH='M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M12 2.8l1.6 2.3 2.8-.4 1 2.6 2.6 1-.4 2.8 2.3 1.6-2.3 1.6.4 2.8-2.6 1-1 2.6-2.8-.4-1.6 2.3-1.6-2.3-2.8.4-1-2.6-2.6-1 .4-2.8L2.8 12l2.3-1.6-.4-2.8 2.6-1 1-2.6 2.8.4L12 2.8Z';
-export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',label='Tools',settings=false}={}) {
-  const children=items.map(item=>element('button',{id:`navigate-${item.id}`,type:'button',className:'launcher-tile'},[Glyph(item.icon),Label(item.label,{className:'launcher-label'})]));
-  if(settings)children.push(element('button',{id:'open-settings',type:'button',className:'launcher-tile launcher-tile--settings','aria-expanded':'false'},[Glyph(SETTINGS_GLYPH),Label('Settings',{className:'launcher-label'})]));
-  return element('nav',{id,'aria-label':label,className:'capability-launcher'},children);
+const HOME_GLYPH='M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z M9.5 21v-6h5v6';
+const LauncherTile=(id,icon,label,className='launcher-tile',props={})=>element('button',{id,type:'button',className,...props},[Glyph(icon),Label(label,{className:'launcher-label'})]);
+export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',label='Tools',settings=false,home=false}={}) {
+  const groups=capabilitySections(items).map(({title,items:entries})=>{
+    const grid=element('div',{className:'launcher-grid'},entries.map(item=>LauncherTile(`navigate-${item.id}`,item.icon,item.label)));
+    if(!title)return grid;
+    return element('section',{className:'launcher-group'},[Title(title,2,{className:'launcher-group-title'}),grid]);
+  });
+  if(home&&groups[0])groups[0].prepend(LauncherTile('navigate-home',HOME_GLYPH,'Home'));
+  if(settings)groups.push(element('div',{className:'launcher-grid launcher-grid--utility'},[LauncherTile('open-settings',SETTINGS_GLYPH,'Settings','launcher-tile launcher-tile--settings',{'aria-expanded':'false'})]));
+  return element('nav',{id,'aria-label':label,className:'capability-launcher'},groups);
+}
+function capabilityRow(item){
+  const props={id:`navigate-${item.id}`,className:'capability-item'};
+  const children=[Glyph(item.icon,{size:16}),Stack([Strong(item.label),Label(item.description)],{className:'capability-text'})];
+  return item.href?element('a',{...props,href:item.href,target:'_blank',rel:'noreferrer'},children):element('button',{...props,type:'button'},children);
 }
 export function CapabilityNavigation(items){
   const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong('Current tab',{id:'current-function'})]);
-  const rows=items.map(item=>{
-    const props={id:`navigate-${item.id}`,className:'capability-item'};
-    const children=[Glyph(item.icon,{size:16}),Stack([Strong(item.label),Label(item.description)],{className:'capability-text'})];
-    return item.href?element('a',{...props,href:item.href,target:'_blank',rel:'noreferrer'},children):element('button',{...props,type:'button'},children);
-  });
+  const rows=capabilitySections(items).flatMap(({title,items:entries})=>[
+    ...(title?[Title(title,2,{className:'capability-group'})]:[]),
+    ...entries.map(capabilityRow)
+  ]);
   const settings=element('button',{id:'open-settings',type:'button',className:'capability-settings','aria-controls':'settings-tool','aria-expanded':'false'},[Glyph(SETTINGS_GLYPH,{size:16}),Stack([Strong('Settings')],{className:'capability-text'})]);
   const nav=element('nav',{'aria-label':'Tools',className:'capability-list'},[...rows,settings]);
   const disclosure=element('details',{id:'app-navigation',className:'capability-navigation'},[summary,nav]);
   disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'){disclosure.open=false;summary.focus();}});
+  return disclosure;
+}
+// Mobile Tools menu: the same icon grid, collapsed behind a dropdown once a
+// tool is open. On the home screen the caller unhides the grid in place.
+export function CapabilityMenu(items=capabilitiesByName,{current='Home'}={}){
+  const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong(current,{id:'current-function'})]);
+  const disclosure=element('details',{id:'app-navigation',className:'capability-navigation capability-navigation--launcher'},[summary,CapabilityLauncher(items,{settings:true,home:true})]);
+  disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'&&!summary.hidden){disclosure.open=false;summary.focus();}});
   return disclosure;
 }
 export function AppHeader({name='Eric’s tools'}={}) {

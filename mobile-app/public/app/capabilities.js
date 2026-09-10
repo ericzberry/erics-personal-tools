@@ -15,7 +15,8 @@ import {mountRestaurants} from './restaurants.js';
 import {restaurantCache} from './restaurant-cache.js';
 const root=document.getElementById('capabilities-root');
 root.replaceChildren(CapabilitiesView());
-// Connection maintenance is shown only from the app header’s Settings control.
+// Connection maintenance and AI connections are shown only from the app
+// header’s Settings control.
 const connectionRoot=document.getElementById('capability-settings');
 connectionRoot.parentElement.append(connectionRoot);
 connectionRoot.hidden=true;
@@ -31,17 +32,15 @@ const credentials={
 };
 const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,remote:cloudRequest});
 const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,onSettings:()=>parent.postMessage({type:'mobile-open-settings'},location.origin)});
-const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai',load:async()=>{
+const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai',level:2,load:async()=>{
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
 async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();cardTool.clear();rewardTool.clear();}}catch{aiLibrary.clear();}}
 const offline=travelOffline({includeNumbers:true,remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 mountTravel(document.getElementById('capability-travel'),{credentials,offline,showNumbers:true,request:offline.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
-for(const [kind,filename] of [['rules','espn-league-2026.json'],['rankings','rankings-2026.json']]){
-  const library=mountLibrary(document.getElementById(`capability-${kind}`),{kind,load:async()=>({value:await (await fetch(`/app/data/${filename}`)).json()})});
-  await library.refresh();
-}
+const rankings=mountLibrary(document.getElementById('capability-rankings'),{kind:'rankings',load:async()=>({value:await (await fetch('/app/data/rankings-2026.json')).json()})});
+await rankings.refresh();
 let selectedTool;
 const restaurants=mountRestaurants(document.getElementById('capability-restaurants'),{credentials,request:cloudRequest,cache:restaurantDownloads,loadConnections:async()=>{
   const result=await ai.request(await credentials.get(),'/v1/ai-connections');return result.records;

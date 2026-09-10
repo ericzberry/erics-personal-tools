@@ -34,9 +34,6 @@ export function DraftSettings() {
     Button('Refresh ESPN player list',{id:'sync-espn-players'}),Note('',{id:'espn-sync-status',role:'status'})
   ],{id:'draft-settings',className:'settings-panel'});
 }
-export function RulesView() {
-  return Disclosure('League rules',[SectionTitle('The rulebook',Badge('SAVED RULES')),Note('Saved September 8, 2026 · Settings won’t update automatically.'),...Field({id:'search-rules',label:'Search rules',placeholder:'Search scoring, waivers, roster…',hiddenLabel:true}),Stack([],{id:'rules'}),Text('No matching rules.',{id:'no-rules',hidden:true})],{id:'rules-view'});
-}
 export function GmailView() {
   return Section([UI.PageHeader({title:'Open an email in Gmail',titleId:'email-subject',action:Button('Refresh',{id:'refresh-email',variant:'secondary',size:'compact'})}),Main([Note('',{id:'email-from',className:'footnote content-meta'}),Note('',{id:'email-read-status',role:'status'}),
     ActionGroup([Button('Summarize',{id:'summarize-email',variant:'primary',disabled:true}),Button('Generate reply',{id:'reply-email',variant:'secondary',disabled:true})]),Note('',{id:'email-action-status',role:'status'}),
@@ -47,7 +44,7 @@ export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     UI.SettingsList([
-    UI.SettingsLink('AI providers & playground','settings.html'),
+    UI.SettingsLink('AI connections','settings.html'),
     Stack([],{id:'travel-settings-connection',className:'travel-wallet connection-only'}),
     UI.SettingsItem('Credentials',[
       UI.FormStack([
@@ -69,7 +66,7 @@ export function SettingsView() {
       Notice('',{id:'credential-status',hidden:true})
       ])
     ]),
-    UI.SettingsItem('Draft',[DraftSettings(),RulesView(),DraftReset()])
+    UI.SettingsItem('Draft',[DraftSettings(),DraftReset()])
     ])
   ]});
 }
