@@ -1,0 +1,157 @@
+# Repository blueprint
+
+A map of where things live, so a task can find the right file without reading the
+whole repository. This is orientation, not rules: the rules stay in
+[AGENTS.md](../AGENTS.md), the nested `AGENTS.md` files, and the guides listed at
+the end.
+
+**Keep this file current.** Any change to the repository's structure — a new or
+removed directory, entry point, app, shared module, HTML page, schema file, API
+route family, build/test command, or a change to which modules mobile shares —
+must update this blueprint in the same commit. A blueprint that no longer matches
+the tree is worse than none. This file is documentation only; editing it alone
+does not require an app version increment or a release.
+
+## Three apps, one shared core
+
+| App | Directory | Runs as | Version source |
+| --- | --- | --- | --- |
+| Chrome sidebar extension | `chrome-sidebar/` | Chrome side panel + extension tabs | `chrome-sidebar/manifest.json` + `package.json` |
+| Mobile web app | `mobile-app/` | Installable iPhone web app, served by the Worker at `/app/` | `mobile-app/package.json`, `manifest.webmanifest`, `releases.js`, `sw.js` cache name |
+| API | `tools-api/` | Cloudflare Worker + D1 (`erics-personal-tools`, binding `DB`) | n/a (deployed, release metadata in D1) |
+
+`chrome-sidebar/src/` is the canonical home of shared UI components, data
+adapters, and validation. Mobile does not have its own copies: `mobile-app/build.js`
+copies a named list of sidebar modules into `dist/app/shared/`. The Worker imports
+sidebar validation modules directly (`../../chrome-sidebar/src/...`). So a change
+under `chrome-sidebar/src/` can affect all three apps — check `mobile-app/build.js`
+and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
+
+## chrome-sidebar/
+
+### Entry points (HTML → controller)
+
+| Page | Controller | Purpose |
+| --- | --- | --- |
+| `sidepanel.html` | `src/app.js` | The side panel shell; mounts views, then navigation and feature controllers |
+| `settings.html` | `src/settings-page.js` | Connections, credentials, AI settings |
+| `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
+| `rewards.html` | `src/rewards.js` | Rewards & benefits |
+| `cards.html` | `src/cards-page.js` | Best card |
+| `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
+| `data.html` | `src/data-page.js` | Read-only reference data (`?capability=rankings` or league rules) |
+
+Not page-mounted: `src/background.js` (service worker: settings bridge, draft
+state, release checks, launcher) and the content scripts
+`src/content.js`, `src/gmail-content.js`, `src/espn-highlights-content.js`,
+`src/draft-reader.js`, `src/gmail-reader.js`, `src/components/espn-highlights.js`
+(these are classic scripts with `var` globals, not ES modules).
+
+### `src/components/` — all DOM construction
+
+`ui.js` (primitives and reusable presentation) · `views.js` (screens composed from
+them) · `tokens.css` (design tokens) · `styles.css` (component classes) ·
+`select.js`/`select.css` (the shared formatted `Select`/combobox — required for
+every dropdown) · `file-drop.js` (all uploads) · plus per-feature component
+modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`,
+`restaurant-views.js`, `workspace.css`, `sidebar-launcher.js`.
+See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
+
+### `src/` shared core (used by more than one host or feature)
+
+- **Navigation / registry** — `capabilities.js` (the capability registry both hosts
+  read; every entry needs an `icon`), `navigation.js`, `capability-links.js`.
+- **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),
+  `offline-storage.js` (encrypted IndexedDB), `cloud-storage.js` (`CLOUD_URL`,
+  `cloudRequest`, `CONNECTION_KEY`), `travel-changes.js` (cross-window change
+  notification), `private-disconnect.js`.
+- **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
+  `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
+  `rewards-sync.js`. The `*-data.js` modules own validation and are also imported
+  by the Worker.
+- **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
+  `data-library.js`, `restaurant-search.js`, `reservation-*.js`.
+- **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
+  `email-ai.js` (on-device), `email-cloud.js` (via Worker).
+- **Credentials / settings** — `credentials.js`, `credential-services.js`,
+  `credential-migration.js`, `settings.js`, `settings-bridge.js`.
+- **Releases** — `release-check.js` (hourly throttle), `release-banner.js`.
+- **Fantasy football** — `draft-*.js`, `espn-*.js`, `manual-draft.js`,
+  `player-identity.js`, `recommendations.js`, `session-selection.js`,
+  `page-advice.js`, `ranking-import.js`, `sidepanel.js`.
+- **Gmail** — `gmail-connection.js`, `gmail-reader.js`, `gmail-content.js`,
+  `context-panel.js`.
+
+### Other
+
+`config/` seasonal JSON (also copied to mobile) · `icons/` · `scripts/build.js`
+(copies pages, `src`, `config`, `icons` into `dist/`) · `scripts/import-rankings.py` ·
+`release/` packaged zips and store listing · `tests/` `node --test` behavior tests
+plus browser preview harnesses (`*-preview.html`, `ui-harness.html`).
+
+## mobile-app/
+
+Source lives in `public/app/` and is copied to `dist/` by `build.js`, which also
+copies the shared sidebar modules into `dist/app/shared/` and the config JSON into
+`dist/app/data/`. **Adding a shared module to mobile means adding it to the list in
+`build.js` and to the `SHELL` array in `sw.js`.**
+
+- `index.html` → `app.js` — the outer, locked shell: passkey unlock, release check,
+  service worker registration. `mobile-security.js`, `passkey-vault.js`,
+  `auto-unlock.js` own locking; `releases.js` holds `VERSION`.
+- `unlocked.html` → `unlocked.js` — the disposable unlocked frame that actually runs
+  the tools; `mobile-session.js` guards access to it, `tool-layout.js` sizes it.
+- `capabilities.js` — mounts capabilities from the shared registry;
+  `tool-navigation.js`/`.css` render the alphabetical launcher.
+- `restaurants.js` + `restaurant-cache.js` — mobile restaurant view and its
+  read-only download cache.
+- `sw.js` — offline shell cache; its cache name carries the version.
+- `tests/` behavior tests plus `preview-server.js` / `cards-preview-server.js`.
+
+## tools-api/
+
+- `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
+  `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research}`,
+  `/v1/rewards`, `/v1/cards[/…]`, `/v1/travel[/…]`.
+- `src/travel.js` — the generic encrypted record store; `src/cards.js` reuses it for
+  `card_records`. `src/rewards.js`, `src/releases.js`, `src/ai-settings.js`.
+- `src/providers.js` (provider adapters) and `src/model-policy.js` (the central task
+  → model policy and priced catalogue — never copy model IDs into features).
+- Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
+  (`travel_records`), `cards-schema.sql` (`card_records`), `release-schema.sql`
+  (`app_releases`). Schema changes need an explicit upgrade path for existing data.
+- `scripts/publish-release.js` — publishes a release version to D1 (required step of
+  every app release). `wrangler.example.jsonc` — config template; real config and
+  credentials stay outside Git.
+
+## Common tasks → where to start
+
+| Task | Start at |
+| --- | --- |
+| Add a capability (tool) | `chrome-sidebar/src/capabilities.js` (id, label, href, 24x24 `icon`), a page + controller, a `*-data.js`/`*-offline.js` pair, mobile mounting in `mobile-app/public/app/capabilities.js`, the shared list in `mobile-app/build.js`, the `SHELL` list in `sw.js`, and a Worker route if it stores records |
+| Change a control's look | `chrome-sidebar/src/components/ui.js` + `styles.css`/`tokens.css` — never in a feature controller |
+| Add a dropdown | `components/select.js` via `FormField({kind:'select'})` |
+| Change stored record shape | the `*-data.js` validator (shared by app and Worker), the matching `*-schema.sql` with an upgrade path, and the offline adapter's revision/normalize |
+| Add or change an AI call | `tools-api/src/model-policy.js` for the task policy, `src/providers.js` for provider differences |
+| Change offline/sync behavior | `chrome-sidebar/src/offline-resource.js` (shared by every capability) |
+| Change what mobile ships | `mobile-app/build.js` shared list **and** `sw.js` `SHELL` |
+
+## Commands (from the repository root)
+
+```sh
+npm --prefix chrome-sidebar test && npm --prefix mobile-app test && npm --prefix tools-api test
+```
+
+```sh
+npm --prefix chrome-sidebar run build && npm --prefix mobile-app run build
+```
+
+`npm --prefix tools-api run deploy` (builds mobile first) · `node tools-api/scripts/publish-release.js`.
+
+## Where the rules are
+
+`AGENTS.md` (repository-wide) · `chrome-sidebar/AGENTS.md` (extension UI and
+release) · `docs/DESIGN.md`, `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
+`_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
+`tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`,
+`chrome-sidebar/RESTAURANTS.md`.

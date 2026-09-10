@@ -10,9 +10,10 @@ backs them both.
 | [`chrome-sidebar/`](./chrome-sidebar) | Chrome side panel extension — travel wallet, best-card advice, rewards, restaurant reservations, ESPN draft board, and Gmail assistance. Canonical home of the shared UI components and data adapters. |
 | [`mobile-app/`](./mobile-app) | Installable iPhone web app for the same tools, unlocked by passkey and usable offline. Built from the sidebar's shared modules. |
 | [`tools-api/`](./tools-api) | Cloudflare Worker and D1 database — encrypted record storage, AI provider routing, release metadata. Also serves the mobile app. |
-| [`docs/`](./docs) | Design system, UI component catalogue, visual QA process, and the Cloudflare runbook. |
+| [`docs/`](./docs) | Repository blueprint, design system, UI component catalogue, visual QA process, and the Cloudflare runbook. |
 
-Agents working in this repository start at [AGENTS.md](./AGENTS.md).
+Agents working in this repository start at [AGENTS.md](./AGENTS.md). For a map of
+where things live, see [docs/BLUEPRINT.md](./docs/BLUEPRINT.md).
 
 ## Setup on a new Mac
 

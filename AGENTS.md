@@ -4,11 +4,13 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 
 ## Read before working
 
+- Read [docs/BLUEPRINT.md](docs/BLUEPRINT.md) first when you need to locate code. It maps the three apps, their entry points, and the shared modules, so a task does not have to read the whole repository to find its files.
 - Read the applicable nested `AGENTS.md` and relevant documents before editing. Verify documented behavior against the implementation; correct stale guidance when it is within the task's scope.
 - Keep shared rules here and project-specific rules in the relevant project's guidance. Link to the canonical explanation rather than maintaining competing copies.
 
 | Work | Read |
 | --- | --- |
+| Finding the right file for any task | [docs/BLUEPRINT.md](docs/BLUEPRINT.md) — the repository map: apps, entry points, shared modules, and common tasks |
 | Repository orientation | [README.md](README.md) and the relevant project's README |
 | Extension behavior and setup | [chrome-sidebar/AGENTS.md](chrome-sidebar/AGENTS.md), [chrome-sidebar/README.md](chrome-sidebar/README.md) |
 | UI, controls, or layout | [docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md), its relevant host guide, and [docs/DESIGN.md](docs/DESIGN.md) |
@@ -18,6 +20,13 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | Cloudflare runtime, D1 lifecycle, or Worker release | [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md) |
 | AI calls or provider integrations | [model routing](tools-api/MODEL_ROUTING.md), [providers](tools-api/PROVIDERS.md) |
 | Gmail or restaurant workflows | [Gmail](docs/GMAIL.md) or [restaurants](chrome-sidebar/RESTAURANTS.md) |
+
+## Keep the blueprint current
+
+- [docs/BLUEPRINT.md](docs/BLUEPRINT.md) must describe the repository as it actually is. Whenever a change alters the structure it maps — adding, removing, renaming, or moving a directory, app, entry point or HTML page, shared module, schema file, API route family, build or test command, or the list of modules mobile shares — update the blueprint in the same commit.
+- Verify the blueprint against the tree when working from it; correct stale entries you find within the task's scope rather than leaving them.
+- The blueprint records structure and starting points, not rules. Keep rules in this file, the nested `AGENTS.md` files, and the supporting guides, and link to them instead of restating them there.
+- The blueprint is repository documentation. Editing it alone is an instructions-only change: it needs no app version increment, build, or D1 publication. When it accompanies an app change, it follows that change's normal release rules.
 
 ## Scope and concurrent work
 
