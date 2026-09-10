@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../src/components/styles.css"><link rel="stylesheet" href="../src/components/capabilities.css"><link rel="stylesheet" href="../src/components/travel.css"></head><body><div id="app"></div><script type="module">
+import {SettingsView} from '../src/components/views.js';
+import {mountTravel} from '../src/travel.js';
+const settings=SettingsView();settings.hidden=false;document.getElementById('app').append(settings);
+const wallet=document.createElement('div');wallet.hidden=true;document.body.append(wallet);
+mountTravel(wallet,{credentials:{get:async()=>''},request:async()=>({records:[]}),connectionRoot:document.getElementById('travel-settings-connection')});
+</script></body></html>

@@ -367,13 +367,13 @@ summary > .title-text { display: inline; }
 
 /* Settings navigation scales as a flat list instead of stacked cards. */
 .settings-list { border-top: 1px solid var(--line); }
-.settings-item { margin: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; overflow: visible; }
-.settings-item > summary, .settings-link { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 12px 4px; color: var(--ink); list-style: none; }
-.settings-item > summary::-webkit-details-marker { display: none; }
-.settings-item > summary::after { content: ''; width: 6px; height: 6px; margin-left: auto; margin-right: 4px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(-45deg); flex-shrink: 0; }
-.settings-item[open] > summary::after { transform: rotate(45deg); }
-.settings-item > summary > .title-text, .settings-link { font: 500 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
-.settings-item > summary:hover, .settings-link:hover { background: var(--sage); }
+.settings-list > .connection-only .connection-surface > details, .settings-item { margin: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; overflow: visible; }
+.settings-list > .connection-only .connection-surface > details > summary, .settings-item > summary, .settings-link { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 12px 4px; color: var(--ink); list-style: none; }
+.settings-list > .connection-only .connection-surface > details > summary::-webkit-details-marker, .settings-item > summary::-webkit-details-marker { display: none; }
+.settings-list > .connection-only .connection-surface > details > summary::after, .settings-item > summary::after { content: ''; width: 6px; height: 6px; margin-left: auto; margin-right: 4px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(-45deg); flex-shrink: 0; }
+.settings-list > .connection-only .connection-surface > details[open] > summary::after, .settings-item[open] > summary::after { transform: rotate(45deg); }
+.settings-list > .connection-only .connection-surface > details > summary, .settings-item > summary > .title-text, .settings-link { font: 500 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+.settings-list > .connection-only .connection-surface > details > summary:hover, .settings-item > summary:hover, .settings-link:hover { background: var(--sage); }
 .settings-item > :not(summary) { margin-left: 0; margin-right: 0; }
 .settings-link { border-bottom: 1px solid var(--line); text-decoration: none; }
 .settings-link::after { content: '↗'; margin-left: auto; color: var(--muted); }
@@ -407,3 +407,13 @@ summary > .title-text { display: inline; }
 .capability-toggle:focus-visible, .capability-item:focus-visible, .capability-settings:focus-visible { outline: 2px solid var(--forest); outline-offset: -2px; }
 
 .release-banner { margin: 0; padding: 8px var(--page-inset); background: #f3ead6; color: #614a23; font-size: 11px; line-height: 1.4; border-bottom: 1px solid #dfcea9; }
+
+/* An embedded connection is a peer Settings row, not a padded wallet page. */
+.settings-list > .travel-wallet.connection-only{padding:0;margin:0;max-width:none;display:block}
+.settings-list > .connection-only .connection-surface{display:block}
+.settings-list > .connection-only .connection-surface > details{padding:0}
+.settings-list > .connection-only .connection-surface > details > .connection-content{margin:0;padding:4px 4px 12px}
+.settings-list > .connection-only .connection-setup{padding:0}
+.settings-list > .connection-only .action-group{margin:0}
+.settings-list > .connection-only .action-group > button{flex:0 0 auto}
+.sub-page > .tool-heading{flex-direction:row;align-items:baseline}
