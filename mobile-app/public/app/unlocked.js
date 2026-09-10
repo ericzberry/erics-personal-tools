@@ -1,24 +1,19 @@
 import {observeToolSize} from './tool-layout.js';
 import {initialize} from './mobile-session.js';
 let started = false;
-let tools;
-window.addEventListener('message',event=>{
-  if(event.source===parent && event.origin===location.origin && event.data?.type==='mobile-settings')tools?.showSettings(event.data.open===true);
-});
 window.addEventListener('message', async event => {
   if (started || window.parent === window || event.source !== parent || event.origin !== location.origin || event.data?.type !== 'mobile-unlock' || typeof event.data.token !== 'string') return;
   started = true;
   initialize(event.data.token);
   try {
-    tools=await import('./capabilities.js');
-    tools.showSettings(parent.document.getElementById('toggle-settings').getAttribute('aria-expanded')==='true');
+    await import('./capabilities.js');
     // The connection is already established by the passkey. Keep maintenance
     // and disconnect controls, but never offer a second plaintext token store.
     const tokenField = document.getElementById('travel-token');
     if (tokenField) { tokenField.disabled = true; tokenField.closest('.form-field')?.setAttribute('hidden', ''); }
     const connect = document.getElementById('travel-connect');
     if (connect) connect.hidden = true;
-    document.querySelector('.capability-launcher [aria-current="page"]')?.focus({preventScroll:true});
+    document.querySelector('.capability-launcher .launcher-tile:not([hidden])')?.focus({preventScroll:true});
   } catch {
     document.getElementById('capabilities-root').textContent = 'Could not open your tools. Reopen the app to try again.';
   }

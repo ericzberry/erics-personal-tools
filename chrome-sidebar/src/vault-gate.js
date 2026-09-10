@@ -9,12 +9,12 @@ import {VaultGateView} from './components/vault.js';
 import {Button,ActionGroup,MaskedValue} from './components/ui.js';
 
 export const vaultReason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
-  ?'Passkey verification was canceled or timed out. Try again when you’re ready.'
+  ?'Passkey verification was canceled or timed out.'
   :error?.message||'This section could not be unlocked.';
 
 export function mountVaultGate(root,{
   id='vault',title='Locked',
-  lockedDetail='Everything in this section is encrypted with a key only your passkey can derive, so the cloud stores unreadable text. Keep your recovery code safe: without the passkey or that code, these records cannot be recovered.',
+  lockedDetail='Sealed with your passkey. Without it or your recovery code, these records cannot be recovered.',
   vault=sharedVault(),onChange=()=>{}
 }={}){
   root.replaceChildren(VaultGateView({id,title,detail:lockedDetail}));
@@ -33,8 +33,8 @@ export function mountVaultGate(root,{
     $('title').hidden=unlocked;
     $('status').textContent=message||(unlocked
       ?`Unlocked · closes after ${Math.round(vault.idleMs/60000)} minutes without activity`
-      :available?'Locked · Your passkey is required to open this section.'
-      :'Locked · This browser cannot use passkeys. Unlock with your recovery code.');
+      :available?'Locked'
+      :'Locked · This browser cannot use passkeys. Use your recovery code.');
     $('detail').hidden=unlocked;
     $('content').hidden=!unlocked;
     $('actions').replaceChildren(...(unlocked

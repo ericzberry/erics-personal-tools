@@ -15,6 +15,18 @@ test('saved release metadata remains available during the throttle window',async
  assert.equal(await checkRelease(storage,async()=>Response.json({version:'0.2.0'}),1000),'0.2.0');
  assert.equal(await checkRelease(storage,()=>{throw Error('must not fetch');},2000),'0.2.0');
 });
+test('the Settings check skips the throttle, records the attempt, and reports failure',async()=>{
+ const data=new Map();const storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
+ let calls=0;const found=async()=>{calls++;return Response.json({version:'0.2.0'});};
+ assert.equal(await checkRelease(storage,found,1000),'0.2.0');
+ // Automatic checks stay throttled by the attempt a forced check just recorded.
+ assert.equal(await checkRelease(storage,()=>{throw Error('must not fetch');},2000),'0.2.0');
+ assert.equal(await checkRelease(storage,found,2000,{force:true}),'0.2.0');
+ assert.equal(calls,2);
+ await assert.rejects(checkRelease(storage,async()=>new Response('',{status:500}),3000,{force:true}));
+ // A forced failure must not lose the version the app already knows about.
+ assert.equal(await checkRelease(storage,()=>{throw Error('must not fetch');},4000),'0.2.0');
+});
 test('installed shell loads offline and never intercepts API requests',async()=>{
  const handlers={};const saved=new Map();let network=0;
  const context={URL,fetch:()=>{network++;throw Error('offline');},self:{location:{origin:'https://example.com'},addEventListener:(name,fn)=>handlers[name]=fn,clients:{claim:async()=>{}},skipWaiting:()=>{}},caches:{open:async()=>({addAll:async paths=>{for(const path of paths)saved.set(path,new Response(path));},match:async path=>saved.get(path)}),keys:async()=>[],delete:async()=>{}}};

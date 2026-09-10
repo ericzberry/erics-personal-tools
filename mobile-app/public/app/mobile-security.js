@@ -1,4 +1,4 @@
-import {autoUnlock} from './shared/auto-unlock.js';
+import {autoUnlock} from './auto-unlock.js';
 import {passkeyVault, VAULT_KEY} from './passkey-vault.js';
 import {idleSession} from './shared/idle-session.js';
 const root = document.getElementById('capabilities-root');
@@ -8,14 +8,14 @@ root.innerHTML = `
   <form id="lock-setup">
     <label for="lock-token">Private access token</label>
     <input id="lock-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required minlength="32" maxlength="500" aria-describedby="lock-token-help">
-    <p id="lock-token-help" class="muted">Use the same token as your extension. It will be stored encrypted with your passkey.</p>
+    <p id="lock-token-help" class="muted">The same token as your extension.</p>
     <button id="lock-create" type="submit">Create passkey</button>
   </form>
   <button id="lock-finish" type="button" hidden>Finish passkey setup</button>
   <button id="lock-restart" class="secondary" type="button" hidden>Start setup again</button>
   <button id="lock-unlock" type="button" hidden>Unlock with passkey</button>
   <p id="lock-status" role="status" aria-live="polite"></p>
-  <details id="lock-recovery" hidden><summary>Can’t use your passkey?</summary><p>Recover with your original access token and create a replacement passkey. Saved records and pending changes stay on this device. Keep that token somewhere safe; deleting your passkey can otherwise make unsynced data inaccessible.</p><button id="lock-recover" class="secondary" type="button">Recover access</button></details>
+  <details id="lock-recovery" hidden><summary>Can’t use your passkey?</summary><p>Recover with your original access token. Saved records and pending changes stay on this device.</p><button id="lock-recover" class="secondary" type="button">Recover access</button></details>
 </section>
 <div id="mobile-private" hidden></div>`;
 const el = id => document.getElementById(id);
@@ -52,7 +52,7 @@ function showGate() {
   el('lock-recovery').hidden = true;
   el('lock-recovery').open = false;
   el('lock-token').value = saved ? '' : vault.legacyToken();
-  if (!saved && el('lock-token').value) status('Your existing connection is ready to protect. Create a passkey to continue.');
+  if (!saved && el('lock-token').value) status('Create a passkey to protect your existing connection.');
 }
 async function run(action) {
   if (busy) return;
@@ -63,7 +63,7 @@ async function run(action) {
   try { await action(epoch); }
   catch (error) {
     if(vault.record()){el('lock-title').textContent='Couldn’t open your tools';el('lock-unlock').textContent='Try again';el('lock-unlock').hidden=false;el('lock-recovery').hidden=false;}
-    status(error.name === 'NotAllowedError' || error.name === 'AbortError' ? 'Passkey verification was canceled or timed out. Try again when you’re ready.' : error.message || 'Could not unlock. Try again.');
+    status(error.name === 'NotAllowedError' || error.name === 'AbortError' ? 'Passkey verification was canceled or timed out.' : error.message || 'Could not unlock. Try again.');
   } finally {
     busy = false;
     for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = false;
@@ -93,11 +93,11 @@ el('lock-setup').addEventListener('submit', event => {
     el('lock-finish').hidden = false;
     el('lock-restart').hidden = false;
     el('lock-unlock').hidden = true;
-    status('Passkey created. Finish setup to verify it can unlock your encrypted data.');
+    status('Passkey created. Finish setup to verify it.');
     el('lock-finish').focus();
   });
 });
-el('lock-restart').addEventListener('click', () => { vault.cancel(); showGate(); status('Setup restarted. Your saved data has not changed.'); });
+el('lock-restart').addEventListener('click', () => { vault.cancel(); showGate(); status('Setup restarted. Your saved data is unchanged.'); });
 el('lock-finish').addEventListener('click', () => run(async attempt => {
   // PRF verification must start directly from the button gesture on Safari.
   const existing = vault.record() || vault.legacyToken();
@@ -115,7 +115,7 @@ el('lock-recover').addEventListener('click', () => {
   el('lock-setup').hidden = false;
   el('lock-token').value = '';
   el('lock-title').textContent = 'Recover mobile access';
-  status('Enter your original token. Replacing the passkey preserves your downloaded data and pending changes.');
+  status('Enter your original token. Downloaded data and pending changes are kept.');
   el('lock-token').focus();
 });
 window.addEventListener('message', event => {
@@ -123,7 +123,7 @@ window.addEventListener('message', event => {
   if (event.data?.type === 'mobile-ready') frame.contentWindow.postMessage({type: 'mobile-unlock', token}, location.origin);
   if (event.data?.type === 'mobile-activity' && !document.hidden) session.touch();
   if (event.data?.type === 'mobile-size' && Number.isFinite(event.data.height)) frame.style.height = `${Math.max(100, Math.min(100000, event.data.height))}px`;
-  if (event.data?.type === 'mobile-disconnected') { vault.disconnect(); session.lock(); status('Disconnected. Private offline copies were removed; cloud records remain saved.'); }
+  if (event.data?.type === 'mobile-disconnected') { vault.disconnect(); session.lock(); status('Disconnected. Offline copies removed; cloud records kept.'); }
 });
 for (const type of ['pointerdown', 'keydown', 'scroll']) document.addEventListener(type, event => {
   if (event.isTrusted && !document.hidden) session.touch();
@@ -149,9 +149,9 @@ try {
   supported = !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials?.create && navigator.credentials?.get);
   if (!supported) {
     for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = true;
-    status('Passkeys are unavailable here. Open the app in Safari on an updated iPhone using its HTTPS address.');
+    status('Passkeys are unavailable here. Open the HTTPS address in Safari.');
   } else automatic.request();
 } catch (error) {
   for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = true;
-  status(error.message || 'Device storage is unavailable. Enable website storage and reopen the app.');
+  status(error.message || 'Device storage is unavailable. Enable website storage.');
 }

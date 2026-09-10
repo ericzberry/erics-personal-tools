@@ -9,10 +9,10 @@ export function RestaurantWorkspace({mobile=false}={}) {
           SettingsGroup({title:'Where to eat',level:2,children:[
             F({id:'restaurant-mode',label:'Search for',kind:'select',options:[{text:'A specific restaurant',value:'restaurant'},{text:'A category of restaurants',value:'category'}]}),
             F({id:'restaurant-query',label:'Restaurant name',kind:'text',placeholder:'Name or approximate spelling'}),
-            Note('For example: exactly 2 Michelin stars, NYT top 20, or Infatuation above 8.5.',{id:'restaurant-category-help',hidden:true}),
+            Note('For example: 2 Michelin stars, NYT top 20, Infatuation above 8.5.',{id:'restaurant-category-help',hidden:true}),
             F({id:'restaurant-city',label:'City',kind:'text'}),
             F({id:'restaurant-neighborhood',label:'Neighborhood (optional)',kind:'text',placeholder:'Any neighborhood'}),
-            Stack([Toggle({id:'restaurant-travel',label:'Include longer travel options',descriptionId:'restaurant-travel-help'}),Note('From the Upper West Side. Off excludes the Lower East Side, East Village, Brooklyn, and Queens from category searches.',{id:'restaurant-travel-help'})],{id:'restaurant-nyc'})
+            Stack([Toggle({id:'restaurant-travel',label:'Include longer travel options',descriptionId:'restaurant-travel-help'}),Note('Off excludes the Lower East Side, East Village, Brooklyn, and Queens.',{id:'restaurant-travel-help'})],{id:'restaurant-nyc'})
           ]}),
           SettingsGroup({title:'When & how many',level:2,children:[
             F({id:'restaurant-date',label:'Date',kind:'date'}),
@@ -20,7 +20,7 @@ export function RestaurantWorkspace({mobile=false}={}) {
             Toggle({id:'restaurant-flexible',label:'Flexible party size',descriptionId:'restaurant-party-help'}),
             Stack([F({id:'restaurant-party',label:'People',kind:'number'})],{id:'restaurant-fixed-fields'}),
             Stack([FieldGrid([F({id:'restaurant-min',label:'Minimum people',kind:'number'}),F({id:'restaurant-max',label:'Maximum people',kind:'number'})])],{id:'restaurant-flex-fields',hidden:true}),
-            Note('Flexible searches check each size separately, up to 8 sizes between 1 and 20.',{id:'restaurant-party-help'})
+            Note('Up to 8 sizes between 1 and 20, checked separately.',{id:'restaurant-party-help'})
           ]}),
           Disclosure('Research settings',[
             F({id:'restaurant-limit',label:'Maximum restaurants',kind:'select',options:[{text:'6 restaurants',value:'6'},{text:'12 restaurants',value:'12'},{text:'24 restaurants',value:'24'}]}),
@@ -35,7 +35,7 @@ export function RestaurantWorkspace({mobile=false}={}) {
       ]),
       Section([
         Heading('Your shortlist',2),
-        Note(mobile?'Find restaurants online. Your latest shortlist, addresses, and sources stay available offline.':'Choose a restaurant and date to start. We’ll resolve the name, find booking providers, and check their live pages.',{id:'restaurant-empty'}),
+        Note('Your last shortlist stays available offline.',{id:'restaurant-empty'}),
         Notice('',{id:'restaurant-summary',hidden:true}),
         Notice('',{id:'restaurant-clarification',hidden:true}),
         Stack([],{id:'restaurant-candidates',className:'result-list'}),

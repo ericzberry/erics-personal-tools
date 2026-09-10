@@ -55,9 +55,10 @@ export function Field({id,label,kind='search',options=[],hiddenLabel=false,place
 }
 // Grid of small tool icons, alphabetical by label within each section. Used
 // where the whole tool list should be visible at a glance: the mobile home
-// screen, and the mobile Tools dropdown once a tool is open.
+// screen, and the mobile Tools menu once a tool is open.
 const SETTINGS_GLYPH='M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M12 2.8l1.6 2.3 2.8-.4 1 2.6 2.6 1-.4 2.8 2.3 1.6-2.3 1.6.4 2.8-2.6 1-1 2.6-2.8-.4-1.6 2.3-1.6-2.3-2.8.4-1-2.6-2.6-1 .4-2.8L2.8 12l2.3-1.6-.4-2.8 2.6-1 1-2.6 2.8.4L12 2.8Z';
 const HOME_GLYPH='M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z M9.5 21v-6h5v6';
+const MENU_GLYPH='M4 7h16 M4 12h16 M4 17h16';
 const LauncherTile=(id,icon,label,className='launcher-tile',props={})=>element('button',{id,type:'button',className,...props},[Glyph(icon),Label(label,{className:'launcher-label'})]);
 export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',label='Tools',settings=false,home=false}={}) {
   const groups=capabilitySections(items).map(({title,items:entries})=>{
@@ -66,7 +67,7 @@ export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',
     return element('section',{className:'launcher-group'},[Title(title,2,{className:'launcher-group-title'}),grid]);
   });
   if(home&&groups[0])groups[0].prepend(LauncherTile('navigate-home',HOME_GLYPH,'Home'));
-  if(settings)groups.push(element('div',{className:'launcher-grid launcher-grid--utility'},[LauncherTile('open-settings',SETTINGS_GLYPH,'Settings','launcher-tile launcher-tile--settings',{'aria-expanded':'false'})]));
+  if(settings)groups.push(element('div',{className:'launcher-grid launcher-grid--utility'},[LauncherTile('open-settings',SETTINGS_GLYPH,'Settings','launcher-tile launcher-tile--settings')]));
   return element('nav',{id,'aria-label':label,className:'capability-launcher'},groups);
 }
 function capabilityRow(item){
@@ -97,10 +98,10 @@ export function CapabilityNavigation(items){
   });
   return disclosure;
 }
-// Mobile Tools menu: the same icon grid, collapsed behind a dropdown once a
+// Mobile Tools menu: the same icon grid, collapsed behind a hamburger once a
 // tool is open. On the home screen the caller unhides the grid in place.
 export function CapabilityMenu(items=capabilitiesByName,{current='Home'}={}){
-  const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong(current,{id:'current-function'})]);
+  const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle','aria-label':'Tools menu'},[Glyph(MENU_GLYPH,{size:20}),Strong(current,{id:'current-function'})]);
   const disclosure=element('details',{id:'app-navigation',className:'capability-navigation capability-navigation--launcher'},[summary,CapabilityLauncher(items,{settings:true,home:true})]);
   disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'&&!summary.hidden){disclosure.open=false;summary.focus();}});
   return disclosure;

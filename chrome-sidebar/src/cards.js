@@ -64,7 +64,7 @@ export function mountCards(root,{credentials,offline,remote}){
       onEdit:()=>{if(dirty){status('Save or cancel your current edit first.','form-status');return;}edit(card);$('editor').open=true;$('name').focus();},
       onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting a card.');const result=await request(`/v1/cards/${card.id}`,{method:'DELETE',value:{revision:card.revision}});records=result.records;clearResults();render();status(result.syncMessage||'Card deleted.');}),
       onResolve:choice=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before resolving a conflict.');const result=await offline.resolve(token,card.id,choice);records=result.records;clearResults();render();status(result.syncMessage);})
-    })):[Note(token?'Add your first card below.':'Connect this device in Settings to save and sync your cards.')]));controls();
+    })):[Note(token?'No cards saved.':'Connect this device in Settings.')]));controls();
   }
   async function run(action,target='status'){
     if(busy)return;busy=true;controls();status('Working…',target);const current=generation;

@@ -113,9 +113,10 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `idle-session.js`); `releases.js` holds `VERSION`.
 - `unlocked.html` → `unlocked.js` — the disposable unlocked frame that actually runs
   the tools; `mobile-session.js` guards access to it, `tool-layout.js` sizes it.
-- `capabilities.js` — mounts capabilities from the shared registry;
-  `tool-navigation.js`/`.css` render the home-screen icon grid and, once a tool
-  is open, the same grid inside the Tools dropdown.
+- `capabilities.js` — mounts capabilities from the shared registry and mirrors the
+  chosen screen to the shell; `tool-navigation.js`/`.css` render the home-screen
+  icon grid and, once a tool or Settings is open, the same grid behind the
+  hamburger menu.
 - `restaurants.js` + `restaurant-cache.js` — mobile restaurant view and its
   read-only download cache.
 - `sw.js` — offline shell cache; its cache name carries the version.

@@ -267,6 +267,35 @@ The combined 0.6.49 / mobile 0.1.11 release also shows mobile numbers directly b
 
 Version 0.6.50 merges restaurant reservations, rewards and central model routing with the latest mobile/offline and travel-wallet updates. One Tools menu includes all extension destinations; travel remains in the sidebar and restaurants opens its workspace. This supersedes the local reservation-only 0.6.43 package.
 
+## Mobile home screen, hamburger menu, and a version check (0.6.73 / mobile 0.1.32)
+
+The mobile home screen now holds nothing but the tool icons. Home is not one of
+them — it is already home — so it appears only inside the menu, as the way back.
+Opening a tool collapses the grid behind a hamburger naming the open screen.
+
+Settings stopped being both a header button and an icon. The header button is
+gone; Settings is a screen reached from the same grid, so the hamburger stays
+available to leave it. Device settings (offline access, version) moved below the
+tools frame so the whole Settings screen reads in one order: cloud connection,
+AI connections, offline access, version. Its **Check for a new version** button
+asks D1 directly, skipping the hourly throttle that paces automatic checks, and
+reports up to date, the newer version, or that the check failed.
+
+Explanatory prose was cut further, continuing 0.6.72: Best card's editor notes,
+the Restaurants criteria and party-size hints, the reference libraries' empty
+and disconnected states, the passkey recovery paragraph, and the
+protected-section gate. Labels, statuses, and error messages stayed; paragraphs
+describing what a feature does did not. The mobile footer went too, since
+Settings now shows the version.
+
+Validation: 218 extension, 28 mobile, and 48 API tests pass, including new
+coverage for the home screen holding no Home tile, the hamburger, Settings as a
+screen, and the forced release check. The mobile home screen, an open tool with
+its collapsed and expanded menu, and the full Settings screen were reviewed in
+the unlocked mobile shell at 375px and 320px; the sidebar Tools menu was
+reviewed in the synthetic harness at 420px. Native iPhone and installed Chrome
+behavior were not directly tested. Archive: `release/erics-sidebar-0.6.73.zip`.
+
 ## Tools menu sections and a mobile home screen (0.6.65 / mobile 0.1.24)
 
 Both hosts read one grouped registry. Registry entries carry an optional `section`, and a **Misc** section now holds Fantasy football and Player rankings; everything else stays in the main, unlabelled group. Gmail left the Tools menu — it opens by itself when the active tab is Gmail, which is what Current tab always did. AI connections is reached from Settings in both hosts rather than as a tool of its own, and League rules is gone: its capability, its data page, its Settings rulebook, and its bundled mobile dataset. The draft engine still reads `config/espn-league-2026.json` for scoring and roster logic.

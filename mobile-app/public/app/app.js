@@ -2,25 +2,46 @@ import './mobile-security.js';
 import {VERSION, checkRelease, newer} from './releases.js';
 const el = id => document.getElementById(id);
 let registration;
-function setSettings(open) {
-  el('app-settings').hidden = !open;
-  el('toggle-settings').setAttribute('aria-expanded', String(open));
-  el('install').hidden = open || navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-  document.querySelector('.mobile-tools-frame')?.contentWindow.postMessage({type:'mobile-settings',open},location.origin);
+// The tools frame owns navigation, so the shell mirrors whichever screen it
+// reports. Device settings are part of the Settings screen; a failed offline
+// setup shows them anyway, because nothing else would report the problem.
+let currentScreen = 'home', offlineProblem = false;
+const standalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+function render() {
+  el('app-settings').hidden = !(currentScreen === 'settings' || offlineProblem);
+  el('install').hidden = currentScreen !== 'home' || standalone();
 }
-window.addEventListener('message',event=>{
-  if(event.origin===location.origin && event.source===document.querySelector('.mobile-tools-frame')?.contentWindow && event.data?.type==='mobile-open-settings'){setSettings(true);el('toggle-settings').focus();}
+window.addEventListener('message', event => {
+  if (event.origin !== location.origin || event.source !== document.querySelector('.mobile-tools-frame')?.contentWindow) return;
+  if (event.data?.type === 'mobile-screen' && typeof event.data.screen === 'string') { currentScreen = event.data.screen; render(); }
 });
-el('toggle-settings').addEventListener('click', () => setSettings(el('app-settings').hidden));
 function connection() { el('connection').textContent = navigator.onLine ? 'Online' : 'Offline'; }
-function installed() { el('install').hidden = !el('app-settings').hidden || navigator.standalone === true || matchMedia('(display-mode: standalone)').matches; }
 async function releases() {
   if (!navigator.onLine) return;
   try {
     const version = await checkRelease(localStorage);
-    if (newer(version)) { el('update').hidden = false; el('update-detail').textContent = `Version ${version} is available. Connect to the internet to update.`; }
+    showRelease(version);
   } catch { /* Private browsing may disable device storage. */ }
 }
+function showRelease(version) {
+  if (!newer(version)) { el('version-status').textContent = `Version ${VERSION} · up to date`; return false; }
+  el('update').hidden = false;
+  el('update-detail').textContent = `Version ${version} is ready.`;
+  el('version-status').textContent = `Version ${VERSION} · ${version} available`;
+  return true;
+}
+// A manual check is a deliberate user action, so it skips the hourly throttle
+// that paces the automatic checks. It still records the attempt.
+el('check-update').addEventListener('click', async () => {
+  const button = el('check-update');
+  button.disabled = true;
+  el('version-status').textContent = 'Checking…';
+  try {
+    if (!navigator.onLine) throw Error('offline');
+    showRelease(await checkRelease(localStorage, fetch, Date.now(), {force: true}));
+  } catch { el('version-status').textContent = `Version ${VERSION} · couldn’t check`; }
+  finally { button.disabled = false; }
+});
 async function offlineSetup() {
   el('retry-offline').hidden = true;
   try {
@@ -29,14 +50,16 @@ async function offlineSetup() {
     try {registration = await navigator.serviceWorker.register('/app/sw.js', {scope: '/app/', updateViaCache: 'none'});}
     catch(error){if(!existing?.active)throw error;registration=existing;}
     await Promise.race([navigator.serviceWorker.ready, new Promise((_, reject) => setTimeout(() => reject(Error('timeout')), 15000))]);
+    offlineProblem = false;
     el('offline-status').textContent = 'Ready';
     el('offline-detail').textContent = '';
   } catch {
-    setSettings(true);
+    offlineProblem = true;
     el('offline-status').textContent = 'Not ready';
-    el('offline-detail').textContent = 'Reconnect and retry to save the app for offline use.';
+    el('offline-detail').textContent = 'Reconnect and retry.';
     el('retry-offline').hidden = false;
   }
+  render();
 }
 el('retry-offline').addEventListener('click', offlineSetup);
 el('apply-update').addEventListener('click', async () => {
@@ -56,13 +79,13 @@ el('apply-update').addEventListener('click', async () => {
       });
       navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {once: true});
       waiting.postMessage({type: 'ACTIVATE'});
-    } else { el('update-detail').textContent = 'The update is still being prepared. Try again in a moment.'; }
-  } catch { el('update-detail').textContent = 'Couldn’t update. Check your connection and try again.'; }
+    } else { el('update-detail').textContent = 'Still preparing. Try again in a moment.'; }
+  } catch { el('update-detail').textContent = 'Couldn’t update. Check your connection.'; }
   finally { button.disabled = false; }
 });
-el('version').textContent = `Version ${VERSION}`;
-connection(); installed(); offlineSetup(); releases();
+el('version-status').textContent = `Version ${VERSION}`;
+connection(); render(); offlineSetup(); releases();
 window.addEventListener('online', () => { connection(); releases(); });
 window.addEventListener('offline', connection);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { connection(); installed(); releases(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { connection(); render(); releases(); } });
 setInterval(releases, 60 * 60 * 1000);

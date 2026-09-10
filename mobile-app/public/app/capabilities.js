@@ -1,6 +1,6 @@
 import {mountRewards} from './shared/rewards-tool.js';
 import {rewardsOffline} from './shared/rewards-offline.js';
-import {mountToolNavigation} from './tool-navigation.js';
+import {mountToolNavigation,SETTINGS_SCREEN} from './tool-navigation.js';
 import {CapabilitiesView} from './shared/components/capabilities.js';
 import {CAPABILITIES} from './shared/capabilities.js';
 import {mountCards} from './shared/cards.js';
@@ -19,8 +19,7 @@ import {mountRestaurants} from './restaurants.js';
 import {restaurantCache} from './restaurant-cache.js';
 const root=document.getElementById('capabilities-root');
 root.replaceChildren(CapabilitiesView());
-// Connection maintenance and AI connections are shown only from the app
-// header’s Settings control.
+// Connection maintenance and AI connections belong to the Settings screen.
 const connectionRoot=document.getElementById('capability-settings');
 connectionRoot.parentElement.append(connectionRoot);
 connectionRoot.hidden=true;
@@ -37,8 +36,8 @@ const credentials={
   async remove(){const token=await this.get();if(token){await cardStore.disconnect(token);await rewardStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();await mobileCredentials.remove();}
 };
 const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,remote:cloudRequest});
-const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,onSettings:()=>parent.postMessage({type:'mobile-open-settings'},location.origin)});
-const openSettings=()=>parent.postMessage({type:'mobile-open-settings'},location.origin);
+const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
+const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,onSettings:openSettings});
 const financeTool=mountFinance(document.getElementById('capability-finance'),{credentials,offline:financeStore,remote:cloudRequest,onSettings:openSettings});
 const personalTool=mountPersonal(document.getElementById('capability-personal'),{credentials,offline:personalStore,onSettings:openSettings});
 const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai',level:2,load:async()=>{
@@ -54,24 +53,22 @@ let selectedTool;
 const restaurants=mountRestaurants(document.getElementById('capability-restaurants'),{credentials,request:cloudRequest,cache:restaurantDownloads,loadConnections:async()=>{
   const result=await ai.request(await credentials.get(),'/v1/ai-connections');return result.records;
 }});
-function selectTool(){
+// The cloud connection belongs to Settings, so it is always expanded there.
+const cloud=document.getElementById('travel-cloud');
+cloud.open=true;
+cloud.querySelector('summary').hidden=true;
+// Settings is a screen like any tool: the hamburger stays available, and the
+// shell mirrors the chosen screen so it can show its own device settings.
+function showScreen(screen){
+  const settings=screen===SETTINGS_SCREEN;
+  selectedTool=settings?null:screen;
+  connectionRoot.hidden=!settings;
   for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=selectedTool!==capability.id;
   if(selectedTool==='restaurants')restaurants.open();
   if(selectedTool==='rewards')rewardTool.refresh({quiet:true});
+  parent.postMessage({type:'mobile-screen',screen:settings?SETTINGS_SCREEN:selectedTool||'home'},location.origin);
 }
-const navigation=mountToolNavigation(root.querySelector('.capability-navigation'),{
-  onSelect(id){selectedTool=id;selectTool();},
-  onSettings(){parent.postMessage({type:'mobile-open-settings'},location.origin);}
-});
-export function showSettings(open){
-  navigation.hidden=open;
-  connectionRoot.hidden=!open;
-  if(open)for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=true;
-  else selectTool();
-  const disclosure=document.getElementById('travel-cloud');
-  disclosure.open=true;
-  disclosure.querySelector('summary').hidden=true;
-}
+const navigation=mountToolNavigation(root.querySelector('.capability-navigation'),{onScreen:showScreen});
 await connectionChanged();
 window.addEventListener('online',connectionChanged);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)connectionChanged();});

@@ -32,8 +32,8 @@ export function CardsView(){
           field('name','Full card name and country'),
           field('unit','Reward type','select',[{value:'cash',text:'Cash back (%)'},{value:'points',text:'Points or miles per dollar'}]),
           field('base','Base reward rate','number'),field('cpp','Redemption value (cents per point)','number'),
-          Note('Cash back uses 1. For points, enter your own redemption value before comparing.'),
-          Heading('Bonus categories',3),Note('Enter total rates. For capped bonuses, enter remaining eligible spend in USD; leave blank only for unlimited bonuses.'),
+          Note('Cash back uses 1.'),
+          Heading('Bonus categories',3),Note('Total rates. For a capped bonus, enter the remaining eligible spend; blank means unlimited.'),
           Stack([],{id:'cards-rules'}),ActionGroup([button('Add bonus category','add-rule','secondary',{size:'compact'})]),
           field('source','Issuer terms URL'),field('checked','Terms reviewed on','date'),
           field('notes','Limits, exclusions, and shared caps','textarea')

@@ -33,7 +33,7 @@ test('the gate keeps its content out of the document tree’s visible state unti
   gate.content.append(h.document.createElement('p'));
   gate.content.querySelector('p').textContent='Synthetic protected content';
   assert.equal(gate.content.hidden,true);
-  assert.match(h.document.getElementById('test-vault-status').textContent,/passkey is required/);
+  assert.equal(h.document.getElementById('test-vault-status').textContent,'Locked');
   assert.equal(h.document.getElementById('test-vault-title').hidden,false,'the locked gate carries the page heading');
   h.document.getElementById('test-vault-actions').querySelector('button').click();
   await settle(()=>changes.length>0);
