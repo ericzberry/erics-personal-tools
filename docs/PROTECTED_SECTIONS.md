@@ -10,37 +10,12 @@ a total, not a category. In these sections a record's name is often as
 revealing as its value, so `chrome-sidebar/src/vault-gate.js` hides the whole
 tool rather than masking individual fields.
 
-**Arriving at the section asks for the passkey.** Opening Finance is a request
-to read it, so the gate raises the prompt itself rather than reporting that the
-section is locked and waiting to be told again. It asks once per arrival —
-mounting a visible section, showing a hidden one, returning to a backgrounded
-tab, or an idle window running out in front of the reader — so a dismissed
-sheet leaves an **Unlock** button and never a loop. It never asks behind a
-hidden tool or a backgrounded tab, where the prompt would belong to nothing the
-reader is looking at, and **Lock now** means locked: it is the one lock the gate
-does not offer to undo by itself. `auto-unlock.js` holds that one-attempt rule,
-shared with the mobile app's own lock screen.
-
 The gate is built on `secret-vault.js`, the same WebAuthn PRF key that seals
 card numbers. One vault is shared per host (`sharedVault()`), so a single
 passkey prompt opens every protected section on the page and one 15-minute idle
 window governs them together: activity in the ledger keeps the personal records
 open, and going idle closes both and drops anything already revealed. Locking is
 also explicit — **Lock now** is always reachable while unlocked.
-
-**The unlocked session belongs to the browser, not to the page.** In the
-extension each capability is its own tab, so a key held only in one page's
-memory would mean a fresh biometric check for every navigation and a reload that
-throws the unlock away. `vaultSessionStore()` keeps the derived key in
-`chrome.storage.session`: memory only, gone when the browser closes, and
-reachable by this extension's pages but not by a web page or content script.
-One check therefore covers the idle window wherever it is spent, an unlock in
-one tab opens the others, and locking or idling in any of them closes all of
-them. The stored stamp carries the window's remaining time, so a restored
-session expires when it was always going to. The trade is deliberate: the key is
-readable by any extension page for as long as the window lasts, which is already
-true of the page that derived it. The mobile app has no such area and needs
-none — every tool there shares one page.
 
 Losing every copy of the passkey makes protected values unreadable. The recovery
 code is the only way back, and the only fallback where a browser cannot produce

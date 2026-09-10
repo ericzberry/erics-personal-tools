@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {secretVault,vaultSessionStore,sealSecret,openSecret,isSealed,recoveryCode,recoveryBytes,encode,VAULT_RP_ID} from '../src/secret-vault.js';
+import {secretVault,sealSecret,openSecret,isSealed,recoveryCode,recoveryBytes,encode,VAULT_RP_ID} from '../src/secret-vault.js';
 import {IDLE_MS} from '../src/idle-session.js';
 
 const ORIGIN='chrome-extension://synthetic-extension-id';
-function fixture({seed=new Uint8Array(32).fill(9),flags=5,prf=true,origin=ORIGIN,rpId=VAULT_RP_ID,store,clock}={}){
+function fixture({seed=new Uint8Array(32).fill(9),flags=5,prf=true,origin=ORIGIN,rpId=VAULT_RP_ID}={}){
   let prompts=0,cancel=false;
   const credentials={async get({publicKey}){
     prompts++;
@@ -16,7 +16,7 @@ function fixture({seed=new Uint8Array(32).fill(9),flags=5,prf=true,origin=ORIGIN
       getClientExtensionResults:()=>({prf:prf?{results:{first:seed.slice().buffer}}:{}})};
   }};
   let now=1000;
-  const vault=secretVault({credentials,origin:ORIGIN,subtle:crypto.subtle,now:clock||(()=>now),store});
+  const vault=secretVault({credentials,origin:ORIGIN,subtle:crypto.subtle,now:()=>now});
   return {vault,count:()=>prompts,advance:ms=>{now+=ms;},cancelNext:()=>{cancel=true;}};
 }
 
@@ -89,55 +89,4 @@ test('malformed and tampered envelopes are refused rather than returning partial
   assert.equal(isSealed(JSON.stringify({v:2,iv:'a',ciphertext:'b'})),false);
   await assert.rejects(()=>openSecret(key,'entry-1',JSON.stringify({...sealed,ciphertext:encode(new Uint8Array(40))})),/cannot open this protected value/);
   await assert.rejects(()=>openSecret(key,'entry-1','{}'),/unsupported format/);
-});
-
-// Stands in for `chrome.storage.session`: memory only, and every page — the
-// writer included — hears each change, as Chrome delivers them.
-function sessionArea(){
-  const values=new Map(),listeners=[];
-  const announce=(key,newValue)=>{for(const listener of [...listeners])listener({[key]:{newValue}},'session');};
-  return {
-    area:{
-      async get(key){return values.has(key)?{[key]:values.get(key)}:{};},
-      async set(entry){for(const [key,value] of Object.entries(entry)){values.set(key,value);announce(key,value);}},
-      async remove(key){values.delete(key);announce(key,undefined);}
-    },
-    changes:{addListener:listener=>listeners.push(listener)},
-    stored:key=>values.get(key)
-  };
-}
-const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
-
-test('an unlock belongs to the browser, not to one page: another page adopts it, and locking closes both',async()=>{
-  const session=sessionArea();
-  let now=1000;
-  const clock=()=>now;
-  const first=fixture({store:vaultSessionStore(session.area,session.changes),clock});
-  await first.vault.key();
-  assert.equal(first.count(),1);
-
-  // Opening Finance in its own tab must not mean a second passkey check.
-  const second=fixture({store:vaultSessionStore(session.area,session.changes),clock});
-  await second.vault.ready;
-  assert.equal(second.vault.unlocked(),true,'a page opened inside the window inherits the session');
-  const sealed=await sealSecret(await first.vault.key(),'entry-1',{number:'4111111111111111',expiry:'12/28'});
-  assert.deepEqual(await openSecret(await second.vault.key(),'entry-1',sealed),{number:'4111111111111111',expiry:'12/28'});
-  assert.equal(second.count(),0,'the second page asked for nothing');
-
-  // Lock now is not a per-tab setting.
-  first.vault.lock();
-  await tick();
-  assert.equal(second.vault.unlocked(),false);
-  assert.equal(session.stored('vault-session'),undefined,'locking clears the stored session');
-
-  // The window the unlock started with is the window a later page inherits:
-  // a stored session past its idle time opens nothing.
-  await second.vault.key();
-  await tick();
-  now+=IDLE_MS;
-  const third=fixture({store:vaultSessionStore(session.area,session.changes),clock});
-  await third.vault.ready;
-  assert.equal(third.vault.unlocked(),false,'an idle session is not adopted');
-  assert.equal(third.count(),0);
-  assert.equal(session.stored('vault-session'),undefined,'and it is cleared rather than left behind');
 });

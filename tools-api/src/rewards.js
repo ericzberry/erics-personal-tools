@@ -1,7 +1,7 @@
 import {encryptSettings,decryptSettings} from './ai-settings.js';
 import {validateReward} from '../../chrome-sidebar/src/rewards-data.js';
 const ID='owner-rewards';
-const conflict=()=>{throw {status:409,message:'Rewards changed in another browser. Refresh rewards, then review and save your changes again.'};};
+const conflict=()=>{throw {status:409,message:'Rewards changed in another browser. This wallet reloaded; review and save your changes again.'};};
 export async function rewardsSettings(request,env,readValue,json){
   if(!['GET','PUT'].includes(request.method))return json({error:'Method not allowed.'},405);
   const previous=await env.DB.prepare('SELECT value, revision, updated_at FROM rewards_wallet WHERE id = ?').bind(ID).first();

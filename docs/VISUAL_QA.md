@@ -17,7 +17,7 @@ Use the current task's checkout, build after the final edit, and keep preview cr
 | Surface | Existing preview and limits |
 | --- | --- |
 | Sidebar | From the repo root, `npm --prefix chrome-sidebar run preview`; open `http://127.0.0.1:8765/sidepanel.html`. This serves source files. It does not verify installed extension APIs or live capture. |
-| Feature fixtures | The same server exposes `/tests/travel-editor-preview.html`, `/tests/restaurant-preview.html`, `/tests/draft-preview.html`, and `/tests/vault-gate-preview.html` (the passkey gate's waiting, dismissed and open states with a synthetic passkey). Inspect each harness before use and confirm it exercises the changed path; a feature fixture alone does not verify navigation into it. |
+| Feature fixtures | The same server exposes `/tests/travel-editor-preview.html`, `/tests/restaurant-preview.html`, and `/tests/draft-preview.html`. Inspect each harness before use and confirm it exercises the changed path; a feature fixture alone does not verify navigation into it. |
 | Mobile | Build with `npm --prefix mobile-app run build`, then run `node mobile-app/tests/preview-server.js`; open `http://localhost:8791/app/`. The harness uses synthetic data and mock passkey, offline, and idle controls. It does not verify native biometric prompts or a real passkey provider. |
 
 Use a separate browser context or dedicated preview origin to avoid stale local storage and service workers masking the result. Keep the existing context when specifically testing restart persistence or an upgrade. Do not clear real app storage to obtain an empty state. If a port is occupied, use an available port supported by the launcher instead of stopping another task's server.

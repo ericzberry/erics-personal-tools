@@ -100,3 +100,31 @@ test('showing a number needs the vault; the list masks it until then and re-mask
  assert.equal($('rewards-list').textContent.includes('4111 1111'),false,'locking re-masks the number');
  tool.stop();h.restore();
 });
+
+test('the wallet syncs on its own: no refresh control, an empty wallet offers only Add a reward, and a queued change retries',async t=>{
+ t.mock.timers.enable({apis:['setInterval']});
+ const h=harness();
+ let records=[],syncs=0;
+ const tool=mountRewards(h.document.querySelector('main'),{credentials:{get:async()=>'token'},vault:fakeVault(),
+  offline:{request:async(token,path,options)=>{if(!options?.method)syncs++;return {records};}}});
+ await tool.refresh();
+ const $=id=>h.document.getElementById(id);
+ const labels=()=>[...h.document.querySelectorAll('button')].map(button=>button.textContent);
+ assert.equal(labels().some(label=>/refresh/i.test(label)),false,'no manual refresh control is offered');
+ assert.deepEqual([...$('rewards-list').querySelectorAll('button')].map(b=>b.textContent),['Add a reward'],'the empty wallet offers one action');
+ $('rewards-list').querySelector('button').click();
+ assert.equal($('reward-editor').open,true,'the empty state opens the editor');
+ // A change still waiting to reach the cloud retries without being asked; an
+ // open editor is left alone so the retry cannot disturb typing.
+ records=[{id:'one',name:'Synthetic',kind:'membership',source:'Example',value:'Member offers',state:'available',revision:'local:1',pending:true}];
+ const queued=syncs;
+ t.mock.timers.tick(60000);
+ await settle(()=>syncs>queued,50).then(()=>assert.fail('an open editor is not interrupted'),()=>{});
+ $('reward-cancel').click();
+ await tool.refresh({quiet:true});
+ const idle=syncs;
+ t.mock.timers.tick(60000);
+ await settle(()=>syncs>idle);
+ assert.ok(syncs>idle,'the queued change retries on its own');
+ tool.stop();h.restore();t.mock.timers.reset();
+});

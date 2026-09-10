@@ -10,7 +10,7 @@ const today=()=>new Date().toISOString().slice(0,10);
 
 export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},onChanged=()=>{},vault,clipboard=globalThis.navigator?.clipboard}){
   const gate=mountVaultGate(root,{
-    id:'finance-vault',title:'Finance',
+    id:'finance-vault',title:'Finance is locked',
     ...(vault?{vault}:{}),
     onChange:unlocked=>{unlocked?refresh():clear();}
   });

@@ -6,6 +6,10 @@ const fields=['kind','name','source','value','due','state','url','notes'];
 // A revealed number returns to its masked form on its own, so an unattended
 // sidebar does not keep a card number on screen.
 const REVEAL_MS=60000;
+// The wallet syncs on its own: on open, on reconnect, when the tool is shown
+// again, and on this timer while a change is still waiting to reach the cloud.
+// Nothing here asks the owner to press a refresh button.
+const RETRY_MS=60000;
 const grouped=digits=>digits.replace(/(.{4})/g,'$1 ').trim();
 const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
   ?'Passkey verification was canceled or timed out. Try again when you’re ready.'
@@ -14,7 +18,7 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
   root.replaceChildren(RewardsView());
   const $=id=>root.querySelector(`#${id}`);
   let entries=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;
-  let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null;
+  let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null,syncFailed=false;
   const revealed=new Map();
   const status=text=>{$('rewards-status').textContent=text;};
   const action=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:busy||!loaded});b.addEventListener('click',fn);return b;};
@@ -96,6 +100,15 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
     if(expiry&&!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry))throw Error('Enter the expiration as MM/YY.');
     return {secret:await sealSecret(await vault.key(),id,{number,expiry}),secretHint:number.slice(-4)};
   }
+  // With nothing to show, the only useful action is starting an entry, so the
+  // empty wallet opens the editor rather than describing where it is.
+  function emptyState(){
+    if(!loaded)return [Note('Connect in Settings to load your saved rewards.')];
+    if(entries.length)return [Note('No matching rewards. Clear the search to see all entries.')];
+    return [Note('No saved rewards yet. A points balance, a card credit, or a membership such as a perks program all belong here.'),
+      ActionGroup([action('Add a reward',startEntry,'primary')],{compact:true})];
+  }
+  function startEntry(){clearForm();$('reward-editor').open=true;$('reward-name').focus();}
   function render(){
     const query=$('rewards-search').value.trim().toLowerCase();
     const visible=entries.filter(e=>[e.name,e.source,e.notes,e.value].join(' ').toLowerCase().includes(query));
@@ -111,25 +124,24 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
         ...(e.url?[Link('Open source',e.url)]:[]),remove];
       if(e.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(e.id,choice))));
       return Stack([RecordRow({title:e.name,detail:`${e.source} · ${e.value} · ${{available:'Available',activation:'Needs activation',used:'Used'}[e.state]}${e.secretHint?` · •••• ${e.secretHint}`:''}${e.due?` · Due ${e.due}`:''}${e.pending?' · Waiting to sync':''}${e.conflict?' · Conflict':''}${e.deleting?' · Pending deletion':''}`,notes:e.notes,actions}),shown?MaskedValue(shown):null,confirmation]);
-    }):[Note(!loaded?'Connect in Settings to load your saved rewards.':entries.length?'No matching rewards. Clear the search to see all entries.':'No saved rewards. Add a program or benefit below.')]));
+    }):emptyState()));
     const next=nextActions(entries.filter(e=>!e.deleting&&!e.conflict));
     $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,detail:`${e.name} · ${e.value}`,actions:[action('Review',()=>edit(e))]})));
     $('rewards-actions').closest('section').hidden=!next.length;
     for(const key of fields)$(`reward-${key}`).disabled=busy||!loaded;
     for(const key of ['number','expiry'])$(`reward-secret-${key}`).disabled=busy||!loaded||vaultBusy;
-    $('reward-save').disabled=busy||!loaded;$('reward-cancel').disabled=busy;$('rewards-refresh').disabled=busy;
+    $('reward-save').disabled=busy||!loaded;$('reward-cancel').disabled=busy;
   }
-  async function run(operation){if(busy)return false;busy=true;const current=++generation;render();try{const token=await credentials.get();if(!token)throw Error('Open Settings to connect this device.');if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. Refresh rewards before editing.');}activeToken=token;const result=await operation(token);if(current!==generation)return false;entries=result.records;loaded=true;status(result.syncMessage||'');return true;}catch(error){if(current!==generation)return false;status(error.message);$('reward-form-status').textContent=error.message;return false;}finally{busy=false;render();renderVault();}}
+  async function run(operation){if(busy)return false;busy=true;const current=++generation;render();try{const token=await credentials.get();if(!token)throw Error('Open Settings to connect this device.');if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. This wallet is reloading for the new connection.');}activeToken=token;const result=await operation(token);if(current!==generation)return false;entries=result.records;loaded=true;syncFailed=false;status(result.syncMessage||'');return true;}catch(error){if(current!==generation)return false;syncFailed=true;status(error.message);$('reward-form-status').textContent=error.message;return false;}finally{busy=false;render();renderVault();}}
   async function save(entry,method='PUT'){
     const success=await run(token=>offline.request(token,`/v1/rewards/${entry.id}`,{method,value:entry}));
     if(success)onChanged();
     return success;
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
-  async function refresh(){if(busy)return;status('Refreshing rewards…');await run(token=>offline.request(token,'/v1/rewards'));}
+  async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…');await run(token=>offline.request(token,'/v1/rewards'));}
   function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';forget();vault.lock();clearForm();status('Open Settings to connect this device.');render();renderVault();}
   $('rewards-search').addEventListener('input',render);
-  $('rewards-refresh').addEventListener('click',refresh);
   $('rewards-connect').addEventListener('click',onSettings);
   $('reward-cancel').addEventListener('click',()=>{clearForm();$('reward-editor').open=false;});
   $('vault-recovery-cancel').addEventListener('click',()=>{$('vault-recovery-code').value='';$('vault-recovery').hidden=true;});
@@ -143,14 +155,21 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
     if(await save({...entry,revision:editing?.revision??null})){clearForm();$('reward-editor').open=false;}
   }catch(error){$('reward-form-status').textContent=reason(error);}});
   clearForm();render();renderVault();
-  const reconnect=()=>{if(!$('reward-editor').open)refresh();};
+  const reconnect=()=>{if(!$('reward-editor').open)refresh({quiet:true});};
   window.addEventListener('online',reconnect);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconnect();});
+  // A failed sync or a queued change retries by itself while the tool is on
+  // screen. A conflict waits for the owner's choice instead of retrying.
+  const retry=setInterval(()=>{
+    if(document.hidden||busy||$('reward-editor').open)return;
+    if(syncFailed||entries.some(entry=>entry.pending&&!entry.conflict))refresh({quiet:true});
+  },RETRY_MS);
+  retry?.unref?.();
   for(const type of ['pointerdown','keydown'])root.addEventListener(type,event=>{if(event.isTrusted)vault.touch();},{capture:true,passive:true});
   // The vault expires on its own schedule; reflect an idle lock without waiting
   // for the next interaction.
   const watch=setInterval(()=>{if(vault.unlocked()!==vaultOpen){forget();renderVault();render();renderSecret();}},1000);
   // Keeping the lock state honest must not keep a host process alive.
   watch?.unref?.();
-  return {refresh,clear,stop(){clearInterval(watch);clearTimeout(revealTimer);}};
+  return {refresh,clear,stop(){clearInterval(watch);clearInterval(retry);clearTimeout(revealTimer);}};
 }

@@ -5,9 +5,7 @@ export const IDLE_MS = 15 * 60 * 1000;
 export function idleSession({now = Date.now, onLock = () => {}, idleMs = IDLE_MS} = {}) {
   let active = false, last = 0;
   return {
-    // `at` lets a restored session keep the window it already had rather than
-    // starting a fresh one: a stored unlock must expire when it was going to.
-    start(at = now()) { active = true; last = at; },
+    start() { active = true; last = now(); },
     check() {
       if (active && (now() < last || now() - last >= idleMs)) this.lock('idle');
       return active;

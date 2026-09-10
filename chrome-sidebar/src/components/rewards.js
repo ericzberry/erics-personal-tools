@@ -1,7 +1,7 @@
 import * as UI from './ui.js';
 const {Stack,Heading,Note,Notice,Button,ActionGroup,Disclosure}=UI;
 export function RewardsView(){
-  const field=(key,label,kind='text',options)=>UI.FormField({id:`reward-${key}`,label,kind,options});
+  const field=(key,label,kind='text',options,placeholder)=>UI.FormField({id:`reward-${key}`,label,kind,options,placeholder});
   return Stack([Heading('Rewards & benefits',1),
     UI.SettingsGroup({title:'Next actions',level:2,children:[Stack([],{id:'rewards-actions'})]}),
     UI.SettingsGroup({title:'Your wallet',level:2,children:[
@@ -19,11 +19,13 @@ export function RewardsView(){
       Note('',{id:'vault-detail'})
     ]}),
     Disclosure('Add or edit a reward',[
+      Note('A membership with no balance — a perks portal or partner program — is a membership entry: name it, say who provides it, and describe what it gets you.'),
       Note('Do not enter passwords or security codes.'),
       UI.Form([
-        field('kind','Entry type','select',[{text:'Points or miles balance',value:'balance'},{text:'Credit, discount, or offer',value:'benefit'}]),
-        field('name','Program or benefit name'),field('source','Card, airline, or benefit source'),
-        field('value','Balance or benefit (e.g. 42,000 miles or $50 credit)'),
+        field('kind','Entry type','select',[{text:'Points or miles balance',value:'balance'},{text:'Credit, discount, or offer',value:'benefit'},{text:'Membership or program access',value:'membership'}]),
+        field('name','Program or benefit name',undefined,undefined,'Airline miles, dining credit, or perks program'),
+        field('source','Card, airline, or benefit source',undefined,undefined,'The card, airline, or company that provides it'),
+        field('value','Balance or benefit',undefined,undefined,'42,000 miles · $50 credit · Member offers'),
         field('due','Expiration or use-by date (optional)','date'),
         field('state','Status','select',[{text:'Available',value:'available'},{text:'Needs activation',value:'activation'},{text:'Used',value:'used'}]),
         field('url','Official account or offer URL (optional)','url'),
@@ -34,6 +36,6 @@ export function RewardsView(){
         ActionGroup([Button('Save reward',{id:'reward-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'reward-cancel',variant:'secondary'})])
       ],{id:'reward-form',className:'form-stack'})
     ],{id:'reward-editor'}),
-    UI.SettingsGroup({title:'Cloud sync',level:2,children:[Notice('Loading rewards…',{id:'rewards-status'}),ActionGroup([Button('Refresh rewards',{id:'rewards-refresh',variant:'secondary'}),Button('Connection settings',{id:'rewards-connect',variant:'secondary'})],{compact:true})]})
+    UI.SettingsGroup({title:'Cloud sync',level:2,children:[Notice('Loading rewards…',{id:'rewards-status'}),ActionGroup([Button('Connection settings',{id:'rewards-connect',variant:'secondary',size:'compact'})],{compact:true})]})
   ],{className:'travel-wallet rewards-wallet'});
 }

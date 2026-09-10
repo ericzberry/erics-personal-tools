@@ -1,4 +1,4 @@
-import {autoUnlock} from './shared/auto-unlock.js';
+import {autoUnlock} from './auto-unlock.js';
 import {passkeyVault, VAULT_KEY} from './passkey-vault.js';
 import {idleSession} from './shared/idle-session.js';
 const root = document.getElementById('capabilities-root');

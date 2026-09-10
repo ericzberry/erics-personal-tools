@@ -57,7 +57,7 @@ const restaurants=mountRestaurants(document.getElementById('capability-restauran
 function selectTool(){
   for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=selectedTool!==capability.id;
   if(selectedTool==='restaurants')restaurants.open();
-  if(selectedTool==='rewards')rewardTool.refresh();
+  if(selectedTool==='rewards')rewardTool.refresh({quiet:true});
 }
 const navigation=mountToolNavigation(root.querySelector('.capability-navigation'),{
   onSelect(id){selectedTool=id;selectTool();},

@@ -4,7 +4,7 @@ export const SECRET_MAX=4096;
 export function validateReward(input,now=new Date().toISOString()){
   const entry=Object.fromEntries(['kind','name','source','value','due','state','url','notes','secret','secretHint'].map(key=>[key,String(input[key]||'').trim()]));
   if(!entry.name||!entry.source||!entry.value)throw Error('Enter a name, source, and balance or benefit.');
-  if(!['balance','benefit'].includes(entry.kind)||!['available','activation','used'].includes(entry.state))throw Error('Choose a valid entry type and status.');
+  if(!['balance','benefit','membership'].includes(entry.kind)||!['available','activation','used'].includes(entry.state))throw Error('Choose a valid entry type and status.');
   if(entry.due&&(!/^\d{4}-\d{2}-\d{2}$/.test(entry.due)||!Number.isFinite(Date.parse(entry.due))||new Date(entry.due).toISOString().slice(0,10)!==entry.due))throw Error('Enter a valid expiration date.');
   if(entry.url){let url;try{url=new URL(entry.url);}catch{throw Error('Enter a full https:// account or offer URL.');}if(url.protocol!=='https:'||url.username||url.password)throw Error('Use an HTTPS URL without credentials.');}
   // The card number is sealed on the device; the API only ever sees an opaque
