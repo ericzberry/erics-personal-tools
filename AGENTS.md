@@ -55,6 +55,12 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - For every requested app change, increment each affected app version by at least 0.0.1, complete required checks and final builds, then commit and push the change before handing it back. Do not wait for a separate request to increment, commit, or push. Honor explicit requests to leave work uncommitted.
 - Keep unrelated unfinished work out of the commit; use an isolated checkout when needed and follow the release and publication rules below.
 
+## Fixed Chrome release location
+
+- Always deliver the completed Chrome sidebar release to `/Users/ericberry/erics-tools-compact-release/chrome-sidebar/dist`. This is the fixed Load unpacked location the user was given; do not redirect them to a new worktree for each release.
+- When building in another checkout, copy the complete verified release into this fixed directory, removing obsolete build files while preserving unrelated source work. Never copy a mixed or unfinished build. Verify the destination manifest version and release contents match the packaged, committed release before reporting delivery.
+- Keep the fixed release checkout available. Chrome may still require Reload on its extensions page to activate the files; distinguish delivered files from the version actually loaded in Chrome.
+
 ## Mandatory version increment on every commit
 
 - Every commit affecting the extension or mobile app must increment that app's patch version in the same commit. This includes fixes, refactors, tests, app documentation, and follow-up commits; “commit and push” is not an exception. Do not defer the increment to a later release commit.
