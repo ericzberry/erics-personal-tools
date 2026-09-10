@@ -22,7 +22,7 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 ## Scope and concurrent work
 
 - Inspect the branch, working-tree changes, and staged diff before editing. Preserve existing edits, including edits to the same file; never stash, reset, overwrite, or commit unrelated work to obtain a clean checkout.
-- For app changes amid unfinished work, use a fresh isolated worktree as required by the release rules below. Verify the fetched remote revision against the latest published release; do not assume local `main` or an old worktree is current. Run checks and build artifacts from that worktree's own sources.
+- Work directly in `/Users/ericberry/erics-personal-tools`. Do not create sibling copies, release checkouts, or worktrees unless the user explicitly requests one. Fetch and reconcile released changes here, preserving unfinished edits. Build and package from this repository.
 - Keep each commit scoped to one working logical change. Stage explicit paths or hunks and inspect the entire staged diff before committing. A path alone does not isolate another task's edits within the same file.
 - Resolve conflicts by preserving both changes' intent. Do not select an entire side merely to make a build pass, force-push shared history, or remove a worktree containing unfinished work.
 - Stop only processes owned by the current task after verifying their identity; shared previews and other agents' jobs are not disposable cleanup.
@@ -93,13 +93,14 @@ Apply these rules to every user-facing interface in this repository. Follow each
 ## Automatic commit and push
 
 - For every requested app change, increment each affected app version by at least 0.0.1, complete required checks and final builds, then commit and push the change before handing it back. Do not wait for a separate request to increment, commit, or push. Honor explicit requests to leave work uncommitted.
-- Keep unrelated unfinished work out of the commit; use an isolated checkout when needed and follow the release and publication rules below.
+- Keep unrelated unfinished work out of the commit. Coordinate overlapping edits in this repository and stage only the intended changes; do not create another checkout.
 
-## Fixed Chrome release location
+## Canonical project and Chrome release location
 
-- Always deliver the completed Chrome sidebar release to `/Users/ericberry/erics-tools-compact-release/chrome-sidebar/dist`. This is the fixed Load unpacked location the user was given; do not redirect them to a new worktree for each release.
-- When building in another checkout, copy the complete verified release into this fixed directory, removing obsolete build files while preserving unrelated source work. Never copy a mixed or unfinished build. Verify the destination manifest version and release contents match the packaged, committed release before reporting delivery.
-- Keep the fixed release checkout available. Chrome may still require Reload on its extensions page to activate the files; distinguish delivered files from the version actually loaded in Chrome.
+- The only active source checkout is `/Users/ericberry/erics-personal-tools`. Build the extension to `/Users/ericberry/erics-personal-tools/chrome-sidebar/dist` and mobile to this repository’s `mobile-app/dist`.
+- The legacy `/Users/ericberry/erics-tools-compact-release` path is a compatibility symlink to this repository so Chrome’s existing Load unpacked path keeps working. Never replace it with a separate checkout or copy release files there.
+- Verify the canonical build’s manifest and release contents. Chrome may still require Reload to activate the files; distinguish delivered files from the version actually loaded.
+- Previous checkouts and unpublished edits were preserved under `.git/consolidation-archive` and the named consolidation recovery stash. Do not restore old snapshots over newer releases without reviewing their differences.
 
 ## Mandatory version increment on every commit
 
@@ -132,7 +133,7 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - A request to fix or change an app includes delivering the working change through the established release process. Do not stop at diagnosis, a local patch, passing tests, or a build and make the user ask again to release it. Honor an explicit request for investigation-only, review-only, or code-only work.
 - Before reporting an app fix as complete, finish relevant behavior and visual checks, increment and align every affected app version, build the final changes, package the artifacts, inspect the staged diff, commit and push, deploy the affected services/mobile app, publish each affected app's version to D1, and verify the live versions and changed behavior where accessible. Follow the release ordering and publication rules below.
 - Existing authorization for the app change covers these normal release steps. Do not ask a redundant "should I release it?" question or end with "fixed locally, not released" while authorized release work remains possible.
-- If other tasks have unfinished changes in the shared checkout, isolate the fix on the latest published code in a separate worktree and coordinate release versions. Mixed changes are a reason to isolate the release, not to stop or publish someone else's unfinished work.
+- If other tasks have unfinished changes, reconcile them in this canonical checkout and coordinate release versions. Preserve unpublished edits in a recoverable form when consolidation is explicitly authorized. Do not publish unfinished work or create sibling checkouts to bypass coordination.
 - Distinguish code committed, artifact packaged, service deployed, update version published, and update installed. Do not imply that an extension archive is installed or published to a store. Provide the artifact and any remaining user installation step clearly.
 - If a real blocker prevents delivery, complete all independent safe steps and report the exact blocked action, evidence, and minimum user action needed. Do not describe an unreleased fix as resolved. Repository-wide instructions-only edits do not require an app release.
 
