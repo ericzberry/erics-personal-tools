@@ -6,8 +6,10 @@ const token = 'synthetic-private-token-at-least-32-characters';
 function fixture() {
   const data = new Map(), storage = {getItem: key => data.get(key) || null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key)};
   let counter = 0, seed = new Uint8Array(32).fill(17), flags = 5, supported = true, cancel = false, wrongOrigin = false;
+  const handles = [];
   const credentials = {
     async create({publicKey}) {
+      handles.push(encode(publicKey.user.id));
       assert.equal(publicKey.authenticatorSelection.userVerification, 'required');
       assert.equal(publicKey.authenticatorSelection.residentKey, 'required');
       assert.equal(publicKey.authenticatorSelection.authenticatorAttachment, 'platform');
@@ -23,7 +25,7 @@ function fixture() {
     }
   };
   const options = {storage, credentials, origin: 'https://example.com', rpId: 'example.com'};
-  return {data, storage, options, vault: passkeyVault(options), set: value => { if ('flags' in value) flags = value.flags; if ('seed' in value) seed = value.seed; if ('supported' in value) supported = value.supported; if ('cancel' in value) cancel = value.cancel; if ('wrongOrigin' in value) wrongOrigin = value.wrongOrigin; }};
+  return {data, storage, options, handles, vault: passkeyVault(options), set: value => { if ('flags' in value) flags = value.flags; if ('seed' in value) seed = value.seed; if ('supported' in value) supported = value.supported; if ('cancel' in value) cancel = value.cancel; if ('wrongOrigin' in value) wrongOrigin = value.wrongOrigin; }};
 }
 test('passkey encrypts the legacy token; a cold offline reopen requires PRF to recover it', async () => {
   const f = fixture(); f.storage.setItem(LEGACY_KEY, token);
@@ -90,4 +92,17 @@ test('suspended page is checked against wall time; full restart starts locked', 
   const session = idleSession({now: () => now}); session.start();
   now += IDLE_MS + 50000; assert.equal(session.check(), false);
   assert.equal(idleSession().check(), false);
+});
+test('enrolling again renews the one passkey instead of leaving another entry behind', async () => {
+  // An authenticator files a resident credential under rp.id and user.id
+  // together. A handle that changed between enrollments made every repeated
+  // setup — and every recovery — add a second passkey under the same name, so
+  // the browser had to ask which one to use and only one of them held the key.
+  const f = fixture();
+  await f.vault.prepare(token); await f.vault.finish();
+  f.set({seed: new Uint8Array(32).fill(99)});
+  await f.vault.prepare(token); await f.vault.finish();
+  assert.equal(f.handles.length, 2);
+  assert.equal(f.handles[0], f.handles[1], 'the same user handle is what makes the second enrollment replace the first');
+  assert.equal(await f.vault.unlock(), token);
 });

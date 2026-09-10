@@ -2,7 +2,7 @@ import {PersonalView,PersonalGroup} from './components/personal.js';
 import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue} from './components/ui.js';
 import {normalizePersonal,validatePersonalPayload,groupPersonalRecords,expiringPersonal} from './personal-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
-import {sealSecret,openSecret} from './secret-vault.js';
+import {sealSecret} from './secret-vault.js';
 const fields=['category','label','person','hint','expires'];
 // A revealed value returns to its hidden form on its own, so an unattended
 // screen does not keep a document number on display for the rest of the
@@ -39,7 +39,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
   // changed. They are sealed as one payload; prefilling is the only way to edit
   // notes without retyping a value.
   async function edit(record){
-    const payload=await openSecret(await gate.key(),record.id,record.secret);
+    const payload=await gate.open(record.id,record.secret);
     editing={id:record.id,revision:record.revision};
     for(const key of fields)$(key).value=record[key]||'';
     $('value').value=payload.value;$('notes').value=payload.notes||'';
@@ -50,7 +50,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
   }
   async function reveal(record){
     await run(async()=>{
-      const payload=await openSecret(await gate.key(),record.id,record.secret);
+      const payload=await gate.open(record.id,record.secret);
       revealed.set(record.id,[payload.value,payload.notes].filter(Boolean).join(' · '));
       hold();
     });
@@ -59,7 +59,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
     if(!clipboard?.write||typeof ClipboardItem==='undefined'){status('Copy is unavailable in this browser. Use Show value instead.');return;}
     // The clipboard write starts during the click so Safari keeps the gesture.
     await run(async()=>{
-      const value=gate.key().then(key=>openSecret(key,record.id,record.secret)).then(payload=>new Blob([payload.value],{type:'text/plain'}));
+      const value=gate.open(record.id,record.secret).then(payload=>new Blob([payload.value],{type:'text/plain'}));
       await clipboard.write([new ClipboardItem({'text/plain':value})]);
       status('Value copied to the clipboard.');
     });

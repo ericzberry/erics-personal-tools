@@ -189,3 +189,26 @@ test('a host with nowhere to remember a credential still unlocks',async()=>{
   assert.equal(f.vault.unlocked(),true);
   assert.deepEqual(f.asked(),[null]);
 });
+
+test('the twin that cannot open a sealed value is forgotten, so the next check offers the choice again',async()=>{
+  const local=localArea();
+  // Two passkeys for this site derive two different keys, and an assertion
+  // succeeds under either. Opening a value is the only test of which one sealed
+  // it, so a value that will not open must not leave the wrong twin remembered.
+  const sealing=fixture({seed:new Uint8Array(32).fill(1),id:PASSKEY_A});
+  const sealed=await sealSecret(await sealing.vault.key(),'entry-1',{number:'4111111111111111',expiry:''});
+
+  const twin=fixture({credentialStore:vaultCredentialStore(local.area),seed:new Uint8Array(32).fill(2),id:PASSKEY_B});
+  await assert.rejects(()=>twin.vault.open('entry-1',sealed),/cannot open this protected value/);
+  assert.equal(local.values.get(CREDENTIAL_KEY),undefined,'the passkey that could not open it is not the one to go straight to');
+
+  const right=fixture({credentialStore:vaultCredentialStore(local.area),seed:new Uint8Array(32).fill(1),id:PASSKEY_A});
+  assert.deepEqual(await right.vault.open('entry-1',sealed),{number:'4111111111111111',expiry:''});
+  assert.deepEqual(right.asked(),[null],'the forgotten twin left the request discoverable');
+  assert.equal(local.values.get(CREDENTIAL_KEY),PASSKEY_A,'and the one that opened it is what gets remembered');
+
+  // Falling back to the recovery code says the same thing about the passkey.
+  const recovering=fixture({credentialStore:vaultCredentialStore(local.area),id:PASSKEY_A});
+  await recovering.vault.unlockWithRecoveryCode(recoveryCode(new Uint8Array(32).fill(1)));
+  assert.equal(local.values.get(CREDENTIAL_KEY),undefined);
+});

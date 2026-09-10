@@ -317,3 +317,28 @@ The wallet list is organized by category instead of one long alphabetical run. R
 An open record is tidier for it. The category line is gone, since the group label already states it, so the block is the number, that record's own detail (expiration, and the traveler where the collapsed row does not show it), a quiet rule, then the actions. The rule separates what the record is from what you can do with it and keeps a delete confirmation visibly attached; a metadata line with nothing to say is removed rather than left as a gap.
 
 Validation: 182 extension, 26 mobile, and 44 API tests pass, including new coverage for group order, retired categories, filtered groups, and the filtered-empty message. Synthetic 14-record wallet reviewed at 390px and 280px in the standalone page and the unlocked mobile shell, covering all seven groups, an open record with and without metadata, delete confirmation, and search filtering to one group. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.62.zip`.
+
+## One passkey, named directly (0.6.76 / mobile 0.1.36)
+
+Opening Finance, Personal information, or a card number asks the passkey by
+name once one has answered, so the routine unlock is a plain biometric prompt
+instead of a browser chooser. Enrollment on the phone now renews the one
+passkey rather than adding another: an authenticator files a resident
+credential under `rp.id` and `user.id` together, and a random handle made every
+repeated setup — and every recovery — leave a second entry behind under the
+same name, each deriving a different key. A fixed handle replaces the passkey
+it renews.
+
+Two passkeys already in a provider still derive two different keys, and an
+assertion succeeds under either, so the remembered one has to be able to be
+wrong. Every protected section reads its values through `vault.open()`: a
+sealed value that will not open drops the remembered ID, and the next check
+offers the choice again. Falling back to the recovery code drops it too.
+Entries created before this release stay in the provider until they are deleted
+there — the app cannot remove a credential it created, and only one of them
+holds the key to existing values.
+
+Validation: 235 extension and 24 mobile tests pass, including new coverage for
+naming the remembered credential, forgetting the twin that cannot open a value,
+and enrolling twice under one user handle. The native Touch ID and Face ID
+sheets were not directly tested.

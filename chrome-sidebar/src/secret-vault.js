@@ -236,7 +236,17 @@ export function secretVault({
       if (!pending) pending = (async () => adopt(await fromPasskey()))().finally(() => { pending = null; });
       return pending;
     },
-    async unlockWithRecoveryCode(code) { return adopt(recoveryBytes(code)); },
+    // Opening a sealed value is also the only test of whether the passkey that
+    // answered is the one that sealed it: two passkeys for this site derive two
+    // different keys, and an assertion succeeds either way. A value that will
+    // not open is that test failing, so the remembered credential is forgotten
+    // and the next unlock asks again rather than going straight back to it.
+    async open(id, envelope) {
+      const current = await this.key();
+      try { return await openSecret(current, id, envelope); }
+      catch (error) { await credentialStore?.clear(); throw error; }
+    },
+    async unlockWithRecoveryCode(code) { await credentialStore?.clear(); return adopt(recoveryBytes(code)); },
     recoveryCode() {
       if (!session.check() || !raw) throw Error('Unlock with your passkey before showing the recovery code.');
       session.touch();

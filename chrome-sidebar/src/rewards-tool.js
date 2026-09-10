@@ -1,7 +1,7 @@
 import {RewardsView} from './components/rewards.js';
 import {RecordRow,Button,Note,Link,Stack,ActionGroup,MaskedValue} from './components/ui.js';
 import {validateReward,nextActions,luhnValid} from './rewards-data.js';
-import {sharedVault,sealSecret,openSecret} from './secret-vault.js';
+import {sharedVault,sealSecret} from './secret-vault.js';
 const fields=['kind','name','source','value','due','state','url','notes'];
 // A revealed number returns to its masked form on its own, so an unattended
 // sidebar does not keep a card number on screen.
@@ -78,7 +78,7 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
   const unlockVault=()=>vaultRun(()=>vault.key());
   async function reveal(entry){
     await vaultRun(async()=>{
-      const value=await openSecret(await vault.key(),entry.id,entry.secret);
+      const value=await vault.open(entry.id,entry.secret);
       revealed.set(entry.id,[grouped(value.number),value.expiry?`exp ${value.expiry}`:''].filter(Boolean).join(' · '));
       hold();
     });

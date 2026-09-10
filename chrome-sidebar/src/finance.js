@@ -5,7 +5,7 @@ import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statem
 import {readOpenAccountPage,MAX_PAGE_TEXT} from './finance-page-read.js';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,valueHistory,parseFinanceUpdates,matchFinanceUpdates,kindLabel,FINANCE_KINDS,effectiveValue} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
-import {sealSecret,openSecret} from './secret-vault.js';
+import {sealSecret} from './secret-vault.js';
 const core=['kind','name','institution','owner','value','asOf'];
 const extra=['currency','ownership','liquidity','rate','commitment','unfunded','tags','notes'];
 const REVEAL_MS=60000;
@@ -77,7 +77,7 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
   }
   async function reveal(record){
     await run(async()=>{
-      const payload=await openSecret(await gate.key(),record.id,record.secret);
+      const payload=await gate.open(record.id,record.secret);
       revealed.set(record.id,payload.number);
       hold();
     });
@@ -85,7 +85,7 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
   async function copy(record){
     if(!clipboard?.write||typeof ClipboardItem==='undefined'){status('Copy is unavailable in this browser. Use Show details instead.');return;}
     await run(async()=>{
-      const value=gate.key().then(key=>openSecret(key,record.id,record.secret)).then(payload=>new Blob([payload.number],{type:'text/plain'}));
+      const value=gate.open(record.id,record.secret).then(payload=>new Blob([payload.number],{type:'text/plain'}));
       await clipboard.write([new ClipboardItem({'text/plain':value})]);
       status('Account details copied to the clipboard.');
     });

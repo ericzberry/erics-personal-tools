@@ -59,6 +59,22 @@ the kind of thing the session area guards. A named passkey that this device no
 longer holds is forgotten rather than becoming a dead end: the failed check
 drops the ID, and the next attempt asks the way the first one did.
 
+**Two passkeys for this site derive two different keys**, and an assertion
+succeeds under either, so naming the wrong one could otherwise stick. Opening a
+sealed value is the only test of which passkey sealed it, and every protected
+section reads through `vault.open()` for that reason: a value that will not open
+drops the remembered ID, so the next check offers the choice again. Falling back
+to the recovery code drops it too.
+
+**Enrollment renews one passkey rather than adding another.** An authenticator
+files a resident credential under `rp.id` and `user.id` together and replaces it
+only when both match, so `passkey-vault.js` enrolls under a fixed user handle: a
+repeated setup, or a recovery, replaces the passkey it renews instead of leaving
+another entry behind under the same name. Entries from before that — an earlier
+enrollment, a restarted setup, a recovery — stay in the provider until they are
+deleted there, and only one of them holds the key that opens existing values.
+The app cannot remove a credential it created.
+
 Losing every copy of the passkey makes protected values unreadable. The recovery
 code is the only way back, and the only fallback where a browser cannot produce
 PRF output. It is the same code the rewards wallet shows.

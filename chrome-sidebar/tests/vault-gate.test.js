@@ -4,7 +4,7 @@ import {parseHTML} from 'linkedom';
 import {mountVaultGate} from '../src/vault-gate.js';
 import {mountPersonal} from '../src/personal.js';
 import {mountFinance} from '../src/finance.js';
-import {sealSecret} from '../src/secret-vault.js';
+import {sealSecret,openSecret} from '../src/secret-vault.js';
 import {normalizePersonal} from '../src/personal-data.js';
 import {normalizeFinance} from '../src/finance-data.js';
 const settle=async(check=()=>true,attempts=500)=>{
@@ -19,12 +19,13 @@ function harness(){
   return {document,window,restore:()=>Object.defineProperty(window.HTMLSelectElement.prototype,'value',descriptor)};
 }
 function fakeVault(){
-  let key=null,prompts=0,open=false,waiting=null;
-  return {idleMs:900000,available:()=>true,unlocked:()=>open,touch(){},lock(){open=false;},
+  let key=null,prompts=0,opened=false,waiting=null;
+  return {idleMs:900000,available:()=>true,unlocked:()=>opened,touch(){},lock(){opened=false;},
     // Holds the next prompt open the way an unanswered passkey sheet does.
     hold(promise){waiting=promise;},
-    async key(){prompts++;if(waiting){const sheet=waiting;waiting=null;await sheet;}open=true;key??=await crypto.subtle.importKey('raw',new Uint8Array(32).fill(7),'AES-GCM',false,['encrypt','decrypt']);return key;},
-    async unlockWithRecoveryCode(){open=true;return this.key();},recoveryCode:()=>'EV1-SYNTHETIC',prompts:()=>prompts};
+    async key(){prompts++;if(waiting){const sheet=waiting;waiting=null;await sheet;}opened=true;key??=await crypto.subtle.importKey('raw',new Uint8Array(32).fill(7),'AES-GCM',false,['encrypt','decrypt']);return key;},
+    async open(id,envelope){return openSecret(await this.key(),id,envelope);},
+    async unlockWithRecoveryCode(){opened=true;return this.key();},recoveryCode:()=>'EV1-SYNTHETIC',prompts:()=>prompts};
 }
 
 test('the gate keeps its content out of the document tree’s visible state until the passkey answers',async()=>{

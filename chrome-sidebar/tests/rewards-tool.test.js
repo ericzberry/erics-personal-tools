@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
 import {mountRewards} from '../src/rewards-tool.js';
-import {sealSecret} from '../src/secret-vault.js';
+import {sealSecret,openSecret} from '../src/secret-vault.js';
 // Waits for the tool to reach an expected state. Sealing and opening a
 // protected value run through real WebCrypto, so a single tick is not enough
 // to observe the result reliably.
@@ -27,10 +27,11 @@ function harness(){
  return {document,window,restore:()=>Object.defineProperty(window.HTMLSelectElement.prototype,'value',descriptor)};
 }
 function fakeVault(){
- let key=null,prompts=0,open=false;
- return {idleMs:900000,available:()=>true,unlocked:()=>open,touch(){},lock(){open=false;},
-  async key(){prompts++;open=true;key??=await crypto.subtle.importKey('raw',new Uint8Array(32).fill(3),'AES-GCM',false,['encrypt','decrypt']);return key;},
-  async unlockWithRecoveryCode(){open=true;},recoveryCode:()=>'EV1-SYNTHETIC',prompts:()=>prompts};
+ let key=null,prompts=0,opened=false;
+ return {idleMs:900000,available:()=>true,unlocked:()=>opened,touch(){},lock(){opened=false;},
+  async key(){prompts++;opened=true;key??=await crypto.subtle.importKey('raw',new Uint8Array(32).fill(3),'AES-GCM',false,['encrypt','decrypt']);return key;},
+  async open(id,envelope){return openSecret(await this.key(),id,envelope);},
+  async unlockWithRecoveryCode(){opened=true;},recoveryCode:()=>'EV1-SYNTHETIC',prompts:()=>prompts};
 }
 function shim(document,ids){for(const id of ids){const node=document.getElementById(id);let value=id==='reward-kind'?'balance':'available';Object.defineProperty(node,'value',{configurable:true,get:()=>value,set:next=>{value=next;}});}}
 

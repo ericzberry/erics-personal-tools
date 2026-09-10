@@ -131,6 +131,7 @@ export function mountVaultGate(root,{
     content:$('content'),vault,
     unlocked:()=>vault.unlocked(),
     key:()=>vault.key(),
+    open:(id,envelope)=>vault.open(id,envelope),
     lock,
     // Lets a section report its own failure through the gate's status line.
     status(text){message=text||'';render();},

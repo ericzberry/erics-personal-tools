@@ -9,6 +9,13 @@ export const encode = value => btoa(String.fromCharCode(...new Uint8Array(value)
 export const decode = value => Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), char => char.charCodeAt(0));
 const random = length => crypto.getRandomValues(new Uint8Array(length));
 const fingerprint = async token => encode(await crypto.subtle.digest('SHA-256', bytes(token)));
+// One passkey per site, renewed rather than added to. An authenticator files a
+// resident credential under rp.id and user.id together and replaces it only
+// when both match, so a random handle made every repeated setup — and every
+// recovery — leave another entry behind, all carrying this same name and each
+// deriving a different key. A fixed handle makes enrollment replace the passkey
+// it renews. The handle is a label, not an identifier of the person.
+const USER_HANDLE = bytes('erics-tools/mobile/passkey-vault/v1');
 const aad = record => bytes(JSON.stringify([record.version, record.id, record.rpId, record.salt, record.fingerprint]));
 async function wrappingKey(seed, salt) {
   const material = await crypto.subtle.importKey('raw', seed, 'HKDF', false, ['deriveKey']);
@@ -57,7 +64,7 @@ export function passkeyVault({storage = globalThis.localStorage, credentials = g
       const salt = encode(random(32));
       const result = await credentials.create({publicKey: {
         challenge: random(32), rp: {id: rpId, name: 'Eric’s Tools'},
-        user: {id: random(32), name: 'Eric’s Tools mobile', displayName: 'Eric’s Tools mobile'},
+        user: {id: USER_HANDLE, name: 'Eric’s Tools mobile', displayName: 'Eric’s Tools mobile'},
         pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],
         authenticatorSelection: {authenticatorAttachment: 'platform', residentKey: 'required', userVerification: 'required'},
         timeout: 60000, attestation: 'none', extensions: {prf: {eval: {first: decode(salt)}}}
