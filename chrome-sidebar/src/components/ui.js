@@ -62,10 +62,11 @@ export function CapabilityNavigation(items){
   const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong('Current tab',{id:'current-function'})]);
   const rows=items.map(item=>{
     const props={id:`navigate-${item.id}`,className:'capability-item'};
-    const children=[Strong(item.label),Label(item.description)];
+    const children=[Glyph(item.icon,{size:16}),Stack([Strong(item.label),Label(item.description)],{className:'capability-text'})];
     return item.href?element('a',{...props,href:item.href,target:'_blank',rel:'noreferrer'},children):element('button',{...props,type:'button'},children);
   });
-  const nav=element('nav',{'aria-label':'Tools',className:'capability-list'},[...rows,Button('Settings',{id:'open-settings',className:'capability-settings','aria-controls':'settings-tool','aria-expanded':'false'})]);
+  const settings=element('button',{id:'open-settings',type:'button',className:'capability-settings','aria-controls':'settings-tool','aria-expanded':'false'},[Glyph(SETTINGS_GLYPH,{size:16}),Stack([Strong('Settings')],{className:'capability-text'})]);
+  const nav=element('nav',{'aria-label':'Tools',className:'capability-list'},[...rows,settings]);
   const disclosure=element('details',{id:'app-navigation',className:'capability-navigation'},[summary,nav]);
   disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'){disclosure.open=false;summary.focus();}});
   return disclosure;

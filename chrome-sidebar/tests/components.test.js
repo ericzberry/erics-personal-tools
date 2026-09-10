@@ -4,6 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {parseHTML} from 'linkedom';
 import {mountApp} from '../src/components/views.js';
 import {RecommendationCard,Field,DataTable,Button,PickRow} from '../src/components/ui.js';
+import {capabilities} from '../src/capabilities.js';
 function setup(){const {document}=parseHTML('<html><body><div id="app"></div></body></html>');globalThis.document=document;return document;}
 test('all screens mount through components with unique, accessible controller hooks',()=>{
   const doc=setup();mountApp(doc.getElementById('app'));
@@ -17,6 +18,20 @@ test('all screens mount through components with unique, accessible controller ho
   assert.equal(doc.getElementById('email-result').hidden,true);
   assert.equal(doc.querySelectorAll('header').length,1);
 });
+test('every Tools entry carries an icon and the sidebar menu renders one per row',()=>{
+  const doc=setup();mountApp(doc.getElementById('app'));
+  for(const item of capabilities)assert.ok(item.icon,`${item.id} has no icon`);
+  for(const item of capabilities){
+    const glyph=doc.querySelector(`#navigate-${item.id} svg`);
+    assert.ok(glyph,`${item.id} rendered no icon`);
+    assert.equal(glyph.getAttribute('aria-hidden'),'true');
+    assert.equal(glyph.querySelector('path').getAttribute('d'),item.icon);
+  }
+  // The label, not the icon, names each row.
+  assert.equal(doc.querySelector('#navigate-gmail .capability-text > strong').textContent,'Gmail');
+  assert.ok(doc.querySelector('#open-settings svg'));
+});
+
 test('shared cards and tables treat external text as text, not markup',()=>{
   setup();const payload='<img src=x onerror=alert(1)>';
   const card=RecommendationCard({name:payload,position:'RB',rank:1,adp:2,reasons:[payload]},{primary:true});

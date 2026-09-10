@@ -383,11 +383,15 @@ summary > .title-text { display: inline; }
 .capability-toggle::after { content: ''; display: block; width: 6px; height: 6px; box-sizing: border-box; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-1.5px) rotate(45deg); }
 .capability-navigation[open] .capability-toggle::after { transform: translateY(1.5px) rotate(225deg); }
 .capability-list { display: grid; padding: 0 8px 8px; }
-.capability-item, .capability-settings { display: grid; gap: 3px; width: 100%; text-align: left; padding: 10px 8px; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--ink); background: transparent; text-decoration: none; white-space: normal; overflow-wrap: anywhere; font: inherit; }
-.capability-item > strong { font-size: 13px; }
-.capability-item > span { font-size: 11px; color: var(--muted); }
+.capability-item, .capability-settings { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; text-align: left; padding: 10px 8px; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--ink); background: transparent; text-decoration: none; white-space: normal; overflow-wrap: anywhere; font: inherit; }
+.capability-item .glyph, .capability-settings .glyph { margin-top: 1px; color: var(--forest); }
+.capability-settings .glyph { color: var(--muted); }
+.capability-text { display: grid; gap: 3px; min-width: 0; }
+.capability-text > strong { font-size: 13px; }
+.capability-text > span { font-size: 11px; color: var(--muted); }
+.capability-text > span:empty { display: none; }
 .capability-item[aria-current='page'] { background: var(--sage); box-shadow: inset 3px 0 var(--forest); }
-.capability-item[aria-current='page'] > strong::after { content: ' · Selected'; font-weight: 400; }
+.capability-item[aria-current='page'] .capability-text > strong::after { content: ' · Selected'; font-weight: 400; }
 .capability-item:hover, .capability-settings:hover { background: var(--sage); }
 .capability-toggle:focus-visible, .capability-item:focus-visible, .capability-settings:focus-visible { outline: 2px solid var(--forest); outline-offset: -2px; }
 
