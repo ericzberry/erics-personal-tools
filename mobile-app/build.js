@@ -18,8 +18,11 @@ for (const file of shared) {
   await cp(new URL(`../chrome-sidebar/src/${file}`, import.meta.url), target);
 }
 // statement-text.js reaches the spreadsheet reader at ../vendor/, which from
-// dist/app/shared/ means dist/app/vendor/.
-await mkdir(new URL('./dist/app/vendor/',import.meta.url),{recursive:true});
-await cp(new URL('../chrome-sidebar/vendor/read-xlsx.js',import.meta.url),new URL('./dist/app/vendor/read-xlsx.js',import.meta.url));
+// dist/app/shared/ means dist/app/vendor/. `vendor/` is not in Git, so a
+// checkout without it copies nothing here rather than failing the build — the
+// same thing the extension build does with that directory. Reading a
+// spreadsheet is one input among several, and the reader's absence must not
+// hold back a release of everything else.
+await cp(new URL('../chrome-sidebar/vendor/',import.meta.url),new URL('./dist/app/vendor/',import.meta.url),{recursive:true,force:true});
 await mkdir(new URL('./dist/app/data/',import.meta.url),{recursive:true});
 await cp(new URL('../chrome-sidebar/config/rankings-2026.json',import.meta.url),new URL('./dist/app/data/rankings-2026.json',import.meta.url));
