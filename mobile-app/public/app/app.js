@@ -8,6 +8,9 @@ function setSettings(open) {
   el('install').hidden = open || navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
   document.querySelector('.mobile-tools-frame')?.contentWindow.postMessage({type:'mobile-settings',open},location.origin);
 }
+window.addEventListener('message',event=>{
+  if(event.origin===location.origin && event.source===document.querySelector('.mobile-tools-frame')?.contentWindow && event.data?.type==='mobile-open-settings'){setSettings(true);el('toggle-settings').focus();}
+});
 el('toggle-settings').addEventListener('click', () => setSettings(el('app-settings').hidden));
 function connection() { el('connection').textContent = navigator.onLine ? 'Online' : 'Offline'; }
 function installed() { el('install').hidden = !el('app-settings').hidden || navigator.standalone === true || matchMedia('(display-mode: standalone)').matches; }

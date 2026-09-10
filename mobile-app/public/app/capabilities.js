@@ -1,3 +1,4 @@
+import {mountToolNavigation} from './tool-navigation.js';
 import {CapabilitiesView} from './shared/components/capabilities.js';
 import {CAPABILITIES} from './shared/capabilities.js';
 import {mountCards} from './shared/cards.js';
@@ -37,23 +38,21 @@ for(const [kind,filename] of [['rules','espn-league-2026.json'],['rankings','ran
   const library=mountLibrary(document.getElementById(`capability-${kind}`),{kind,load:async()=>({value:await (await fetch(`/app/data/${filename}`)).json()})});
   await library.refresh();
 }
-const picker=document.getElementById('capability-picker');
+let selectedTool;
 const restaurants=mountRestaurants(document.getElementById('capability-restaurants'),{credentials,request:cloudRequest,cache:restaurantDownloads,loadConnections:async()=>{
   const result=await ai.request(await credentials.get(),'/v1/ai-connections');return result.records;
 }});
 function selectTool(){
-  for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=picker.value!==capability.id;
-  if(picker.value==='restaurants')restaurants.open();
+  for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=selectedTool!==capability.id;
+  if(selectedTool==='restaurants')restaurants.open();
 }
-try { picker.value=localStorage.getItem('mobile-selected-tool')||CAPABILITIES[0].id; } catch { picker.value=CAPABILITIES[0].id; }
-if(!CAPABILITIES.some(tool=>tool.id===picker.value))picker.value=CAPABILITIES[0].id;
-selectTool();
-picker.addEventListener('change',()=>{
-  selectTool();
-  try { localStorage.setItem('mobile-selected-tool',picker.value); } catch { /* Selection remains usable without storage. */ }
+const navigation=mountToolNavigation(root.querySelector('.capability-navigation'),{
+  onSelect(id){selectedTool=id;selectTool();},
+  onSettings(){parent.postMessage({type:'mobile-open-settings'},location.origin);}
 });
 export function showSettings(open){
-  root.querySelector('.capability-navigation').hidden=open;
+  navigation.hidden=open;
+  navigation.open=false;
   connectionRoot.hidden=!open;
   if(open)for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=true;
   else selectTool();

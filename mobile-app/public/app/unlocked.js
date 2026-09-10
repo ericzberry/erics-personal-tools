@@ -18,7 +18,7 @@ window.addEventListener('message', async event => {
     if (tokenField) { tokenField.disabled = true; tokenField.closest('.form-field')?.setAttribute('hidden', ''); }
     const connect = document.getElementById('travel-connect');
     if (connect) connect.hidden = true;
-    document.getElementById('capability-picker')?.focus({preventScroll:true});
+    document.getElementById('navigation-toggle')?.focus({preventScroll:true});
   } catch {
     document.getElementById('capabilities-root').textContent = 'Could not open your tools. Reopen the app to try again.';
   }
