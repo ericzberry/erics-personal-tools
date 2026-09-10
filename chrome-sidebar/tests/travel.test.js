@@ -95,3 +95,37 @@ test('travel records stay alphabetical when loaded, searched, and refreshed',asy
   await wallet.refresh();
   assert.deepEqual(names(),['AAA','Alamo','alaska','Bravo','Delta']);
 });
+
+test('records group by category in registry order, keeping retired categories and filtered groups',async()=>{
+  const {window,document}=parseHTML('<html><body><main></main></body></html>');
+  globalThis.window=window;globalThis.document=document;
+  const records=[
+    {id:'1',name:'Hertz',category:'Rental car'},
+    {id:'2',name:'Delta',category:'Airline'},
+    {id:'3',name:'AAA',category:'Other'},
+    {id:'4',name:'Alaska',category:'Airline'},
+    {id:'5',name:'Airport lounge',category:'Lounge'},
+    {id:'6',name:'Unfiled membership'}
+  ];
+  const wallet=mountTravel(document.querySelector('main'),{
+    credentials:{get:async()=>'synthetic'},request:async()=>({records})
+  });
+  await wallet.ready;
+  const layout=()=>[...document.querySelectorAll('#travel-list .record-group')].map(group=>[
+    group.querySelector('.record-group-title').textContent,
+    [...group.querySelectorAll('.record-row-toggle')].map(node=>node.textContent.trim())
+  ]);
+  // Registry order first, a retired category before Other, and no record dropped.
+  assert.deepEqual(layout(),[
+    ['Airline',['Alaska','Delta']],
+    ['Rental car',['Hertz']],
+    ['Lounge',['Airport lounge']],
+    ['Other',['AAA','Unfiled membership']]
+  ]);
+  const search=document.getElementById('travel-search');
+  search.value='rental';search.dispatchEvent(new window.Event('input'));
+  assert.deepEqual(layout(),[['Rental car',['Hertz']]]);
+  search.value='zzz';search.dispatchEvent(new window.Event('input'));
+  assert.deepEqual(layout(),[]);
+  assert.equal(document.querySelector('#travel-list').textContent,'No matching records.');
+});

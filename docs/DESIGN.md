@@ -63,11 +63,15 @@ Touch form buttons and fields have a 44px minimum; expanded record actions have 
 
 ### Record layout
 
-A record list is one ruled column, not a stack of loose lines. A hairline opens the list above the first row and each row closes with a single fine separator; drop the opening hairline when the list has no records, so an empty state never sits under a stray rule.
+A record list is organized by type, not one long alphabetical run. Records group under a category label in the category registry's own order, alphabetically within each group; a group with no records is omitted, and a record whose saved category has since been retired keeps its own group rather than disappearing. A search filters within that structure, so only the groups holding matches remain.
+
+The group label is 13px Georgia in muted ink — the editorial voice, not an uppercase eyebrow — set close above its own records. It replaces an opening hairline: the label anchors the run, each row closes with a single fine separator, and 16px separates one group from the next. An empty or filtered-empty list shows only its explanation, never a stray rule.
 
 A collapsed record is a compact row: 13px program name, optional 11px traveler, then a copy icon. Its disclosure marker is a small stroked chevron in a fixed right-hand column, quiet line color, pointing right and rotating down when the record opens. Never append a marker character to the name: markers must align in one column whatever the names are, and a long name that wraps keeps its marker centered on the row. Respect reduced motion when it turns.
 
-An open record is one contained block, not text floating between two rules. It takes the surface fill with 6px top corners, and its number, metadata, actions, and any delete confirmation sit inside that block on the same left edge as the collapsed rows. Content is 18px tabular number at 600, 12px metadata, then the compact action group. Edit and Delete have matching size and weight; danger color reinforces the Delete label. The number remains the strongest element, without extra tracking or a headline weight.
+An open record is one contained block, not text floating between two rules. It takes the surface fill with 6px top corners, and its number, metadata, actions, and any delete confirmation sit inside that block on the same left edge as the collapsed rows.
+
+Inside the block the number leads at 18px tabular 600 — the strongest element, without extra tracking or a headline weight — followed by that record's own detail at 12px, then a quiet rule and the compact action group beneath it. The rule separates what the record is from what you can do with it, and keeps the confirmation visibly attached to its record. A record carries only detail the surrounding list does not already state: the category belongs to the group label, and the traveler belongs to whichever of the collapsed row or the open block is not already showing it. A metadata line with nothing to say is removed, never left as an empty gap. Edit and Delete have matching size and weight; danger color reinforces the Delete label.
 
 A find-record field is a filter, not the page's main control. Keep it at the Filter density with the quiet `Line` border, separated from the list by 12px, and never let it outweigh the rows it filters. The shared `.form-field` control rules are more specific than a bare element selector, so a compact override must match `.form-field > input` specificity to take effect; verify the rendered height rather than trusting the declaration.
 

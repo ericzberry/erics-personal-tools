@@ -43,8 +43,9 @@
 .travel-wallet summary{cursor:pointer;font-size:12px;padding:4px 0}
 .travel-wallet summary h2{display:inline}
 .travel-wallet details[open]>:not(summary){margin-top:12px}
-.travel-list{display:grid;gap:0;border-top:1px solid var(--wallet-line)}
-.travel-list:not(:has(.record-row)){border-top:0}
+.travel-list{display:grid;gap:16px}
+.travel-wallet .record-group{display:grid;gap:0}
+.travel-wallet .record-group-title{font-size:13px;color:var(--wallet-muted);padding:0 0 4px}
 .travel-wallet .record-search{display:grid;gap:12px}
 /* Matches the shared .form-field input specificity so the compact size applies. */
 .travel-wallet .record-search .form-field>input{min-height:34px;padding:6px 10px;font-size:13px;border-color:var(--wallet-line)}
@@ -59,9 +60,11 @@
 .travel-wallet .record-row-toggle::after{content:'';position:absolute;right:4px;top:50%;width:5px;height:5px;border-right:1.5px solid var(--wallet-control-line);border-bottom:1.5px solid var(--wallet-control-line);transform:translateY(-50%) rotate(-45deg);transition:transform .15s ease}
 .travel-wallet .record-row-toggle[aria-expanded=true]::after{transform:translateY(-65%) rotate(45deg)}
 @media(prefers-reduced-motion:reduce){.travel-wallet .record-row-toggle::after{transition:none}}
-.travel-wallet .record-row-content{display:grid;gap:4px;padding:2px 0 10px}
+.travel-wallet .record-row-content{display:grid;gap:4px;padding:4px 0 8px}
+.travel-wallet .record-row-content p:empty{display:none}
 .travel-number{font-size:18px;font-weight:600;line-height:1.35;font-variant-numeric:tabular-nums;user-select:text}
 .travel-wallet .record-row-content .action-group{gap:4px;margin-top:6px}
+.travel-wallet .record-row-content>.action-group{border-top:1px solid var(--wallet-line);margin-top:8px;padding-top:8px}
 .travel-wallet .icon-button{width:28px;min-height:28px;padding:6px;border:0;background:transparent;display:grid;place-items:center}
 .travel-wallet .row-copy,.travel-wallet .row-copy:disabled{opacity:0}
 .travel-wallet .record-row:hover .row-copy,.travel-wallet .record-row:focus-within .row-copy,.travel-wallet .row-copy:focus-visible{opacity:1}

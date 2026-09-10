@@ -1,5 +1,6 @@
-import {TravelView,TravelRecord,TravelConnection} from './components/travel.js';
+import {TravelView,TravelGroup,TravelRecord,TravelConnection} from './components/travel.js';
 import {Note} from './components/ui.js';
+import {groupTravelRecords} from './travel-data.js';
 export function mountTravel(root,{credentials,request,offline,connectionRoot,onConnectionChange=()=>{},mode='inline',showNumbers=false,editId=null,onOpenEditor=()=>{},onSaved=()=>{},onChanged=()=>{},onDone=()=>{},clipboard=globalThis.navigator?.clipboard}) {
   root.replaceChildren(TravelView({connection:!connectionRoot,mode,editId}));
   if(connectionRoot)connectionRoot.replaceChildren(TravelConnection());
@@ -26,16 +27,18 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   }
   function render(){
     const term=$('search').value.trim().toLowerCase();
-    const matches=records.filter(r=>`${r.name} ${r.category} ${r.traveler}`.toLowerCase().includes(term))
-      .sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
-    $('list').replaceChildren(...(matches.length?matches.map(record=>TravelRecord(record,{
+    const matches=records.filter(r=>`${r.name} ${r.category} ${r.traveler}`.toLowerCase().includes(term));
+    const row=record=>TravelRecord(record,{
       showNumber:showNumbers,
       onEdit:()=>{if(busy)return;if(mode==='browse'){run(async()=>{await onOpenEditor(record.id);status('Editor opened in a new tab.');});return;}if(dirty){status('Save or cancel your edits first.');return;}edit(record);$('editor').open=true;$('name').focus();},
       onShow:async()=>{let value;await run(async()=>{value=(await request(token,`/v1/travel/${record.id}`)).record.number;status('');});return value;},
       onCopy:()=>copy(record,'number'),onCopyNotes:()=>copy(record,'notes'),
       onResolve:choice=>run(async()=>{if(dirty)throw Error('Save or cancel your edits first.');const result=await offline.resolve(token,record.id,choice);records=result.records;edit();render();onChanged();status(result.syncMessage);}),
       onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting.');const result=await request(token,`/v1/travel/${record.id}`,{method:'DELETE',value:{revision:record.revision}});records=result.records||records.filter(r=>r.id!==record.id);if(selected?.id===record.id)edit();render();onChanged();status(result.syncMessage||'Record deleted from all devices.');})
-    })):[Note(!token?'Connect in Settings to load your travel wallet.':records.length?'No matching records.':mode==='browse'?'No travel records yet. Choose Add record to get started.':'No travel records yet. Add your first one below.')]));
+    });
+    $('list').replaceChildren(...(matches.length
+      ? groupTravelRecords(matches).map(group=>TravelGroup(group.category,group.records.map(row)))
+      : [Note(!token?'Connect in Settings to load your travel wallet.':records.length?'No matching records.':mode==='browse'?'No travel records yet. Choose Add record to get started.':'No travel records yet. Add your first one below.')]));
     controls();
   }
   async function run(action,target='status'){if(busy)return;feedbackTarget=target;busy=true;controls();status('Working…');try{await action();}catch(error){status(error.message||'Could not connect. Check your internet connection and try again.');}finally{busy=false;controls();feedbackTarget='status';if(refreshPending&&!dirty){refreshPending=false;reload();}}}

@@ -25,6 +25,10 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
     ...(connection?[TravelConnection()]:[])
   ],{className:'travel-wallet'});
 }
+export function TravelGroup(category, rows) {
+  return Section([Heading(category,2,{className:'record-group-title'}),...rows],{className:'record-group'});
+}
+
 export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve,showNumber=false}) {
   const action=(label,options)=>Button(label,{size:'compact',...options});
   const number=Strong(showNumber?record.number||'—':'••••••••',{className:'travel-number','aria-live':'polite'});
@@ -50,7 +54,7 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
     subtitle:[showNumber?'':record.traveler,record.pending?(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Waiting to sync'):''].filter(Boolean).join(' · '),
     action:showNumber?null:copy,
     preview:showNumber?Stack([number,copy],{className:'record-number-line'}):null,
-    children:[...(showNumber?[]:[number]),Note([record.category,record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],
+    children:[...(showNumber?[]:[number]),Note([showNumber?record.traveler:'',record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],
     onToggle:async open=>{
       if(showNumber)return;
       number.textContent='••••••••';

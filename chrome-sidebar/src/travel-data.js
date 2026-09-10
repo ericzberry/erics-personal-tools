@@ -13,4 +13,17 @@ export function normalizeTravel(input, previous = {}) {
   return {category, name:field('name',100,true), traveler:field('traveler',100), number:field('number',200,true), notes:field('notes',2000), expires};
 }
 
+// Wallet lists group by category in registry order so a person scans by type.
+// Records saved with a retired category keep their own group before Other
+// rather than disappearing from the list.
+export function groupTravelRecords(records) {
+  const byName = (a, b) => a.name.localeCompare(b.name, undefined, {sensitivity:'base', numeric:true});
+  const category = record => record.category || 'Other';
+  const known = TRAVEL_CATEGORIES.slice(0, -1), other = TRAVEL_CATEGORIES.at(-1);
+  const extra = [...new Set(records.map(category))].filter(value => !TRAVEL_CATEGORIES.includes(value)).sort((a, b) => a.localeCompare(b));
+  return [...known, ...extra, other]
+    .map(value => ({category: value, records: records.filter(record => category(record) === value).sort(byName)}))
+    .filter(group => group.records.length);
+}
+
 export function travelMetadata(record) { const {number,notes,...value}=record; return {...value,hasNotes:!!notes}; }
