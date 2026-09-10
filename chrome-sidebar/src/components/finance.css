@@ -1,0 +1,12 @@
+.finance-totals{display:flex;flex-wrap:wrap;gap:8px 16px}
+.figure{display:flex;flex-direction:column;gap:2px;min-width:96px}
+.figure-label{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.figure-value{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.figure-value--negative{color:var(--danger,#8c2f26)}
+.currency-switch{display:flex;flex-wrap:wrap;gap:6px}
+.breakdown-group{display:flex;flex-direction:column;gap:2px;margin-block-end:8px}
+.breakdown-row,.trend-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.breakdown-row strong,.trend-row strong{font-weight:600}
+.trend-table{display:flex;flex-direction:column;gap:2px}
+.trend-row .footnote{margin:0;min-width:88px;text-align:end}
+.finance-ledger .record-row{gap:2px}

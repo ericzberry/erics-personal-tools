@@ -76,6 +76,17 @@ export const isSealed = value => {
   catch { return false; }
 };
 
+// One vault per host. Every protected section shares it, so a single passkey
+// prompt opens all of them and one idle window governs them together — an
+// unlock in the ledger keeps the personal records open, and going idle closes
+// both. The derived key is deterministic either way; what is shared here is the
+// session, not the secret.
+let shared=null;
+export function sharedVault(options){
+  if(!shared)shared=secretVault(options);
+  return shared;
+}
+
 export function secretVault({
   credentials = globalThis.navigator?.credentials,
   origin = globalThis.location?.origin,

@@ -38,6 +38,8 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
 | `rewards.html` | `src/rewards.js` | Rewards & benefits |
 | `cards.html` | `src/cards-page.js` | Best card |
+| `finance.html` | `src/finance-page.js` | Finance ledger (passkey-gated) |
+| `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
 | `data.html` | `src/data-page.js` | Read-only player rankings reference data |
 
@@ -53,8 +55,9 @@ state, release checks, launcher) and the content scripts
 them) · `tokens.css` (design tokens) · `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js` (all uploads) · plus per-feature component
-modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`,
-`restaurant-views.js`, `workspace.css`, `sidebar-launcher.js`.
+modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
+`vault.*` (the shared lock screen), `restaurant-views.js`, `workspace.css`,
+`sidebar-launcher.js`.
 See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 
 ### `src/` shared core (used by more than one host or feature)
@@ -66,15 +69,19 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `cloudRequest`, `CONNECTION_KEY`), `travel-changes.js` (cross-window change
   notification), `private-disconnect.js`.
 - **Device-held secrets** — `secret-vault.js` (WebAuthn PRF key derivation,
-  sealed envelopes, and the recovery code for values the Worker must not be able
-  to read) and `idle-session.js` (the canonical 15-minute inactivity gate, used
-  by both the mobile app lock and the vault).
+  sealed envelopes, the recovery code, and `sharedVault()` — one vault per host
+  so a single passkey opens every protected section), `idle-session.js` (the
+  canonical 15-minute inactivity gate, used by the mobile app lock and the
+  vault), and `vault-gate.js` (the whole-section lock screen used by Finance and
+  Personal information).
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
-  `rewards-sync.js`. The `*-data.js` modules own validation and are also imported
-  by the Worker.
+  `rewards-sync.js`, `finance-data.js`/`finance-offline.js`,
+  `personal-data.js`/`personal-offline.js`. The `*-data.js` modules own validation
+  and are also imported by the Worker.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
-  `data-library.js`, `restaurant-search.js`, `reservation-*.js`.
+  `finance.js`, `personal.js`, `data-library.js`, `restaurant-search.js`,
+  `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
   `email-ai.js` (on-device), `email-cloud.js` (via Worker).
 - **Credentials / settings** — `credentials.js`, `credential-services.js`,
@@ -118,14 +125,19 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
   `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research}`,
-  `/v1/rewards`, `/v1/cards[/…]`, `/v1/travel[/…]`.
-- `src/travel.js` — the generic encrypted record store; `src/cards.js` reuses it for
-  `card_records`. `src/rewards.js`, `src/releases.js`, `src/ai-settings.js`.
+  `/v1/rewards`, `/v1/cards[/…]`, `/v1/travel[/…]`, `/v1/finance[/…]`,
+  `/v1/personal[/…]`. The AI-connection family also serves `finance-intake`.
+- `src/travel.js` — the generic encrypted record store; `src/cards.js`,
+  `src/finance.js` and `src/personal.js` reuse it for `card_records`,
+  `finance_records` and `personal_records`. `src/rewards.js`, `src/releases.js`,
+  `src/ai-settings.js`.
 - `src/providers.js` (provider adapters) and `src/model-policy.js` (the central task
   → model policy and priced catalogue — never copy model IDs into features).
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
-  (`travel_records`), `cards-schema.sql` (`card_records`), `release-schema.sql`
-  (`app_releases`). Schema changes need an explicit upgrade path for existing data.
+  (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
+  (`finance_records`), `personal-schema.sql` (`personal_records`),
+  `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
+  path for existing data.
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of
   every app release). `wrangler.example.jsonc` — config template; real config and
   credentials stay outside Git.
@@ -139,6 +151,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 | Add a dropdown | `components/select.js` via `FormField({kind:'select'})` |
 | Change stored record shape | the `*-data.js` validator (shared by app and Worker), the matching `*-schema.sql` with an upgrade path, and the offline adapter's revision/normalize |
 | Add a value the cloud must not be able to read | `chrome-sidebar/src/secret-vault.js` — seal on the device, store the envelope in the record, and keep only a safe hint (such as last four digits) in the clear |
+| Put a whole capability behind the passkey | `chrome-sidebar/src/vault-gate.js` — mount the gate, then mount the tool into its `content` and load nothing until it unlocks |
 | Add or change an AI call | `tools-api/src/model-policy.js` for the task policy, `src/providers.js` for provider differences |
 | Change offline/sync behavior | `chrome-sidebar/src/offline-resource.js` (shared by every capability) |
 | Change what mobile ships | `mobile-app/build.js` shared list **and** `sw.js` `SHELL` |
@@ -161,4 +174,4 @@ npm --prefix chrome-sidebar run build && npm --prefix mobile-app run build
 release) · `docs/DESIGN.md`, `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`,
-`chrome-sidebar/RESTAURANTS.md`.
+`docs/PROTECTED_SECTIONS.md`, `chrome-sidebar/RESTAURANTS.md`.

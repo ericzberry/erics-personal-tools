@@ -40,3 +40,13 @@ Do not use a model's self-reported confidence as a quality gate, or blindly esca
 # Card rewards tasks
 
 `cards.category` uses level 1, 600 output tokens, no web tool, and a $0.01 estimated request ceiling. It reads one free-text purchase description into a merchant, category, purchase method and stated amount; it never sees the owner's cards and cannot supply reward rates or pick a winner. `cards.research` uses level 3, 4,000 output tokens, live web search, and a $0.10 estimated request ceiling. Both use the existing reviewed catalog and availability checks. Issuer research is a draft requiring owner review, including caps and point values. Fixtures test ambiguous category handling, output validation and rejection of research without source evidence. The calculation suite covers cash/points equivalence, caps, ties, activation, channel restrictions, expiration and explicit eligibility confirmation.
+# Finance reading task
+
+`finance.intake` uses level 2, 2,500 output tokens, no web tool, and a $0.03
+estimated request ceiling. It reads one block of pasted text into draft figures
+and nothing else: the owner's saved records are never sent, so it cannot match a
+figure to a record, and its instructions forbid totalling, netting, annualizing
+and currency conversion. Drafts are matched to records and all arithmetic is
+performed on the device. A draft without a usable as-of date is dropped rather
+than dated today. Fixtures cover that drop, the untrusted-text framing, input
+limits, and rejection of unparseable output.

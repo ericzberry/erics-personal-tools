@@ -1,7 +1,7 @@
 import {RewardsView} from './components/rewards.js';
 import {RecordRow,Button,Note,Link,Stack,ActionGroup,MaskedValue} from './components/ui.js';
 import {validateReward,nextActions,luhnValid} from './rewards-data.js';
-import {secretVault,sealSecret,openSecret} from './secret-vault.js';
+import {sharedVault,sealSecret,openSecret} from './secret-vault.js';
 const fields=['kind','name','source','value','due','state','url','notes'];
 // A revealed number returns to its masked form on its own, so an unattended
 // sidebar does not keep a card number on screen.
@@ -10,7 +10,7 @@ const grouped=digits=>digits.replace(/(.{4})/g,'$1 ').trim();
 const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
   ?'Passkey verification was canceled or timed out. Try again when you’re ready.'
   :error?.message||'Protected values could not be unlocked.';
-export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChanged=()=>{},vault=secretVault()}){
+export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChanged=()=>{},vault=sharedVault()}){
   root.replaceChildren(RewardsView());
   const $=id=>root.querySelector(`#${id}`);
   let entries=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;

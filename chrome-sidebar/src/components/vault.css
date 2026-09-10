@@ -1,0 +1,14 @@
+/* Layout only. The gate wrapper carries `travel-wallet`, so controls, spacing
+   and typography come from the shared wallet system rather than from here. */
+.vault-gate{display:grid;gap:8px;padding:12px;border:1px solid var(--wallet-line);border-radius:8px}
+/* Unlocked, the gate is not the subject of the page: one quiet line that keeps
+   Lock now reachable without competing with the tool's own heading. */
+.vault-gate[data-state="unlocked"]{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:0;border:0}
+.vault-gate[data-state="unlocked"] .notice{flex:1 1 auto;min-width:0;margin:0;padding:0;border:0;border-radius:0;background:none;color:var(--wallet-muted);font-size:12px}
+.vault-content{display:grid;gap:16px}
+.vault-content[hidden]{display:none}
+/* A gated tool keeps the wallet's own rhythm between its groups. */
+.vault-content>*{display:grid;gap:16px}
+/* Status lines are permanent landmarks for assistive technology, but an empty
+   one should not paint a bar across the section. */
+.vault-content .notice:empty,.vault-content .footnote:empty{display:none}

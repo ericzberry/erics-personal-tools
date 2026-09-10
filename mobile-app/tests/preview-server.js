@@ -10,6 +10,7 @@ const token = 'synthetic-private-token-at-least-32-characters';
 const id = '11111111-1111-4111-8111-111111111111';
 let records = [{id, name: 'Synthetic airline', category: 'Airline', traveler: 'Test traveler', number: '000123456', notes: 'Synthetic private note', expires: '', revision: 'first', updatedAt: new Date().toISOString()}];
 let rewards={entries:[],revision:null};let cards=[];
+let finance=[];let personal=[];
 let apiCalls = 0;
 const fixture = `
 const fixtureEncode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
@@ -90,6 +91,25 @@ createServer(async (req, res) => {
       const id=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');const previous=cards.find(c=>c.id===id);
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
       cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
+    }
+    for(const [name,list,set] of [['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}]]){
+      if(url.pathname===`/v1/${name}/snapshot`){res.end(JSON.stringify({records:list()}));return;}
+      if(url.pathname.startsWith(`/v1/${name}/`)){
+        const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
+        const previous=list().find(record=>record.id===recordId);
+        if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
+        set(list().filter(record=>record.id!==recordId));
+        if(req.method==='PUT'){const record={...value,id:recordId,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};set([...list(),record]);res.end(JSON.stringify({record}));return;}
+        res.end('{}');return;
+      }
+    }
+    if(url.pathname===`/v1/ai-connections/${id}/finance-intake`){
+      let text='';for await(const data of req)text+=data;const {text:input}=JSON.parse(text);
+      if(String(input).includes('failure')){res.statusCode=502;res.end('{"error":"Synthetic reading failure"}');return;}
+      res.end(JSON.stringify({updates:[
+        {name:'Synthetic brokerage',institution:'Synthetic Broker',owner:'',kind:'brokerage',currency:'USD',value:412350,asOf:'2026-09-05',confidence:'high',reason:'The text states a balance and a date.'},
+        {name:'Synthetic private fund II',institution:'',owner:'Family trust',kind:'private',currency:'USD',value:250000,asOf:'2026-08-31',confidence:'low',reason:'The sponsor and the valuation date should be confirmed.'}
+      ],unread:'One line mentioned a wire with no amount, so it was left out.'}));return;
     }
     if (url.pathname === '/v1/travel/snapshot') {res.end(JSON.stringify({records}));return;}
     if (url.pathname.startsWith('/v1/travel/')) {

@@ -9,7 +9,7 @@ The repository is the source of truth for Worker code, schema SQL, dependency me
 | Location | Responsibility |
 | --- | --- |
 | `tools-api/src/index.js` | Request entry point, shared authentication and request limits, mobile asset responses, and capability routing |
-| `tools-api/src/ai-settings.js`, `rewards.js`, `travel.js` | Capability-specific storage and operations |
+| `tools-api/src/ai-settings.js`, `rewards.js`, `travel.js`, `cards.js`, `finance.js`, `personal.js` | Capability-specific storage and operations; `travel.js` is the generic encrypted record store the others reuse |
 | `tools-api/src/providers.js`, `model-policy.js` | Provider dispatch and central task-based model selection |
 | `tools-api/src/releases.js` | Public, per-app release metadata lookup |
 | `tools-api/*schema.sql` | Explicit D1 schema setup and upgrades |
