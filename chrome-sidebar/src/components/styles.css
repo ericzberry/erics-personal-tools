@@ -1,23 +1,8 @@
+@import url('./tokens.css');
+@import url('./select.css');
 @import url('./workspace.css');
 /* Eric’s Personal Tools · Forest & Paper */
-:root {
-  --page-inset: 14px;
-  --section-gap: 12px;
-  --paper: #f7f6f2;
-  --surface: #fffefa;
-  --ink: #203b33;
-  --muted: #626f67;
-  --forest: #173e37;
-  --sage: #e8eee5;
-  --line: #dedfd5;
-  --accent: #ad8050;
-  --radius: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 14px;
-  color: var(--ink);
-  background: var(--paper);
-  color-scheme: light;
-}
+
 .header-link {color:#fffefa;font-size:11px;margin-left:6px;}
 /* Extension settings workspace; shared sidebar components keep their own scale. */
 body.settings-site {max-width:none;border:0;margin:0;font-size:16px;min-height:100vh;}
@@ -417,3 +402,19 @@ summary > .title-text { display: inline; }
 .settings-list > .connection-only .action-group{margin:0}
 .settings-list > .connection-only .action-group > button{flex:0 0 auto}
 .sub-page > .tool-heading{flex-direction:row;align-items:baseline}
+
+/* Full-tab hosts share compact controls; extra width belongs to content. */
+.settings-shell > main{padding:20px 24px;}
+.settings-heading{margin-bottom:12px;gap:12px;flex-wrap:wrap;}
+.settings-heading h1{font-size:24px;}.settings-intro{font-size:14px;margin-top:6px;}
+.settings-columns{gap:16px;margin-top:16px;}
+.settings-site .footnote,.settings-site .notice{font-size:12px;}
+.settings-site .settings-card{padding:12px;border-radius:6px;box-shadow:none;}
+.settings-site input,.settings-site textarea,.settings-site button{border-radius:6px;}
+.settings-site .pill{border-radius:6px;padding:4px 6px;}
+.record-row{padding:8px 0;}.record-row > p{margin:3px 0;}
+@media(max-width:600px){.settings-shell > main{padding:14px;}}
+
+.settings-brand > strong:last-child{font:500 22px/1.2 Georgia,serif;}.settings-site h2{font-size:17px;}.settings-site .form-field{margin:10px 0;}.settings-site label{font-size:13px;margin-bottom:4px;}.settings-site .action-group{gap:8px;}.settings-site .toggle-field{margin:10px 0;}.settings-site .button-primary,.settings-site .button-secondary{font-size:13px;padding:8px 12px;min-height:36px;}
+
+.action-group > button{flex:0 0 auto;}.settings-site .connection-setup .action-group{display:flex;}.settings-site .settings-empty{padding:12px;border-radius:6px;font-size:13px;}

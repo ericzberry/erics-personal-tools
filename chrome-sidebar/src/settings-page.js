@@ -21,6 +21,7 @@ function controls() {
   for (const node of $('connection-list').querySelectorAll('button')) node.disabled=working||!connected;
   $('settings-connect').disabled=working||!available;
   $('settings-disconnect').disabled=working||!connected;
+  $('settings-disconnect').hidden=!connected;
   $('settings-token').disabled=working||!available;
   $('settings-connection-badge').textContent=connected?'Connected':'Not connected';
   $('settings-connection-badge').classList.toggle('pill-connected',connected);
@@ -153,6 +154,7 @@ $('playground-copy').addEventListener('click',()=>run(async()=>{
 window.addEventListener('beforeunload',event=>{if (dirty) {event.preventDefault();event.returnValue='';}});
 edit();
 await run(async()=>{
+  $('settings-cloud').open=true;
   const result=await send('status');connected=result.connected;$('settings-cloud').open=!connected;
   if (connected) {
     try {await load();}

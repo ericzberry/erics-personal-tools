@@ -1,3 +1,13 @@
+# UI conformance — mobile 0.1.18 / extension 0.6.58
+
+Shared formatted selects and editable suggestion menus, compact controls, consistent page typography and spacing, clearer settings actions, and reliable reference-library status messages. Rewards is available in the general Tools menu on both apps, with encrypted offline records, durable queued edits, per-record conflict handling, and pending-change protection before disconnecting.
+
+Validation: 180 extension, 23 mobile, and 44 API tests; both builds; synthetic browser review of sidebar, mobile and full-tab pages, keyboard menus, failed form preservation, card comparison, and reward edits surviving an offline restart. Native iPhone passkey prompts, the installed Chrome extension and authenticated live provider operations require device verification.
+
+Archives: `erics-tools-mobile-0.1.18.zip` and `../../chrome-sidebar/release/erics-sidebar-0.6.58.zip`.
+
+---
+
 # Travel wallet save fix — mobile 0.1.15 / extension 0.6.54
 
 The Add record page stays in creation mode after saving and reloading. Each subsequent addition creates a separate record instead of replacing the previous entry. Explicit edits still update the selected record. Previously overwritten values are not restored by this update.

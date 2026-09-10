@@ -1,4 +1,4 @@
-# Eric's Personal Tools — 0.6.57
+# Eric's Personal Tools — 0.6.58
 
 Status: prepared locally; not uploaded or published. Google developer dashboard requires reauthentication.
 
@@ -25,7 +25,7 @@ Provide a contextual personal productivity sidebar for the current page: ESPN dr
 Open the sidebar to inspect saved league rules without signing in. Live capture requires an ESPN account and an active football draft or practice draft. Open or reload the draft room after installing. The draft is selected automatically. Settings contains the ESPN is capturing picks toggle. Switch it off for manual Me / Someone else buttons on the tier board, and on to hide those buttons and resume the live feed. After each pick, the count and available recommendations update. Completed, disconnected or incomplete drafts do not show actionable picks. No credentials are included in this submission.
 
 ## Submission checklist
-Upload erics-sidebar-0.6.57.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
+Upload erics-sidebar-0.6.58.zip. Add icons/icon-128.png as the listing icon and store-screenshot.png (640×400). Host PRIVACY.md at a public URL and enter that URL in the dashboard if required. Complete privacy disclosures accurately, select Private / Trusted testers, add the requested tester account, and submit for review. Registration, contact verification, fees or other account requirements may still be required after sign-in.
 
 Install the approved store listing once on each computer while signed into the tester account. Subsequent approved versions of that same listing update automatically. Local draft storage does not sync between computers.
 
@@ -43,6 +43,6 @@ Options opens the extension-only AI settings page and prompt playground. Provide
 
 Save reviewed card reward terms, classify purchases with AI, and compare estimated cash or points value. Includes encrypted offline cards and queued synchronization, mobile parity, source-linked issuer research, and conservative bonus eligibility. See docs/BEST_CARD.md for limits.
 
-## Compact Tools header — 0.6.57
+## Compact Tools header — 0.6.58
 
 Reduced the Tools trigger to a 28px desktop row, removed inherited navigation padding, and tightened the brand spacing. Touch targets retain a 44px minimum.

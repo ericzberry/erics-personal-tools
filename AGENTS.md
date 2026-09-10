@@ -1,4 +1,42 @@
-# UI and UX standards for all agents
+# Repository guidance for all coding agents
+
+This file holds repository-wide rules. Supporting documents hold architecture, component catalogues, rationale, and operating procedures. Keep rules concise and update affected supporting docs alongside behavior changes. Adapt outside examples to this repository; do not import another app's features, paths, commands, infrastructure assumptions, or design system.
+
+## Read before working
+
+- Read the applicable nested `AGENTS.md` and relevant documents before editing. Verify documented behavior against the implementation; correct stale guidance when it is within the task's scope.
+- Keep shared rules here and project-specific rules in the relevant project's guidance. Link to the canonical explanation rather than maintaining competing copies.
+
+| Work | Read |
+| --- | --- |
+| Repository orientation | [README.md](README.md) and the relevant project's README |
+| Extension behavior and setup | [chrome-sidebar/AGENTS.md](chrome-sidebar/AGENTS.md), [chrome-sidebar/README.md](chrome-sidebar/README.md) |
+| UI, controls, or layout | [docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md), its relevant host guide, and [docs/DESIGN.md](docs/DESIGN.md) |
+| Rendered UI review and acceptance | [docs/VISUAL_QA.md](docs/VISUAL_QA.md) |
+| Mobile, offline access, or shared assets | [mobile-app/README.md](mobile-app/README.md) and the shared modules included by `mobile-app/build.js` |
+| API, authentication, storage, or deployment | [tools-api/README.md](tools-api/README.md), the affected schema files, and the package scripts |
+| Cloudflare runtime, D1 lifecycle, or Worker release | [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md) |
+| AI calls or provider integrations | [model routing](tools-api/MODEL_ROUTING.md), [providers](tools-api/PROVIDERS.md) |
+| Gmail or restaurant workflows | [Gmail](docs/GMAIL.md) or [restaurants](chrome-sidebar/RESTAURANTS.md) |
+
+## Scope and concurrent work
+
+- Inspect the branch, working-tree changes, and staged diff before editing. Preserve existing edits, including edits to the same file; never stash, reset, overwrite, or commit unrelated work to obtain a clean checkout.
+- For app changes amid unfinished work, use a fresh isolated worktree as required by the release rules below. Verify the fetched remote revision against the latest published release; do not assume local `main` or an old worktree is current. Run checks and build artifacts from that worktree's own sources.
+- Keep each commit scoped to one working logical change. Stage explicit paths or hunks and inspect the entire staged diff before committing. A path alone does not isolate another task's edits within the same file.
+- Resolve conflicts by preserving both changes' intent. Do not select an entire side merely to make a build pass, force-push shared history, or remove a worktree containing unfinished work.
+- Stop only processes owned by the current task after verifying their identity; shared previews and other agents' jobs are not disposable cleanup.
+
+## Shared logic and service boundaries
+
+- Before adding a helper, constant, data adapter, or component, search for its existing owner and consumers. Extend the canonical implementation and verify affected consumers instead of copying logic into feature controllers or the mobile app.
+- Keep feature logic in capability modules and provider differences in provider adapters. Shared routers, storage, synchronization, and UI components must not accumulate provider-specific exceptions.
+- Keep Worker source, schema changes, build configuration, and deployment procedures in the repository; credentials and local account configuration stay outside Git. Deploy the tested repository version. Reconcile emergency dashboard edits into source before the next deployment.
+- For schema changes, provide an explicit upgrade path for existing D1 data; fresh-database initialization is not an upgrade test. Follow this repo's SQL/deployment conventions, verify existing-record preservation, and apply required schema changes before code that depends on them.
+- Extension and offline mobile clients can remain on older versions. Keep API and queued-record formats compatible during rollout, and reject unsupported versions without deleting pending work or advancing synchronization state.
+- Bound external requests, polling, payloads, and retries. Retry only when duplicate effects are prevented or the operation is safe to repeat; a timeout does not prove that a write or billable request failed.
+
+## UI and UX standards
 
 Apply these rules to every user-facing interface in this repository. Follow each project's component architecture and established visual language.
 
@@ -37,6 +75,8 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Respect reduced motion and avoid animation that obstructs work.
 
 ## Review before delivery
+
+- Follow [docs/VISUAL_QA.md](docs/VISUAL_QA.md) and the [shared component and host guides](docs/UI_COMPONENTS.md).
 
 - Inspect the rendered interface at its actual target size and a narrow supported size. A passing build is not a visual review.
 - Check alignment, grouping, hierarchy, wrapping, focus visibility, and all changed interaction states using synthetic data.
@@ -86,3 +126,31 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Support durable offline changes with per-record revisions, a pending-change queue, reconnect/foreground synchronization, explicit sync status, and conflict resolution. Never overwrite newer cloud data or discard unsynced changes silently.
 - Disconnecting a device must explain and clear its private offline copies while leaving cloud records intact. Require pending changes to be synchronized or explicitly resolved before disconnecting. Browser storage can be evicted; do not present a device cache as a permanent backup.
 - Verify a cold offline reopen, access to private values without a network request, queued edits surviving a restart, reconnection, conflicts, and cache clearing. Check the general Tools dropdown at mobile and narrow sidebar widths.
+
+## Complete app fixes through release
+
+- A request to fix or change an app includes delivering the working change through the established release process. Do not stop at diagnosis, a local patch, passing tests, or a build and make the user ask again to release it. Honor an explicit request for investigation-only, review-only, or code-only work.
+- Before reporting an app fix as complete, finish relevant behavior and visual checks, increment and align every affected app version, build the final changes, package the artifacts, inspect the staged diff, commit and push, deploy the affected services/mobile app, publish each affected app's version to D1, and verify the live versions and changed behavior where accessible. Follow the release ordering and publication rules below.
+- Existing authorization for the app change covers these normal release steps. Do not ask a redundant "should I release it?" question or end with "fixed locally, not released" while authorized release work remains possible.
+- If other tasks have unfinished changes in the shared checkout, isolate the fix on the latest published code in a separate worktree and coordinate release versions. Mixed changes are a reason to isolate the release, not to stop or publish someone else's unfinished work.
+- Distinguish code committed, artifact packaged, service deployed, update version published, and update installed. Do not imply that an extension archive is installed or published to a store. Provide the artifact and any remaining user installation step clearly.
+- If a real blocker prevents delivery, complete all independent safe steps and report the exact blocked action, evidence, and minimum user action needed. Do not describe an unreleased fix as resolved. Repository-wide instructions-only edits do not require an app release.
+
+## Mandatory build after every change
+
+- After any change, automatically compile/build every affected app before handing the work back, committing, or packaging. Do not wait for the user to ask, and do not treat a small fix or follow-up as an exception.
+- From the repository root, run `npm --prefix chrome-sidebar run build` for extension changes and `npm --prefix mobile-app run build` for mobile changes. Run both for shared code, shared assets, API behavior used by both apps, or repository-wide changes.
+- Build after the final edit, including version and configuration updates; a build from before the latest change does not count. Fix build failures and rerun the affected build before claiming completion. If blocked, report which build remains incomplete and why.
+- Building does not replace required tests, visual review, version increments, packaging, deployment, or D1 release publication. Never publish another task's unfinished work merely because it builds.
+
+## User density preference
+
+- Prefer compact interfaces with minimal whitespace. Use normal body-size record values, 2–4px gaps within record details, and 8–12px between related groups. Avoid stacked container padding and oversized numbers; preserve accessible shared control hit targets.
+
+## Formatted controls
+
+- Every dropdown must use the shared formatted `Select` component, including its open options menu, on extension and mobile. Do not ship plain browser/OS select menus or feature-specific dropdown implementations.
+- Format all controls with shared typography, spacing, surfaces, borders, focus and disabled states. Keep persistent labels and compact layouts; preserve accessible touch targets.
+- Dropdowns must support keyboard navigation, type-ahead, Escape, outside dismissal, long labels, disabled options, and visible selected states. Share assets with mobile and include them in its offline shell.
+
+- Editable suggestion menus (such as model IDs) also use the shared formatted combobox; keep custom text entry available instead of exposing a native datalist popup.

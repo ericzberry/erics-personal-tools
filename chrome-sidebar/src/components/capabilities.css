@@ -1,1 +1,12 @@
+@import url('./tokens.css');
+@import url('./select.css');
 .capability-navigation{padding:12px 14px;border-bottom:1px solid var(--line,#d8ddd5);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink,#173e37)}.capability-navigation .form-field{display:grid;gap:6px}.capability-navigation select{box-sizing:border-box;width:100%;min-width:0;min-height:44px;font:inherit;border:1px solid var(--line,#aab6ad);background:var(--surface,#fff);color:inherit;border-radius:8px;padding:8px}.capability-navigation :focus-visible{outline:3px solid #527d38;outline-offset:3px}.data-library{font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#173e37;max-width:680px;margin:auto;padding:20px;display:grid;gap:16px;overflow-wrap:anywhere}.data-library h1{font-size:26px;margin:0}.data-library h2{font-size:17px;margin:0}.data-library p{margin:0}.data-library .form-field{display:grid;gap:6px}.data-library input{box-sizing:border-box;width:100%;min-height:44px;font:inherit;padding:8px;border:1px solid #aab6ad;border-radius:8px}.data-library :focus-visible{outline:3px solid #527d38;outline-offset:3px}.data-record{padding:16px 0;border-bottom:1px solid #d8ddd5}.data-records{display:grid;gap:12px}[hidden]{display:none!important}
+
+/* Shared compact reference records across full tabs and mobile. */
+.data-library{font-size:14px;gap:12px;color:var(--ink,#203b33);padding:14px;}
+.data-library h1{font:500 22px/1.25 Georgia,serif;letter-spacing:-.3px;}
+.data-library h2{font-size:14px;line-height:1.4;}
+.data-library .data-records{gap:0;}
+.data-library .data-record{padding:8px 0;display:grid;gap:3px;border-color:var(--line,#dedfd5);}
+.data-library input{border-radius:6px;background:var(--surface,#fffefa);font-size:16px;}
+.data-library :focus-visible{outline:2px solid var(--forest,#173e37);outline-offset:2px;}

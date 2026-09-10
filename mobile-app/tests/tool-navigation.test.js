@@ -14,7 +14,7 @@ test('mobile menu restores supported tools, switches in place, and routes Settin
   const saved=new Map([['mobile-selected-tool','rules']]);
   const ctx=setup({getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)});
   const {nav,selections}=ctx;
-  assert.deepEqual([...nav.querySelectorAll('.capability-item')].map(row=>row.id),['navigate-travel','navigate-cards','navigate-rules','navigate-rankings','navigate-ai','navigate-restaurants']);
+  assert.deepEqual([...nav.querySelectorAll('.capability-item')].map(row=>row.id),['navigate-travel','navigate-rewards','navigate-cards','navigate-rules','navigate-rankings','navigate-ai','navigate-restaurants']);
   assert.equal(nav.querySelectorAll('a,select').length,0);
   assert.deepEqual(selections,['rules']);
   assert.equal(nav.querySelector('[aria-current="page"]').id,'navigate-rules');

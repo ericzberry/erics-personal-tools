@@ -1,0 +1,21 @@
+/* Canonical palette and typography for every app host. */
+:root {
+  --page-inset: 14px;
+  --section-gap: 12px;
+  --paper: #f7f6f2;
+  --surface: #fffefa;
+  --ink: #203b33;
+  --muted: #626f67;
+  --forest: #173e37;
+  --sage: #e8eee5;
+  --line: #dedfd5;
+  --accent: #ad8050;
+  --radius: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--paper);
+  color-scheme: light;
+}
+body{margin:0;}
+.title-text{font-family:Georgia,serif;font-weight:500;letter-spacing:-.3px;}

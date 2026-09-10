@@ -1,6 +1,6 @@
 # Shared UI components
 
-All extension UI is built here. `ui.js` owns native DOM construction and reusable presentation. `views.js` composes the shared pieces into screens. `styles.css` owns the design tokens and component classes. `file-drop.js` owns reusable upload interaction. `src/app.js` mounts the screens before feature controllers attach.
+All extension UI is built here. `ui.js` owns native DOM construction and reusable presentation. `views.js` composes the shared pieces into screens. `tokens.css` owns the shared design tokens and title typography; `styles.css` owns the main component classes. `file-drop.js` owns reusable upload interaction. `src/app.js` mounts the screens before feature controllers attach.
 
 | Component | Responsibility |
 | --- | --- |
@@ -32,3 +32,7 @@ Use `settings-panel--compact` on a settings disclosure for tighter insets, group
 `CapabilityNavigation` renders the shared expandable navigation from `src/capabilities.js`. Keep feature-specific actions inside their screens. The controller distinguishes Current tab automatic mode from explicit capability selection; Escape closes the list and returns focus to its summary.
 
 `Workspace`, `WorkspaceColumns`, `FieldGrid`, `ChoiceRow`, `EvidenceList`, and `ResultBlock` provide reusable search-workspace layouts and source-backed results. Restaurant screens are composed in `restaurant-views.js` and exported through `views.js`. `SettingsGroup` accepts an optional heading level to preserve page hierarchy.
+
+`Select` now composes `FormattedSelect` from `select.js`. The native select retains the controller ID and value, while the shared trigger and option list handle keyboard and pointer interaction. `Field` supplies the visible label; editable model suggestions use `FormattedSuggestions`, retaining custom input. `select.css` and `tokens.css` are included in every host and the mobile offline shell.
+
+`components/rewards.js` and `rewards-tool.js` share Rewards presentation and behavior between sidebar, full tab, and mobile. `rewards-offline.js` queues encrypted per-record changes and merges them through the existing wallet revision API. Inline delete confirmation replaces the browser dialog.

@@ -4,10 +4,12 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import worker from '../../tools-api/src/index.js';
 const root = new URL('../dist/', import.meta.url);
+const previewRevision=crypto.randomUUID();
 const port = Number(process.env.PORT || 8791);
 const token = 'synthetic-private-token-at-least-32-characters';
 const id = '11111111-1111-4111-8111-111111111111';
 let records = [{id, name: 'Synthetic airline', category: 'Airline', traveler: 'Test traveler', number: '000123456', notes: 'Synthetic private note', expires: '', revision: 'first', updatedAt: new Date().toISOString()}];
+let rewards={entries:[],revision:null};let cards=[];
 let apiCalls = 0;
 const fixture = `
 const fixtureEncode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
@@ -56,7 +58,7 @@ createServer(async (req, res) => {
         let value = await readFile(new URL('.' + path, root));
         if (path.endsWith('.html')) value = value.toString().replace('<head>', '<head><script src="/app/fixture.js"></script>');
         if (path.endsWith('/sw.js')) {
-          const revision=createHash('sha256').update(await readFile(new URL('app/restaurants.js',root))).update(await readFile(new URL('app/shared/components/restaurant-views.js',root))).digest('hex').slice(0,8);
+          const revision=createHash('sha256').update(previewRevision).update(await readFile(new URL('app/restaurants.js',root))).update(await readFile(new URL('app/shared/components/restaurant-views.js',root))).digest('hex').slice(0,8);
           value=value.toString().replace(/(const CACHE = '[^']+)/,`$1-preview-${revision}`).replace('const SHELL = [',"const SHELL = ['/app/fixture.js', ");
         }
         const type=Object.entries(types).find(([extension])=>path.endsWith(extension))?.[1] || 'application/octet-stream';
@@ -74,6 +76,16 @@ createServer(async (req, res) => {
       let text='';for await(const data of req)text+=data;const {search}=JSON.parse(text);
       if(search.query==='failure'){res.statusCode=502;res.end('{"error":"Synthetic research failure"}');return;}
       res.end(JSON.stringify({summary:'Synthetic source-backed matches for the selected criteria.',clarification:'Review the restaurant address before booking.',researchedAt:new Date().toISOString(),restaurants:[{id:'1',name:'Example Bistro with a deliberately long restaurant name',address:'100 Example Avenue',city:'New York City',neighborhood:'Upper West Side',borough:'Manhattan',travel:'included',reason:'Synthetic candidate for layout and offline testing.',evidence:[{url:'https://example.com/review',title:'Synthetic restaurant review',detail:'Two stars in the synthetic guide.',published:'2026'}],booking:[{url:'https://resy.com/cities/new-york-ny/venues/example-bistro',provider:'Resy'},{url:'https://www.opentable.com/r/example-bistro',provider:'OpenTable'}]}]}));return;
+    }
+    if(url.pathname==='/v1/rewards'){
+      if(req.method==='PUT'){let text='';for await(const data of req)text+=data;const value=JSON.parse(text);if(value.revision!==rewards.revision){res.statusCode=409;res.end('{}');return;}rewards={entries:value.entries,revision:crypto.randomUUID()};}
+      res.end(JSON.stringify(rewards));return;
+    }
+    if(url.pathname==='/v1/cards/snapshot'){res.end(JSON.stringify({records:cards}));return;}
+    if(url.pathname.startsWith('/v1/cards/')){
+      const id=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');const previous=cards.find(c=>c.id===id);
+      if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
+      cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
     }
     if (url.pathname === '/v1/travel/snapshot') {res.end(JSON.stringify({records}));return;}
     if (url.pathname.startsWith('/v1/travel/')) {

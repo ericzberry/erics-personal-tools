@@ -15,7 +15,7 @@ export function DraftView() {
 export function DraftReset() {
   return Disclosure('Reset draft data',[
     Note('Clears this board’s picks and corrections and switches live capture off. Other drafts and rankings stay saved. Turn capture back on in Settings to use ESPN history again.'),
-    Button('Reset this draft',{id:'reset-draft'}),Notice('',{id:'reset-draft-status',hidden:true})
+    Button('Reset this draft',{id:'reset-draft',variant:'danger'}),Notice('',{id:'reset-draft-status',hidden:true})
   ],{className:'settings-panel'});
 }
 export function DraftSettings() {
@@ -26,7 +26,7 @@ export function DraftSettings() {
     Stack([
       ...Field({id:'manual-clock',label:'Current overall pick',kind:'number',placeholder:'Unknown'}),
       ...Field({id:'manual-slot',label:'Your draft position',kind:'select',options:[{text:'Unknown',value:''},...Array.from({length:10},(_,i)=>({text:String(i+1),value:String(i+1)}))]}),
-      Button('Save progress',{id:'save-manual-progress'}),
+      Button('Save progress',{id:'save-manual-progress',variant:'primary'}),
       Note('Update the current pick as your manual draft progresses.'),
       ...Field({id:'manual-search',label:'Player outside your spreadsheet',placeholder:'Search ESPN players…'}),
       Note('',{id:'manual-result-count'}),Stack([],{id:'manual-players'})
@@ -38,7 +38,7 @@ export function RulesView() {
   return Disclosure('League rules',[SectionTitle('The rulebook',Badge('SAVED RULES')),Note('Saved September 8, 2026 · Settings won’t update automatically.'),...Field({id:'search-rules',label:'Search rules',placeholder:'Search scoring, waivers, roster…',hiddenLabel:true}),Stack([],{id:'rules'}),Text('No matching rules.',{id:'no-rules',hidden:true})],{id:'rules-view'});
 }
 export function GmailView() {
-  return Section([UI.PageHeader({title:'Open an email in Gmail',titleId:'email-subject',action:Button('Refresh',{id:'refresh-email'})}),Main([Note('',{id:'email-from',className:'footnote content-meta'}),Note('',{id:'email-read-status',role:'status'}),
+  return Section([UI.PageHeader({title:'Open an email in Gmail',titleId:'email-subject',action:Button('Refresh',{id:'refresh-email',variant:'secondary',size:'compact'})}),Main([Note('',{id:'email-from',className:'footnote content-meta'}),Note('',{id:'email-read-status',role:'status'}),
     ActionGroup([Button('Summarize',{id:'summarize-email',variant:'primary',disabled:true}),Button('Generate reply',{id:'reply-email',variant:'secondary',disabled:true})]),Note('',{id:'email-action-status',role:'status'}),
     EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),Disclosure('Email text',[Text('',{id:'email-preview',className:'source-preview'})],{id:'email-source',hidden:true})
   ])],{id:'gmail-tool',className:'tool-page',hidden:true});
@@ -78,7 +78,7 @@ export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),G
 export function AISettingsView() {
   const field=UI.FormField;
   return Stack([
-    Section([Stack([UI.Strong('eb',{className:'settings-monogram'}),Heading('ericberry',1)],{className:'settings-brand'}),
+    Section([Stack([UI.Strong('eb',{className:'settings-monogram'}),UI.Strong('ericberry')],{className:'settings-brand'}),
       Note('Personal settings'),CapabilityPicker(),Text('AI connections',{className:'settings-nav-current'}),
       Note('Open here anytime: ericberry → Tab → Enter',{className:'settings-shortcut'})
     ],{className:'settings-rail'}),
@@ -88,13 +88,13 @@ export function AISettingsView() {
       Disclosure('Cloud connection',[
         Stack([Note('Connect this browser to your personal settings. Use your extension access token here; add AI provider keys below.'),
           field({id:'settings-token',label:'Extension access token',kind:'password',placeholder:'Paste your private token'}),
-          ActionGroup([Button('Connect',{id:'settings-connect',variant:'primary'}),Button('Disconnect this browser',{id:'settings-disconnect'})]),
+          ActionGroup([Button('Connect',{id:'settings-connect',variant:'primary'}),Button('Disconnect this browser',{id:'settings-disconnect',variant:'secondary'})]),
           Note('',{id:'settings-cloud-status',role:'status'})],{className:'connection-setup'})
       ],{id:'settings-cloud'}),
       Notice('',{id:'settings-status',role:'status',hidden:true}),
       Stack([
-        Section([SectionTitle('Saved connections',Button('+ Add',{id:'connection-add'})),
-          Button('Reload connections',{id:'connection-reload'}),
+        Section([SectionTitle('Saved connections',Button('Add connection',{id:'connection-add',variant:'primary',size:'compact'})),
+          Button('Reload connections',{id:'connection-reload',variant:'secondary',size:'compact'}),
           Text('Connect your browser to load your AI settings.',{id:'connections-empty',className:'settings-empty'}),
           Stack([],{id:'connection-list',className:'connection-list'})],{className:'settings-library'}),
         UI.Panel([
@@ -109,16 +109,16 @@ export function AISettingsView() {
             field({id:'ai-key',label:'API key',kind:'password',placeholder:'Paste your provider’s key'}),
             Note('Keys are stored encrypted. Saved keys are never displayed.',{id:'ai-key-help'}),
             UI.Toggle({id:'ai-clear-key',label:'Remove the saved API key',checked:false}),
-            ActionGroup([Button('Save connection',{id:'connection-save',variant:'primary',type:'submit'}),Button('Cancel',{id:'connection-cancel'})]),
-            Button('Remove connection',{id:'connection-remove',hidden:true}),
+            ActionGroup([Button('Save connection',{id:'connection-save',variant:'primary',type:'submit'}),Button('Cancel',{id:'connection-cancel',variant:'secondary'})]),
+            Button('Remove connection',{id:'connection-remove',variant:'danger-subtle',hidden:true}),
             Stack([Notice('Remove this connection and its saved API key?'),
-              ActionGroup([Button('Yes, remove',{id:'connection-confirm-remove',variant:'secondary'}),Button('Keep connection',{id:'connection-keep'})])
+              ActionGroup([Button('Yes, remove',{id:'connection-confirm-remove',variant:'danger'}),Button('Keep connection',{id:'connection-keep'})])
             ],{id:'connection-remove-confirm',hidden:true})
           ],{id:'connection-form'})
         ],{className:'settings-card settings-editor'})
       ],{className:'settings-columns'}),
       UI.Panel([
-        SectionTitle('Try a connection',Button('Fetch models',{id:'connection-models'})),
+        SectionTitle('Try a connection',Button('Fetch models',{id:'connection-models',variant:'secondary',size:'compact'})),
         Note('Select a saved connection above. Tests and prompts use that provider’s API credit.',{id:'playground-context'}),
         UI.ModelSuggestions({id:'provider-model-list'}),
         Note('',{id:'model-list-status',role:'status'}),
@@ -128,7 +128,7 @@ export function AISettingsView() {
           field({id:'playground-system',label:'Instructions (optional)',kind:'textarea',rows:2}),
           field({id:'playground-prompt',label:'Your prompt',kind:'textarea',rows:4}),
           field({id:'playground-limit',label:'Output token limit',kind:'select',options:[512,1024,2048,4096,8192].map(value=>({text:String(value),value:String(value)}))}),
-          ActionGroup([Button('Run prompt',{id:'playground-run',type:'submit',variant:'primary'}),Button('Copy response',{id:'playground-copy'})])
+          ActionGroup([Button('Run prompt',{id:'playground-run',type:'submit',variant:'primary'}),Button('Copy response',{id:'playground-copy',variant:'secondary'})])
         ],{id:'playground-form'}),
         Note('',{id:'playground-status',role:'status'}),
         UI.OutputText({id:'playground-output',hidden:true})
@@ -139,31 +139,6 @@ export function AISettingsView() {
 }
 export function mountSettings(root) {root.replaceChildren(AISettingsView());}
 
-export function RewardsView(){
-  const field=(key,label,kind='text',options)=>UI.FormField({id:`reward-${key}`,label,kind,options});
-  return SubPage({id:'rewards-tool',title:'Rewards & benefits',backId:'close-rewards',children:[
-    Note('Your points, miles, credits, and discounts in one place. Accounts and benefits sync across your connected browsers; balances and offers are entered manually.'),
-    UI.SettingsGroup({title:'Cloud sync',children:[Notice('Loading rewards…',{id:'rewards-status'}),ActionGroup([Button('Refresh rewards',{id:'rewards-refresh',variant:'secondary'}),Button('Connection settings',{id:'rewards-connect',variant:'secondary'})],{compact:true})]}),
-    UI.SettingsGroup({title:'Next actions',children:[Note('Deadlines within 30 days, activation steps, and balances due for review.'),Stack([],{id:'rewards-actions'})]}),
-    UI.SettingsGroup({title:'Your wallet',children:[
-      UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
-      Stack([],{id:'rewards-list'})]}),
-    Disclosure('Add or edit a reward',[
-      Note('Add each card or airline balance, then add its benefits separately. Include discounts from work, memberships, and other sources. Do not enter account numbers or passwords.'),
-      UI.Form([
-        field('kind','Entry type','select',[{text:'Points or miles balance',value:'balance'},{text:'Credit, discount, or offer',value:'benefit'}]),
-        field('name','Program or benefit name'),field('source','Card, airline, or benefit source'),
-        field('value','Balance or benefit (e.g. 42,000 miles or $50 credit)'),
-        field('due','Expiration or use-by date (optional)','date'),
-        field('state','Status','select',[{text:'Available',value:'available'},{text:'Needs activation',value:'activation'},{text:'Used',value:'used'}]),
-        field('url','Official account or offer URL (optional)','url'),
-        UI.FormField({id:'reward-notes',label:'Terms, eligibility, and next step (optional)',kind:'textarea',rows:3}),
-        Notice('',{id:'reward-form-status'}),
-        ActionGroup([Button('Save reward',{id:'reward-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'reward-cancel',variant:'secondary'})])
-      ],{id:'reward-form'})
-    ],{id:'reward-editor'}),
-    Note('Actions cover your saved entries only. Check official terms before using a benefit. Recurring credits need a new entry for each period; no automatic discovery or background alerts yet.')
-  ]});
-}
+export function RewardsView(){return SubPage({id:'rewards-tool',title:'Rewards & benefits',backId:'close-rewards',children:[Stack([],{id:'rewards-root'})]});}
 
 export {RestaurantWorkspace,RestaurantCandidate,ReservationResult} from './restaurant-views.js';

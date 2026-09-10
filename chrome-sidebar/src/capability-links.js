@@ -5,7 +5,7 @@ document.getElementById('navigate-travel')?.addEventListener('click',()=>{
   if(root&&!mounted){mountExtensionTravel(root);mounted=true;}
 });
 
-// Standalone settings/data pages use the same data registry in a native picker.
+// Standalone settings/data pages use the same data registry in the shared formatted picker.
 const {CAPABILITIES}=await import('./capabilities.js');
 const picker=document.getElementById('capability-picker');
 picker?.addEventListener('change',()=>{

@@ -2,6 +2,8 @@
 
 A quiet, personal workspace. Warm paper, deep forest green, and a little brass. The tools should feel like parts of one considered product.
 
+Read [UI_COMPONENTS.md](UI_COMPONENTS.md) for shared components and the sidebar, mobile, and full-tab guides. Use [VISUAL_QA.md](VISUAL_QA.md) for acceptance.
+
 ## Visual language
 
 | Token | Value | Use |
@@ -23,7 +25,7 @@ Use 4px spacing increments and 14px sidebar gutters. Controls use 6px corners; a
 
 A 42px header pairs the Eric’s tools signature with the current function. The active browser tab selects the function automatically; do not add function tabs. Each tool has a compact heading. Put secondary information such as league rules behind a disclosure. Use the action hierarchy below, and one dominant recommendation at a time. Keep supporting explanations behind disclosure controls. Empty states explain one next step; they never pretend to show live data.
 
-The implementation tokens live in chrome-sidebar/src/components/styles.css. Reuse these names and values in future subprojects. No external fonts, tracking, or third-party UI assets are needed.
+The implementation tokens live in chrome-sidebar/src/components/tokens.css; styles.css and each standalone shared stylesheet import them. Reuse these names and values in future subprojects. No external fonts, tracking, or third-party UI assets are needed.
 
 ## Writing
 

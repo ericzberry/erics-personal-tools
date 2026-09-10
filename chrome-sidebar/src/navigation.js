@@ -16,6 +16,7 @@ export function selectCapability(id){selection=id;settingsOpen=false;closeNaviga
 export function showRewards(open){selectCapability(open?'rewards':'auto');}
 export function initializeNavigation(){
   for(const item of capabilities)if(!item.href)$(`navigate-${item.id}`).addEventListener('click',()=>selectCapability(item.id));
+  document.addEventListener('pointerdown',event=>{if(!$('app-navigation').contains(event.target))closeNavigation();});
   render();
 }
 

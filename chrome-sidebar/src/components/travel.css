@@ -1,10 +1,12 @@
+@import url('./tokens.css');
+@import url('./select.css');
 /* Shared wallet styles for the extension and mobile app. See docs/DESIGN.md. */
 .travel-wallet {
   --control-height:36px; --control-compact:28px; --control-radius:6px;
   --control-text:13px; --control-text-compact:12px;
-  --wallet-ink:#203b33; --wallet-muted:#626f67; --wallet-forest:#173e37;
-  --wallet-line:#dedfd5; --wallet-control-line:#aab6ad; --wallet-surface:#fffefa;
-  --wallet-hover:#e8eee5; --wallet-danger:#982f27; --wallet-danger-hover:#f7e9e6;
+  --wallet-ink:var(--ink); --wallet-muted:var(--muted); --wallet-forest:var(--forest);
+  --wallet-line:var(--line); --wallet-control-line:#aab6ad; --wallet-surface:var(--surface);
+  --wallet-hover:var(--sage); --wallet-danger:#982f27; --wallet-danger-hover:#f7e9e6;
   font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color:var(--wallet-ink); max-width:680px; margin:0 auto; padding:24px;
   display:grid; gap:16px; overflow-wrap:anywhere;
@@ -88,3 +90,5 @@
 }
 .travel-wallet .connection-surface>details:has(>summary[hidden]){padding:0}
 .travel-wallet .connection-surface>details:has(>summary[hidden])>.connection-content{margin-top:0}
+
+.rewards-wallet{padding:0;gap:12px;max-width:none;}.rewards-wallet .record-row{padding:8px 0;border-bottom:1px solid var(--wallet-line);}.rewards-wallet .record-row p{margin:3px 0;}.rewards-wallet .record-row .action-group{margin-top:4px;}.rewards-wallet .form-stack{display:grid;gap:10px;}.rewards-wallet .form-field{gap:4px;}.rewards-wallet textarea{font:inherit;width:100%;min-width:0;padding:8px;border:1px solid var(--wallet-control-line);border-radius:6px;background:var(--wallet-surface);color:var(--wallet-ink);}.rewards-wallet .notice:empty{display:none;}.rewards-wallet .settings-group{gap:8px;}

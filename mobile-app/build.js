@@ -11,7 +11,7 @@ await mkdir(new URL('./dist/', import.meta.url), {recursive: true});
 await cp(new URL('./public/', import.meta.url), new URL('./dist/', import.meta.url), {recursive: true});
 console.log(`Built Eric’s Tools ${version}`);
 
-const shared=['cards.js','card-data.js','cards-offline.js','components/cards.js','components/cards.css','restaurant-search.js','components/restaurant-views.js','components/workspace.css','travel.js','travel-data.js','travel-offline.js','offline-resource.js','offline-storage.js','capabilities.js','data-library.js','cloud-storage.js','components/ui.js','components/travel.js','components/travel.css','components/capabilities.js','components/capabilities.css'];
+const shared=['components/tokens.css','rewards-tool.js','rewards-data.js','rewards-offline.js','components/rewards.js','components/select.js','components/select.css','cards.js','card-data.js','cards-offline.js','components/cards.js','components/cards.css','restaurant-search.js','components/restaurant-views.js','components/workspace.css','travel.js','travel-data.js','travel-offline.js','offline-resource.js','offline-storage.js','capabilities.js','data-library.js','cloud-storage.js','components/ui.js','components/travel.js','components/travel.css','components/capabilities.js','components/capabilities.css'];
 for (const file of shared) {
   const target = new URL(`./dist/app/shared/${file}`, import.meta.url);
   await mkdir(new URL('./', target), {recursive:true});

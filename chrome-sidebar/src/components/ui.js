@@ -1,3 +1,4 @@
+import {FormattedSelect,FormattedSuggestions} from './select.js';
 import {capabilities} from '../capabilities.js';
 // All DOM construction lives here. Features compose components and supply data.
 function element(tag, props={}, children=[]) {
@@ -22,7 +23,7 @@ export const PageBody=children=>element('main',{className:'page-body'},children)
 export const Main=PageBody;
 export const Button=(text,{variant='quiet',size,className,...props}={})=>element('button',{type:'button',text,className:[className||(variant==='quiet'?'quiet':`button-${variant}`),size?`button--${size}`:''].filter(Boolean).join(' '),...props});
 export const Link=(text,href,props={})=>element('a',{text,href,target:'_blank',rel:'noreferrer',...props});
-export const Select=({id,disabled=false,options=[]})=>element('select',{id,disabled,className:'select-control'},options.map(o=>Option(o.text,o.value)));
+export const Select=({id,label='',disabled=false,options=[]})=>FormattedSelect(element('select',{id,disabled,className:'select-control'},options.map(o=>Option(o.text,o.value))),label);
 export const Option=(text,value)=>element('option',{text,value});
 export const List=(children=[],props={})=>element('ol',props,children);
 export const Note=(text,props={})=>Text(text,{className:'footnote',...props});
@@ -31,9 +32,10 @@ export const Notice=(text='',props={})=>Text(text,{className:'notice',role:'stat
 export const SectionTitle=(title,action,props={})=>Stack([Heading(title,props.level||2,{id:props.titleId}),action],{className:'section-title'});
 export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>element('details',props,[titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),...children]);
 export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list}) {
-  const caption=element('label',{for:id,text:label,className:hiddenLabel?'sr-only':undefined});
-  const control=kind==='select'?Select({id,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
-  return [caption,control];
+  const caption=element('label',{for:id,id:kind==='select'?`${id}-label`:undefined,text:label,className:hiddenLabel?'sr-only':undefined});
+  const control=kind==='select'?Select({id,label,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
+  if(kind==='select'){const trigger=control.querySelector('button');trigger.setAttribute('aria-labelledby',`${id}-label`);caption.addEventListener('click',()=>trigger.focus());}
+  return [caption,list?FormattedSuggestions(control,list,label):control];
 }
 export function CapabilityNavigation(items){
   const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong('Current tab',{id:'current-function'})]);
