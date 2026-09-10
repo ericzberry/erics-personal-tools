@@ -388,10 +388,11 @@ summary > .title-text { display: inline; }
 .editable-output--fit { field-sizing: content; min-height: 96px; resize: none; overflow: hidden; line-height: 1.65; padding: 12px; }
 
 /* Capability navigation is a single expandable list, independent of page actions. */
-.app-header--navigation { display: block; padding: 10px 14px; }
-.app-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.capability-navigation { margin: 0; border: 0; border-radius: 6px; background: var(--paper); color: var(--ink); }
-.capability-toggle { display: grid; grid-template-columns: auto minmax(0, 1fr) 8px; align-items: center; gap: 12px; padding: 10px; list-style: none; cursor: pointer; font-size: 12px; }
+.app-header--navigation { display: block; padding: 8px 14px; }
+.app-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.app-header--navigation .capability-navigation { margin: 0; padding: 0; border: 0; border-radius: 6px; background: var(--paper); color: var(--ink); }
+.capability-toggle { display: grid; grid-template-columns: auto minmax(0, 1fr) 8px; align-items: center; gap: 8px; min-height: 28px; padding: 4px 8px; list-style: none; cursor: pointer; font-size: 12px; line-height: 1.5; }
+@media (pointer: coarse) { .capability-toggle { min-height: 44px; } }
 .capability-toggle::-webkit-details-marker { display: none; }
 .capability-toggle > strong { min-width: 0; text-align: right; overflow-wrap: anywhere; }
 .capability-toggle::after { content: ''; display: block; width: 6px; height: 6px; box-sizing: border-box; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-1.5px) rotate(45deg); }

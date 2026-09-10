@@ -50,6 +50,11 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Keep capability tiers, pricing sources, output budgets, and selection tests centralized. Add representative quality evaluations as tasks and model choices expand.
 - Honor explicit user model choices within the relevant task policy, never as a global default. Manual model IDs belong only to per-request playground experiments. Never copy model constants into feature controllers.
 
+## Automatic commit and push
+
+- For every requested app change, increment each affected app version by at least 0.0.1, complete required checks and final builds, then commit and push the change before handing it back. Do not wait for a separate request to increment, commit, or push. Honor explicit requests to leave work uncommitted.
+- Keep unrelated unfinished work out of the commit; use an isolated checkout when needed and follow the release and publication rules below.
+
 ## Mandatory version increment on every commit
 
 - Every commit affecting the extension or mobile app must increment that app's patch version in the same commit. This includes fixes, refactors, tests, app documentation, and follow-up commits; “commit and push” is not an exception. Do not defer the increment to a later release commit.
