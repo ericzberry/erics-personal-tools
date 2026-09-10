@@ -57,12 +57,21 @@ Delete is always labeled; it never becomes an ambiguous trash icon. Keep confirm
 | Standard | 36px | 13px | 12px | Form and connection actions |
 | Compact | 28px | 12px | 8px | Add record and actions inside a record |
 | Icon | 28px square | 14px glyph | Centered | Copy number |
+| Filter | 34px | 13px | 10px | The find-record field above a record list |
 
 Touch form buttons and fields have a 44px minimum; expanded record actions have a 32px minimum. Heights are minimums, so labels can wrap under zoom. Use 8px between form actions and 4px between compact record actions. Keep action labels short, concrete, and stable.
 
 ### Record layout
 
-A collapsed record is a compact row: 13px program name, optional 11px traveler, and a copy icon. Use a single fine separator. Expanded content follows the same left edge: 18px tabular number, 12px metadata, then the compact action group. Edit and Delete have matching size and weight; danger color reinforces the Delete label. The number remains the strongest element.
+A record list is one ruled column, not a stack of loose lines. A hairline opens the list above the first row and each row closes with a single fine separator; drop the opening hairline when the list has no records, so an empty state never sits under a stray rule.
+
+A collapsed record is a compact row: 13px program name, optional 11px traveler, then a copy icon. Its disclosure marker is a small stroked chevron in a fixed right-hand column, quiet line color, pointing right and rotating down when the record opens. Never append a marker character to the name: markers must align in one column whatever the names are, and a long name that wraps keeps its marker centered on the row. Respect reduced motion when it turns.
+
+An open record is one contained block, not text floating between two rules. It takes the surface fill with 6px top corners, and its number, metadata, actions, and any delete confirmation sit inside that block on the same left edge as the collapsed rows. Content is 18px tabular number at 600, 12px metadata, then the compact action group. Edit and Delete have matching size and weight; danger color reinforces the Delete label. The number remains the strongest element, without extra tracking or a headline weight.
+
+A find-record field is a filter, not the page's main control. Keep it at the Filter density with the quiet `Line` border, separated from the list by 12px, and never let it outweigh the rows it filters. The shared `.form-field` control rules are more specific than a bare element selector, so a compact override must match `.form-field > input` specificity to take effect; verify the rendered height rather than trusting the declaration.
+
+A tool heading is 22px Georgia. When it carries one primary action, that action sits on the opposite end of the heading row, aligned to the right edge of the content below it, never crowded against the title.
 
 In the extension, Copy appears on row hover or keyboard focus. In the unlocked mobile wallet, show the number directly under its program name, with a permanently visible small Copy icon next to the number. Keep metadata and editing controls under the program disclosure. Mobile numbers use 15px text; do not add another traveler line to every collapsed mobile row. Icons retain accessible names and tooltips. A search field may use a visually hidden associated label and the visible placeholder “find record.” Routine successful synchronization has no banner; pending changes, errors, and offline state remain discoverable. Connection maintenance belongs in Settings.
 

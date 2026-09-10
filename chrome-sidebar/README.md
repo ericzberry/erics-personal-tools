@@ -267,3 +267,9 @@ Validation: 141 extension tests, 19 mobile tests, and 31 API tests passed. Synth
 The combined 0.6.49 / mobile 0.1.11 release also shows mobile numbers directly beside Copy, invokes saved passkeys without an extra app Unlock prompt, and removes routine up-to-date messages from shared data views. Final validation: 144 extension, 19 mobile, and 31 API tests pass. This includes the simplified record form and live sidebar propagation verified in the related tasks.
 
 Version 0.6.50 merges restaurant reservations, rewards and central model routing with the latest mobile/offline and travel-wallet updates. One Tools menu includes all extension destinations; travel remains in the sidebar and restaurants opens its workspace. This supersedes the local reservation-only 0.6.43 package.
+
+## Travel wallet record list (0.6.61 / mobile 0.1.20)
+
+Rebuilds the wallet list against the revised record layout in `docs/DESIGN.md`. Disclosure markers move out of the record names into a fixed right-hand column and rotate when a record opens, so they align regardless of name length. An open record becomes one contained surface block holding its number, metadata, actions, and delete confirmation instead of loose text between two rules. The find-record field returns to its intended compact filter size — the shared `.form-field` control rules had been out-specifying it, rendering a 40px/16px control — and the list's opening hairline is dropped when there are no records. The page heading is 22px with its primary action aligned to the list's right edge.
+
+Validation: 180 extension, 26 mobile, and 44 API tests pass. Synthetic 13-record wallet reviewed at 390px and 280px in the standalone page, the sidebar, and the installed mobile shell, covering collapsed rows, an open record, delete confirmation, filtered-empty, disconnected-empty, and the editor page. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.61.zip`.

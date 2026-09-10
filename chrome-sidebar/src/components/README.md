@@ -31,6 +31,8 @@ Use `settings-panel--compact` on a settings disclosure for tighter insets, group
 
 `CapabilityNavigation` renders the shared expandable navigation from `src/capabilities.js`. Keep feature-specific actions inside their screens. The controller distinguishes Current tab automatic mode from explicit capability selection; Escape closes the list and returns focus to its summary.
 
+`ExpandableRecord` and `RecordRow` build ruled record lists. `ExpandableRecord` owns the disclosure marker: `travel.css` draws it as a stroked chevron in a fixed right-hand column on `.record-row-toggle::after`, and an open row takes the surface fill so its number, metadata, actions, and confirmation read as one block. Do not append a marker character to a record's name or restyle these rows per feature; the rules live in [DESIGN.md](../../../docs/DESIGN.md#record-layout).
+
 `Workspace`, `WorkspaceColumns`, `FieldGrid`, `ChoiceRow`, `EvidenceList`, and `ResultBlock` provide reusable search-workspace layouts and source-backed results. Restaurant screens are composed in `restaurant-views.js` and exported through `views.js`. `SettingsGroup` accepts an optional heading level to preserve page hierarchy.
 
 `Select` now composes `FormattedSelect` from `select.js`. The native select retains the controller ID and value, while the shared trigger and option list handle keyboard and pointer interaction. `Field` supplies the visible label; editable model suggestions use `FormattedSuggestions`, retaining custom input. `select.css` and `tokens.css` are included in every host and the mobile offline shell.

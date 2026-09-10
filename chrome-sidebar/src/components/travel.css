@@ -12,7 +12,7 @@
   display:grid; gap:16px; overflow-wrap:anywhere;
 }
 .travel-wallet,.travel-wallet *{box-sizing:border-box}
-.travel-wallet h1{font-size:24px;line-height:1.2;margin:0}
+.travel-wallet h1{font-size:22px;line-height:1.2;margin:0}
 .travel-wallet h2,.travel-wallet h3{font-size:16px;margin:0}
 .travel-wallet p{margin:0;line-height:1.5}
 .travel-wallet .footnote{color:var(--wallet-muted);font-size:12px}
@@ -22,6 +22,8 @@
 .travel-wallet .form-stack{gap:16px}
 .travel-wallet input,.travel-wallet select{font:inherit;width:100%;min-width:0;min-height:var(--control-height);padding:7px 10px;border:1px solid var(--wallet-control-line);border-radius:var(--control-radius);background:var(--wallet-surface);color:var(--wallet-ink)}
 .travel-wallet .action-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* The page heading keeps its action on the record list's right edge. */
+.travel-wallet>.action-group{justify-content:space-between;gap:12px}
 .travel-wallet button{font:500 var(--control-text)/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:var(--control-height);margin:0;padding:7px 12px;border:1px solid var(--wallet-control-line);border-radius:var(--control-radius);cursor:pointer;background:var(--wallet-surface);color:var(--wallet-ink)}
 .travel-wallet .button--compact{min-height:var(--control-compact);padding:4px 8px;font-size:var(--control-text-compact)}
 .travel-wallet .button-primary{background:var(--wallet-forest);color:white;border-color:var(--wallet-forest)}
@@ -41,19 +43,25 @@
 .travel-wallet summary{cursor:pointer;font-size:12px;padding:4px 0}
 .travel-wallet summary h2{display:inline}
 .travel-wallet details[open]>:not(summary){margin-top:12px}
-.travel-list{display:grid;gap:0}
-.travel-wallet .record-search input{min-height:30px;padding:5px 8px;font-size:12px}
+.travel-list{display:grid;gap:0;border-top:1px solid var(--wallet-line)}
+.travel-list:not(:has(.record-row)){border-top:0}
+.travel-wallet .record-search{display:grid;gap:12px}
+/* Matches the shared .form-field input specificity so the compact size applies. */
+.travel-wallet .record-search .form-field>input{min-height:34px;padding:6px 10px;font-size:13px;border-color:var(--wallet-line)}
+.travel-wallet .record-search .form-field>input:hover:not(:disabled){border-color:var(--wallet-control-line)}
 .travel-wallet .record-search .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .travel-wallet .record-row{border-bottom:1px solid var(--wallet-line);min-width:0}
+.travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]){background:var(--wallet-surface);border-radius:6px 6px 0 0}
 .travel-wallet .record-row-heading{display:flex;align-items:center;gap:8px}
-.travel-wallet .record-row-toggle{flex:1;min-width:0;min-height:34px;border:0;border-radius:0;background:transparent;text-align:left;padding:6px 0;display:grid;gap:2px;line-height:1.35}
+.travel-wallet .record-row-toggle{position:relative;flex:1;min-width:0;min-height:34px;border:0;border-radius:0;background:transparent;text-align:left;padding:6px 18px 6px 0;display:grid;gap:2px;line-height:1.35}
 .travel-wallet .record-row-toggle strong{font-size:13px;font-weight:500}
 .travel-wallet .record-row-toggle .footnote{font-size:11px}
-.travel-wallet .record-row-toggle strong::after{content:' ›';font-weight:400;color:var(--wallet-muted)}
-.travel-wallet .record-row-toggle[aria-expanded=true] strong::after{content:' ⌄'}
-.travel-wallet .record-row-content{display:grid;gap:4px;padding:4px 0 12px}
-.travel-number{font-size:18px;line-height:1.4;letter-spacing:.02em;font-variant-numeric:tabular-nums;user-select:text}
-.travel-wallet .record-row-content .action-group{gap:4px;margin-top:4px}
+.travel-wallet .record-row-toggle::after{content:'';position:absolute;right:4px;top:50%;width:5px;height:5px;border-right:1.5px solid var(--wallet-control-line);border-bottom:1.5px solid var(--wallet-control-line);transform:translateY(-50%) rotate(-45deg);transition:transform .15s ease}
+.travel-wallet .record-row-toggle[aria-expanded=true]::after{transform:translateY(-65%) rotate(45deg)}
+@media(prefers-reduced-motion:reduce){.travel-wallet .record-row-toggle::after{transition:none}}
+.travel-wallet .record-row-content{display:grid;gap:4px;padding:2px 0 10px}
+.travel-number{font-size:18px;font-weight:600;line-height:1.35;font-variant-numeric:tabular-nums;user-select:text}
+.travel-wallet .record-row-content .action-group{gap:4px;margin-top:6px}
 .travel-wallet .icon-button{width:28px;min-height:28px;padding:6px;border:0;background:transparent;display:grid;place-items:center}
 .travel-wallet .row-copy,.travel-wallet .row-copy:disabled{opacity:0}
 .travel-wallet .record-row:hover .row-copy,.travel-wallet .record-row:focus-within .row-copy,.travel-wallet .row-copy:focus-visible{opacity:1}
@@ -73,7 +81,7 @@
   .travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]) .row-copy{opacity:1}
 }
 /* Unlocked mobile records keep the number and its copy action together. */
-.travel-wallet .record-number-line{display:flex;align-items:center;gap:4px;padding:0 0 6px}.travel-wallet .record-number-line .travel-number{font-size:15px;font-weight:500;letter-spacing:.01em}.travel-wallet .record-number-line .row-copy{opacity:1}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle{min-height:24px;padding:5px 0 0}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle strong{font-size:12px;color:var(--wallet-muted)}
+.travel-wallet .record-number-line{display:flex;align-items:center;gap:4px;padding:0 0 6px}.travel-wallet .record-number-line .travel-number{font-size:15px;font-weight:500;letter-spacing:.01em}.travel-wallet .record-number-line .row-copy{opacity:1}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle{min-height:24px;padding:5px 18px 0 0}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle strong{font-size:12px;color:var(--wallet-muted)}
 
 /* Connection setup and maintenance share compact, explicit groups. */
 .travel-wallet .connection-content{display:grid;gap:12px}
