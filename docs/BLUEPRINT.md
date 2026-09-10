@@ -143,6 +143,18 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   every app release). `wrangler.example.jsonc` — config template; real config and
   credentials stay outside Git.
 
+## finance-intake/
+
+Not an app: a small operator directory Claude uses to file statements into the
+Finance ledger over `/v1/finance`, so figures reach the app without being typed
+in. `ledger.mjs` is dependency-free Node that lists records and appends dated
+snapshots — it cannot delete, and previews every write until `--confirm`.
+`RUNBOOK.md` is the procedure a run follows; `README.md` covers setup and the
+snapshot file format. The bearer token lives in `credentials/api-token`, which
+is gitignored. Changing the ledger's record shape means re-reading
+`chrome-sidebar/src/finance-data.js`, which is the validator both this and the
+Worker answer to.
+
 ## Common tasks → where to start
 
 | Task | Start at |

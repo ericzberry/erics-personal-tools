@@ -12,3 +12,6 @@ dist/
 
 # Secrets — never commit
 gmail-sender/credentials/
+
+# Finance intake bearer token
+finance-intake/credentials/
