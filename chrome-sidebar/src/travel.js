@@ -11,6 +11,7 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
     $('add').disabled=busy||!token;
     for(const node of $('list').querySelectorAll('button'))node.disabled=busy||!token;
     $('setup').hidden=!!token;
+    $('maintenance').hidden=!token;
     $('connect').disabled=busy; $('token').disabled=busy;
     $('refresh').disabled=busy||!token;$('disconnect').disabled=busy||!token;
     $('connection').textContent=token?'Connected · Shared with your other connected devices.':'Connect with the same private access token on each device.';

@@ -62,8 +62,13 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
 }
 
 export function TravelConnection(){return Stack([Disclosure('Connection settings',[
-      Note('Connect with the same private access token on each device.',{id:'travel-connection',role:'status'}),
-      Stack([FormField({id:'travel-token',label:'Private access token',kind:'password'}),Button('Connect',{id:'travel-connect',variant:'primary'})],{id:'travel-setup'}),
-      ActionGroup([Button('Refresh records',{id:'travel-refresh',variant:'secondary'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger'})],{compact:true}),
-      Note('Records are encrypted in cloud storage. Downloaded records are encrypted on this device for offline use. Changes sync when connected. Disconnect clears this device’s copy and keeps cloud records.')
+      Stack([
+        Note('Connect with the same private access token on each device.',{id:'travel-connection',role:'status'}),
+        Stack([FormField({id:'travel-token',label:'Private access token',kind:'password'}),ActionGroup([Button('Connect',{id:'travel-connect',variant:'primary'})])],{id:'travel-setup',className:'connection-setup'}),
+        Stack([
+          ActionGroup([Button('Refresh records',{id:'travel-refresh',variant:'secondary',size:'compact'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger',size:'compact'})],{compact:true}),
+          Note('Disconnect removes this device’s offline copies. Cloud records stay saved.')
+        ],{id:'travel-maintenance',className:'connection-maintenance',hidden:true}),
+        Disclosure('Storage & privacy',[Note('Records are encrypted in the cloud and on this device. Downloaded records work offline; changes sync when connected.')],{className:'connection-privacy'})
+      ],{className:'connection-content'})
     ],{id:'travel-cloud'})],{className:'connection-surface'});}

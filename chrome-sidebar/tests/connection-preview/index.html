@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../../src/components/travel.css"><style>body{margin:0;background:#f7f6f2}main{max-width:400px;margin:auto}.travel-wallet{padding:14px}.preview-actions{display:flex;gap:8px;margin:14px;font:12px sans-serif}</style></head><body><div class="preview-actions"><button id="connected">Connected preview</button><button id="disconnected">Disconnected preview</button></div><main class="travel-wallet" id="root"></main><script type="module">
+import {TravelConnection} from '../../src/components/travel.js';
+const root=document.getElementById('root');root.append(TravelConnection());document.getElementById('travel-cloud').open=true;
+function state(connected){document.getElementById('travel-setup').hidden=connected;document.getElementById('travel-maintenance').hidden=!connected;document.getElementById('travel-connection').textContent=connected?'Connected · Shared with your other connected devices.':'Connect with the same private access token on each device.';}
+document.getElementById('connected').onclick=()=>state(true);document.getElementById('disconnected').onclick=()=>state(false);state(false);
+</script></body></html>

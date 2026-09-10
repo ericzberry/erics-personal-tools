@@ -72,3 +72,19 @@
 }
 /* Unlocked mobile records keep the number and its copy action together. */
 .travel-wallet .record-number-line{display:flex;align-items:center;gap:4px;padding:0 0 6px}.travel-wallet .record-number-line .travel-number{font-size:15px;font-weight:500;letter-spacing:.01em}.travel-wallet .record-number-line .row-copy{opacity:1}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle{min-height:24px;padding:5px 0 0}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle strong{font-size:12px;color:var(--wallet-muted)}
+
+/* Connection setup and maintenance share compact, explicit groups. */
+.travel-wallet .connection-content{display:grid;gap:12px}
+.travel-wallet .connection-setup,.travel-wallet .connection-maintenance{display:grid;gap:8px}
+.travel-wallet .connection-setup .form-field{gap:4px}
+.travel-wallet .connection-setup label{font-size:12px;font-weight:500;color:var(--wallet-ink)}
+.travel-wallet .connection-surface>details{padding:8px 0}
+.travel-wallet .connection-surface>details>summary{font-size:13px;font-weight:500;color:var(--wallet-ink);min-height:28px}
+.travel-wallet .connection-content .connection-privacy{padding:0;border:0}
+.travel-wallet .connection-privacy>summary{color:var(--wallet-muted);font-size:12px}
+.travel-wallet .connection-privacy[open]>:not(summary){margin-top:4px}
+@media(hover:none){
+  .travel-wallet .connection-surface button,.travel-wallet .connection-surface summary{min-height:44px}
+}
+.travel-wallet .connection-surface>details:has(>summary[hidden]){padding:0}
+.travel-wallet .connection-surface>details:has(>summary[hidden])>.connection-content{margin-top:0}

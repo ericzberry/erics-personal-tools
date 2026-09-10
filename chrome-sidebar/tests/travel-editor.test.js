@@ -109,3 +109,17 @@ test('change notifications during a busy refresh are coalesced and applied after
   wallet.refresh();wallet.refresh();release();await refreshing;await tick();
   assert.equal(calls,3);assert.match($('list').textContent,/Live updated airline/);
 });
+
+test('connection setup hides unavailable maintenance and preserves token after failure',async()=>{
+  const {root,$}=setup();let saved='';
+  const wallet=mountTravel(root,{credentials:{get:async()=>saved,set:async value=>{saved=value;},remove:async()=>{saved='';}},request:async token=>{if(token==='bad')throw Error('Check your access token.');return {records:[]};}});
+  await wallet.ready;
+  assert.equal($('setup').hidden,false);assert.equal($('maintenance').hidden,true);
+  $('token').value='bad';$('connect').click();await tick();
+  assert.equal($('token').value,'bad');assert.equal($('maintenance').hidden,true);
+  $('token').value='synthetic-token';$('connect').click();await tick();
+  assert.equal($('setup').hidden,true);assert.equal($('maintenance').hidden,false);
+  assert.equal($('token').value,'');
+  $('disconnect').click();await tick();
+  assert.equal($('setup').hidden,false);assert.equal($('maintenance').hidden,true);
+});
