@@ -1,4 +1,4 @@
-import {Section,Heading,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord,CopyIconButton} from './ui.js';
+import {Section,Heading,GroupTitle,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord,CopyIconButton} from './ui.js';
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
 export function TravelView({connection=true,mode='inline',editId=null}={}) {
   return Section([
@@ -26,7 +26,7 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
   ],{className:'travel-wallet'});
 }
 export function TravelGroup(category, rows) {
-  return Section([Heading(category,2,{className:'record-group-title'}),...rows],{className:'record-group'});
+  return Section([GroupTitle(category,{className:'record-group-title'}),...rows],{className:'record-group'});
 }
 
 export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve,showNumber=false}) {

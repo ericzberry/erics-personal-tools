@@ -42,6 +42,9 @@ export const List=(children=[],props={})=>element('ol',props,children);
 export const Note=(text,props={})=>Text(text,{className:'footnote',...props});
 export const Badge=(text,props={})=>Label(text,{className:'pill',...props});
 export const Notice=(text='',props={})=>Text(text,{className:'notice',role:'status',...props});
+// Small label heading a run of records. Sans-serif and quiet on purpose so it
+// reads as a divider between groups rather than competing with record names.
+export const GroupTitle=(text,{className='',...props}={})=>element('h2',{text,...props,className:`group-title ${className}`.trim()});
 export const SectionTitle=(title,action,props={})=>Stack([Heading(title,props.level||2,{id:props.titleId}),action],{className:'section-title'});
 export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>element('details',props,[titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),...children]);
 export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list}) {

@@ -43,9 +43,12 @@
 .travel-wallet summary{cursor:pointer;font-size:12px;padding:4px 0}
 .travel-wallet summary h2{display:inline}
 .travel-wallet details[open]>:not(summary){margin-top:12px}
-.travel-list{display:grid;gap:16px}
+.travel-list{display:grid;gap:18px}
 .travel-wallet .record-group{display:grid;gap:0}
-.travel-wallet .record-group-title{font-size:13px;color:var(--wallet-muted);padding:0 0 4px}
+/* Category labels head each run of records. They are quiet, uppercase, and
+   ruled so a group reads as one block instead of a floating serif heading. */
+.travel-wallet .group-title{font:600 11px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--wallet-muted)}
+.travel-wallet .record-group-title{padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
 .travel-wallet .record-search{display:grid;gap:12px}
 /* Matches the shared .form-field input specificity so the compact size applies. */
 .travel-wallet .record-search .form-field>input{min-height:34px;padding:6px 10px;font-size:13px;border-color:var(--wallet-line)}
