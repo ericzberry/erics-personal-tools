@@ -44,7 +44,7 @@ function token() {
   const found = process.env.TOOLS_API_TOKEN?.trim()
     || keychainToken()
     || (existsSync(TOKEN_FILE) ? readFileSync(TOKEN_FILE, 'utf8').trim() : '');
-  if (!found) die(`No API token found. Store it in the login keychain:\n\n  security add-generic-password -s ${KEYCHAIN.service} -a ${KEYCHAIN.account} -w -U\n\n(-w with no value prompts for it, so the token never lands in shell history.)\nSee README.md for the alternatives.`);
+  if (!found) die(`No API token found. In Terminal, store it in the login keychain:\n\n  security add-generic-password -s ${KEYCHAIN.service} -a ${KEYCHAIN.account} -U -w\n\n-w must come last: it then prompts twice for the token instead of taking a\nvalue, so nothing lands in shell history. Nothing echoes as you paste.\nSee README.md for the alternatives.`);
   if (found.length < 32) die('The stored API token is under 32 characters, so the API will reject it. Store the full token.');
   return found;
 }

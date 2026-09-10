@@ -28,14 +28,26 @@ snapshots appear in the history and in **Value over time**.
 
 ## Setup — the API token
 
-One step, once. Put the token in the login keychain:
+One step, once. In **Terminal** (not the browser console), put the token in the
+login keychain:
 
 ```bash
-security add-generic-password -s erics-tools-api -a API_TOKEN -w -U
+security add-generic-password -s erics-tools-api -a API_TOKEN -U -w
 ```
 
-`-w` with no value prompts for the token, so it never lands in shell history.
-macOS encrypts it at rest and the script reads it back without a prompt.
+**`-w` must be last.** There it takes no value and prompts instead —
+`password data for new item:`, then `retype password for new item:` — so the
+token never lands in shell history. Nothing echoes as you paste; paste, Enter,
+paste again, Enter. Given a value (or followed by another flag, which it will
+happily swallow as the password) it stores that instead, silently.
+
+macOS encrypts the item at rest and the script reads it back without a prompt.
+
+To read the token out of the extension: right-click the extension icon →
+**Options**, then in DevTools → Console run
+`(await chrome.storage.local.get('cloudConnection')).cloudConnection.token`.
+The Settings field itself is a password input and is cleared after saving, so
+it never shows the token back.
 
 **This token cannot live in D1**, which is the obvious-looking place for it. It
 is the credential that protects D1: every route checks it before running, and
