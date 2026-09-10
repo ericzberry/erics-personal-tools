@@ -31,8 +31,10 @@ export function capabilitySections(items=CAPABILITIES){
   return [...groups].filter(([,list])=>list.length).map(([title,list])=>({title,icon:title?SECTION_ICONS.get(title):null,items:list}));
 }
 // Gmail is not listed: it appears on its own when the active tab is Gmail.
+// Automatic mode has no menu row: it is the state the sidebar starts in, and
+// the toggle names it, so listing it again would be a row for "no tool chosen".
+export const AUTO_CAPABILITY={id:'auto',label:'Current tab'};
 export const capabilities=[
-  {id:'auto',label:'Current tab',icon:'M6 3l11.5 7.6-4.8 1.4 2.6 5.4-2.7 1.3-2.6-5.4L6 16.4V3Z'},
   ...CAPABILITIES.map(({href,...rest})=>['travel','rewards'].includes(rest.id)?rest:{...rest,href}),
   {id:'football',label:'Fantasy football',section:MISC_SECTION,icon:'M7.5 4h9v5a4.5 4.5 0 0 1-9 0V4Z M12 13.5V17 M8.5 20h7'}
 ];

@@ -388,8 +388,9 @@ summary > .title-text { display: inline; }
 .capability-settings .glyph { color: var(--muted); }
 .capability-text { display: grid; gap: 3px; min-width: 0; }
 .capability-text > strong { font-size: 13px; }
+/* The selected row is marked by its tint and the bar down its leading edge —
+   shape as well as color — with aria-current naming it for assistive tech. */
 .capability-item[aria-current='page'] { background: var(--sage); box-shadow: inset 3px 0 var(--forest); }
-.capability-item[aria-current='page'] .capability-text > strong::after { content: ' · Selected'; font-weight: 400; }
 .capability-submenu { margin: 0; background: transparent; border: 0; border-radius: 0; overflow: visible; }
 .capability-submenu > summary { list-style: none; }
 .capability-submenu > summary::-webkit-details-marker { display: none; }

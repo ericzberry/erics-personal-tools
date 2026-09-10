@@ -4,7 +4,7 @@ Read the [shared foundation](UI_COMPONENTS.md), [design rules](DESIGN.md), and [
 
 ## Structure
 
-Use the shared app header and Tools navigation, followed by the selected tool's heading, content, and actions. Tools come from the shared capabilities registry. Keep Current tab as the explicit automatic mode; a manual selection stays selected when browser tabs change. Do not add new function tabs, feature shortcuts, or a second navigation system to the header.
+Use the shared app header and Tools navigation, followed by the selected tool's heading, content, and actions. Tools come from the shared capabilities registry. Current tab is the automatic mode the sidebar starts in; the Tools toggle names it and the menu has no row for it. A manual selection stays selected when browser tabs change, marked in the menu by its highlighted row alone. Do not add new function tabs, feature shortcuts, or a second navigation system to the header.
 
 Compose the sidebar through `views.js` and shared component modules. `sidepanel.html` is a bootstrap document. Controllers attach behavior to component hooks; they do not build parallel markup or style feature IDs.
 

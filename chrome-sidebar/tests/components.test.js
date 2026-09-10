@@ -31,7 +31,8 @@ test('every Tools entry carries an icon and the sidebar menu renders one per row
   assert.equal(doc.querySelector('#navigate-travel .capability-text > strong').textContent,'Travel wallet');
   assert.ok(doc.querySelector('#open-settings svg'));
   // Gmail follows the active tab; AI connections and League rules left the menu.
-  for(const id of ['navigate-gmail','navigate-ai','navigate-rules'])assert.equal(doc.getElementById(id),null);
+  // Current tab is the automatic mode the toggle names, not a row of its own.
+  for(const id of ['navigate-gmail','navigate-ai','navigate-rules','navigate-auto'])assert.equal(doc.getElementById(id),null);
   // Misc is one closed row after the ungrouped tools; its tools appear only once opened.
   const branches=[...doc.querySelectorAll('.capability-list .capability-submenu')];
   assert.equal(branches.length,1);

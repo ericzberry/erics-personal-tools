@@ -9,7 +9,7 @@ The user requires every extension UI element to come from a reusable component.
 - Style reusable classes and variants, not feature IDs. IDs are controller/accessibility hooks only.
 - All uploads use `UploadField` and the shared `components/file-drop.js` behavior (drop, browse, validation and status).
 - Prefer native accessible elements inside components. Keep keyboard support, labels, disabled/loading states, and text-safe rendering.
-- Use the shared capability navigation and registry for every top-level tool. Do not add standalone feature buttons or function tabs to the header. Keep Current tab as an explicit automatic mode; a manually selected capability stays open as browser tabs change.
+- Use the shared capability navigation and registry for every top-level tool. Do not add standalone feature buttons or function tabs to the header. Current tab is the automatic mode the sidebar starts in, named by the Tools toggle rather than listed as a menu row; a manually selected capability stays open as browser tabs change.
 - Run the component architecture checks and relevant behavior tests before building the release.
 
 ## Release versions
