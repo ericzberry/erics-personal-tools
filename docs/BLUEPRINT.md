@@ -69,11 +69,14 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `cloudRequest`, `CONNECTION_KEY`), `travel-changes.js` (cross-window change
   notification), `private-disconnect.js`.
 - **Device-held secrets** — `secret-vault.js` (WebAuthn PRF key derivation,
-  sealed envelopes, the recovery code, and `sharedVault()` — one vault per host
-  so a single passkey opens every protected section), `idle-session.js` (the
-  canonical 15-minute inactivity gate, used by the mobile app lock and the
-  vault), and `vault-gate.js` (the whole-section lock screen used by Finance and
-  Personal information).
+  sealed envelopes, the recovery code, `sharedVault()` — one vault per host so a
+  single passkey opens every protected section — and `vaultSessionStore()`,
+  which keeps the unlocked session in `chrome.storage.session` so it survives a
+  page and covers every extension tab), `idle-session.js` (the canonical
+  15-minute inactivity gate, used by the mobile app lock and the vault),
+  `auto-unlock.js` (one unlock attempt per arrival, shared by the mobile app
+  lock and the gate), and `vault-gate.js` (the whole-section lock screen used by
+  Finance and Personal information, which asks for the passkey on arrival).
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
   `rewards-sync.js`, `finance-data.js`/`finance-offline.js`,
@@ -114,9 +117,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 `build.js` and to the `SHELL` array in `sw.js`.**
 
 - `index.html` → `app.js` — the outer, locked shell: passkey unlock, release check,
-  service worker registration. `mobile-security.js`, `passkey-vault.js`,
-  `auto-unlock.js` own locking (the inactivity gate itself is the shared
-  `idle-session.js`); `releases.js` holds `VERSION`.
+  service worker registration. `mobile-security.js` and `passkey-vault.js` own
+  locking (the inactivity gate and the one-attempt-per-arrival rule are the
+  shared `idle-session.js` and `auto-unlock.js`); `releases.js` holds `VERSION`.
 - `unlocked.html` → `unlocked.js` — the disposable unlocked frame that actually runs
   the tools; `mobile-session.js` guards access to it, `tool-layout.js` sizes it.
 - `capabilities.js` — mounts capabilities from the shared registry and mirrors the
@@ -176,7 +179,7 @@ Worker answer to.
 | Add a dropdown | `components/select.js` via `FormField({kind:'select'})` |
 | Change stored record shape | the `*-data.js` validator (shared by app and Worker), the matching `*-schema.sql` with an upgrade path, and the offline adapter's revision/normalize |
 | Add a value the cloud must not be able to read | `chrome-sidebar/src/secret-vault.js` — seal on the device, store the envelope in the record, and keep only a safe hint (such as last four digits) in the clear |
-| Put a whole capability behind the passkey | `chrome-sidebar/src/vault-gate.js` — mount the gate, then mount the tool into its `content` and load nothing until it unlocks |
+| Put a whole capability behind the passkey | `chrome-sidebar/src/vault-gate.js` — mount the gate, then mount the tool into its `content` and load nothing until it unlocks; arriving at the section asks for the passkey on its own |
 | Add or change an AI call | `tools-api/src/model-policy.js` for the task policy, `src/providers.js` for provider differences |
 | Change offline/sync behavior | `chrome-sidebar/src/offline-resource.js` (shared by every capability) |
 | Change what mobile ships | `mobile-app/build.js` shared list **and** `sw.js` `SHELL` |

@@ -11,7 +11,7 @@ const REVEAL_MS=60000;
 
 export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChanged=()=>{},vault,clipboard=globalThis.navigator?.clipboard}){
   const gate=mountVaultGate(root,{
-    id:'personal-vault',title:'Personal information is locked',
+    id:'personal-vault',title:'Personal information',
     ...(vault?{vault}:{}),
     onChange:unlocked=>{unlocked?refresh():clear();}
   });

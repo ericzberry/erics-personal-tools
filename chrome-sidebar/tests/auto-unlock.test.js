@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {autoUnlock} from '../public/app/auto-unlock.js';
+import {autoUnlock} from '../src/auto-unlock.js';
 test('opening and duplicate pageshow events prompt once; returning prompts again', async () => {
   let calls = 0;
   const gate = autoUnlock({eligible: () => true, unlock: async () => { calls++; }});
@@ -30,7 +30,7 @@ test('Lock now stays locked until another visit; failures allow a later foregrou
 });
 
 test('idle expiry is distinguishable from deliberate locking', async () => {
-  const {idleSession, IDLE_MS} = await import('../../chrome-sidebar/src/idle-session.js');
+  const {idleSession, IDLE_MS} = await import('../src/idle-session.js');
   let now = 0; const reasons = [];
   const session = idleSession({now: () => now, onLock: reason => reasons.push(reason)});
   session.start(); now = IDLE_MS; session.check();

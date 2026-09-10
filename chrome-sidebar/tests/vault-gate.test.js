@@ -19,9 +19,11 @@ function harness(){
   return {document,window,restore:()=>Object.defineProperty(window.HTMLSelectElement.prototype,'value',descriptor)};
 }
 function fakeVault(){
-  let key=null,prompts=0,open=false;
+  let key=null,prompts=0,open=false,waiting=null;
   return {idleMs:900000,available:()=>true,unlocked:()=>open,touch(){},lock(){open=false;},
-    async key(){prompts++;open=true;key??=await crypto.subtle.importKey('raw',new Uint8Array(32).fill(7),'AES-GCM',false,['encrypt','decrypt']);return key;},
+    // Holds the next prompt open the way an unanswered passkey sheet does.
+    hold(promise){waiting=promise;},
+    async key(){prompts++;if(waiting){const sheet=waiting;waiting=null;await sheet;}open=true;key??=await crypto.subtle.importKey('raw',new Uint8Array(32).fill(7),'AES-GCM',false,['encrypt','decrypt']);return key;},
     async unlockWithRecoveryCode(){open=true;return this.key();},recoveryCode:()=>'EV1-SYNTHETIC',prompts:()=>prompts};
 }
 
@@ -29,7 +31,7 @@ test('the gate keeps its content out of the document tree’s visible state unti
   const h=harness();
   const vault=fakeVault();
   const changes=[];
-  const gate=mountVaultGate(h.document.querySelector('main'),{id:'test-vault',title:'Locked section',vault,onChange:value=>changes.push(value)});
+  const gate=mountVaultGate(h.document.querySelector('main'),{id:'test-vault',title:'Locked section',vault,automatic:false,onChange:value=>changes.push(value)});
   gate.content.append(h.document.createElement('p'));
   gate.content.querySelector('p').textContent='Synthetic protected content';
   assert.equal(gate.content.hidden,true);
@@ -64,17 +66,21 @@ test('personal information loads nothing while locked and opens a value only thr
   const h=harness();
   const vault=fakeVault();
   const key=await vault.key();vault.lock();
+  const asked=vault.prompts();
   const id='11111111-1111-4111-8111-111111111111';
   const record={...normalizePersonal({category:'Identification',label:'Synthetic passport',hint:'ends 7781',secret:await sealSecret(key,id,{value:'X1234567','notes':'Synthetic notes'})}),id,revision:'first'};
-  let requests=0;
+  let requests=0,answer;
+  vault.hold(new Promise(resolve=>{answer=resolve;}));
   const tool=mountPersonal(h.document.querySelector('main'),{vault,credentials:{get:async()=>'token'},
     offline:{request:async()=>{requests++;return {records:[record]};}}});
-  // Nothing is fetched and no record name is rendered while the section is locked.
-  await settle(()=>true,5);
+  // Arriving raises the prompt by itself, and nothing is fetched or rendered
+  // while it is still unanswered.
+  await settle(()=>vault.prompts()>asked);
   assert.equal(requests,0);
   assert.equal(h.document.body.textContent.includes('Synthetic passport'),false);
-  h.document.getElementById('personal-vault-actions').querySelector('button').click();
+  answer();
   await settle(()=>requests>0&&h.document.body.textContent.includes('Synthetic passport'));
+  assert.equal(vault.prompts(),asked+1,'arriving asks for the passkey once, without a button press');
   assert.equal(h.document.body.textContent.includes('X1234567'),false,'the value stays sealed until it is revealed');
   [...h.document.querySelectorAll('#personal-list button')].find(button=>button.textContent==='Show value').click();
   await settle(()=>h.document.body.textContent.includes('X1234567'));
@@ -94,7 +100,6 @@ test('finance totals and drafts stay behind the gate, and an applied draft is sa
       :{connections:[{id:'c1',name:'Synthetic',provider:'openai',hasApiKey:true}]},
     offline:{request:async(token,path,options)=>{if(options?.method){saved.push(options.value);return {records:[{...options.value,revision:'next'}]};}return {records:[record]};}}});
   assert.equal(h.document.body.textContent.includes('Synthetic brokerage'),false);
-  h.document.getElementById('finance-vault-actions').querySelector('button').click();
   await settle(()=>h.document.body.textContent.includes('Synthetic brokerage'));
   assert.match(h.document.getElementById('finance-totals').textContent,/\$1,000/);
 
@@ -116,4 +121,45 @@ test('finance totals and drafts stay behind the gate, and an applied draft is sa
   assert.match(JSON.parse(saved[0].history)[0].source,/AI reading/);
   assert.equal(h.document.getElementById('finance-drafts').textContent,'','an applied draft leaves the review list');
   tool.stop();h.restore();
+});
+
+test('arriving at a locked section asks for the passkey, and a dismissed prompt leaves a button instead of a loop',async()=>{
+  const h=harness();
+  let prompts=0,refuse=true,open=false;
+  const vault={idleMs:900000,available:()=>true,unlocked:()=>open,touch(){},lock(){open=false;},
+    async key(){prompts++;if(refuse)throw Object.assign(Error('Canceled'),{name:'NotAllowedError'});open=true;return 'key';},
+    async unlockWithRecoveryCode(){open=true;},recoveryCode:()=>'EV1'};
+  const changes=[];
+  const gate=mountVaultGate(h.document.querySelector('main'),{id:'auto-vault',vault,onChange:value=>changes.push(value)});
+  await settle(()=>prompts>0);
+  assert.equal(prompts,1,'no button press was needed');
+  await settle(()=>h.document.getElementById('auto-vault-actions').textContent.includes('Unlock'),50);
+  assert.match(h.document.getElementById('auto-vault-status').textContent,/canceled or timed out/);
+  await settle(()=>true,50);
+  assert.equal(prompts,1,'a dismissed prompt is not retried on its own');
+  refuse=false;
+  h.document.getElementById('auto-vault-actions').querySelector('button').click();
+  await settle(()=>changes.length>0);
+  assert.deepEqual(changes,[true]);
+  assert.equal(gate.content.hidden,false);
+  gate.stop();h.restore();
+});
+
+test('a hidden section waits its turn, and Lock now stays locked',async()=>{
+  const h=harness();
+  let prompts=0,open=false;
+  const vault={idleMs:900000,available:()=>true,unlocked:()=>open,touch(){},lock(){open=false;},
+    async key(){prompts++;open=true;return 'key';},async unlockWithRecoveryCode(){open=true;},recoveryCode:()=>'EV1'};
+  const root=h.document.querySelector('main');
+  root.hidden=true;
+  const gate=mountVaultGate(root,{id:'hidden-vault',vault});
+  await settle(()=>true,50);
+  assert.equal(prompts,0,'a tool that is not on screen must not raise a passkey sheet');
+  root.hidden=false;
+  await settle(()=>prompts>0);
+  assert.equal(gate.unlocked(),true);
+  gate.lock();
+  await settle(()=>true,50);
+  assert.equal(prompts,1,'Lock now is an instruction, not an invitation to ask again');
+  gate.stop();h.restore();
 });
