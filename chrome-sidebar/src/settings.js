@@ -12,6 +12,7 @@ async function send(action,data={}){
 }
 function controls(){
   $('credential-connection').hidden=connected;
+  $('credential-maintenance').hidden=!connected;
   $('credential-cloud-state').textContent=connected?'Worker connected · Access token stays on this computer.':'Connect the Worker, then add your OpenAI API key below.';
   for(const id of ['save-credential','credential-name','credential-secret','credential-refresh','credential-disconnect'])$(id).disabled=busy||!connected;
   $('credential-connect').disabled=busy||!available;

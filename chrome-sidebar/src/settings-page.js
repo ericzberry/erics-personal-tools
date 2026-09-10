@@ -18,6 +18,7 @@ function status(message) {$('settings-status').textContent=message;$('settings-s
 function controls() {
   for (const node of $('connection-form').querySelectorAll('input,select,button')) node.disabled=working||!connected;
   for (const id of ['connection-add','connection-reload']) $(id).disabled=working||!connected;
+  $('connection-actions').hidden=!connected;
   for (const node of $('connection-list').querySelectorAll('button')) node.disabled=working||!connected;
   $('settings-connect').disabled=working||!available;
   $('settings-disconnect').disabled=working||!connected;

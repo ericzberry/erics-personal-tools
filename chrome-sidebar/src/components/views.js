@@ -58,7 +58,7 @@ export function SettingsView() {
         UI.FormField({id:'credential-token',label:'Worker access token',kind:'password',placeholder:'Your Worker’s API_TOKEN'}),
         Button('Connect',{id:'credential-connect',variant:'primary'})
       ],{id:'credential-connection',className:'form-stack'}),
-      ActionGroup([Button('Refresh',{id:'credential-refresh',variant:'secondary'}),Button('Disconnect',{id:'credential-disconnect',variant:'danger'})],{compact:true})
+      ActionGroup([Button('Refresh',{id:'credential-refresh',variant:'secondary'}),Button('Disconnect',{id:'credential-disconnect',variant:'danger'})],{compact:true,id:'credential-maintenance',hidden:true})
       ]}),
       UI.SettingsGroup({title:'Saved credentials',children:[Stack([Note('Connect to load saved credentials.')],{id:'credential-list'})]}),
       UI.SettingsGroup({title:'Add or replace a key',children:[UI.FormStack([
@@ -93,8 +93,8 @@ export function AISettingsView() {
       ],{id:'settings-cloud'}),
       Notice('',{id:'settings-status',role:'status',hidden:true}),
       Stack([
-        Section([SectionTitle('Saved connections',Button('Add connection',{id:'connection-add',variant:'primary',size:'compact'})),
-          Button('Reload connections',{id:'connection-reload',variant:'secondary',size:'compact'}),
+        Section([SectionTitle('Saved connections'),
+          ActionGroup([Button('Add connection',{id:'connection-add',variant:'primary',size:'compact'}),Button('Reload connections',{id:'connection-reload',variant:'secondary',size:'compact'})],{compact:true,id:'connection-actions',hidden:true}),
           Text('Connect your browser to load your AI settings.',{id:'connections-empty',className:'settings-empty'}),
           Stack([],{id:'connection-list',className:'connection-list'})],{className:'settings-library'}),
         UI.Panel([

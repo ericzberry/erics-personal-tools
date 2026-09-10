@@ -17,10 +17,12 @@ test('sidebar saves keys through the Worker, reports failures, and deletes using
    records=[{id:message.id,name:'OpenAI',provider:'openai',hasApiKey:true,revision:'revision-1'}];return {ok:true,connection:records[0]};
   }
   if(message.action==='remove'){records=[];return {ok:true};}
+  if(message.action==='disconnect')return {ok:true};
  }}};
  await import('../src/settings.js');
  const $=id=>document.getElementById(id),settle=()=>new Promise(resolve=>setTimeout(resolve,10));
  $('open-settings').click();await settle();assert.equal($('save-credential').disabled,false);
+ assert.equal($('credential-connection').hidden,true);assert.equal($('credential-maintenance').hidden,false);
  $('credential-name').value='openai';$('credential-secret').value='synthetic-key';$('save-credential').click();await settle();
  assert.equal(calls.find(m=>m.action==='save').connection.apiKey,'synthetic-key');assert.equal($('credential-secret').value,'');assert.equal($('credential-status').textContent,'OpenAI API key verified in D1.');
  missing=true;$('credential-name').value='openai';$('credential-secret').value='unconfirmed';$('save-credential').click();await settle();
@@ -29,5 +31,7 @@ test('sidebar saves keys through the Worker, reports failures, and deletes using
  fail=true;$('credential-name').value='openai';$('credential-secret').value='replacement';$('save-credential').click();await settle();
  assert.equal($('credential-status').textContent,'Worker unavailable');assert.equal($('credential-secret').value,'replacement');
  document.querySelector('[aria-label="Delete OpenAI"]').click();await settle();assert.equal(calls.find(m=>m.action==='remove').revision,'revision-1');
+ $('credential-disconnect').click();await settle();
+ assert.equal($('credential-connection').hidden,false);assert.equal($('credential-maintenance').hidden,true);
  delete globalThis.chrome;
 });
