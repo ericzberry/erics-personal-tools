@@ -1,5 +1,8 @@
-import {FinanceView,FinanceGroup,BreakdownList,TrendTable,DraftRow,Figure,money} from './components/finance.js';
+import {FinanceView,FinanceGroup,BreakdownList,TrendTable,DraftRow,Figure,money,AttachmentCard} from './components/finance.js';
 import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue,Option} from './components/ui.js';
+import {attachFileDrop} from './components/file-drop.js';
+import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
+import {readOpenAccountPage,MAX_PAGE_TEXT} from './finance-page-read.js';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,valueHistory,parseFinanceUpdates,matchFinanceUpdates,kindLabel,FINANCE_KINDS,effectiveValue} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {sealSecret,openSecret} from './secret-vault.js';
@@ -17,6 +20,10 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
   gate.content.replaceChildren(FinanceView());
   const $=id=>gate.content.querySelector(`#finance-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',drafts=[],revealTimer=null,clearSecret=false;
+  // A picture has no text to show, so it is held here and described instead.
+  // Text from a file or a page goes straight into the box, where it can be
+  // read, corrected, or thrown away before anything is sent.
+  let attachment=null;
   const revealed=new Map();
   const status=(text,target='status')=>{$(target).textContent=text||'';};
   const action=(label,handler,variant='secondary')=>{
@@ -112,6 +119,52 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
     $('breakdown-panel').querySelector('summary').textContent=currencies.length>1?`Breakdown · ${currency} only`:'Breakdown';
   }
 
+  function renderAttachment(){
+    $('attachment').hidden=!attachment;
+    $('attachment').replaceChildren(...(attachment?[AttachmentCard({
+      label:attachment.label,detail:attachment.detail,note:attachment.note,
+      tone:attachment.tone,onRemove:()=>{attachment=null;renderAttachment();render();}
+    })]:[]));
+  }
+  // Text and pictures take different routes on purpose. Extracted text is put
+  // in front of the owner verbatim, because a bad extraction is obvious there
+  // and invisible anywhere else. A picture can only be described.
+  async function receive(file){
+    const result=await readStatement(file);
+    if(result.kind==='image'){
+      attachment={kind:'image',image:result.image,label:file.name,
+        detail:`Image · ${result.image.width}×${result.image.height} · ${Math.round(result.image.bytes/1000)} KB after downscaling on this device`,
+        note:'',tone:''};
+      renderAttachment();render();
+      return 'Ready to read. Add a note below if the picture needs context.';
+    }
+    if(!result.text.trim()){
+      attachment=null;renderAttachment();render();
+      throw Error(result.note||'Nothing readable came out of that file.');
+    }
+    const {text,trimmed}=trimForReading(result.text);
+    $('intake').value=text;
+    attachment={kind:'text',label:file.name,
+      detail:`Text pulled out on this device · ${text.length.toLocaleString('en-US')} characters${result.pages?` · ${result.pages} section${result.pages===1?'':'s'}`:''}`,
+      note:[result.note,trimmed?`${trimmed.toLocaleString('en-US')} characters past the ${MAX_SEND.toLocaleString('en-US')}-character limit were left out. Trim the box to what matters.`:''].filter(Boolean).join(' '),
+      tone:result.confidence==='good'?'':'warning'};
+    renderAttachment();render();
+    return result.confidence==='good'?'Check the text below, then read it.':'Check the text below carefully before reading it.';
+  }
+  async function readPage(){
+    await run(async()=>{
+      status('Reading the open page…','intake-status');
+      const page=await readOpenAccountPage();
+      $('intake').value=page.text;
+      attachment={kind:'text',label:`${page.host}`,
+        detail:`Visible text from the open page · ${page.text.length.toLocaleString('en-US')} characters${page.tables?` · ${page.tables} table${page.tables===1?'':'s'}`:''}`,
+        note:page.trimmed?`${page.trimmed.toLocaleString('en-US')} characters were left out at the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit. Trim the box to the accounts you want.`:'',
+        tone:page.trimmed?'warning':''};
+      renderAttachment();
+      status('Read from the page below. Check it, then press Read this.','intake-status');
+    },'intake-status');
+  }
+
   function renderDrafts(){
     $('drafts').replaceChildren(...drafts.map((draft,index)=>DraftRow(draft,{
       onApply:()=>apply(index),
@@ -192,6 +245,9 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;$('refresh').disabled=busy;
     $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     $('intake').disabled=busy||!loaded;
+    $('drop').disabled=busy||!loaded;
+    $('page').disabled=busy||!loaded||!globalThis.chrome?.scripting;
+    $('page').hidden=!globalThis.chrome?.scripting;
   }
 
   async function run(operation,target='status'){
@@ -224,7 +280,7 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
     if(await run(token=>offline.request(token,'/v1/finance')))connectionList();
   }
   function clear(){
-    generation++;records=[];loaded=false;activeToken='';drafts=[];forget();clearForm();renderDrafts();
+    generation++;records=[];loaded=false;activeToken='';drafts=[];attachment=null;forget();clearForm();renderDrafts();renderAttachment();
     status('Unlock this section with your passkey to load your ledger.');
     render();
   }
@@ -243,12 +299,13 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
   }
   async function read(){
     const text=$('intake').value.trim();
-    if(!text){status('Paste the text you want read first.','intake-status');return;}
+    const images=attachment?.kind==='image'?[attachment.image.dataUrl]:[];
+    if(!text&&!images.length){status('Drop a statement, read the open page, or paste the figures first.','intake-status');return;}
     const id=$('connection').value;
     if(!id){status('Choose a saved AI connection, or add the record by hand below.','intake-status');return;}
     await run(async token=>{
-      status('Reading…','intake-status');
-      const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text,today:today()},timeoutMs:130000});
+      status(images.length?'Reading the image…':'Reading…','intake-status');
+      const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text,...(images.length?{images}:{}),today:today()},timeoutMs:130000});
       const parsed=parseFinanceUpdates(result);
       drafts=matchFinanceUpdates(parsed.updates,records);
       renderDrafts();
@@ -260,7 +317,9 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
   $('refresh').addEventListener('click',refresh);
   $('connect').addEventListener('click',onSettings);
   $('read').addEventListener('click',read);
-  $('intake-clear').addEventListener('click',()=>{$('intake').value='';drafts=[];renderDrafts();status('','intake-status');});
+  $('intake-clear').addEventListener('click',()=>{$('intake').value='';drafts=[];attachment=null;renderAttachment();renderDrafts();render();status('','intake-status');status('','file-status');});
+  $('page').addEventListener('click',readPage);
+  attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_BYTES});
   $('cancel').addEventListener('click',()=>{clearForm();$('editor').open=false;});
   $('kind').addEventListener('change',()=>{
     // The kind's usual liquidity is a starting point, not a lock: it applies

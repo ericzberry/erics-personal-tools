@@ -79,6 +79,12 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `rewards-sync.js`, `finance-data.js`/`finance-offline.js`,
   `personal-data.js`/`personal-offline.js`. The `*-data.js` modules own validation
   and are also imported by the Worker.
+- **Statement intake** — `statement-text.js` (turns a dropped file into text or
+  a downscaled image, entirely on the device), `pdf-text.js` (the PDF text-layer
+  extractor, with its own confidence reporting), `finance-page-read.js` (one
+  text snapshot of the tab the owner is looking at). All three ship to mobile
+  too, because `finance.js` imports them statically; the page reader needs
+  `chrome.scripting` and hides its own button where there is none.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
   `finance.js`, `personal.js`, `data-library.js`, `restaurant-search.js`,
   `reservation-*.js`.
@@ -97,7 +103,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 
 `config/` seasonal JSON (also copied to mobile) · `icons/` · `scripts/build.js`
 (copies pages, `src`, `config`, `icons` into `dist/`) · `scripts/import-rankings.py` ·
-`release/` packaged zips and store listing · `tests/` `node --test` behavior tests
+`vendor/` third-party readers copied into `dist/` by the build (`read-xlsx.js`, reached by `statement-text.js` at `../vendor/`) · `release/` packaged zips and store listing · `tests/` `node --test` behavior tests
 plus browser preview harnesses (`*-preview.html`, `ui-harness.html`).
 
 ## mobile-app/
@@ -127,13 +133,17 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
   `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research}`,
   `/v1/rewards`, `/v1/cards[/…]`, `/v1/travel[/…]`, `/v1/finance[/…]`,
-  `/v1/personal[/…]`. The AI-connection family also serves `finance-intake`.
+  `/v1/personal[/…]`. The AI-connection family also serves `finance-intake`,
+  the one route allowed a request body over 64 KB because a statement image
+  travels inline.
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
   `src/finance.js` and `src/personal.js` reuse it for `card_records`,
   `finance_records` and `personal_records`. `src/rewards.js`, `src/releases.js`,
   `src/ai-settings.js`.
-- `src/providers.js` (provider adapters) and `src/model-policy.js` (the central task
-  → model policy and priced catalogue — never copy model IDs into features).
+- `src/providers.js` (provider adapters, including the text/image content parts
+  every format renders in its own shape) and `src/model-policy.js` (the central
+  task → model policy and priced catalogue, where `vision` marks a model that may
+  be sent an image — never copy model IDs into features).
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_records`), `personal-schema.sql` (`personal_records`),

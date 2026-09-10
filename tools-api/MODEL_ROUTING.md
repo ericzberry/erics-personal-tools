@@ -42,6 +42,13 @@ Do not use a model's self-reported confidence as a quality gate, or blindly esca
 `cards.category` uses level 1, 600 output tokens, no web tool, and a $0.01 estimated request ceiling. It reads one free-text purchase description into a merchant, category, purchase method and stated amount; it never sees the owner's cards and cannot supply reward rates or pick a winner. `cards.research` uses level 3, 4,000 output tokens, live web search, and a $0.10 estimated request ceiling. Both use the existing reviewed catalog and availability checks. Issuer research is a draft requiring owner review, including caps and point values. Fixtures test ambiguous category handling, output validation and rejection of research without source evidence. The calculation suite covers cash/points equivalence, caps, ties, activation, channel restrictions, expiration and explicit eligibility confirmation.
 # Finance reading task
 
+A task whose input carries an image is automatically restricted to models
+marked `vision` in the catalog, and each image adds `IMAGE_TOKENS` to the
+estimated input so the cost ceiling is judged on what is actually sent. A model
+is marked `vision` only where image input is known to be supported; an unmarked
+model is simply never chosen for an image, which surfaces as a clear "no model
+available" rather than a provider error.
+
 `finance.intake` uses level 2, 2,500 output tokens, no web tool, and a $0.03
 estimated request ceiling. It reads one block of pasted text into draft figures
 and nothing else: the owner's saved records are never sent, so it cannot match a

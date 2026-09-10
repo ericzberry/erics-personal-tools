@@ -1,5 +1,6 @@
 import * as UI from './ui.js';
 import {FINANCE_KINDS,LIQUIDITY} from '../finance-data.js';
+import {ACCEPTED} from '../statement-text.js';
 const {Stack,Section,Heading,GroupTitle,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text}=UI;
 
 export function money(value,currency='USD'){
@@ -20,7 +21,13 @@ export function FinanceView(){
       Disclosure('Value over time',[Stack([],{id:'finance-trend'})],{id:'finance-trend-panel'})
     ]}),
     SettingsGroup({title:'Read an update',level:2,children:[
-      Note('Paste a statement summary, a note to yourself, or anything with figures in it. AI reads it into draft updates you review before anything is saved. Your saved records are never sent — only the text you paste.'),
+      Note('Drop a statement, read the page you are logged into, or paste figures in by hand. Everything is pulled out on this device and shown below before it is read, and nothing is saved until you apply a draft. Your saved records are never sent.'),
+      UI.UploadField({id:'finance-drop',inputId:'finance-file',statusId:'finance-file-status',
+        label:'Drop a statement',formats:'PDF, CSV, XLSX, or an image',accept:ACCEPTED.join(','),
+        status:'',resetId:'finance-file-clear',resetLabel:'Remove file'}),
+      ActionGroup([Button('Read the open page',{id:'finance-page',variant:'secondary',size:'compact'})],{compact:true}),
+      Note('Reads the visible text of whatever tab you are looking at — useful for a balance behind a login. It never signs in, never opens a page, and never sends anything until you press Read this.',{className:'footnote'}),
+      Stack([],{id:'finance-attachment',hidden:true}),
       FormField({id:'finance-intake',label:'What changed?',kind:'textarea',rows:3}),
       FormField({id:'finance-connection',label:'AI connection',kind:'select',options:[{text:'Choose a connection',value:''}]}),
       Note('',{id:'finance-ai-status',role:'status'}),
@@ -109,5 +116,18 @@ export function DraftRow(draft,{onApply,onDiscard,onEdit}){
     Note([target,`As of ${draft.asOf}`,`${draft.confidence} confidence`].join(' · ')),
     draft.reason?Text(draft.reason,{className:'footnote'}):null,
     ActionGroup([apply,edit,discard],{compact:true})
+  ],{className:'record-row'});
+}
+
+// What the device pulled out of a file or a page, stated plainly before it is
+// read. A poor extraction has to be visible here — the owner deciding "that is
+// garbage, I will paste it instead" is the whole point of showing it.
+export function AttachmentCard({label,detail,note,tone,onRemove}){
+  const remove=Button('Remove',{variant:'subtle',size:'compact'});
+  remove.addEventListener('click',onRemove);
+  return Section([
+    Stack([Strong(label),Text(detail,{className:'footnote'})]),
+    note?Notice(note,{tone}):null,
+    ActionGroup([remove],{compact:true})
   ],{className:'record-row'});
 }

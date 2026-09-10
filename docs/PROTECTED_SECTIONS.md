@@ -50,16 +50,39 @@ newest by date. Value over time is a step function between observed snapshots;
 nothing is interpolated, and a record contributes nothing before its first
 snapshot.
 
-### Reading pasted text
+### Reading a statement
 
-**Read an update** sends one block of pasted text to the `finance.intake` task
-and gets back draft figures. What it does not send matters more: saved records
-never leave the device, so the model cannot know what is already held, cannot
-pick the record a figure belongs to, and is instructed never to total, net,
-annualize or convert anything. Matching a draft to an existing record happens on
-the device by name and institution; an ambiguous name is reported rather than
-resolved by guessing. A draft with no usable date is dropped rather than assumed
-to be today.
+Figures reach the ledger four ways, and all four end at the same place: draft
+updates the owner reviews before anything is saved.
+
+- **Drop a file.** PDF, CSV, XLSX, or an image. A PDF's text layer is extracted
+  on the device by `pdf-text.js`, a spreadsheet by the vendored reader, and the
+  result is put in the intake box **verbatim** so the owner sees exactly what
+  was pulled out. This matters: PDF extraction is best-effort, and a statement
+  that comes out garbled has to be visible as garbled rather than read
+  silently. `pdf-text.js` reports its own confidence — `good`, `partial`,
+  `low`, or `none` — and a scan with no text layer says so and suggests the
+  image path instead.
+- **Read the open page.** One text snapshot of the tab the owner is already
+  looking at, for a balance behind a login. It never navigates, never signs in,
+  never opens a tab, and only reads when asked. Table rows are rendered cell by
+  cell so a label stays beside its figure. Extension and browser-internal pages
+  are skipped.
+- **Drop an image.** A screenshot, a photo, or a scanned statement. The picture
+  is downscaled to 1400px and re-encoded on the device before it is sent —
+  the original file never leaves. Images travel as content parts to a model
+  marked `vision` in the catalog; a connection with no such model is refused
+  rather than sent something it cannot read.
+- **Paste text.** As before.
+
+What is not sent matters as much. Saved records never leave the device, so the
+model cannot know what is already held, cannot pick the record a figure belongs
+to, and is instructed never to total, net, annualize or convert anything.
+Matching a draft to an existing record happens on the device by name and
+institution; an ambiguous name is reported rather than resolved by guessing. A
+draft with no usable date is dropped rather than assumed to be today, and a
+figure that is illegible in an image is named under `unread` rather than
+guessed at.
 
 Nothing is saved by reading. Each draft is applied, edited first, or discarded
 by hand, and applying one writes through the same validator and offline queue as
@@ -92,8 +115,9 @@ on reconnect or foreground; conflicts offer Keep my change or Use cloud version.
 Disconnecting is blocked while changes are pending, and a successful disconnect
 clears this device's copies while leaving cloud records intact.
 
-Reading pasted text is the only part that needs the internet. Everything
-else — totals, history, matching, revealing a value — works offline.
+Reading is the only part that needs the internet, and only for the model call:
+extracting a PDF, a spreadsheet, a page or an image all happen on the device.
+Everything else — totals, history, matching, revealing a value — works offline.
 
 ## API and deployment
 
@@ -101,4 +125,6 @@ else — totals, history, matching, revealing a value — works offline.
 `tools-api/src/travel.js`. Apply `tools-api/finance-schema.sql` and
 `tools-api/personal-schema.sql` before deploying the code that depends on them;
 both are additive `CREATE TABLE IF NOT EXISTS` statements that leave existing
-records untouched. `/v1/ai-connections/:id/finance-intake` serves the reading.
+records untouched. `/v1/ai-connections/:id/finance-intake` serves the reading; it accepts up to
+24,000 characters and up to four images, and is the only route whose request
+body may exceed 64 KB.

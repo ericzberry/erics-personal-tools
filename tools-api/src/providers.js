@@ -14,15 +14,55 @@ export function providerConfig(connection) {
   if (!['chat','responses','anthropic'].includes(format)) fail(400,'Choose a supported API format.');
   return {...provider,baseUrl:url.href.replace(/\/+$/,''),format};
 }
+// An image part carries the picture inline as a data URL. Only still raster
+// formats every supported provider accepts are allowed through, and the
+// encoded size is capped here so one oversized frame cannot be forwarded to a
+// provider on the strength of having passed the request body limit.
+export const IMAGE_MEDIA=['image/jpeg','image/png','image/webp','image/gif'];
+export const MAX_IMAGE_CHARS=900000;
+export const MAX_IMAGES=4;
+export function imagePart(value){
+  if(typeof value!=='string')fail(400,'An image must be a data URL.');
+  const match=/^data:(image\/[a-z+]+);base64,([A-Za-z0-9+/=]+)$/.exec(value.trim());
+  if(!match)fail(400,'An image must be a base64 data URL.');
+  const [,media,data]=match;
+  if(!IMAGE_MEDIA.includes(media))fail(400,`Use ${IMAGE_MEDIA.map(type=>type.replace('image/','')).join(', ')} images.`);
+  if(data.length>MAX_IMAGE_CHARS)fail(400,'That image is too large once encoded. Downscale it before sending.');
+  return {type:'image',media,data};
+}
+// Content is either a plain string or an ordered list of text and image parts.
+// Both shapes normalize to the same internal form so every downstream branch —
+// validation, cost, and each provider's request body — sees one thing.
+function contentParts(content){
+  if(typeof content==='string')return content.trim()?[{type:'text',text:content}]:fail(400,'Messages must contain a supported role and nonempty text.');
+  if(!Array.isArray(content)||!content.length||content.length>MAX_IMAGES+2)fail(400,'Message content must be text or a short list of text and image parts.');
+  const parts=content.map(part=>{
+    if(!part||typeof part!=='object')fail(400,'Each content part needs a type.');
+    if(part.type==='text'){
+      if(typeof part.text!=='string'||!part.text.trim())fail(400,'A text part cannot be empty.');
+      return {type:'text',text:part.text};
+    }
+    if(part.type==='image')return imagePart(part.dataUrl??part.url);
+    return fail(400,'Content parts must be text or image.');
+  });
+  if(parts.filter(part=>part.type==='image').length>MAX_IMAGES)fail(400,`Send at most ${MAX_IMAGES} images.`);
+  return parts;
+}
+export const partsLength=parts=>parts.reduce((total,part)=>total+(part.type==='text'?part.text.length:0),0);
+export const partsImages=parts=>parts.filter(part=>part.type==='image').length;
+export const messageImages=messages=>messages.reduce((total,message)=>total+partsImages(contentParts(message.content)),0);
+
 export function generationInput(input,connection) {
   const model=input.model;
   if (typeof model!=='string' || !model.trim() || model.length>240) fail(400,'Choose a model or enter its model ID.');
   if (!Array.isArray(input.messages) || !input.messages.length || input.messages.length>40) fail(400,'Provide between 1 and 40 text messages.');
   let length=0;
   const messages=input.messages.map(message=>{
-    if (!message || !['system','user','assistant'].includes(message.role) || typeof message.content!=='string' || !message.content.trim()) fail(400,'Messages must contain a supported role and nonempty text.');
-    length+=message.content.length;
-    return {role:message.role,content:message.content};
+    if (!message || !['system','user','assistant'].includes(message.role)) fail(400,'Messages must contain a supported role and nonempty text.');
+    const parts=contentParts(message.content);
+    if (message.role!=='user' && partsImages(parts)) fail(400,'Only a user message may carry an image.');
+    length+=partsLength(parts);
+    return {role:message.role,content:parts};
   });
   if (length>32000) fail(400,'The prompt is too long (32,000 characters maximum).');
   if (!messages.some(message=>message.role==='user')) fail(400,'A user message is required.');
@@ -30,13 +70,33 @@ export function generationInput(input,connection) {
   if (!Number.isInteger(maxTokens)||maxTokens<128||maxTokens>8192) fail(400,'Output limit must be between 128 and 8,192 tokens.');
   return {model:model.trim(),messages,maxTokens};
 }
+const joinText=parts=>parts.filter(part=>part.type==='text').map(part=>part.text).join('\n');
+// A message with no image renders exactly as it always did — a plain string —
+// so adding image support changes nothing about the requests every existing
+// task sends. The structured form appears only when a picture is present.
+function renderContent(format,parts){
+  if(!partsImages(parts))return joinText(parts);
+  if(format==='anthropic')return parts.map(part=>part.type==='text'
+    ?{type:'text',text:part.text}
+    :{type:'image',source:{type:'base64',media_type:part.media,data:part.data}});
+  if(format==='responses')return parts.map(part=>part.type==='text'
+    ?{type:'input_text',text:part.text}
+    :{type:'input_image',image_url:`data:${part.media};base64,${part.data}`});
+  return parts.map(part=>part.type==='text'
+    ?{type:'text',text:part.text}
+    :{type:'image_url',image_url:{url:`data:${part.media};base64,${part.data}`}});
+}
 export function generationRequest(config,input) {
   const {model,messages,maxTokens}=input;
-  if (config.format==='responses') return {path:'/responses',body:{model,input:messages.filter(m=>m.role!=='system'),
-    ...(messages.some(m=>m.role==='system')?{instructions:messages.filter(m=>m.role==='system').map(m=>m.content).join('\n\n')}:{ }),max_output_tokens:maxTokens,store:false}};
-  if (config.format==='anthropic') return {path:'/messages',body:{model,messages:messages.filter(m=>m.role!=='system'),max_tokens:maxTokens,
-    ...(messages.some(m=>m.role==='system')?{system:messages.filter(m=>m.role==='system').map(m=>m.content).join('\n\n')}:{ })}};
-  return {path:'/chat/completions',body:{model,messages,max_tokens:maxTokens,stream:false}};
+  const render=list=>list.map(message=>({role:message.role,content:renderContent(config.format,message.content)}));
+  const system=messages.filter(message=>message.role==='system');
+  const rest=render(messages.filter(message=>message.role!=='system'));
+  const instructions=system.map(message=>joinText(message.content)).join('\n\n');
+  if (config.format==='responses') return {path:'/responses',body:{model,input:rest,
+    ...(system.length?{instructions}:{ }),max_output_tokens:maxTokens,store:false}};
+  if (config.format==='anthropic') return {path:'/messages',body:{model,messages:rest,max_tokens:maxTokens,
+    ...(system.length?{system:instructions}:{ })}};
+  return {path:'/chat/completions',body:{model,messages:render(messages),max_tokens:maxTokens,stream:false}};
 }
 async function boundedJSON(response) {
   const reader=response.body?.getReader();if (!reader) fail(502,'The provider returned an empty response.');

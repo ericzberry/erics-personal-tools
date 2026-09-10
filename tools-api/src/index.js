@@ -8,6 +8,9 @@ import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
 import {discoverRestaurants} from './restaurants.js';
 const MAX_BYTES = 64 * 1024;
+// A record write stays at 64 KB. Only the AI-connection family may be larger,
+// because a downscaled statement image travels inline in its request body.
+const MAX_AI_BYTES = 1536 * 1024;
 const json = (value, status = 200) => Response.json(value, {
   status, headers: {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}
 });
@@ -24,7 +27,7 @@ async function authorized(request, token) {
   return difference === 0;
 }
 
-async function readValue(request) {
+async function readValue(request, limit = MAX_BYTES) {
   if (!request.headers.get('Content-Type')?.toLowerCase().startsWith('application/json')) {
     throw {status: 415, message: 'Use application/json.'};
   }
@@ -36,9 +39,9 @@ async function readValue(request) {
     const {done, value} = await reader.read();
     if (done) break;
     size += value.byteLength;
-    if (size > MAX_BYTES) {
+    if (size > limit) {
       await reader.cancel();
-      throw {status: 413, message: 'Settings exceed 64 KB.'};
+      throw {status: 413, message: `Request exceeds ${Math.round(limit / 1024)} KB.`};
     }
     text += decoder.decode(value, {stream: true});
   }
@@ -88,7 +91,7 @@ export default {
         if(request.method!==(action==='models'?'GET':'POST'))return json({error:'Method not allowed.'},405);
         const connection=await savedConnection(id,env);
         if(action==='models')return json(await listModels(connection));
-        const input=JSON.parse(await readValue(request));
+        const input=JSON.parse(await readValue(request, action==='finance-intake'?MAX_AI_BYTES:MAX_BYTES));
         if(action==='card-category')return json(await classifyPurchase(connection,input));
         if(action==='card-research')return json(await researchCard(connection,input));
         if(action==='finance-intake')return json(await readFinanceUpdates(connection,input));

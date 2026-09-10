@@ -11,11 +11,15 @@ await mkdir(new URL('./dist/', import.meta.url), {recursive: true});
 await cp(new URL('./public/', import.meta.url), new URL('./dist/', import.meta.url), {recursive: true});
 console.log(`Built Eric’s Tools ${version}`);
 
-const shared=['components/tokens.css','rewards-tool.js','rewards-data.js','rewards-offline.js','secret-vault.js','idle-session.js','components/rewards.js','components/select.js','components/select.css','cards.js','card-data.js','cards-offline.js','components/cards.js','components/cards.css','restaurant-search.js','components/restaurant-views.js','components/workspace.css','travel.js','travel-data.js','travel-offline.js','offline-resource.js','offline-storage.js','capabilities.js','data-library.js','cloud-storage.js','components/ui.js','components/travel.js','components/travel.css','finance.js','finance-data.js','finance-offline.js','components/finance.js','components/finance.css','personal.js','personal-data.js','personal-offline.js','components/personal.js','vault-gate.js','components/vault.js','components/vault.css','components/capabilities.js','components/capabilities.css'];
+const shared=['components/tokens.css','rewards-tool.js','rewards-data.js','rewards-offline.js','secret-vault.js','idle-session.js','components/rewards.js','components/select.js','components/select.css','cards.js','card-data.js','cards-offline.js','components/cards.js','components/cards.css','restaurant-search.js','components/restaurant-views.js','components/workspace.css','travel.js','travel-data.js','travel-offline.js','offline-resource.js','offline-storage.js','capabilities.js','data-library.js','cloud-storage.js','components/ui.js','components/travel.js','components/travel.css','finance.js','finance-data.js','finance-offline.js','components/finance.js','components/finance.css','pdf-text.js','statement-text.js','finance-page-read.js','components/file-drop.js','personal.js','personal-data.js','personal-offline.js','components/personal.js','vault-gate.js','components/vault.js','components/vault.css','components/capabilities.js','components/capabilities.css'];
 for (const file of shared) {
   const target = new URL(`./dist/app/shared/${file}`, import.meta.url);
   await mkdir(new URL('./', target), {recursive:true});
   await cp(new URL(`../chrome-sidebar/src/${file}`, import.meta.url), target);
 }
+// statement-text.js reaches the spreadsheet reader at ../vendor/, which from
+// dist/app/shared/ means dist/app/vendor/.
+await mkdir(new URL('./dist/app/vendor/',import.meta.url),{recursive:true});
+await cp(new URL('../chrome-sidebar/vendor/read-xlsx.js',import.meta.url),new URL('./dist/app/vendor/read-xlsx.js',import.meta.url));
 await mkdir(new URL('./dist/app/data/',import.meta.url),{recursive:true});
 await cp(new URL('../chrome-sidebar/config/rankings-2026.json',import.meta.url),new URL('./dist/app/data/rankings-2026.json',import.meta.url));
