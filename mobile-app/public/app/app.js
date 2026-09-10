@@ -30,7 +30,7 @@ async function offlineSetup() {
     catch(error){if(!existing?.active)throw error;registration=existing;}
     await Promise.race([navigator.serviceWorker.ready, new Promise((_, reject) => setTimeout(() => reject(Error('timeout')), 15000))]);
     el('offline-status').textContent = 'Ready';
-    el('offline-detail').textContent = 'Downloaded records and reference data work offline. Changes wait on this device until they can sync. Device storage is not a permanent backup.';
+    el('offline-detail').textContent = '';
   } catch {
     setSettings(true);
     el('offline-status').textContent = 'Not ready';

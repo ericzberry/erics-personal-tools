@@ -5,7 +5,7 @@ export function referenceRows(kind,value){
 }
 export function mountLibrary(root,{kind,load,level=1}){
   const title={rankings:'Player rankings',ai:'AI connections'}[kind];
-  root.replaceChildren(DataLibrary({title,id:kind,level,description:kind==='ai'?'Saved connection details are available offline. Provider requests require internet; API keys stay on the server.':'Saved 2026 reference data · Available offline. Live ESPN capture requires the extension.'}));
+  root.replaceChildren(DataLibrary({title,id:kind,level}));
   const search=root.querySelector('input'),list=root.querySelector('.data-records'),status=root.querySelector('[role=status]');
   let rows=[],message='',loading=false,error='',generation=0;
   function render(){const term=search.value.trim().toLowerCase();const filtered=rows.filter(r=>`${r.title} ${r.lines.join(' ')}`.toLowerCase().includes(term));list.replaceChildren(...DataRows(filtered));status.textContent=error||(loading?'Loading saved data…':!filtered.length?(rows.length?'No matching records. Clear the search to see all records.':'No saved records.'):(message||''));}

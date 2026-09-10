@@ -2,7 +2,7 @@ import * as UI from './ui.js';
 const {Workspace,WorkspaceColumns,FieldGrid,FormField:F,Form,FormStack,Section,Heading,Text,Note,Notice,Button,Link,Stack,Toggle,SettingsGroup,ActionGroup,Disclosure,ResultBlock,ChoiceRow,EvidenceList}=UI;
 export function RestaurantWorkspace({mobile=false}={}) {
   return Workspace([
-    Stack([Stack([mobile?null:Note('ERIC’S PERSONAL TOOLS'),Heading('Find a table',1),Text('A favorite restaurant, or somewhere worth discovering.')]),mobile?null:Link('AI settings','settings.html')],{className:'workspace-heading'}),
+    Stack([Stack([mobile?null:Note('ERIC’S PERSONAL TOOLS'),Heading('Find a table',1)]),mobile?null:Link('AI settings','settings.html')],{className:'workspace-heading'}),
     WorkspaceColumns([
       Section([
         Form([
@@ -17,7 +17,6 @@ export function RestaurantWorkspace({mobile=false}={}) {
           SettingsGroup({title:'When & how many',level:2,children:[
             F({id:'restaurant-date',label:'Date',kind:'date'}),
             FieldGrid([F({id:'restaurant-start',label:'From',kind:'time'}),F({id:'restaurant-end',label:'Until',kind:'time'})]),
-            Note('Times are local to the restaurant. Results cover this time window.'),
             Toggle({id:'restaurant-flexible',label:'Flexible party size',descriptionId:'restaurant-party-help'}),
             Stack([F({id:'restaurant-party',label:'People',kind:'number'})],{id:'restaurant-fixed-fields'}),
             Stack([FieldGrid([F({id:'restaurant-min',label:'Minimum people',kind:'number'}),F({id:'restaurant-max',label:'Maximum people',kind:'number'})])],{id:'restaurant-flex-fields',hidden:true}),
@@ -26,7 +25,6 @@ export function RestaurantWorkspace({mobile=false}={}) {
           Disclosure('Research settings',[
             F({id:'restaurant-limit',label:'Maximum restaurants',kind:'select',options:[{text:'6 restaurants',value:'6'},{text:'12 restaurants',value:'12'},{text:'24 restaurants',value:'24'}]}),
             F({id:'restaurant-connection',label:'OpenAI connection',kind:'select',options:[{text:'Loading connections…',value:''}]}),
-            Note(mobile?'Research uses your saved OpenAI connection and API credit. Find connection details under Tools → AI connections.':'A suitable model is selected automatically. Research and page interpretation use your API credit. Booking pages open in temporary background tabs; their rendered booking content is sent to your saved OpenAI connection.'),
             ActionGroup([Button('Reload connections',{id:'restaurant-reload',variant:'secondary'})],{compact:true}),
             Note('',{id:'restaurant-connection-status',role:'status'})
           ],{className:'research-settings'}),
@@ -42,7 +40,7 @@ export function RestaurantWorkspace({mobile=false}={}) {
         Notice('',{id:'restaurant-clarification',hidden:true}),
         Stack([],{id:'restaurant-candidates',className:'result-list'}),
         ActionGroup([Button('Check selected restaurants',{id:'restaurant-check',variant:'primary',hidden:true})],{compact:true}),
-        Section([Heading('Availability',2),Note('',{id:'restaurant-result-context'}),Note('Availability can change. Open the provider to review details and finish booking.'),Stack([],{id:'restaurant-results',className:'result-list'})],{id:'restaurant-availability',hidden:true})
+        Section([Heading('Availability',2),Note('',{id:'restaurant-result-context'}),Stack([],{id:'restaurant-results',className:'result-list'})],{id:'restaurant-availability',hidden:true})
       ],{'aria-label':'Restaurant results'})
     ])
   ]);
@@ -71,10 +69,9 @@ export function MobileRestaurantCandidate(r,{search,links,expired=false}) {
     r.travel==='longer'?Notice('Longer travel from the UWS. Review the address before booking.'):r.travel==='unknown'?Notice('Neighborhood is unverified. Review the address before booking.'):null,
     EvidenceList(r.evidence),
     Disclosure('Booking pages',[
-      Note(`${search.date} · ${search.startTime}–${search.endTime} local time. Availability has not been checked. Confirm the date, time, and party size on the provider.`),
+      Note(`${search.date} · ${search.startTime}–${search.endTime} local time`),
       expired?Note('This search date has passed. Run a new search for current booking links.'):
-        links.length?Stack(links.map(link=>Link(`${link.provider} · ${link.size} people${link.time?` · near ${link.time}`:''}`,link.url)),{className:'booking-links'}):Note('No booking destination was verified.'),
-      Note('Opening providers and checking tables requires internet. The mobile app cannot automatically read their booking pages.')
+        links.length?Stack(links.map(link=>Link(`${link.provider} · ${link.size} people${link.time?` · near ${link.time}`:''}`,link.url)),{className:'booking-links'}):Note('No booking destination was verified.')
     ])
   ]});
 }

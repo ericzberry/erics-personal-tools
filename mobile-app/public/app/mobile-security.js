@@ -1,11 +1,10 @@
-import {autoUnlock} from './auto-unlock.js';
+import {autoUnlock} from './shared/auto-unlock.js';
 import {passkeyVault, VAULT_KEY} from './passkey-vault.js';
 import {idleSession} from './shared/idle-session.js';
 const root = document.getElementById('capabilities-root');
 root.innerHTML = `
 <section class="mobile-lock" aria-labelledby="lock-title">
   <h1 id="lock-title">Protect your mobile app</h1>
-  <p id="lock-detail">Use a passkey to protect your saved data, including offline copies. The app locks after 15 minutes without activity.</p>
   <form id="lock-setup">
     <label for="lock-token">Private access token</label>
     <input id="lock-token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required minlength="32" maxlength="500" aria-describedby="lock-token-help">
@@ -17,7 +16,6 @@ root.innerHTML = `
   <button id="lock-unlock" type="button" hidden>Unlock with passkey</button>
   <p id="lock-status" role="status" aria-live="polite"></p>
   <details id="lock-recovery" hidden><summary>Can’t use your passkey?</summary><p>Recover with your original access token and create a replacement passkey. Saved records and pending changes stay on this device. Keep that token somewhere safe; deleting your passkey can otherwise make unsynced data inaccessible.</p><button id="lock-recover" class="secondary" type="button">Recover access</button></details>
-  <p id="lock-support" class="muted">On iPhone, use Apple Passwords on iOS 18 or later. Unlock with Face ID, Touch ID, or your device passcode. A full app restart also requires unlocking.</p>
 </section>
 <div id="mobile-private" hidden></div>`;
 const el = id => document.getElementById(id);
@@ -47,11 +45,8 @@ window.mobileAccessAllowed = () => session.check() && !document.hidden;
 function showGate() {
   const saved = !!vault.record();
   el('lock-title').textContent = saved ? 'Opening your tools…' : 'Protect your mobile app';
-  el('lock-detail').textContent = saved ? 'Unlock your saved data with your passkey. Downloaded records remain available offline.' : 'Use a passkey to protect your saved data, including offline copies. The app locks after 15 minutes without activity.';
   el('lock-setup').hidden = saved;
   el('lock-unlock').hidden = true;
-  el('lock-detail').hidden = saved;
-  el('lock-support').hidden = saved;
   el('lock-finish').hidden = true;
   el('lock-restart').hidden = true;
   el('lock-recovery').hidden = true;

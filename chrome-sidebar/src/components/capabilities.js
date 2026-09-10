@@ -11,7 +11,7 @@ export function CapabilitiesView(){
     ...CAPABILITIES.map(c=>Section([],{id:`capability-${c.id}`,hidden:true}))
   ]);
 }
-export function DataLibrary({title,description,id,level=1}){
-  return Stack([Heading(title,level),Note(description),FormField({id:`${id}-search`,label:'Search saved data',kind:'search'}),Note('',{id:`${id}-status`,role:'status'}),Stack([],{id:`${id}-rows`,className:'data-records'})],{className:'data-library'});
+export function DataLibrary({title,id,level=1}){
+  return Stack([Heading(title,level),FormField({id:`${id}-search`,label:'Search saved data',kind:'search'}),Note('',{id:`${id}-status`,role:'status'}),Stack([],{id:`${id}-rows`,className:'data-records'})],{className:'data-library'});
 }
 export function DataRows(rows){return rows.map(row=>Section([Heading(row.title,2),...row.lines.map(line=>Note(line))],{className:'data-record'}));}

@@ -34,7 +34,7 @@ test('mobile restaurant search preserves failures, ignores canceled replies, res
   try{
     await mountRestaurants(root,options).open();$('connection').value='test';$('query').value='Example';$('party').value='4';
     submit();await settle();assert.equal($('find').disabled,true);submit();assert.equal(calls,1);
-    resolveResearch(research);await settle();assert.ok(saved);assert.match($('candidates').textContent,/Availability has not been checked/);
+    resolveResearch(research);await settle();assert.ok(saved);assert.match($('candidates').textContent,/17:00–22:00 local time/);
     const url=new URL(root.querySelector('.booking-links a').href);assert.equal(url.searchParams.get('seats'),'4');assert.equal(url.searchParams.get('date'),saved.search.date);
     fail=true;$('query').value='failure';submit();await settle();assert.equal($('query').value,'failure');assert.match($('error').textContent,/Synthetic failure/);assert.equal(saved.search.query,'Example');
     fail=false;submit();await settle();$('stop').click();resolveResearch({...research,summary:'Canceled result'});await settle();assert.equal(saved.research.summary,'Verified shortlist');

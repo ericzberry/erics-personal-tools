@@ -9,7 +9,6 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
       Stack([],{id:'travel-list',className:'travel-list'})
     ],{hidden:mode==='editor',className:'record-search'}),
     (mode==='editor'?(_title,children,props)=>Section(children,props):Disclosure)('Add or edit a record',[
-      Note('Add airline, hotel, rental-car, trusted traveler, passport, visa, or other membership numbers.'),
       Form([
         Strong('New record',{id:'travel-editor-title'}),
         FormField({id:'travel-category',label:'Category',kind:'select',options:TRAVEL_CATEGORIES.map(text=>({text,value:text}))}),
@@ -72,7 +71,6 @@ export function TravelConnection(){return Stack([Disclosure('Connection settings
         Stack([
           ActionGroup([Button('Refresh records',{id:'travel-refresh',variant:'secondary',size:'compact'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger',size:'compact'})],{compact:true}),
           Note('Disconnect removes this device’s offline copies. Cloud records stay saved.')
-        ],{id:'travel-maintenance',className:'connection-maintenance',hidden:true}),
-        Disclosure('Storage & privacy',[Note('Records are encrypted in the cloud and on this device. Downloaded records work offline; changes sync when connected.')],{className:'connection-privacy'})
+        ],{id:'travel-maintenance',className:'connection-maintenance',hidden:true})
       ],{className:'connection-content'})
     ],{id:'travel-cloud'})],{className:'connection-surface'});}

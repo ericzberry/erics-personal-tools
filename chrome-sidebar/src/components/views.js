@@ -27,7 +27,6 @@ export function DraftSettings() {
       ...Field({id:'manual-clock',label:'Current overall pick',kind:'number',placeholder:'Unknown'}),
       ...Field({id:'manual-slot',label:'Your draft position',kind:'select',options:[{text:'Unknown',value:''},...Array.from({length:10},(_,i)=>({text:String(i+1),value:String(i+1)}))]}),
       Button('Save progress',{id:'save-manual-progress',variant:'primary'}),
-      Note('Update the current pick as your manual draft progresses.'),
       ...Field({id:'manual-search',label:'Player outside your spreadsheet',placeholder:'Search ESPN players…'}),
       Note('',{id:'manual-result-count'}),Stack([],{id:'manual-players'})
     ],{id:'manual-settings',hidden:true}),
@@ -48,7 +47,6 @@ export function SettingsView() {
     Stack([],{id:'travel-settings-connection',className:'travel-wallet connection-only'}),
     UI.SettingsItem('Credentials',[
       UI.FormStack([
-      Note('API keys are encrypted in D1.'),
       UI.SettingsGroup({title:'Cloud connection',children:[
       Note('Worker not connected.',{id:'credential-cloud-state',role:'status'}),
       Stack([
@@ -80,10 +78,10 @@ export function AISettingsView() {
       Note('Open here anytime: ericberry → Tab → Enter',{className:'settings-shortcut'})
     ],{className:'settings-rail'}),
     Main([
-      Stack([Stack([Heading('AI connections',1),Text('Your providers and API keys. Models are chosen per task.',{className:'settings-intro'})]),
+      Stack([Stack([Heading('AI connections',1)]),
         Badge('Not connected',{id:'settings-connection-badge'})],{className:'settings-heading'}),
       Disclosure('Cloud connection',[
-        Stack([Note('Connect this browser to your personal settings. Use your extension access token here; add AI provider keys below.'),
+        Stack([
           field({id:'settings-token',label:'Extension access token',kind:'password',placeholder:'Paste your private token'}),
           ActionGroup([Button('Connect',{id:'settings-connect',variant:'primary'}),Button('Disconnect this browser',{id:'settings-disconnect',variant:'secondary'})]),
           Note('',{id:'settings-cloud-status',role:'status'})],{className:'connection-setup'})
@@ -100,7 +98,6 @@ export function AISettingsView() {
             field({id:'ai-name',label:'Connection name',kind:'text',placeholder:'e.g. Writing assistant'}),
             field({id:'ai-provider',label:'Provider',kind:'select',options:AI_PROVIDERS.map(provider=>({text:provider.name,value:provider.id}))}),
             Stack([field({id:'ai-format',label:'API format',kind:'select',options:[{text:'OpenAI Chat Completions',value:'chat'},{text:'OpenAI Responses',value:'responses'},{text:'Anthropic Messages',value:'anthropic'}]})],{id:'ai-format-field',hidden:true}),
-            Note('Each task has its own model policy, balancing capability and cost. Provider access is stored here.'),
             field({id:'ai-base-url',label:'API base URL (optional)',kind:'url',placeholder:'https://…'}),
             Note('',{id:'ai-endpoint-help'}),
             field({id:'ai-key',label:'API key',kind:'password',placeholder:'Paste your provider’s key'}),
@@ -129,8 +126,7 @@ export function AISettingsView() {
         ],{id:'playground-form'}),
         Note('',{id:'playground-status',role:'status'}),
         UI.OutputText({id:'playground-output',hidden:true})
-      ],{className:'settings-card playground-card'}),
-      Note('Prompts go through your Worker to the selected provider. Prompts and responses are not saved by this app.',{className:'settings-footer'})
+      ],{className:'settings-card playground-card'})
     ])
   ],{className:'settings-shell'});
 }
