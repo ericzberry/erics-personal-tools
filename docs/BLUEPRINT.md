@@ -150,8 +150,10 @@ Finance ledger over `/v1/finance`, so figures reach the app without being typed
 in. `ledger.mjs` is dependency-free Node that lists records and appends dated
 snapshots — it cannot delete, and previews every write until `--confirm`.
 `RUNBOOK.md` is the procedure a run follows; `README.md` covers setup and the
-snapshot file format. The bearer token lives in `credentials/api-token`, which
-is gitignored. Changing the ledger's record shape means re-reading
+snapshot file format. The bearer token comes from `TOOLS_API_TOKEN`, then the
+login keychain (`erics-tools-api` / `API_TOKEN`), then a gitignored
+`credentials/api-token`. It cannot be stored in D1: it is the credential that
+gates every route, so nothing there is reachable without presenting it first. Changing the ledger's record shape means re-reading
 `chrome-sidebar/src/finance-data.js`, which is the validator both this and the
 Worker answer to.
 

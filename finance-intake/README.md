@@ -28,21 +28,35 @@ snapshots appear in the history and in **Value over time**.
 
 ## Setup — the API token
 
-One step, once. The token is a Cloudflare Worker secret and is not stored
-anywhere in this repository, so put a copy where the script can read it:
+One step, once. Put the token in the login keychain:
 
 ```bash
-pbpaste > finance-intake/credentials/api-token
+security add-generic-password -s erics-tools-api -a API_TOKEN -w -U
 ```
 
-Or paste it into that file with an editor. `finance-intake/credentials/` is
-gitignored, alongside `gmail-sender/credentials/`. `TOOLS_API_TOKEN` in the
-environment works too, and takes precedence.
+`-w` with no value prompts for the token, so it never lands in shell history.
+macOS encrypts it at rest and the script reads it back without a prompt.
+
+**This token cannot live in D1**, which is the obvious-looking place for it. It
+is the credential that protects D1: every route checks it before running, and
+the AI provider keys and finance records stored there are only reachable by
+presenting it first. Storing it behind itself has no bootstrap. That is also
+why it differs from an AI provider key, which *is* typed into a field in
+Settings and encrypted into `ai_connections` — those are protected *by* this
+token, not equal to it.
+
+The script looks in three places, in order:
+
+1. `TOOLS_API_TOKEN` in the environment — for a one-off or a different account.
+2. The login keychain, as above. **Use this.**
+3. `finance-intake/credentials/api-token` — a plain file, for a machine with no
+   keychain. Gitignored, alongside `gmail-sender/credentials/`, but it is
+   plaintext on disk; prefer the keychain.
 
 If you no longer have the token, it is the same one the extension holds under
 its connection settings, and it can be rotated with
 `npx wrangler secret put API_TOKEN` in `tools-api/` — but rotating it means
-re-entering it in the extension and the phone.
+re-entering it in the extension and on the phone.
 
 ## The script
 
@@ -116,4 +130,4 @@ is whichever snapshot is newest by date.
 | `ledger.mjs` | The CLI. Read and append only. |
 | `RUNBOOK.md` | The procedure Claude follows for each intake. |
 | `log.md` | One line per intake (created on the first save). |
-| `credentials/api-token` | The bearer token. Gitignored, never committed. |
+| `credentials/api-token` | Fallback token file if the keychain is not used. Gitignored, never committed. |

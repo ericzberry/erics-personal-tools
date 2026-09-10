@@ -11,11 +11,13 @@
 //  - It writes nothing until asked twice. `save` previews by default; only
 //    `--confirm` sends a request. Arithmetic and totals stay in the app.
 import {readFileSync, existsSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BASE = (process.env.TOOLS_API_URL || 'https://erics-tools-api.ezberry.workers.dev').replace(/\/$/, '');
+const KEYCHAIN = {service: 'erics-tools-api', account: 'API_TOKEN'};
 const TOKEN_FILE = join(HERE, 'credentials', 'api-token');
 // A figure that moves this far in one step is usually a misread decimal or a
 // column read off the wrong row, so the plan says so out loud before saving.
@@ -28,13 +30,23 @@ const money = (value, currency = 'USD') => {
   catch { return `${Number(value).toLocaleString('en-US')} ${currency}`; }
 };
 
+// The bearer token is the root credential for the whole API — it is what
+// protects the encrypted D1 records, so it cannot itself live in D1. The login
+// keychain is the right home for it: encrypted at rest by macOS, readable
+// without a prompt by the tool that stored it, and nowhere in the repository.
+// The file is a fallback for a machine without a keychain, and says so.
+function keychainToken() {
+  try {
+    return execFileSync('security', ['find-generic-password', '-s', KEYCHAIN.service, '-a', KEYCHAIN.account, '-w'], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
+  } catch { return ''; }
+}
 function token() {
-  const supplied = process.env.TOOLS_API_TOKEN?.trim();
-  if (supplied) return supplied;
-  if (!existsSync(TOKEN_FILE)) die(`No API token found.\nWrite it to ${TOKEN_FILE} (see README.md), or set TOOLS_API_TOKEN.`);
-  const saved = readFileSync(TOKEN_FILE, 'utf8').trim();
-  if (saved.length < 32) die(`The token in ${TOKEN_FILE} is under 32 characters, so the API will reject it.`);
-  return saved;
+  const found = process.env.TOOLS_API_TOKEN?.trim()
+    || keychainToken()
+    || (existsSync(TOKEN_FILE) ? readFileSync(TOKEN_FILE, 'utf8').trim() : '');
+  if (!found) die(`No API token found. Store it in the login keychain:\n\n  security add-generic-password -s ${KEYCHAIN.service} -a ${KEYCHAIN.account} -w -U\n\n(-w with no value prompts for it, so the token never lands in shell history.)\nSee README.md for the alternatives.`);
+  if (found.length < 32) die('The stored API token is under 32 characters, so the API will reject it. Store the full token.');
+  return found;
 }
 
 async function api(path, {method = 'GET', body} = {}) {
