@@ -57,7 +57,6 @@ const navigation=mountToolNavigation(root.querySelector('.capability-navigation'
 });
 export function showSettings(open){
   navigation.hidden=open;
-  navigation.open=false;
   connectionRoot.hidden=!open;
   if(open)for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=true;
   else selectTool();

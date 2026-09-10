@@ -1,5 +1,5 @@
 import {FormattedSelect,FormattedSuggestions} from './select.js';
-import {capabilities} from '../capabilities.js';
+import {capabilities,capabilitiesByName} from '../capabilities.js';
 // All DOM construction lives here. Features compose components and supply data.
 function element(tag, props={}, children=[]) {
   const node=document.createElement(tag);
@@ -11,6 +11,19 @@ function element(tag, props={}, children=[]) {
     else node.setAttribute(key,String(value));
   }
   node.append(...children.filter(Boolean));return node;
+}
+const SVG_NS='http://www.w3.org/2000/svg';
+function svgElement(tag, props={}) {
+  const node=document.createElementNS(SVG_NS,tag);
+  for(const [key,value] of Object.entries(props))node.setAttribute(key,String(value));
+  return node;
+}
+// Decorative-by-default icon. Callers supply a 24x24 path; the label beside it
+// carries the accessible name.
+export function Glyph(d,{size=20}={}) {
+  const svg=svgElement('svg',{viewBox:'0 0 24 24',width:size,height:size,fill:'none',stroke:'currentColor','stroke-width':'1.5','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false',class:'glyph'});
+  svg.append(svgElement('path',{d}));
+  return svg;
 }
 export const Text=(text='',props={})=>element('p',{text,...props});
 export const Label=(text,props={})=>element('span',{text,...props});
@@ -36,6 +49,14 @@ export function Field({id,label,kind='search',options=[],hiddenLabel=false,place
   const control=kind==='select'?Select({id,label,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
   if(kind==='select'){const trigger=control.querySelector('button');trigger.setAttribute('aria-labelledby',`${id}-label`);caption.addEventListener('click',()=>trigger.focus());}
   return [caption,list?FormattedSuggestions(control,list,label):control];
+}
+// Flat grid of small tool icons, alphabetical by label. Used where the whole
+// tool list should be visible at a glance instead of hidden behind a dropdown.
+const SETTINGS_GLYPH='M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M12 2.8l1.6 2.3 2.8-.4 1 2.6 2.6 1-.4 2.8 2.3 1.6-2.3 1.6.4 2.8-2.6 1-1 2.6-2.8-.4-1.6 2.3-1.6-2.3-2.8.4-1-2.6-2.6-1 .4-2.8L2.8 12l2.3-1.6-.4-2.8 2.6-1 1-2.6 2.8.4L12 2.8Z';
+export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',label='Tools',settings=false}={}) {
+  const children=items.map(item=>element('button',{id:`navigate-${item.id}`,type:'button',className:'launcher-tile'},[Glyph(item.icon),Label(item.label,{className:'launcher-label'})]));
+  if(settings)children.push(element('button',{id:'open-settings',type:'button',className:'launcher-tile launcher-tile--settings','aria-expanded':'false'},[Glyph(SETTINGS_GLYPH),Label('Settings',{className:'launcher-label'})]));
+  return element('nav',{id,'aria-label':label,className:'capability-launcher'},children);
 }
 export function CapabilityNavigation(items){
   const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong('Current tab',{id:'current-function'})]);

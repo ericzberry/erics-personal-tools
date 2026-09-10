@@ -49,7 +49,7 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Keep the most important action visually dominant; normally use one primary action per form or task group.
 - Use progressive disclosure for secondary detail. Keep current status and necessary actions discoverable.
 - Put the selected tool and saved information first on mobile. Keep device and connection maintenance secondary, omit unlocked-state banners and manual lock controls, and let tool content use the page scroll instead of a small nested scrolling box.
-- Avoid redundant cards inside cards, gratuitous shadows, decorative icons, and oversized headings. Every visual boundary should explain a relationship.
+- Avoid redundant cards inside cards, gratuitous shadows, decorative icons, and oversized headings. Every visual boundary should explain a relationship. Capability launcher icons are navigation, not decoration, and are the exception.
 
 ## Controls and interaction
 
@@ -122,11 +122,12 @@ Apply these rules to every user-facing interface in this repository. Follow each
 
 - Every capability that stores or presents personal/reference data must also be available in the mobile app. Build mobile parity with the capability; do not deliver an extension-only data feature or an online-only mobile shell for it.
 - Data that does not inherently require a live service must remain usable offline after its first successful download. Save the actual records and required reference assets, not only the app shell. Keep online-only actions (generation, live capture, external requests) separate from offline data access.
-- Use a shared capabilities registry and the general Tools dropdown for navigation. Add features such as Travel wallet as ordinary entries; do not add special home-page callouts, one-off feature links, or new function tabs.
+- Use the shared capabilities registry for navigation: the sidebar's Tools dropdown and the mobile launcher both read it. Add features such as Travel wallet as ordinary entries; do not add special home-page callouts, one-off feature links, or new function tabs.
+- Give every capability an `icon` in the same change that registers it: a 24x24 stroked SVG path drawn with `currentColor`, sized and colored by the shared launcher styles. The mobile launcher renders one icon per capability, so an entry without an icon cannot be reached there. Keep the launcher alphabetical by label; registry order sets only the default tool.
 - Reuse shared components and data adapters across extension and mobile. Persist private records in encrypted device storage, keep secret values masked, and never put authenticated responses in the service-worker shell cache.
 - Support durable offline changes with per-record revisions, a pending-change queue, reconnect/foreground synchronization, explicit sync status, and conflict resolution. Never overwrite newer cloud data or discard unsynced changes silently.
 - Disconnecting a device must explain and clear its private offline copies while leaving cloud records intact. Require pending changes to be synchronized or explicitly resolved before disconnecting. Browser storage can be evicted; do not present a device cache as a permanent backup.
-- Verify a cold offline reopen, access to private values without a network request, queued edits surviving a restart, reconnection, conflicts, and cache clearing. Check the general Tools dropdown at mobile and narrow sidebar widths.
+- Verify a cold offline reopen, access to private values without a network request, queued edits surviving a restart, reconnection, conflicts, and cache clearing. Check the sidebar Tools dropdown and the mobile tool launcher at mobile and narrow sidebar widths.
 
 ## Complete app fixes through release
 

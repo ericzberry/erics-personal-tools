@@ -21,7 +21,8 @@ export async function travel(request, env, readValue, json, config={resource:'tr
   const previous = await env.DB.prepare(`SELECT id, value, revision, updated_at FROM ${table} WHERE id = ?`).bind(id).first();
   if (request.method === 'GET') {
     if (!previous) fail(404,'Record not found. Refresh your records.');
-    return json({record:{...describe(previous,await decryptSettings(previous.value,`${resource}:${id}`,env)),...await decryptSettings(previous.value,`${resource}:${id}`,env)}});
+    const value=await decryptSettings(previous.value,`${resource}:${id}`,env);
+    return json({record:{...describe(previous,value),...value}});
   }
   const input = JSON.parse(await readValue(request));
   if ((previous?.revision ?? null) !== (input.revision ?? null)) fail(409,'This record changed on another device. Cancel your edits and refresh before trying again.');

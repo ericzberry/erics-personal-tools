@@ -46,8 +46,10 @@ export async function savedConnection(id,env) {
   if(!row)fail(404,'Connection not found.');
   return decryptSettings(row.value,id,env);
 }
-async function publicRecord(row, env) {
-  const {apiKey, model:legacyModel, ...value} = await decryptSettings(row.value, row.id, env);
+// Callers holding the plaintext pass it in; a value this request just
+// encrypted must not be decrypted again to describe it.
+async function publicRecord(row, env, settings) {
+  const {apiKey, model:legacyModel, ...value} = settings ?? await decryptSettings(row.value, row.id, env);
   return {...value, id:row.id, hasApiKey:!!apiKey, revision:row.revision, updatedAt:row.updated_at};
 }
 export async function aiSettings(request, env, readValue, json) {
@@ -76,5 +78,5 @@ export async function aiSettings(request, env, readValue, json) {
     ? await env.DB.prepare('UPDATE ai_connections SET value = ?, revision = ?, updated_at = ? WHERE id = ? AND revision = ?').bind(row.value, row.revision, row.updated_at, id, previous.revision).run()
     : await env.DB.prepare('INSERT INTO ai_connections (id, value, revision, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING').bind(id, row.value, row.revision, row.updated_at).run();
   if (!result.meta.changes) fail(409, 'This connection changed elsewhere. Reload connections before editing.');
-  return json({connection:await publicRecord(row, env)});
+  return json({connection:await publicRecord(row, env, value)});
 }

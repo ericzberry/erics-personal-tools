@@ -10,3 +10,16 @@
 .data-library .data-record{padding:8px 0;display:grid;gap:3px;border-color:var(--line,#dedfd5);}
 .data-library input{border-radius:6px;background:var(--surface,#fffefa);font-size:16px;}
 .data-library :focus-visible{outline:2px solid var(--forest,#173e37);outline-offset:2px;}
+
+/* Tool launcher: small icons, alphabetical, all visible without opening a menu. */
+.capability-launcher{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:4px;align-items:stretch;}
+.launcher-tile{display:grid;justify-items:center;align-content:start;gap:5px;min-height:62px;padding:9px 3px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--ink,#203b33);font:inherit;text-align:center;cursor:pointer;}
+.launcher-tile .glyph{display:block;color:var(--forest,#173e37);}
+.launcher-label{font-size:11px;line-height:1.25;color:var(--muted,#626f67);overflow-wrap:break-word;}
+.launcher-tile:hover{background:var(--sage,#e8eee5);}
+.launcher-tile[aria-current='page']{background:var(--sage,#e8eee5);border-color:var(--line,#dedfd5);}
+.launcher-tile[aria-current='page'] .launcher-label{color:var(--forest,#173e37);font-weight:600;}
+.launcher-tile--settings .glyph,.launcher-tile--settings .launcher-label{color:var(--muted,#626f67);}
+.launcher-tile:focus-visible{outline:2px solid var(--forest,#173e37);outline-offset:-2px;}
+@media (pointer:coarse){.launcher-tile{min-height:66px;}}
+@media (prefers-reduced-motion:no-preference){.launcher-tile{transition:background-color .12s ease;}}
