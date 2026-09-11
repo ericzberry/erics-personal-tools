@@ -19,6 +19,7 @@ export const TASK_POLICIES = {
   'cards.research':{label:'Card issuer research',level:3,outputTokens:4000,web:true,maxCost:0.10},
   'rewards.benefits':{label:'Card benefit research',level:3,outputTokens:6000,web:true,maxCost:0.15},
   'finance.intake':{label:'Finance reading',level:2,outputTokens:2500,web:false,maxCost:0.03},
+  'capture.note':{label:'Quick note reading',level:1,outputTokens:500,web:false,maxCost:0.01},
   'email.summary':{label:'Email summary',model:'gpt-5.6-terra',level:3,outputTokens:700,web:false,maxCost:0.04},
   'restaurant.availability':{label:'Reservation page interpretation',level:2,outputTokens:2000,web:false,maxCost:0.05},
   'restaurant.research':{label:'Restaurant research',level:2,outputTokens:7000,web:true,maxCost:0.15}

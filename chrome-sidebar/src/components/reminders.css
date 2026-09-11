@@ -1,0 +1,7 @@
+@import url('./travel.css');
+@import url('./capture.css');
+/* Dates read as a run of short lines, so the list stays scannable at a glance. */
+.reminder-list .record-row{padding:6px 0;gap:2px}
+.reminder-list .record-row p{margin:0}
+.reminder-list .travel-list{gap:0}
+.reminder-list .record-row--overdue strong{color:var(--wallet-danger,#982f27)}

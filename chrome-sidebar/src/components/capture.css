@@ -1,0 +1,8 @@
+/* The note and its one action share a line; the status wraps under both. */
+.capture-field{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+.capture-field .form-field{gap:4px;min-width:0}
+.capture-field .action-group{padding-bottom:1px}
+.capture-field .notice{grid-column:1/-1;margin:0}
+.capture-field .notice:empty{display:none}
+@media(max-width:360px){.capture-field{grid-template-columns:minmax(0,1fr)}.capture-field .action-group{justify-content:flex-end}}
+@media(hover:none){.capture-field button{min-height:44px}}

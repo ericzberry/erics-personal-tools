@@ -5,6 +5,9 @@ export function CapabilityPicker({id='capability-picker'}={}) {
 }
 export function CapabilitiesView(){
   return Stack([
+    // Quick add belongs to the home screen, above the tools themselves: a note
+    // is typed before choosing where it goes, which is the point of it.
+    Stack([],{id:'capability-capture',hidden:true}),
     CapabilityPicker(),
     // AI connections live in Settings beside the cloud connection they belong to.
     Section([Heading('Cloud connection',2),Stack([],{id:'capability-connection'}),Stack([],{id:'capability-ai'})],{id:'capability-settings',className:'travel-wallet connection-only',hidden:true}),

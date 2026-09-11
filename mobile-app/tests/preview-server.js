@@ -19,6 +19,13 @@ const programCatalog={id:'ms-reserved',programId:'ms-reserved',label:'Morgan Sta
   complete:true,offers:programOffers,readAt:new Date().toISOString(),listedAt:new Date().toISOString(),
   revision:'synthetic-catalog',updatedAt:new Date().toISOString()};
 let finance=[];let personal=[];
+// Dated commitments, as the phone receives them: one overdue service, one
+// birthday inside its notice, one renewal with months of warning.
+let reminders=[
+  {id:'21111111-1111-4111-8111-111111111111',kind:'Service',title:'Oil change and tire rotation',subject:'Subaru Outback',date:'2026-02-28',every:6,since:'',notice:14,completed:'',notes:'Tire pressure was low at the last visit.',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'21111111-1111-4111-8111-111111111112',kind:'Birthday',title:'Maisie’s birthday',subject:'',date:'2016-09-20',every:12,since:'2016',notice:14,completed:'',notes:'',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'21111111-1111-4111-8111-111111111113',kind:'Renewal',title:'Passport renewal',subject:'Eric',date:'2026-12-01',every:0,since:'',notice:90,completed:'',notes:'',revision:'first',updatedAt:new Date().toISOString()}
+];
 let apiCalls = 0;
 const fixture = `
 const fixtureEncode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
@@ -110,7 +117,7 @@ createServer(async (req, res) => {
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
       cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
     }
-    for(const [name,list,set] of [['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}]]){
+    for(const [name,list,set] of [['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}]]){
       if(url.pathname===`/v1/${name}/snapshot`){res.end(JSON.stringify({records:list()}));return;}
       if(url.pathname.startsWith(`/v1/${name}/`)){
         const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
@@ -120,6 +127,15 @@ createServer(async (req, res) => {
         if(req.method==='PUT'){const record={...value,id:recordId,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};set([...list(),record]);res.end(JSON.stringify({record}));return;}
         res.end('{}');return;
       }
+    }
+    // What a typed note reads back as, so quick add can be operated without a
+    // model call. The note itself decides only whether it fails.
+    if(url.pathname===`/v1/ai-connections/${id}/capture`){
+      let text='';for await(const data of req)text+=data;const {note,today}=JSON.parse(text);
+      if(String(note).includes('failure')){res.statusCode=422;res.end('{"error":"That does not name a date to remember."}');return;}
+      res.end(JSON.stringify({capability:'reminders',path:'/v1/reminders',
+        record:{kind:'Birthday',title:'Derek’s birthday',subject:'',date:today,every:12,since:'',notice:14,completed:'',notes:''},
+        summary:'Derek’s birthday · Every year · Today'}));return;
     }
     if(url.pathname===`/v1/ai-connections/${id}/finance-intake`){
       let text='';for await(const data of req)text+=data;const {text:input}=JSON.parse(text);

@@ -9,6 +9,7 @@ export const MISC_SECTION='Misc';
 const SECTION_ICONS=new Map([[MISC_SECTION,'M6 12h.01 M12 12h.01 M18 12h.01']]);
 export const CAPABILITIES = [
   {id:'travel',label:'Travel wallet',href:'travel.html',icon:'M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z M9 8V5h6v3'},
+  {id:'reminders',label:'Reminders',href:'reminders.html',icon:'M12 4a5 5 0 0 0-5 5v3.4L5.5 16h13L17 12.4V9a5 5 0 0 0-5-5Z M10 19a2 2 0 0 0 4 0'},
   {id:'rewards',label:'Rewards & benefits',href:'rewards.html',icon:'M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.3-4.8-2.5-4.8 2.5.9-5.3L4.2 9.7l5.4-.8L12 4Z'},
   {id:'cards',label:'Best card',href:'cards.html',icon:'M3 7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z M3 10.5h18'},
   {id:'finance',label:'Finance',href:'finance.html',icon:'M4 20V10 M9.5 20V5 M15 20v-7 M20.5 20V8 M3 20h18'},
