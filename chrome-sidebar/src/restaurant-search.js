@@ -10,19 +10,44 @@ export function matchesGeography(restaurant,search) {
   return !neighborhood || (` ${neighborhoodName(restaurant.neighborhood)} `).includes(` ${neighborhood} `);
 }
 export function localDate(now = new Date()) { return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`; }
+export const MAX_DATES = 7;
+const calendarDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
+const dayCount = (from,to) => Math.round((Date.parse(`${to}T00:00:00Z`)-Date.parse(`${from}T00:00:00Z`))/86400000)+1;
+export function searchDates(search) {
+  const dates=[];
+  for (let i=0, day=Date.parse(`${search.date}T00:00:00Z`); i<MAX_DATES; i++, day+=86400000) {
+    const value=new Date(day).toISOString().slice(0,10);
+    dates.push(value);
+    if (value >= (search.endDate || search.date)) break;
+  }
+  return dates;
+}
 export function searchInput(input, today = localDate()) {
   const text = (value,max=300) => typeof value === 'string' ? value.trim().slice(0,max) : '';
   const mode = input.mode === 'category' ? 'category' : 'restaurant';
   const query = text(input.query), city = text(input.city,120);
   if (!query || !city) throw Error('Enter a restaurant or category and a city.');
   const date = text(input.date,10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0,10)!==date || date < today) throw Error('Choose a valid date today or later.');
+  if (!calendarDate(date) || date < today) throw Error('Choose a valid date today or later.');
+  // A range of dates only makes sense for one named restaurant; a category search
+  // is one evening out, not a survey of the city over a week.
+  const flexibleDates = mode === 'restaurant' && input.flexibleDates === true;
+  const endDate = flexibleDates ? (text(input.endDate,10) || date) : date;
+  if (!calendarDate(endDate) || endDate < date) throw Error('Choose a last date on or after the first date.');
+  if (dayCount(date,endDate) > MAX_DATES) throw Error(`Check at most ${MAX_DATES} dates in one search.`);
   const flexible = input.flexible === true;
-  const minParty = Number(flexible ? input.minParty : input.partySize), maxParty = Number(flexible ? input.maxParty : input.partySize);
-  if (![minParty,maxParty].every(n=>Number.isInteger(n)&&n>=1&&n<=20) || maxParty<minParty || maxParty-minParty>7) throw Error('Use party sizes from 1–20, with at most 8 sizes in a flexible search.');
+  // The Worker re-validates this object, so it has to survive its own output:
+  // a fixed size reads back from minParty, and it is also returned as partySize
+  // so a client on this version still satisfies an older deployed Worker.
+  const size = Number(input.partySize ?? input.minParty);
+  const minParty = flexible ? Number(input.minParty) : size, maxParty = flexible ? Number(input.maxParty) : size;
+  const party = n => Number.isInteger(n) && n >= 1 && n <= 20;
+  if (flexible) {
+    if (![minParty,maxParty].every(party) || maxParty < minParty || maxParty-minParty > 7) throw Error('Choose a party-size range between 1 and 20 people, covering at most 8 sizes.');
+  } else if (!party(size)) throw Error('Enter a party size from 1 to 20 people.');
   const startTime = text(input.startTime,5) || '17:00', endTime = text(input.endTime,5) || '22:00';
   if (![startTime,endTime].every(t=>/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(t)) || startTime>endTime) throw Error('Choose a time window ending on the same day, after it starts.');
-  return {mode,query,city:isNYC(city)?'New York City':city,neighborhood:text(input.neighborhood,120),date,flexible,minParty,maxParty,startTime,endTime,includeLongTravel:isNYC(city)&&input.includeLongTravel===true,limit:[6,12,24].includes(Number(input.limit))?Number(input.limit):12};
+  return {mode,query,city:isNYC(city)?'New York City':city,neighborhood:text(input.neighborhood,120),date,endDate,flexibleDates,flexible,...(flexible?{}:{partySize:size}),minParty,maxParty,startTime,endTime,includeLongTravel:isNYC(city)&&input.includeLongTravel===true,limit:[6,12,24].includes(Number(input.limit))?Number(input.limit):12};
 }
 export const partySizes = search => Array.from({length:search.maxParty-search.minParty+1},(_,i)=>search.minParty+i);
 export function safePublicURL(value) {
@@ -40,13 +65,13 @@ export function bookingProvider(value) {
   if(h==='sevenrooms.com' && /^\/(?:reservations|explore)\//.test(u.pathname))return 'SevenRooms';
   return 'Restaurant website';
 }
-export function bookingURL(value,search,size,time=search.startTime) {
+export function bookingURL(value,search,size,time=search.startTime,date=search.date) {
   const safe=safePublicURL(value); if(!safe)throw Error('The booking link is not a public HTTPS address.');
   const u=new URL(safe),provider=bookingProvider(safe);
-  if(provider==='Resy'){u.searchParams.set('date',search.date);u.searchParams.set('seats',size);u.searchParams.set('time','all-day');}
-  if(provider==='OpenTable'){u.searchParams.set('dateTime',`${search.date}T${time}:00`);u.searchParams.set('covers',size);}
-  if(provider==='Tock'){u.searchParams.set('date',search.date);u.searchParams.set('size',size);u.searchParams.set('time',time);}
-  if(provider==='SevenRooms'){u.searchParams.set('date',search.date);u.searchParams.set('party_size',size);}
+  if(provider==='Resy'){u.searchParams.set('date',date);u.searchParams.set('seats',size);u.searchParams.set('time','all-day');}
+  if(provider==='OpenTable'){u.searchParams.set('dateTime',`${date}T${time}:00`);u.searchParams.set('covers',size);}
+  if(provider==='Tock'){u.searchParams.set('date',date);u.searchParams.set('size',size);u.searchParams.set('time',time);}
+  if(provider==='SevenRooms'){u.searchParams.set('date',date);u.searchParams.set('party_size',size);}
   return u.href;
 }
 export function travelDisposition(restaurant,search) {

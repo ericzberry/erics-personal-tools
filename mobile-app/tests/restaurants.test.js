@@ -36,6 +36,15 @@ test('mobile restaurant search preserves failures, ignores canceled replies, res
     submit();await settle();assert.equal($('find').disabled,true);submit();assert.equal(calls,1);
     resolveResearch(research);await settle();assert.ok(saved);assert.match($('candidates').textContent,/17:00–22:00 local time/);
     const url=new URL(root.querySelector('.booking-links a').href);assert.equal(url.searchParams.get('seats'),'4');assert.equal(url.searchParams.get('date'),saved.search.date);
+    // A run of dates gives every date its own verified booking link.
+    $('flex-dates').checked=true;$('flex-dates').dispatchEvent(new window.Event('input'));
+    assert.equal($('through-field').hidden,false);
+    const through=new Date(Date.parse(`${saved.search.date}T00:00:00Z`)+86400000).toISOString().slice(0,10);
+    $('through').value=through;submit();await settle();resolveResearch(research);await settle();
+    const dates=[...root.querySelectorAll('.booking-links a')].map(a=>new URL(a.href).searchParams.get('date'));
+    assert.deepEqual([...new Set(dates)],[saved.search.date,through]);
+    $('flex-dates').checked=false;$('flex-dates').dispatchEvent(new window.Event('input'));
+    submit();await settle();resolveResearch(research);await settle();
     fail=true;$('query').value='failure';submit();await settle();assert.equal($('query').value,'failure');assert.match($('error').textContent,/Synthetic failure/);assert.equal(saved.search.query,'Example');
     fail=false;submit();await settle();$('stop').click();resolveResearch({...research,summary:'Canceled result'});await settle();assert.equal(saved.research.summary,'Verified shortlist');
     network=false;await mountRestaurants(root,options).open();assert.match($('summary').textContent,/Offline/);assert.match($('candidates').textContent,/Verified rating/);assert.equal($('find').disabled,true);assert.equal($('search-panel').open,false);

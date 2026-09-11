@@ -23,5 +23,11 @@ test('controller preserves failed inputs, stops pending research and rejects sta
     assert.equal($('check').disabled,true);const choice=document.querySelector('.choice-row input');choice.checked=true;choice.dispatchEvent(new window.Event('change'));assert.equal($('check').disabled,false);
     $('party').value='4';$('check').click();await settle();assert.match($('error').textContent,/Search details changed/);assert.equal(requests.filter(m=>m.action==='restaurants').length,3);
     $('city').value='Paris';$('city').dispatchEvent(new window.Event('input'));assert.equal($('nyc').hidden,true);
+    // Flexible dates belong to a named restaurant; a category search keeps one date.
+    assert.equal($('through-field').hidden,true);
+    $('flex-dates').checked=true;$('flex-dates').dispatchEvent(new window.Event('input'));
+    assert.equal($('through-field').hidden,false);assert.equal(document.querySelector('label[for="restaurant-date"]').textContent,'First date');
+    $('mode').value='category';$('mode').dispatchEvent(new window.Event('input'));
+    assert.equal($('date-options').hidden,true);assert.equal($('through-field').hidden,true);
   }finally{delete globalThis.chrome;Object.defineProperty(window.HTMLSelectElement.prototype,'value',value);}
 });

@@ -454,6 +454,45 @@ preview at 380px and 280px against synthetic offers. The reader itself was run
 against the live `msreserved.com` from an offer page, reading all 136 offers;
 the end-to-end save was not exercised against a signed-in session.
 
+## Finding a table uses the whole page (0.6.92 / mobile 0.1.51)
+
+Every search with an exact party size used to fail with a party-size complaint
+that had nothing to do with what was typed. The app sends the Worker its
+normalized search, and a fixed size travels in that as `minParty`/`maxParty`
+with no `partySize` field — which the Worker's own copy of the same validator
+then rejected. `searchInput` now reads a fixed size from either field and
+returns `partySize` alongside the range, so its output survives the round trip
+and the Worker already running in production accepts it — this release fixes
+the error without waiting on a deploy, and a client still on the old shape
+stays acceptable once the Worker does update. Both the API and extension suites
+hold it there.
+
+The workspace is one page instead of a narrow form beside a results column.
+`WorkspaceFlow` runs the search across the full width — the two field groups sit
+side by side while there is room for them — and the shortlist follows
+underneath as a row of cards, appearing only once a search has returned
+something. **Search for** is two choices, so it is now the new shared
+`SegmentedField` rather than a dropdown holding two options. **Research
+settings** is one row: shortlist size, connection, and **Reload** beside the
+connection, with nothing to read when research can run.
+
+A named restaurant can be checked across a run of dates. **Flexible dates**
+takes a first and last date up to seven days apart; each date is its own page
+check, confirmed against that date's own controls, and each gets its own booking
+link on the phone. A category search is one evening out, so it keeps a single
+date and is not offered the option. The 120-check cap now counts dates along
+with party sizes and time anchors.
+
+Validation: 289 extension, 32 mobile and 66 API tests pass, including the
+normalized search surviving the Worker's validation for fixed, flexible-party
+and flexible-date searches, the seven-day limit, a category search keeping one
+date, per-date booking links, and the segmented control replacing the mode
+dropdown. The workspace was reviewed in the restaurant preview harness at
+1440px, 420px and 280px — with a synthetic three-card shortlist for the grid and
+no horizontal overflow at 280px — and in the unlocked mobile shell at 390px,
+where a two-date search produced a booking link for each date. Live OpenAI
+research and live provider pages were not exercised.
+
 ## An unlock lasts an hour (0.6.91 / mobile 0.1.50)
 
 The inactivity window is an hour rather than fifteen minutes. One passkey now

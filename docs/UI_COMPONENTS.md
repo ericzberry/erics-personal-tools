@@ -25,11 +25,12 @@ The catalogue below describes existing exports, not a promise that each componen
 | App identity and tool selection | `AppHeader`, `CapabilityNavigation`, `CapabilityMenu`, `CapabilityLauncher` | Use the capabilities registry and general Tools navigation; a registry `section` groups entries in both hosts: a heading over the mobile launcher grid, and a row that opens to reveal its tools in the sidebar menu |
 | Page heading and body | `PageHeader`, `PageBody`; `ToolHeading` and `Main` aliases | One page title; shared insets and section rhythm |
 | Section heading or secondary view | `SectionTitle`, `SubPage`, `Section` | Name the group and provide a meaningful return path |
-| Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceColumns`, `FieldGrid` | Compose layout before introducing new wrappers |
+| Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceFlow`, `FieldGrid` | Compose layout before introducing new wrappers; a full-tab workspace runs down the page rather than into a side column |
 | Text and supporting detail | `Title`, `Text`, `Note`, `Strong`, `Label` | `Heading` aliases `Title`; `Label` is a text span, not an input label |
 | Form and labeled inputs | `Form`, `FormStack`, `FormField`, `Field` | `Field` supplies an associated label and control |
 | Actions and links | `Button`, `Link`, `CopyIconButton` | Choose role and density explicitly; use real links for navigation |
 | Select or editable suggestions | `Select`, `Field` with `kind: 'select'` or `list` | Shared formatted trigger and open menu; keep custom text for suggestions |
+| Choice of two or three | `SegmentedField` | Show the options side by side instead of behind a menu; it is a radio group exposing `value` like a select |
 | Boolean choice | `Toggle`, `ChoiceRow` | Keep the explanation and click target together |
 | Secondary detail | `Disclosure`, `ExpandableRecord` | Current status and frequent actions remain discoverable |
 | Compact saved records | `RecordRow`, `ExpandableRecord` | Avoid a card for every line of metadata |

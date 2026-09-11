@@ -5,8 +5,12 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .workspace-heading {display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:28px;}
 .workspace-heading h1 {font-size:28px;margin:6px 0;}
 .workspace-heading p {margin:6px 0;}
-.workspace-columns {display:grid;grid-template-columns:minmax(260px,350px) minmax(0,1fr);gap:36px;align-items:start;}
-.workspace-columns > * {min-width:0;}
+/* One column down the page: the search uses the full width, its results below. */
+.workspace-flow {display:grid;gap:24px;}
+.workspace-flow > * {min-width:0;}
+.workspace-form {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:16px;align-items:start;}
+.research-grid {display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr) auto;gap:12px;align-items:end;}
+.research-grid > button {min-height:36px;}
 .workspace-shell .form-field {margin:0;display:grid;gap:5px;min-width:0;}
 .workspace-shell input,.workspace-shell select {min-width:0;width:100%;box-sizing:border-box;}
 .workspace-shell .toggle-field input,.workspace-shell .choice-row input {width:auto;flex-shrink:0;}
@@ -21,6 +25,9 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .choice-row .footnote {margin-top:4px;}
 .result-list {display:grid;gap:16px;margin:16px 0;}
 .result-block {border-top:1px solid var(--line);padding:16px 0;display:grid;gap:10px;overflow-wrap:anywhere;}
+/* On the full-width page the candidates read as a row of cards, not one long column. */
+.workspace-shell:not(.workspace-shell--mobile) .result-list {grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));align-items:start;}
+.workspace-shell:not(.workspace-shell--mobile) .result-block {border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px;align-content:start;}
 .result-heading {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;}
 .result-heading h3 {margin:0;}
 .result-block p {margin:0;line-height:1.5;}
@@ -28,16 +35,30 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .evidence-list {margin:0;}
 .evidence-row {padding:10px 12px;display:grid;gap:5px;}
 .research-settings {margin:0;}
-.research-settings > :not(summary) {margin:12px;}
+.research-settings > :not(summary) {margin:0 14px 14px;}
 .slot-list {display:flex;flex-wrap:wrap;gap:8px;}
 .workspace-shell button {cursor:pointer;white-space:normal;}
 .workspace-shell button:disabled {cursor:default;}
-@media(max-width:720px) {.workspace-columns {grid-template-columns:minmax(0,1fr);gap:24px;}.workspace-shell {padding:20px 14px;}.workspace-heading {align-items:flex-start;flex-wrap:wrap;}}
+
+/* Two choices stay visible side by side instead of hiding inside a menu. */
+.segmented {border:0;margin:0;padding:0;min-width:0;display:grid;gap:5px;}
+.segmented-legend {padding:0;font-size:11px;font-weight:500;color:var(--muted);}
+.segmented-options {display:flex;gap:6px;}
+.segmented-option {position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:8px 10px;margin:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-size:12px;text-align:center;cursor:pointer;}
+.segmented-option:has(input:checked) {border-color:var(--forest);background:var(--sage);color:var(--forest);font-weight:600;}
+.segmented-option:has(input:focus-visible) {outline:2px solid var(--accent);outline-offset:2px;}
+.workspace-shell .segmented-input {position:absolute;width:1px;height:1px;margin:0;padding:0;opacity:0;pointer-events:none;}
+@media (hover:hover) {.segmented-option:hover {border-color:#93aa9b;}}
+@media(max-width:720px) {.research-grid {grid-template-columns:minmax(0,1fr);align-items:stretch;}.workspace-shell {padding:20px 14px;}.workspace-heading {align-items:flex-start;flex-wrap:wrap;}}
 @media(max-width:340px) {.field-grid {grid-template-columns:minmax(0,1fr);}.workspace-shell .settings-group {padding:12px;}}
 
 /* Embedded workspaces share the phone's page scroll and control hierarchy. */
 .workspace-shell--mobile{padding:0;font-size:14px;line-height:1.5;--surface:#fffefa;--forest:#173e37}
-.workspace-shell--mobile .workspace-columns{grid-template-columns:minmax(0,1fr);gap:20px}
+.workspace-shell--mobile .workspace-flow{gap:20px}
+.workspace-shell--mobile .workspace-form{grid-template-columns:minmax(0,1fr);gap:24px}
+.workspace-shell--mobile .research-grid{grid-template-columns:minmax(0,1fr);gap:12px;align-items:stretch}
+.workspace-shell--mobile .segmented-legend{font-size:13px;font-weight:600;color:inherit}
+.workspace-shell--mobile .segmented-option{min-height:44px;font-size:14px}
 .workspace-shell--mobile .workspace-heading{margin-bottom:20px}
 .workspace-shell--mobile h1{font-size:24px;letter-spacing:-.5px}
 .workspace-shell--mobile h2{font-size:18px}

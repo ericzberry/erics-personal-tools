@@ -232,6 +232,17 @@ export function TieredRankings(players,picks,ownTeamId,{confirmed=false,recommen
   return [archive,...remaining];
 }
 
+// Two or three mutually exclusive choices, shown side by side instead of hidden
+// inside a menu. Native radios keep the keyboard and screen-reader behavior; the
+// group exposes `value` so a controller reads it exactly like the select it replaces.
+export function SegmentedField({id,label,options=[]}) {
+  const inputs=options.map(option=>element('input',{type:'radio',name:id,id:`${id}-${option.value}`,value:option.value,className:'segmented-input'}));
+  const choices=options.map((option,index)=>element('label',{className:'segmented-option',for:inputs[index].id},[inputs[index],Label(option.text)]));
+  const group=element('fieldset',{id,className:'segmented'},[element('legend',{text:label,className:'segmented-legend'}),Stack(choices,{className:'segmented-options'})]);
+  Object.defineProperty(group,'value',{get:()=>inputs.find(input=>input.checked)?.value??'',set(value){for(const input of inputs)input.checked=input.value===String(value);}});
+  return group;
+}
+
 export function Toggle({id,label,checked=false,descriptionId}) {
   const input=element('input',{id,type:'checkbox',role:'switch','aria-describedby':descriptionId});input.checked=checked;
   return element('label',{className:'toggle-field',for:id},[Label(label),input]);
@@ -250,7 +261,7 @@ export const FormField=({className='',...options})=>Stack(Field(options),{classN
 
 // Reusable layouts for searchable workspaces and evidence-backed results.
 export const Workspace=children=>Stack(children,{className:'workspace-shell'});
-export const WorkspaceColumns=children=>Stack(children,{className:'workspace-columns'});
+export const WorkspaceFlow=children=>Stack(children,{className:'workspace-flow'});
 export const FieldGrid=children=>Stack(children,{className:'field-grid'});
 export function ChoiceRow({title,description,checked=false,onChange}) {
   const input=element('input',{type:'checkbox','aria-label':title});input.checked=checked;

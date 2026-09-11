@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
-import {searchInput,partySizes,isNYC,travelDisposition,discoveryResult,needsRestaurantChoice,bookingURL,bookingProvider,safePublicURL} from '../src/restaurant-search.js';
+import {searchInput,partySizes,searchDates,isNYC,travelDisposition,discoveryResult,needsRestaurantChoice,bookingURL,bookingProvider,safePublicURL} from '../src/restaurant-search.js';
 import {resyAvailability,validatedAvailability,matchesDate,combineObservations} from '../src/reservation-availability.js';
 import {searchTimes,matchesGeography} from '../src/restaurant-search.js';
 import {RestaurantWorkspace,RestaurantCandidate,ReservationResult} from '../src/components/views.js';
@@ -15,6 +15,20 @@ test('validates dates, local party ranges, time windows, and city aliases',()=>{
   assert.equal(isNYC('Manhattan'),true);assert.equal(isNYC('New York City'),true);assert.equal(isNYC('Paris'),false);
   assert.deepEqual(partySizes(searchInput({...input,flexible:true,minParty:2,maxParty:6},'2030-01-01')),[2,3,4,5,6]);
   for(const changes of [{date:'2030-02-30'},{date:'2029-12-01'},{date:'2030-13-10'},{partySize:0},{partySize:2.5},{flexible:true,minParty:1,maxParty:10},{flexible:true,minParty:6,maxParty:2},{endTime:'16:00'},{city:''},{query:''}])assert.throws(()=>searchInput({...input,...changes},'2030-01-01'));
+  // The Worker re-validates the normalized search the app sends it, so it has to survive the round trip.
+  assert.deepEqual(searchInput(search,'2030-01-01'),search);
+  assert.deepEqual(searchInput(searchInput({...input,flexible:true,minParty:2,maxParty:6},'2030-01-01'),'2030-01-01').maxParty,6);
+});
+test('a specific restaurant can be checked across a run of dates',()=>{
+  const week=searchInput({...input,flexibleDates:true,endDate:'2030-09-18'},'2030-01-01');
+  assert.deepEqual(searchDates(week),['2030-09-15','2030-09-16','2030-09-17','2030-09-18']);
+  assert.deepEqual(searchDates(search),['2030-09-15']);
+  assert.deepEqual(searchInput(week,'2030-01-01'),week);
+  // A category search is one evening out, so it keeps a single date.
+  assert.equal(searchInput({...input,mode:'category',flexibleDates:true,endDate:'2030-09-18'},'2030-01-01').endDate,'2030-09-15');
+  for(const endDate of ['2030-09-25','2030-09-14','2030-13-01'])assert.throws(()=>searchInput({...input,flexibleDates:true,endDate},'2030-01-01'));
+  const url=new URL(bookingURL('https://www.opentable.com/r/example-new-york',week,4,'19:00','2030-09-17'));
+  assert.equal(url.searchParams.get('dateTime'),'2030-09-17T19:00:00');
 });
 test('NYC travel filter handles exclusions, unknown locations and city-specific behavior',()=>{
   for(const neighborhood of ['Lower East Side','LES','East Village','EV'])assert.equal(travelDisposition({...restaurant,neighborhood},search),'longer');
@@ -64,6 +78,13 @@ test('workspace uses unique IDs, accessible controls, safe evidence and results'
   const {document}=parseHTML('<html><body></body></html>');globalThis.document=document;const view=RestaurantWorkspace();document.body.append(view);
   const ids=[...view.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length);
   for(const label of view.querySelectorAll('label[for]'))assert.ok(document.getElementById(label.getAttribute('for')));
+  // Two choices stay visible as a segmented control rather than hiding in a dropdown.
+  assert.equal(view.querySelector('select#restaurant-mode'),null);
+  const mode=view.querySelector('#restaurant-mode');mode.value='category';
+  assert.equal(view.querySelector('#restaurant-mode-category').checked,true);assert.equal(mode.value,'category');
+  // The search fills the page: no second column, and results wait until there are some.
+  assert.equal(view.querySelector('.workspace-columns'),null);
+  assert.equal(view.querySelector('#restaurant-shortlist').hidden,true);
   assert.equal(view.querySelectorAll('input[type=password]').length,0);
   const card=RestaurantCandidate({...restaurant,name:'<img src=x>',booking:[],evidence:[]},false,()=>{});assert.equal(card.querySelector('img'),null);
   const result=ReservationResult({restaurant,size:4,provider:'Resy',date:search.date,status:'attention',detail:'Log in'},{});assert.match(result.textContent,/4 people/);assert.equal(result.querySelectorAll('button')[1].disabled,true);
