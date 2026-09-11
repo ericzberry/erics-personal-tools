@@ -40,6 +40,9 @@ test('a free-text description is read into merchant, category, method and amount
  assert.equal(body.model,'gpt-4o-mini');
  // Only the description reaches the model; saved card names never do.
  assert.ok(!JSON.stringify(body).includes('Synthetic Cash'));
+ // A named category is a complete reading, so the instruction must never let a
+ // missing merchant lower confidence — that is what made a bare “gas” nag.
+ assert.match(JSON.stringify(body),/missing merchant is never by itself a reason to lower confidence/);
  // A bare description still reads, with no invented merchant, method or amount.
  reply='{"merchant":"","category":"Gas","confidence":"high","reason":"Fuel"}';
  assert.deepEqual(Object.values(await classifyPurchase(connection,{purchase:'gas'},fetcher)).slice(0,6),['Gas','high','Fuel','','Direct',null]);
