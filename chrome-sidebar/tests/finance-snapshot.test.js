@@ -101,6 +101,8 @@ test('storing snapshots reads one total per account and saves nothing until Save
   assert.match(panel.textContent,/Updates Individual Brokerage/,'a known account names the record it lands on');
   assert.match(panel.textContent,/New record/,'an unknown account says it would create one');
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save','Edit','Discard']);
+  assert.match(panel.textContent,/2 accounts · as of 2026-09-11/,'one shared date is stated once, not on every row');
+  assert.equal(panel.textContent.includes('New record · as of'),false);
   assert.equal(writes.length,0,'reading saves nothing');
   assert.match(document.getElementById('finance-snapshot-status').textContent,/2 accounts read\. Nothing is saved yet\./);
 
@@ -113,6 +115,24 @@ test('storing snapshots reads one total per account and saves nothing until Save
   assert.equal(writes[1].kind,'retirement');
   assert.match(writes[0].history,/E\*TRADE page/,'the snapshot says where the figure came from');
   assert.equal(document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'),false,'saved snapshots leave the panel');
+  tool.stop();restore();
+});
+
+test('accounts read with different dates each state their own',async()=>{
+  const {document,restore}=setup();
+  const {tool}=financeHost(document,{reading:{updates:[
+    {...READING.updates[0],asOf:'2026-09-11'},
+    {...READING.updates[1],asOf:'2026-08-31'}
+  ],unread:''}});
+  await ready(document);
+  tool.site(ETRADE);
+  document.getElementById('finance-connection').value='connection-1';
+  document.querySelector('#finance-snapshot-body button').click();
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
+  const panel=document.getElementById('finance-snapshot-body');
+  assert.equal(panel.textContent.includes('accounts · as of'),false,'no single date can stand for both');
+  assert.match(panel.textContent,/as of 2026-09-11/);
+  assert.match(panel.textContent,/as of 2026-08-31/);
   tool.stop();restore();
 });
 

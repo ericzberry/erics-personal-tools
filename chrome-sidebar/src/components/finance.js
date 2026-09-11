@@ -19,12 +19,15 @@ export function SnapshotPanel({site,rows=[],editing=false,disabled=false,onStore
     node.addEventListener('click',handler);
     return node;
   };
+  // One date for the reading when every figure shares it, which is the usual
+  // case on a live page; otherwise each row states its own.
+  const shared=rows.length&&rows.every(row=>row.asOf===rows[0].asOf)?rows[0].asOf:'';
   const heading=Stack([
     Strong(site.label),
-    rows.length?Label(`${rows.length} account${rows.length===1?'':'s'} · as of ${rows[0].asOf}`,{className:'snapshot-meta'}):null
+    rows.length?Label([`${rows.length} account${rows.length===1?'':'s'}`,shared?`as of ${shared}`:''].filter(Boolean).join(' · '),{className:'snapshot-meta'}):null
   ],{className:'snapshot-heading'});
   if(!rows.length)return Section([heading,ActionGroup([action('Store account snapshots','primary',onStore)],{compact:true})],{className:'record-row'});
-  return Section([heading,...rows.map((row,index)=>SnapshotRow(row,{index,editing,onAmount})),ActionGroup([
+  return Section([heading,...rows.map((row,index)=>SnapshotRow(row,{index,editing,dated:!shared,onAmount})),ActionGroup([
     action('Save','primary',onSave),
     ...(editing?[]:[action('Edit','secondary',onEdit)]),
     action('Discard','subtle',onDiscard)
@@ -32,8 +35,11 @@ export function SnapshotPanel({site,rows=[],editing=false,disabled=false,onStore
 }
 // A read figure names the record it would land on and nothing else is implied:
 // until it is saved it is a proposal, the same as a draft.
-function SnapshotRow(row,{index,editing,onAmount}){
-  const target=row.match?`Updates ${row.match.name}`:row.ambiguous?'Several records match — saves as a new record':'New record';
+function SnapshotRow(row,{index,editing,dated,onAmount}){
+  const target=[
+    row.match?`Updates ${row.match.name}`:row.ambiguous?'Several records match — saves as a new record':'New record',
+    dated?`as of ${row.asOf}`:''
+  ].filter(Boolean).join(' · ');
   if(!editing)return Stack([
     Stack([Label(row.name),Strong(money(row.value,row.currency))],{className:'snapshot-figure'}),
     Note(target)

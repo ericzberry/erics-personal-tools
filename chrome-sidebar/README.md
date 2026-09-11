@@ -343,7 +343,7 @@ naming the remembered credential, forgetting the twin that cannot open a value,
 and enrolling twice under one user handle. The native Touch ID and Face ID
 sheets were not directly tested.
 
-## Store account snapshots from a signed-in account page (0.6.83 / mobile 0.1.44)
+## Store account snapshots from a signed-in account page (0.6.85 / mobile 0.1.46)
 
 The sidebar recognizes an account site in the tab beside it — E*TRADE to start —
 and asks that page three things: its path, whether a password field is on
@@ -365,9 +365,9 @@ It still never navigates, never signs in, and never opens a tab; the sidebar
 only ever reads a page the owner already has in front of them, and only when
 they ask.
 
-Validation: 252 extension, 32 mobile and 50 API tests pass, including new
+Validation: 259 extension, 32 mobile and 58 API tests pass, including new
 coverage for host matching, the sign-in probe, the once-per-throttle page ask,
-the snapshot rows, editing an amount before saving, and a bad amount that stops
-the save without losing the rest. The panel was reviewed at 380px and 280px
-against synthetic readings. The detection was not exercised against a live
-E*TRADE session.
+the snapshot rows and the date they carry, editing an amount before saving, and
+a bad amount that stops the save without losing the rest. The panel was reviewed
+at 380px and 280px against synthetic readings. The detection was not exercised
+against a live E*TRADE session.
