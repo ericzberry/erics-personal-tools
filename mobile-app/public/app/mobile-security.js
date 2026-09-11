@@ -1,5 +1,6 @@
 import {autoUnlock} from './shared/auto-unlock.js';
-import {passkeyVault, VAULT_KEY} from './passkey-vault.js';
+import {passkeyVault, VAULT_KEY, encode} from './passkey-vault.js';
+import {PRF_SALT} from './shared/secret-vault.js';
 import {idleSession} from './shared/idle-session.js';
 const root = document.getElementById('capabilities-root');
 root.innerHTML = `
@@ -19,7 +20,11 @@ root.innerHTML = `
 </section>
 <div id="mobile-private" hidden></div>`;
 const el = id => document.getElementById(id);
-let vault, token = '', frame = null, busy = false, epoch = 0, supported = false;
+// The record key rides along with the token: it is the other half of the same
+// assertion, and the frame adopts it so a protected section opens without a
+// second prompt. It lives exactly as long as the token does.
+let vault, token = '', records = null, frame = null, busy = false, epoch = 0, supported = false;
+function forgetRecordKey() { records?.fill(0); records = null; }
 const automatic = autoUnlock({
   eligible: () => supported && !document.hidden && !busy && !frame && !!vault?.record() && el('lock-setup').hidden,
   unlock: () => unlock()
@@ -28,6 +33,7 @@ const status = text => { el('lock-status').textContent = text; };
 const session = idleSession({onLock: reason => {
   ++epoch;
   token = '';
+  forgetRecordKey();
   vault?.cancel();
   frame?.remove(); frame = null;
   el('mobile-private').replaceChildren();
@@ -69,10 +75,12 @@ async function run(action) {
     for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = false;
   }
 }
-function open(value, attempt) {
+function open({token: value, records: recordKey}, attempt) {
   if (attempt !== epoch) return;
   if (document.hidden) { status('Return to the app and unlock again.'); return; }
   token = value;
+  forgetRecordKey();
+  records = recordKey;
   session.start();
   root.querySelector('.mobile-lock').hidden = true;
   el('mobile-private').hidden = false;
@@ -101,13 +109,13 @@ el('lock-restart').addEventListener('click', () => { vault.cancel(); showGate();
 el('lock-finish').addEventListener('click', () => run(async attempt => {
   // PRF verification must start directly from the button gesture on Safari.
   const existing = vault.record() || vault.legacyToken();
-  const value = await vault.finish({validate: async value => {
+  const opened = await vault.finish({validate: async value => {
     if (existing) return; // Recovery must also work offline with the original token.
     const response = await fetch('/health', {headers: {Authorization: `Bearer ${value}`}, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(15000)});
     if (!response.ok) throw Error(response.status === 401 ? 'The access token was rejected. Start setup again and enter the correct token.' : 'Connect to the internet to finish first-time setup.');
   }});
   el('lock-token').value = '';
-  open(value, attempt);
+  open(opened, attempt);
 }));
 function unlock() { return run(async attempt => open(await vault.unlock(), attempt)); }
 el('lock-unlock').addEventListener('click', () => { automatic.suppress(); unlock(); });
@@ -120,7 +128,7 @@ el('lock-recover').addEventListener('click', () => {
 });
 window.addEventListener('message', event => {
   if (!frame || event.source !== frame.contentWindow || event.origin !== location.origin || !session.check()) return;
-  if (event.data?.type === 'mobile-ready') frame.contentWindow.postMessage({type: 'mobile-unlock', token}, location.origin);
+  if (event.data?.type === 'mobile-ready') frame.contentWindow.postMessage({type: 'mobile-unlock', token, records: records ? encode(records) : ''}, location.origin);
   if (event.data?.type === 'mobile-activity' && !document.hidden) session.touch();
   if (event.data?.type === 'mobile-size' && Number.isFinite(event.data.height)) frame.style.height = `${Math.max(100, Math.min(100000, event.data.height))}px`;
   if (event.data?.type === 'mobile-disconnected') { vault.disconnect(); session.lock(); status('Disconnected. Offline copies removed; cloud records kept.'); }
@@ -134,7 +142,7 @@ document.addEventListener('visibilitychange', () => {
   else if (session.check()) el('mobile-private').hidden = false;
   else automatic.request();
 }, true);
-window.addEventListener('pagehide', () => { ++epoch; automatic.background(); session.lock(); vault?.cancel(); el('lock-token').value = ''; });
+window.addEventListener('pagehide', () => { ++epoch; automatic.background(); session.lock(); forgetRecordKey(); vault?.cancel(); el('lock-token').value = ''; });
 window.addEventListener('pageshow', () => { if (!session.check()) automatic.request(); });
 window.addEventListener('storage', event => {
   if (event.key === VAULT_KEY || event.key === null) {
@@ -144,7 +152,7 @@ window.addEventListener('storage', event => {
 });
 setInterval(() => session.check(), 1000);
 try {
-  vault = passkeyVault();
+  vault = passkeyVault({recordSalt: PRF_SALT});
   showGate();
   supported = !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials?.create && navigator.credentials?.get);
   if (!supported) {

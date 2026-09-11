@@ -164,3 +164,20 @@ test('a hidden section waits its turn, and Lock now stays locked',async()=>{
   assert.equal(prompts,1,'Lock now is an instruction, not an invitation to ask again');
   gate.stop();h.restore();
 });
+
+test('a section arriving at an already-open vault shows itself instead of asking again',async()=>{
+  // The mobile app's lock verifies the passkey and hands the record key over, so
+  // the vault is open before the first section mounts. Opening Finance then has
+  // nothing to ask for.
+  const h=harness();
+  let prompts=0;
+  const vault={idleMs:900000,available:()=>true,unlocked:()=>true,touch(){},lock(){},
+    async key(){prompts++;return 'key';},async unlockWithRecoveryCode(){},recoveryCode:()=>'EV1'};
+  const gate=mountVaultGate(h.document.querySelector('main'),{id:'adopted-vault',title:'Finance',vault});
+  await settle(()=>true,50);
+  assert.equal(prompts,0,'the passkey the owner just gave is the one that counts');
+  assert.equal(gate.content.hidden,false);
+  assert.equal(h.document.getElementById('adopted-vault-title').hidden,true);
+  assert.equal(h.document.getElementById('adopted-vault-status').textContent,'');
+  gate.stop();h.restore();
+});

@@ -21,7 +21,13 @@ async function wrappingKey(seed, salt) {
   const material = await crypto.subtle.importKey('raw', seed, 'HKDF', false, ['deriveKey']);
   return crypto.subtle.deriveKey({name: 'HKDF', hash: 'SHA-256', salt: decode(salt), info: bytes('erics-tools/mobile/passkey-vault/v1')}, material, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
 }
-export function passkeyVault({storage = globalThis.localStorage, credentials = globalThis.navigator?.credentials, origin = globalThis.location?.origin, rpId = globalThis.location?.hostname} = {}) {
+// `recordSalt` is the shared record vault's PRF salt, handed in by the caller so
+// this mobile-only module keeps no dependency on the shared vault. Evaluating it
+// beside this lock's own salt makes one assertion yield two independent keys:
+// the one that unwraps this device's token, and the one that opens sealed
+// records. Without it — an authenticator that evaluates only one salt — the
+// second result is simply absent and each protected section asks as before.
+export function passkeyVault({storage = globalThis.localStorage, credentials = globalThis.navigator?.credentials, origin = globalThis.location?.origin, rpId = globalThis.location?.hostname, recordSalt = null} = {}) {
   let pending = null;
   function record() {
     const value = storage.getItem(VAULT_KEY);
@@ -39,16 +45,20 @@ export function passkeyVault({storage = globalThis.localStorage, credentials = g
       // too, so Safari need not offer external security-key transports.
       challenge, rpId, allowCredentials: [{type: 'public-key', id: decode(saved.id), transports: ['internal']}],
       userVerification: 'required', timeout: 60000,
-      extensions: {prf: {eval: {first: decode(saved.salt)}}}
+      extensions: {prf: {eval: {first: decode(saved.salt), ...(recordSalt ? {second: recordSalt} : {})}}}
     }});
     if (!result || result.id !== saved.id) throw Error('Choose the passkey used to protect this device.');
     const client = JSON.parse(new TextDecoder().decode(result.response.clientDataJSON));
     const auth = new Uint8Array(result.response.authenticatorData);
     const rpHash = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes(rpId)));
     if (client.type !== 'webauthn.get' || client.origin !== origin || client.challenge !== encode(challenge) || client.crossOrigin === true || auth.length < 37 || (auth[32] & 5) !== 5 || !rpHash.every((value, i) => value === auth[i])) throw Error('Passkey verification failed. Try again.');
-    const seed = result.getClientExtensionResults()?.prf?.results?.first;
+    const results = result.getClientExtensionResults()?.prf?.results;
+    const seed = results?.first;
     if (!seed || seed.byteLength !== 32) throw Error('This passkey provider cannot unlock encrypted offline data. Use Apple Passwords on iOS 18 or later, or another provider that supports passkey encryption.');
-    try { return await wrappingKey(seed, saved.salt); }
+    // The record key is a convenience, not a requirement: the lock still opens
+    // on an authenticator that returned only the first result.
+    const records = results.second?.byteLength === 32 ? new Uint8Array(results.second) : null;
+    try { return {key: await wrappingKey(seed, saved.salt), records}; }
     finally { new Uint8Array(seed).fill(0); }
   }
   return {
@@ -76,7 +86,7 @@ export function passkeyVault({storage = globalThis.localStorage, credentials = g
     async finish({validate = async () => {}} = {}) {
       if (!pending) throw Error('Create a passkey first.');
       const {token, saved} = pending;
-      const key = await evaluate(saved), iv = random(12);
+      const {key, records} = await evaluate(saved), iv = random(12);
       await validate(token);
       const ciphertext = await crypto.subtle.encrypt({name: 'AES-GCM', iv, additionalData: aad(saved)}, key, bytes(token));
       const next = {...saved, iv: encode(iv), ciphertext: encode(ciphertext)};
@@ -84,18 +94,18 @@ export function passkeyVault({storage = globalThis.localStorage, credentials = g
       storage.setItem(VAULT_KEY, JSON.stringify(next));
       storage.removeItem(LEGACY_KEY);
       pending = null;
-      return token;
+      return {token, records};
     },
     async unlock() {
       const saved = record();
       if (!saved) throw Error('Set up your mobile passkey first.');
-      const key = await evaluate(saved);
+      const {key, records} = await evaluate(saved);
       let token;
       try { token = new TextDecoder().decode(await crypto.subtle.decrypt({name: 'AES-GCM', iv: decode(saved.iv), additionalData: aad(saved)}, key, decode(saved.ciphertext))); }
       catch { throw Error('This passkey could not open your saved connection. Try again, or recover with your original access token.'); }
       if (await fingerprint(token) !== saved.fingerprint) throw Error('The saved connection could not be verified.');
       storage.removeItem(LEGACY_KEY);
-      return token;
+      return {token, records};
     },
     cancel() { pending = null; },
     disconnect() { pending = null; storage.removeItem(VAULT_KEY); storage.removeItem(LEGACY_KEY); }

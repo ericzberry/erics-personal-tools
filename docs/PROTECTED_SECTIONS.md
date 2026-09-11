@@ -48,6 +48,19 @@ readable by any extension page for as long as the window lasts, which is already
 true of the page that derived it. The mobile app has no such area and needs
 none — every tool there shares one page.
 
+**On the phone, the app's own lock is the check.** The mobile app already asks
+for the passkey before it shows anything, to unwrap this device's access token.
+That is a WebAuthn PRF evaluation of the same passkey the record vault needs, so
+`mobile-security.js` evaluates the vault's salt (`PRF_SALT`) beside its own in
+that one assertion: one salt yields the key that unwraps the token, the other
+the key that opens sealed records. The unlocked frame adopts the second through
+`unlockWithPasskeySeed()` before any tool mounts, so opening Finance right after
+unlocking the app is simply open — it does not ask for the passkey the owner has
+just given. The two keys stay independent: neither can be derived from the
+other, and the record key lives only as long as the unlocked session does. An
+authenticator that evaluates only one salt returns nothing for the second, and
+each section asks for itself exactly as it did before.
+
 **The check names the passkey that answered last.** A request that names no
 credential leaves the browser to ask which passkey to use, and that chooser is
 noise for a reader who has one — worse when a synced copy or a repeated

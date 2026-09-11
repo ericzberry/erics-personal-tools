@@ -1,11 +1,21 @@
 import {observeToolSize} from './tool-layout.js';
 import {initialize} from './mobile-session.js';
+import {decode} from './passkey-vault.js';
 let started = false;
 window.addEventListener('message', async event => {
   if (started || window.parent === window || event.source !== parent || event.origin !== location.origin || event.data?.type !== 'mobile-unlock' || typeof event.data.token !== 'string') return;
   started = true;
   initialize(event.data.token);
   try {
+    // The lock already verified the passkey, and the same assertion carried the
+    // key that opens sealed records. Adopt it before the tools mount, so a
+    // protected section is simply open rather than asking for the passkey the
+    // owner has just given. An authenticator that produced no second result
+    // sends nothing here and each section asks for itself, as before.
+    if (event.data.records) {
+      const {sharedVault} = await import('./shared/secret-vault.js');
+      try { await sharedVault().unlockWithPasskeySeed(decode(event.data.records)); } catch { /* The section asks for itself. */ }
+    }
     await import('./capabilities.js');
     // The connection is already established by the passkey. Keep maintenance
     // and disconnect controls, but never offer a second plaintext token store.

@@ -31,8 +31,14 @@ Object.defineProperty(navigator, 'credentials', {value: {
     // The secret vault asks without allowCredentials (a discoverable passkey);
     // its seed must stay stable so every device derives the same key.
     const handle=publicKey.allowCredentials?.[0]?.id||new TextEncoder().encode('synthetic-discoverable-passkey');
-    const seed=await crypto.subtle.digest('SHA-256',handle);
-    return {id:fixtureEncode(handle),response:{authenticatorData:auth,clientDataJSON:new TextEncoder().encode(JSON.stringify({type:'webauthn.get',origin:location.origin,challenge:fixtureEncode(publicKey.challenge)}))},getClientExtensionResults:()=>({prf:unsupported?{}:{results:{first:seed}}})};
+    // One passkey, one answer per salt — the property the app lock relies on
+    // when it evaluates the record vault's salt beside its own. Deriving from
+    // the salt rather than the credential is what makes the lock's second
+    // result equal the seed the vault gets when it asks for that salt itself.
+    const prfSeed=async salt=>crypto.subtle.digest('SHA-256',new Uint8Array([...new TextEncoder().encode('synthetic-prf/'),...new Uint8Array(salt)]));
+    const ask=publicKey.extensions?.prf?.eval||{};
+    const results={first:await prfSeed(ask.first),...(ask.second?{second:await prfSeed(ask.second)}:{})};
+    return {id:fixtureEncode(handle),response:{authenticatorData:auth,clientDataJSON:new TextEncoder().encode(JSON.stringify({type:'webauthn.get',origin:location.origin,challenge:fixtureEncode(publicKey.challenge)}))},getClientExtensionResults:()=>({prf:unsupported?{}:{results}})};
   }
 }});
 if (!window.PublicKeyCredential) window.PublicKeyCredential=function(){};

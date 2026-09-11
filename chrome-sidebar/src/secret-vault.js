@@ -16,7 +16,10 @@ import {CLOUD_URL} from './cloud-storage.js';
 
 export const VAULT_RP_ID = new URL(CLOUD_URL).hostname;
 export const RECOVERY_PREFIX = 'EV1';
-const PRF_SALT = new TextEncoder().encode('erics-tools/card-secrets/v1/prf-salt');
+// Exported because a host may already be asking this passkey for something of
+// its own. The mobile app's lock evaluates this salt alongside its own, so one
+// biometric check opens the app and the records it holds.
+export const PRF_SALT = new TextEncoder().encode('erics-tools/card-secrets/v1/prf-salt');
 const HKDF_INFO = new TextEncoder().encode('erics-tools/card-secrets/v1');
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const bytes = value => new TextEncoder().encode(value);
@@ -245,6 +248,17 @@ export function secretVault({
       const current = await this.key();
       try { return await openSecret(current, id, envelope); }
       catch (error) { await credentialStore?.clear(); throw error; }
+    },
+    // The PRF output of an assertion this page has already made, handed over
+    // instead of a second one. A host that verified the passkey for its own
+    // reasons — the mobile app's lock, unwrapping this device's access token —
+    // evaluates PRF_SALT in that same ceremony and passes the result here, so
+    // opening a protected section costs no further prompt. The seed is wiped
+    // on the way through: only the stretched key is kept.
+    async unlockWithPasskeySeed(seed) {
+      const material = seed instanceof Uint8Array ? seed : new Uint8Array(seed);
+      if (material.byteLength !== 32) throw Error('That passkey did not produce a key for these records.');
+      try { return await adopt(await stretch(material)); } finally { material.fill(0); }
     },
     async unlockWithRecoveryCode(code) { await credentialStore?.clear(); return adopt(recoveryBytes(code)); },
     recoveryCode() {
