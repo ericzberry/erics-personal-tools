@@ -77,7 +77,7 @@ export function BreakdownList(title,rows,currency){
 }
 
 export function TrendTable(series,currency){
-  if(series.length<2)return Note('Two dated values are needed before a trend can be shown. Each save files a snapshot under its as-of date.');
+  if(series.length<2)return Note('Two dated values needed.');
   const recent=series.slice(-12);
   const first=series[0],last=series.at(-1);
   const change=last.net-first.net;
@@ -98,7 +98,7 @@ export function TrendTable(series,currency){
 // A draft is a proposal, never a saved figure: it names the record it would
 // change, or says it would create one, and does nothing until it is applied.
 export function DraftRow(draft,{onApply,onDiscard,onEdit}){
-  const target=draft.match?`Updates ${draft.match.name}`:draft.ambiguous?'Several records match this name — open the ledger and edit the right one':'Creates a new record';
+  const target=draft.match?`Updates ${draft.match.name}`:draft.ambiguous?'Several records match this name':'Creates a new record';
   const apply=Button(draft.ambiguous?'Add as new record':draft.match?'Apply update':'Create record',{variant:'primary',size:'compact'});
   const discard=Button('Discard',{variant:'secondary',size:'compact'});
   const edit=Button('Edit before saving',{variant:'subtle',size:'compact'});

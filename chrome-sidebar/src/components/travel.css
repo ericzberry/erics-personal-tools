@@ -44,7 +44,7 @@
 .travel-wallet summary{cursor:pointer;font-size:12px;padding:4px 0}
 .travel-wallet summary h2{display:inline}
 .travel-wallet details[open]>:not(summary){margin-top:12px}
-.travel-list{display:grid;gap:14px}
+.travel-list{display:grid;gap:18px}
 /* Tool title line: the name, whatever whole-tool actions apply, and a status
    line that takes no space while there is nothing to say. */
 .tool-title-block{display:grid;gap:4px}

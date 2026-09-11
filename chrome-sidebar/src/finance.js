@@ -246,7 +246,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     };
     $('list').replaceChildren(...(visible.length
       ?groupFinanceRecords(visible).map(group=>FinanceGroup(group.label,group.side,group.records.map(row)))
-      :[Note(!loaded?'Connect in Settings to load your ledger.':records.length?'No matching records. Clear the search to see all of them.':'No records yet. Add your first account or asset below.')]));
+      :[Note(!loaded?'Connect in Settings to load your records.':records.length?'No matching records.':'No records yet.')]));
     renderPosition();
     for(const key of [...core,...extra])$(key).disabled=busy||!loaded;
     for(const key of ['number','expiry'])$(`secret-${key}`).disabled=busy||!loaded;
@@ -267,7 +267,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     try{
       const token=await credentials.get();
       if(!token)throw Error('Open Settings to connect this device.');
-      if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. Refresh your ledger before editing.');}
+      if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. Refresh before editing.');}
       activeToken=token;
       const result=await operation(token);
       if(current!==generation)return false;
@@ -287,12 +287,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh(){
     if(!gate.unlocked())return;
-    status('Loading your ledger…');
+    status('Loading your records…');
     if(await run(token=>offline.request(token,'/v1/finance')))connectionList();
   }
   function clear(){
     generation++;records=[];loaded=false;activeToken='';drafts=[];attachment=null;forget();clearForm();renderDrafts();renderAttachment();
-    status('Unlock this section with your passkey to load your ledger.');
+    status('Unlock this section with your passkey.');
     render();
   }
 
