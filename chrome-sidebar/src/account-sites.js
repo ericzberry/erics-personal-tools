@@ -22,7 +22,24 @@ export const ACCOUNT_SITES=[
     // /web/auth/dashboard path and puts its password field in a frame. That is
     // why the password question is put to every frame below: on this site it is
     // the only thing that tells a log-on page from a signed-in one.
-    hosts:['chase.com'],app:/^\/web\/auth\//i}
+    hosts:['chase.com'],app:/^\/web\/auth\//i},
+  {id:'morgan-stanley',label:'Morgan Stanley',institution:'Morgan Stanley',kind:'brokerage',
+    // Morgan Stanley Online is one site under two names: the log-on form is
+    // served from login.morganstanleyclientserv.com/ux/ and the signed-in
+    // application from www. under /cs/, so the shared registrable domain covers
+    // both and the log-on path falls outside the application's own.
+    //
+    // The site keeps its public pages under that same /cs/ prefix, marked by a
+    // `free` segment: /cs/freecontent/logout.aspx is exactly where signing out
+    // lands and /cs/freecontentenrollment/ is where a username is created.
+    // Neither shows a password field, so without holding them out they would
+    // read as the application. A deep link followed with no session at all is
+    // refused in place, on the application's own path, and that one page cannot
+    // be told apart here; reading it simply finds no figures.
+    //
+    // Self-directed accounts at E*TRADE from Morgan Stanley sign in separately
+    // and are already their own entry above.
+    hosts:['morganstanleyclientserv.com'],app:/^\/cs\/(?!free)/i}
 ];
 
 const hostMatches=(hostname,host)=>hostname===host||hostname.endsWith(`.${host}`);

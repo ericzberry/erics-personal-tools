@@ -4,6 +4,7 @@ import {accountSite,signedIn,readSignInState,combineSignInState,accountSiteWatch
 
 const etrade=ACCOUNT_SITES.find(site=>site.id==='etrade');
 const chase=ACCOUNT_SITES.find(site=>site.id==='chase');
+const morganStanley=ACCOUNT_SITES.find(site=>site.id==='morgan-stanley');
 const frame=(result,frameId=0)=>({frameId,result});
 
 test('an account site is recognized by its host, and nothing else is',()=>{
@@ -13,8 +14,14 @@ test('an account site is recognized by its host, and nothing else is',()=>{
   // jpmorganonline.com redirects here, so this host covers both names.
   for(const url of ['https://secure.chase.com/web/auth/dashboard','https://www.chase.com/','https://chase.com/personal/investments'])
     assert.equal(accountSite(url)?.id,'chase',url);
+  // Morgan Stanley Online logs on from one subdomain and serves the signed-in
+  // application from another, so the registrable domain covers both.
+  for(const url of ['https://www.morganstanleyclientserv.com/cs/MSORLandingPage.aspx','https://login.morganstanleyclientserv.com/ux/','https://morganstanleyclientserv.com/'])
+    assert.equal(accountSite(url)?.id,'morgan-stanley',url);
+  // The firm's public site is not where the accounts are, and is left alone.
+  assert.equal(accountSite('https://www.morganstanley.com/what-we-do/wealth-management'),null);
   // A look-alike host is not the site, and neither is an unencrypted one.
-  for(const url of ['https://etrade.com.example.invalid/','https://notetrade.com/','http://us.etrade.com/etx/','https://chase.com.example.invalid/','https://notchase.com/','chrome://extensions','',undefined])
+  for(const url of ['https://etrade.com.example.invalid/','https://notetrade.com/','http://us.etrade.com/etx/','https://chase.com.example.invalid/','https://notchase.com/','https://morganstanleyclientserv.com.example.invalid/','https://notmorganstanleyclientserv.com/','chrome://extensions','',undefined])
     assert.equal(accountSite(url),null,String(url));
 });
 
@@ -39,6 +46,20 @@ test('a page still loading cannot be read as a signed-in one by its path',()=>{
   // A rendered sign-out control is proof by itself: no log-on page carries one,
   // so it does not have to wait for the rest of the page.
   assert.equal(signedIn(chase,{path:'/web/auth/dashboard',ready:false,password:false,exit:true}),true);
+});
+
+// Morgan Stanley Online serves its public pages from the same /cs/ prefix as the
+// signed-in application, marked by a `free` segment. None of them carries a
+// password field, so without holding them out the page an owner lands on the
+// moment they sign out would read as a signed-in session.
+test('a site’s public pages are held out of its application paths',()=>{
+  const page=(path,extra={})=>({path,ready:true,password:false,exit:false,...extra});
+  assert.equal(signedIn(morganStanley,page('/cs/MSORLandingPage.aspx')),true,'the landing page after signing on is the application');
+  assert.equal(signedIn(morganStanley,page('/cs/Secure/MSSBAdventApplication/adventDownload.aspx')),true);
+  assert.equal(signedIn(morganStanley,page('/cs/freecontent/logout.aspx')),false,'signing out lands here, and carries no password field to say so');
+  assert.equal(signedIn(morganStanley,page('/cs/freeContent/FreeContentFixedWidth.aspx')),false,'the prefix is held out however the site capitalizes it');
+  assert.equal(signedIn(morganStanley,page('/cs/freecontentenrollment/enrollments/identification.aspx')),false,'creating a username is not being signed in');
+  assert.equal(signedIn(morganStanley,page('/ux/')),false,'the log-on form is on the same site, under its own path');
 });
 
 test('the page probe reports four facts and no page content',()=>{

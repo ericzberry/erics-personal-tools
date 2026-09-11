@@ -165,6 +165,9 @@ updates the owner reviews before anything is saved.
   because Chase serves its log-on form inside one, under the same path its
   signed-in application uses; for the same reason a path only counts once the
   page has finished loading, while a rendered sign-out control counts at once.
+  A site's public pages are held out of the paths it is recognized by, since
+  Morgan Stanley Online serves the page an owner lands on when they sign out
+  from the same prefix as its application.
   On a signed-in site the sidebar opens Finance and offers one action. Pressing
   it takes the same single page snapshot as above and reads it as a live page:
   one figure per account, using each account's own total, and a balance the page

@@ -454,6 +454,47 @@ preview at 380px and 280px against synthetic offers. The reader itself was run
 against the live `msreserved.com` from an offer page, reading all 136 offers;
 the end-to-end save was not exercised against a signed-in session.
 
+## Morgan Stanley accounts read into the snapshot (0.6.90)
+
+Morgan Stanley joins the sites the sidebar recognizes beside it. Signed in to
+Morgan Stanley Online, Finance opens with **Store account snapshots**, and one
+press reads the wealth-management accounts on screen — brokerage, retirement and
+the rest — into one row each, each account's own total rather than a holding
+inside it or a sum across them. An account the reading cannot place is filed as a
+brokerage, and a page that names no institution is filed under Morgan Stanley,
+while an account the page names for itself keeps that name. Self-directed
+accounts at E*TRADE from Morgan Stanley sign in separately and stay their own
+entry.
+
+The site is one site under two names — the log-on form is served from
+`login.morganstanleyclientserv.com` and the signed-in application from `www.` —
+so the registrable domain covers both and the log-on path falls outside the
+application's own. What needed saying in the registry is which paths are the
+application's: Morgan Stanley Online keeps its public pages under the same `/cs/`
+prefix, marked by a `free` segment. `/cs/freecontent/logout.aspx` is exactly
+where signing out lands, and none of those pages carries a password field to say
+so, so they are held out of the paths the site is recognized by. A deep link
+followed with no session at all is refused in place, on the application's own
+path; that one page cannot be told apart, and reading it simply finds no figures.
+
+Nothing else changed. The page still hands back a path, a loading state and two
+yes/no answers and no page text, and the extension still never navigates, never
+signs in, never opens a tab, and reads only the page already in front of the
+owner, only when asked.
+
+Validation: 287 extension, 32 mobile and 65 API tests pass, including new
+coverage for Morgan Stanley host matching across both subdomains, the firm's
+public site not being mistaken for the client one, and the site's own public
+pages — the page signing out lands on, the same prefix capitalized differently,
+and username enrollment — being held out of its application paths. Detection was
+checked against the live signed-out `login.morganstanleyclientserv.com` log-on
+form, its enrollment page, and `/cs/freecontent/logout.aspx`: the real module
+calls all three the site and none of them signed in. It was not exercised against
+a signed-in Morgan Stanley session. The snapshot panel was reviewed at 380px and
+280px in the passkey-gate harness, which shows one open state per registered
+site, and the Morgan Stanley reading was driven through Store, Edit and Save
+against synthetic figures.
+
 ## Chase joins the account pages that can be read (0.6.89)
 
 Chase is now one of the sites the sidebar recognizes beside it, on the same
