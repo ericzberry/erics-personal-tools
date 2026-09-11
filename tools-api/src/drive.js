@@ -126,12 +126,18 @@ const folderContents=(env,request,fetcher,folderId)=>driveFetch(env,request,fetc
   fields:'files(id,name,modifiedTime,size,webViewLink)',pageSize:'1000',orderBy:'name'
 }));
 
-async function multipart(env,request,fetcher,{fileId,metadata,bytes,mimeType}){
+// Drive's one-request upload: the metadata and the file in one multipart body.
+// Exported because this is the part that depends on the runtime rather than on
+// Drive — a Blob of mixed text and bytes has to reach Google byte for byte.
+export function multipartBody({metadata,bytes,mimeType}){
   const boundary=`tax-${crypto.randomUUID()}`;
   const head=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`;
-  const body=new Blob([head,bytes,`\r\n--${boundary}--`]);
+  return {body:new Blob([head,bytes,`\r\n--${boundary}--`]),contentType:`multipart/related; boundary=${boundary}`};
+}
+async function multipart(env,request,fetcher,{fileId,metadata,bytes,mimeType}){
+  const {body,contentType}=multipartBody({metadata,bytes,mimeType});
   const target=`${UPLOAD}/files${fileId?`/${encodeURIComponent(fileId)}`:''}?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,modifiedTime,size`;
-  return driveFetch(env,request,fetcher,target,{method:fileId?'PATCH':'POST',headers:{'Content-Type':`multipart/related; boundary=${boundary}`},body});
+  return driveFetch(env,request,fetcher,target,{method:fileId?'PATCH':'POST',headers:{'Content-Type':contentType},body});
 }
 
 // --- The routes.
