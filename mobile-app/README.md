@@ -45,3 +45,5 @@ Mobile 0.1.6 puts saved content directly below Tools, remembers the selected too
 Mobile 0.1.8 shares compact expandable wallet rows for long lists: Copy stays visible, tapping a program reveals its number and actions, and adding or editing stays inline. The extension opens its editor in a separate tab.
 
 Mobile 0.1.9 moves cloud connection maintenance and offline details into Settings at the top of the app. The tool view omits the introductory helper text and empty divider. Closing Settings restores the selected tool and any form input.
+
+Mobile 0.1.42 shows an available update at the top of the app, above the tools, rather than below them.

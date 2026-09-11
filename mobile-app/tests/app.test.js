@@ -16,3 +16,8 @@ test('offline shell includes every shared module and bundled reference dataset',
   assert.ok(paths.includes('/app/data/rankings-2026.json'));
   assert.ok(!paths.some(path=>path.startsWith('/v1/')));
 });
+test('an available update leads the page instead of trailing the tools',async()=>{
+  const markup=await readFile(new URL('../public/app/index.html',import.meta.url),'utf8');
+  const main=markup.slice(markup.indexOf('<main>'));
+  assert.ok(main.indexOf('id="update"')<main.indexOf('id="capabilities-root"'));
+});

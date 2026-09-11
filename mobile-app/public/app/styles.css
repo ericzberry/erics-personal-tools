@@ -17,6 +17,8 @@ button:focus-visible,.mobile-lock input:focus-visible,.mobile-lock summary:focus
 .mobile-lock{padding-top:16px;}.mobile-lock h1{font:500 22px/1.25 Georgia,serif;letter-spacing:-.3px;}
 .mobile-lock form{margin-top:12px;}.mobile-lock input{font-size:16px;background:var(--surface);}.mobile-lock details,.mobile-lock #lock-support{margin-top:12px;}
 .install,.notice{padding:12px;border-radius:6px;margin-top:16px;background:var(--sage);}.install h2{font-size:15px;}li+li{margin-top:4px;}
+/* The update notice leads the page, so its spacing separates it from what follows. */
+#update{margin:12px 0 0;}
 .device{margin-top:16px;}
 .unlocked-tools .travel-wallet,.unlocked-tools .data-library{padding:8px 0;}
 .mobile-tools-frame{margin-top:12px;}
