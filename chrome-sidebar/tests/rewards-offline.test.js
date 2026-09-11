@@ -26,3 +26,20 @@ test('rewards reconcile lost success without duplicate writes and preserve same-
  await adapter.resolve('token',a.id,'cloud');assert.equal(f.wallet.entries[0].value,'700 miles');assert.equal(await adapter.hasPending('token'),false);
  await adapter.disconnect('token');f.offline();await assert.rejects(adapter.request('token','/v1/rewards'),/once|offline/i);
 });
+
+test('a benefit keeps the card it belongs to and the period it resets on all the way to the cloud',async()=>{
+ const f=fixture(),adapter=f.create();
+ const card=validateReward({id:'cccccccc-cccc-cccc-cccc-cccccccccccc',kind:'card',name:'Test card',source:'Test bank',value:'5x flights',state:'available'});
+ const benefit=validateReward({id:'dddddddd-dddd-dddd-dddd-dddddddddddd',kind:'benefit',name:'Ride credit',source:card.name,value:'$15 per month',state:'activation',cadence:'monthly',card:card.id});
+ await adapter.request('token','/v1/rewards');
+ await adapter.request('token',`/v1/rewards/${card.id}`,{method:'PUT',value:{...card,revision:null}});
+ await adapter.request('token',`/v1/rewards/${benefit.id}`,{method:'PUT',value:{...benefit,revision:null}});
+ // A field the sync layer does not carry is a field the wallet silently loses,
+ // which would unfile every researched benefit from its card.
+ const stored=f.wallet.entries.find(entry=>entry.id===benefit.id);
+ assert.equal(stored.card,card.id);
+ assert.equal(stored.cadence,'monthly');
+ const reloaded=(await f.create().request('token','/v1/rewards')).records.find(entry=>entry.id===benefit.id);
+ assert.equal(reloaded.card,card.id);
+ assert.equal(reloaded.cadence,'monthly');
+});

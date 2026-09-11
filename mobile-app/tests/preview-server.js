@@ -10,6 +10,14 @@ const token = 'synthetic-private-token-at-least-32-characters';
 const id = '11111111-1111-4111-8111-111111111111';
 let records = [{id, name: 'Synthetic airline', category: 'Airline', traveler: 'Test traveler', number: '000123456', notes: 'Synthetic private note', expires: '', revision: 'first', updatedAt: new Date().toISOString()}];
 let rewards={entries:[],revision:null};let cards=[];
+const programOffers=[
+  {key:'/offer/sixt',name:'SIXT',category:'Automotive',badge:'Limited-Time Offer',dates:'',summary:'For a limited time, save up to 20% off SIXT car rentals. Offer expires on 9/30/2026.',firstSeenAt:new Date().toISOString()},
+  {key:'/offer/music_city_festival',name:'Music City Festival',category:'Events',badge:'New',dates:'November 16-18, 2026',summary:'An exclusive three-day, invite-only experience featuring curated showcases and behind-the-scenes access to a lineup of country artists in Nashville, Tennessee.',firstSeenAt:new Date().toISOString()},
+  {key:'/offer/synthetic_appliances',name:'Synthetic Appliances',category:'Home',badge:'',dates:'',summary:'Upgrade your home with at least 10% off major appliances, plus free shipping and installation.',firstSeenAt:'2026-01-01T00:00:00.000Z'}
+];
+const programCatalog={id:'ms-reserved',programId:'ms-reserved',label:'Morgan Stanley Reserved',source:'Morgan Stanley Reserved Living & Giving',
+  complete:true,offers:programOffers,readAt:new Date().toISOString(),listedAt:new Date().toISOString(),
+  revision:'synthetic-catalog',updatedAt:new Date().toISOString()};
 let finance=[];let personal=[];
 let apiCalls = 0;
 const fixture = `
@@ -88,6 +96,10 @@ createServer(async (req, res) => {
       if(search.query==='failure'){res.statusCode=502;res.end('{"error":"Synthetic research failure"}');return;}
       res.end(JSON.stringify({summary:'Synthetic source-backed matches for the selected criteria.',clarification:'Review the restaurant address before booking.',researchedAt:new Date().toISOString(),restaurants:[{id:'1',name:'Example Bistro with a deliberately long restaurant name',address:'100 Example Avenue',city:'New York City',neighborhood:'Upper West Side',borough:'Manhattan',travel:'included',reason:'Synthetic candidate for layout and offline testing.',evidence:[{url:'https://example.com/review',title:'Synthetic restaurant review',detail:'Two stars in the synthetic guide.',published:'2026'}],booking:[{url:'https://resy.com/cities/new-york-ny/venues/example-bistro',provider:'Resy'},{url:'https://www.opentable.com/r/example-bistro',provider:'OpenTable'}]}]}));return;
     }
+    // A program's published offers, as the phone receives them. Nothing on the
+    // phone writes one: the reading needs the browser that is on the program's
+    // site, so this answers reads only.
+    if(url.pathname==='/v1/rewards/programs'||url.pathname==='/v1/rewards/programs/snapshot'){res.end(JSON.stringify({records:[programCatalog]}));return;}
     if(url.pathname==='/v1/rewards'){
       if(req.method==='PUT'){let text='';for await(const data of req)text+=data;const value=JSON.parse(text);if(value.revision!==rewards.revision){res.statusCode=409;res.end('{}');return;}rewards={entries:value.entries,revision:crypto.randomUUID()};}
       res.end(JSON.stringify(rewards));return;

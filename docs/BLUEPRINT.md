@@ -86,7 +86,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   Finance and Personal information, which asks for the passkey on arrival).
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
-  `rewards-sync.js`, `finance-data.js`/`finance-offline.js`,
+  `rewards-sync.js`, `program-data.js`/`program-offline.js` (the offer
+  catalogues reward programs publish, read-only on every host),
+  `finance-data.js`/`finance-offline.js`,
   `personal-data.js`/`personal-offline.js`, `tax-data.js` (no offline wrapper:
   Taxes keeps nothing on the device). The `*-data.js` modules own validation and
   are also imported by the Worker.
@@ -100,6 +102,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   recognizing (E*TRADE) plus the in-page probe that says whether the owner is
   already signed in to one. `context-panel.js` drives it from the tab it already
   watches, and a signed-in site opens Finance with its snapshot prompt.
+  `reward-programs.js` is the counterpart for reward programs (MS Reserved): the
+  in-page reader that lifts the published offer catalogue off the program's own
+  pages, and the watcher `background.js` registers, so a visit updates the
+  catalogue whether or not the panel is open.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
   `finance.js`, `personal.js`, `taxes.js`, `data-library.js`,
   `restaurant-search.js`, `reservation-*.js`.
@@ -149,17 +155,22 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 ## tools-api/
 
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
-  `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research}`,
-  `/v1/rewards`, `/v1/cards[/…]`, `/v1/travel[/…]`, `/v1/finance[/…]`,
-  `/v1/personal[/…]`, `/v1/drive/…`. The AI-connection family also serves
-  `finance-intake` and `tax-intake`, the routes allowed a request body over
-  64 KB because a statement or document image travels inline.
+  `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits}`,
+  `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
+  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/drive/…`. The AI-connection family
+  also serves `finance-intake` and `tax-intake`, the routes allowed a request
+  body over 64 KB because a statement or document image travels inline;
+  `/v1/rewards/programs/:id` is allowed 256 KB because a program's whole offer
+  catalogue is one document.
   `/v1/drive/callback` is the one route outside the bearer check — Google's
   redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
   `src/finance.js` and `src/personal.js` reuse it for `card_records`,
-  `finance_records` and `personal_records`. `src/rewards.js`, `src/releases.js`,
-  `src/ai-settings.js`. `src/drive.js` is not a record store: it holds the
+  `finance_records` and `personal_records`. `src/rewards.js` (the
+  wallet, plus the issuer research that turns one card name into the card and the
+  benefits it carries),
+  `src/programs.js` (one catalogue document per reward program, folded into what
+  is stored on every write), `src/releases.js`, `src/ai-settings.js`. `src/drive.js` is not a record store: it holds the
   owner's Google Drive connection and files tax documents through it, and
   `src/taxes.js` is the reading that names one.
 - `src/providers.js` (provider adapters, including the text/image content parts
@@ -237,5 +248,6 @@ node scripts/release.js
 `AGENTS.md` (repository-wide) · `chrome-sidebar/AGENTS.md` (extension UI and
 release) · `docs/DESIGN.md`, `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
-`tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`,
-`docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `chrome-sidebar/RESTAURANTS.md`.
+`tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/REWARDS.md`,
+`docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/REWARD_PROGRAMS.md`,
+`chrome-sidebar/RESTAURANTS.md`.

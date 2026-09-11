@@ -1,5 +1,6 @@
 import {mountRewards} from './shared/rewards-tool.js';
 import {rewardsOffline} from './shared/rewards-offline.js';
+import {programsOffline} from './shared/program-offline.js';
 import {mountToolNavigation,SETTINGS_SCREEN} from './tool-navigation.js';
 import {CapabilitiesView} from './shared/components/capabilities.js';
 import {CAPABILITIES} from './shared/capabilities.js';
@@ -27,6 +28,10 @@ connectionRoot.hidden=true;
 const ai=offlineResource({resource:'ai-metadata',path:'/v1/ai-connections',store:protectedStore(encryptedDeviceStore()),remote:async token=>({records:(await cloudRequest(token,'/v1/ai-connections')).connections}),normalize:value=>value,metadata:value=>value});
 const restaurantDownloads=restaurantCache({store:protectedStore(encryptedDeviceStore()),credentials:mobileCredentials});
 const rewardStore=rewardsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
+// The phone shows a program's offers and never reads one: the reading needs the
+// browser that is signed in to the program's site. Its copy is downloaded like
+// any other record, so the offers stay readable with no signal.
+const programStore=programsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const cardStore=cardsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const financeStore=financeOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const personalStore=personalOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
@@ -34,11 +39,11 @@ const credentials={
   async beforeDisconnect(){const token=await this.get();if(token&&(await cardStore.hasPending(token)||await rewardStore.hasPending(token)||await financeStore.hasPending(token)||await personalStore.hasPending(token)))throw Error('Sync or resolve pending changes before disconnecting.');},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token){await cardStore.disconnect(token);await rewardStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token){await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,remote:cloudRequest});
 const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
-const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,onSettings:openSettings});
+const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,programs:programStore,remote:cloudRequest,onSettings:openSettings});
 const financeTool=mountFinance(document.getElementById('capability-finance'),{credentials,offline:financeStore,remote:cloudRequest,onSettings:openSettings});
 const personalTool=mountPersonal(document.getElementById('capability-personal'),{credentials,offline:personalStore,onSettings:openSettings});
 // Taxes keeps nothing on the device: a document is read here and goes straight

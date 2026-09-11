@@ -21,6 +21,8 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | AI calls or provider integrations | [model routing](tools-api/MODEL_ROUTING.md), [providers](tools-api/PROVIDERS.md) |
 | Gmail or restaurant workflows | [Gmail](docs/GMAIL.md) or [restaurants](chrome-sidebar/RESTAURANTS.md) |
 | Filing tax documents or Google Drive access | [docs/TAXES.md](docs/TAXES.md) |
+| Rewards wallet, card benefits, or card comparisons | [rewards](docs/REWARDS.md), [best card](docs/BEST_CARD.md) |
+| Reading a reward program's published offers from its own site | [docs/REWARD_PROGRAMS.md](docs/REWARD_PROGRAMS.md) |
 
 ## Keep the blueprint current
 

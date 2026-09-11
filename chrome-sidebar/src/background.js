@@ -3,8 +3,16 @@ registerSidebarLauncher(chrome);
 import {pageAdvice} from './page-advice.js';
 import {registerSettingsBridge} from './settings-bridge.js';
 import {validateSnapshot, mergeSnapshot, sessionKey} from './draft-state.js';
+import {watchRewardPrograms} from './reward-programs.js';
+import {travelChanges} from './travel-changes.js';
 chrome.sidePanel.setPanelBehavior({openPanelOnActionClick: true}).catch(console.error);
 registerSettingsBridge(chrome);
+// A reward program's catalogue is read here rather than in the side panel, so
+// visiting the program's site keeps the offers current whether or not the panel
+// is open. An open Rewards tool hears about it through the same change marker a
+// saved record uses.
+const rewardChanges = travelChanges(() => {}, {resource: 'rewards'});
+watchRewardPrograms(chrome, {onRead: () => rewardChanges.publish()});
 let pending = Promise.resolve();
 function enqueue(action) {
   pending = pending.catch(console.error).then(action);

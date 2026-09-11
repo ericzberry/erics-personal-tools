@@ -54,3 +54,14 @@ Mobile 0.1.47 carries the shared Finance modules behind the extension's new
 **Store account snapshots** action. Reading the tab beside the panel is the
 sidebar's alone — the phone has no such page and shows no snapshot prompt — so
 nothing changes here beyond keeping the shared ledger code in step.
+
+Mobile 0.1.49 carries the same **Add a card you hold** intake as the extension:
+name a card, review the benefits research brings back, and save them into the
+wallet, where the card holds its own benefits. Recurring credits state how often
+they reset and are raised as their period closes.
+
+
+Mobile 0.1.49 shows a reward program's published offers under **Program offers**
+in Rewards & benefits, downloaded like any other record so they stay readable
+with no signal. The phone never reads one: that needs the browser signed in to
+the program's site. See [reward programs](../docs/REWARD_PROGRAMS.md).

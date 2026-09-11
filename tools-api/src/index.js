@@ -1,11 +1,12 @@
 import {travel} from './travel.js';
 import {cards,classifyPurchase,researchCard} from './cards.js';
 import {finance,readFinanceUpdates} from './finance.js';
+import {rewardPrograms} from './programs.js';
 import {drive,driveCallback} from './drive.js';
 import {readTaxDocument} from './taxes.js';
 import {personal} from './personal.js';
 import {latestRelease} from './releases.js';
-import {rewardsSettings} from './rewards.js';
+import {rewardsSettings,researchCardBenefits} from './rewards.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
 import {discoverRestaurants} from './restaurants.js';
@@ -94,7 +95,7 @@ export default {
         await env.DB.prepare('SELECT id FROM ai_connections LIMIT 1').all();
         return json({ok: true, service: 'erics-tools-api', version: 2});
       }
-      const operation=/^\/v1\/ai-connections\/([a-f0-9-]{36})\/(models|test|generate|restaurants|card-category|card-research|finance-intake|tax-intake)$/.exec(path);
+      const operation=/^\/v1\/ai-connections\/([a-f0-9-]{36})\/(models|test|generate|restaurants|card-category|card-research|card-benefits|finance-intake|tax-intake)$/.exec(path);
       if(operation){
         const [,id,action]=operation;
         if(request.method!==(action==='models'?'GET':'POST'))return json({error:'Method not allowed.'},405);
@@ -103,12 +104,14 @@ export default {
         const input=JSON.parse(await readValue(request, ['finance-intake','tax-intake'].includes(action)?MAX_AI_BYTES:MAX_BYTES));
         if(action==='card-category')return json(await classifyPurchase(connection,input));
         if(action==='card-research')return json(await researchCard(connection,input));
+        if(action==='card-benefits')return json(await researchCardBenefits(connection,input));
         if(action==='finance-intake')return json(await readFinanceUpdates(connection,input));
         if(action==='tax-intake')return json(await readTaxDocument(connection,input));
         if(action==='restaurants')return json(await discoverRestaurants(connection,input));
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
       if(path.startsWith('/v1/drive/'))return await drive(request,env,readValue,json);
+      if(path==='/v1/rewards/programs'||path.startsWith('/v1/rewards/programs/'))return await rewardPrograms(request,env,readValue,json);
       if(path==='/v1/rewards')return await rewardsSettings(request,env,readValue,json);
       if(path==='/v1/finance'||path.startsWith('/v1/finance/'))return await finance(request,env,readValue,json);
       if(path==='/v1/personal'||path.startsWith('/v1/personal/'))return await personal(request,env,readValue,json);

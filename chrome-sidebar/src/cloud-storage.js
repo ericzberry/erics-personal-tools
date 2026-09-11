@@ -1,9 +1,9 @@
 export const CLOUD_URL = 'https://erics-tools-api.ezberry.workers.dev';
 export const CONNECTION_KEY = 'cloudConnection';
-export async function cloudRequest(token, path, {method = 'GET', value, fetcher = globalThis.fetch, timeoutMs = 30000} = {}) {
+export async function cloudRequest(token, path, {method = 'GET', value, fetcher = globalThis.fetch, timeoutMs = 30000, maxBytes = 64 * 1024} = {}) {
   if (!token || token.length < 32) throw Error('Enter your private access token (at least 32 characters).');
   const body = value === undefined ? undefined : JSON.stringify(value);
-  if (body && new TextEncoder().encode(body).length > 64 * 1024) throw Error('These settings exceed the 64 KB limit.');
+  if (body && new TextEncoder().encode(body).length > maxBytes) throw Error(`This request exceeds the ${Math.round(maxBytes / 1024)} KB limit.`);
   const response = await fetcher(`${CLOUD_URL}${path}`, {
     method, headers: {Authorization: `Bearer ${token}`, ...(body ? {'Content-Type': 'application/json'} : {})},
     body, credentials: 'omit', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(timeoutMs)

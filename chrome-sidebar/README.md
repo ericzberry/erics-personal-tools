@@ -371,3 +371,86 @@ the snapshot rows and the date they carry, editing an amount before saving, and
 a bad amount that stops the save without losing the rest. The panel was reviewed
 at 380px and 280px against synthetic readings. The detection was not exercised
 against a live E*TRADE session.
+
+## Name a card you hold and its benefits arrive with it (0.6.88 / mobile 0.1.49)
+
+Rewards & benefits gains the intake Best card already had, aimed at the part of a
+card nobody finishes typing. Say which card you have however you name it — `amex
+platinum`, `blue cash`, `jp morgan reserve` — and **Find card benefits** reads the
+issuer's current pages and brings back the card and every benefit it carries: the
+amount, how often it resets, whether it needs enrolling, any fixed end date, and
+what the issuer says to check. A name that fits more than one real card returns
+the products it could be and researches nothing until one is chosen; `blue cash`
+is two cards with two different annual fees.
+
+Nothing is saved by looking. The card and its benefits are listed the way they
+will be stored, and one action saves them — the card first, so each benefit can
+name it. A save that stops part way keeps what is left on screen to finish.
+
+Two things the wallet needed to hold them. A card you hold is now an entry kind
+of its own, so its benefits are filed under it and the wallet shows one card with
+its benefits inside rather than forty loose rows; its number seals on the device
+the way any other did, entered once on the card instead of on every benefit.
+And an entry says how often it **resets** — monthly, quarterly, twice a year,
+yearly — because a card credit is not a one-time offer and the unused part does
+not carry over. Next actions raises a recurring credit as its period closes,
+sooner for a shorter period, so a monthly credit surfaces in its last week
+instead of sitting on the list all month. A credit that follows an account
+anniversary rather than the calendar keeps an explicit date, because only the
+owner knows the anniversary.
+
+Only the card name typed in is sent; nothing already in the wallet leaves the
+device for it. See [docs/REWARDS.md](../docs/REWARDS.md).
+
+Validation: 261 extension, 32 mobile and 65 API tests pass, including new
+coverage for the reset calendar and how near a reset each period is raised, a
+benefit's link to its card, the fields the sync layer must carry, research that
+must cite an issuer page it opened, a loose name answered with alternatives, and
+a save that fails part way and is finished by saving again. `tests/draft.test.js`
+was excluded: another session's uncommitted `background.js` change breaks and
+hangs it, unrelated to this work. Reviewed in the shared wallet preview at 380px
+and 280px against synthetic research, populated, offline and empty states. Live
+issuer research was not exercised against a real OpenAI connection.
+
+
+## A reward program's offers arrive on their own (0.6.88 / mobile 0.1.49)
+
+Morgan Stanley Reserved Living & Giving is a membership with no balance: its
+value is the catalogue of offers behind it, and that catalogue moves. It is now
+read from the program's own pages instead of typed in, and refreshed whenever
+you visit `msreserved.com`. The offers appear under **Program offers** in
+Rewards & benefits, below your own wallet, with the wallet's search filtering
+both lists and a category picker narrowing the offers further. There is no
+button to press: the catalogue updates by itself, and the status line says how
+many offers there are and when the whole list was last seen.
+
+The reading follows the rule Finance already follows for an account page. The
+extension never signs in, never navigates, and never opens a tab of its own; it
+reads a page you already have open, in the page, and takes only the published
+offer list — name, category, one-line summary, badge, dates, and the offer's own
+address. Nothing about your account is read, and no session, cookie or
+credential leaves the browser. None is needed: every member sees the same list.
+
+`/offers/all_offers` carries all 136 of today's offers and every other page
+carries a subset, so a reading taken elsewhere on the site asks that page for
+itself from inside the tab. A reading that could not see the whole list may add
+and update offers but never retire one; only a complete reading drops an offer
+the program has stopped listing. `background.js` does the watching, so a visit
+counts whether or not the side panel is open — always on the full listing, and
+at most once every 30 minutes anywhere else.
+
+An offer's first sighting survives every later reading, so offers that are new
+to you sort to the top. That fold happens in the Worker rather than on the
+device, because it is the one copy every browser writes. See
+[docs/REWARD_PROGRAMS.md](../docs/REWARD_PROGRAMS.md).
+
+Validation: 283 extension, 32 mobile and 65 API tests pass, including new
+coverage for host matching, the card reader against both heading shapes, the
+listing fetch and its three failure modes, partial versus complete merges,
+search and category filtering, the once-per-throttle rule, and a catalogue past
+the 64 KB an ordinary record is held to. `tests/draft.test.js` is included again:
+its `chrome` stub now carries the tab and storage-change APIs `background.js`
+uses, which is what had been hanging it. Reviewed in a new shared rewards
+preview at 380px and 280px against synthetic offers. The reader itself was run
+against the live `msreserved.com` from an offer page, reading all 136 offers;
+the end-to-end save was not exercised against a signed-in session.

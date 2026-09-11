@@ -127,3 +127,29 @@
 .vault-locked .masked-value{color:var(--wallet-muted);}
 #vault-code:empty{display:none;}
 
+/* A rough card name can fit more than one real product, so both wallets show the
+   candidates to choose from. Shared, because Best card and Rewards both ask. */
+.travel-wallet .card-match{display:grid;gap:2px;padding:6px 0;border-top:1px solid var(--wallet-line);}
+.travel-wallet .card-match button{justify-self:start;text-align:left;}
+/* A card you hold, with the benefits filed under it. The group is closed by
+   default so a dozen credits stay out of the way until they are wanted. */
+.rewards-wallet .reward-group{border-top:1px solid var(--wallet-line);border-bottom:0;padding:0;}
+.rewards-wallet .reward-group>summary{position:relative;display:grid;gap:1px;padding:8px 18px 8px 0;min-height:40px;align-content:center;list-style:none;}
+.rewards-wallet .reward-group>summary::-webkit-details-marker{display:none;}
+/* display:grid drops the native marker, so the group carries the same chevron a
+   compact record row does rather than reading as an inert heading. */
+.rewards-wallet .reward-group>summary::after{content:'';position:absolute;right:4px;top:50%;width:5px;height:5px;border-right:1.5px solid var(--wallet-control-line);border-bottom:1.5px solid var(--wallet-control-line);transform:translateY(-50%) rotate(-45deg);transition:transform .15s ease;}
+.rewards-wallet .reward-group[open]>summary::after{transform:translateY(-65%) rotate(45deg);}
+@media(prefers-reduced-motion:reduce){.rewards-wallet .reward-group>summary::after{transition:none;}}
+.rewards-wallet .reward-group>summary strong{font-size:13px;font-weight:500;}
+.rewards-wallet .reward-group[open]>:not(summary){margin-top:0;}
+.rewards-wallet .reward-group .record-row{padding:8px 0 8px 12px;border-left:2px solid var(--wallet-line);}
+.rewards-wallet .reward-group>div:first-of-type .record-row{padding-left:0;border-left:0;}
+/* What research found, before any of it is saved. */
+.rewards-wallet .reward-ingest{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--wallet-line);border-radius:8px;background:var(--wallet-surface);}
+.rewards-wallet .reward-found{display:grid;gap:1px;padding-top:6px;border-top:1px solid var(--wallet-line);}
+.rewards-wallet .reward-found strong{font-size:12px;font-weight:500;}
+.rewards-wallet #reward-card-matches:empty,.rewards-wallet #reward-card-review:empty{display:none;}
+/* Row links are actions beside Edit and Delete, not body links; a researched
+   card and most of its benefits carry one, so they read as the wallet's own. */
+.rewards-wallet a{color:var(--wallet-forest);overflow-wrap:anywhere;}

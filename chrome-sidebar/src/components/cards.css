@@ -12,8 +12,6 @@
 .card-tool .comparison-result {padding:12px 0;border-top:1px solid var(--wallet-line);display:grid;gap:4px}
 .card-tool .comparison-best {background:var(--wallet-hover);padding:12px;border-radius:6px}
 .card-tool input[type=checkbox] {width:20px;min-height:20px;justify-self:start;accent-color:var(--wallet-forest)}
-.card-tool .card-match {display:grid;gap:2px;padding:6px 0;border-top:1px solid var(--wallet-line)}
-.card-tool .card-match button {justify-self:start;text-align:left}
 .card-tool .card-ingest-rule {color:var(--wallet-ink)}
 .card-tool #cards-details {margin:8px 0}
 .card-tool .notice:empty, .card-tool #cards-reading:empty, .card-tool #cards-conditions:empty, .card-tool #cards-results:empty, .card-tool #cards-matches:empty, .card-tool #cards-summary:empty {display:none}

@@ -6,7 +6,17 @@ async function encryptionKey(env) {
   const bytes = Uint8Array.from(env.SETTINGS_ENCRYPTION_KEY.match(/../g), hex => parseInt(hex, 16));
   return crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
-const encode = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+// Spreading the whole array into String.fromCharCode overflows the call stack
+// somewhere above a hundred kilobytes, which a record never reached but a
+// program's whole catalogue does. Chunking produces the identical base64, so
+// everything already stored still decrypts.
+const CHUNK = 8192;
+const encode = bytes => {
+  const view = new Uint8Array(bytes);
+  let text = '';
+  for (let at = 0; at < view.length; at += CHUNK) text += String.fromCharCode(...view.subarray(at, at + CHUNK));
+  return btoa(text);
+};
 const decode = text => Uint8Array.from(atob(text), c => c.charCodeAt(0));
 export async function encryptSettings(value, id, env) {
   const iv = crypto.getRandomValues(new Uint8Array(12));

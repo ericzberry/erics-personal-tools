@@ -65,7 +65,7 @@ createServer(async (req, res) => {
       res.setHeader('Content-Type','text/html');res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><script src="/app/fixture.js"></script><link rel="stylesheet" href="/app/styles.css"><link rel="stylesheet" href="/app/shared/components/travel.css"><link rel="stylesheet" href="/app/shared/components/capabilities.css"></head><body class="shell unlocked-tools"><main id="root"></main><script type="module" src="/rewards-fixture.js"></script></body></html>`);return;
     }
     if(url.pathname==='/rewards-fixture.js'){
-      res.setHeader('Content-Type','text/javascript');res.end(`import {mountRewards} from '/app/shared/rewards-tool.js';import {rewardsOffline} from '/app/shared/rewards-offline.js';const token='${token}';const remote=async(_t,path,options={})=>{const response=await fetch(path,{method:options.method||'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:options.value?JSON.stringify(options.value):undefined});const value=await response.json();if(!response.ok)throw Object.assign(Error(value.error||'Synthetic failure'),{status:response.status});return value;};const tool=mountRewards(document.getElementById('root'),{credentials:{get:async()=>token},offline:rewardsOffline({remote})});window.previewTool=tool;tool.refresh();`);return;
+      res.setHeader('Content-Type','text/javascript');res.end(`import {mountRewards} from '/app/shared/rewards-tool.js';import {rewardsOffline} from '/app/shared/rewards-offline.js';const token='${token}';const remote=async(_t,path,options={})=>{const response=await fetch(path,{method:options.method||'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:options.value?JSON.stringify(options.value):undefined});const value=await response.json();if(!response.ok)throw Object.assign(Error(value.error||'Synthetic failure'),{status:response.status});return value;};const tool=mountRewards(document.getElementById('root'),{credentials:{get:async()=>token},offline:rewardsOffline({remote}),remote});window.previewTool=tool;tool.refresh();`);return;
     }
     if (url.pathname === '/fixture-count') {res.end(JSON.stringify({apiCalls}));return;}
     if (url.pathname.startsWith('/app/')) {
@@ -96,6 +96,24 @@ createServer(async (req, res) => {
       // A loose name answers with the synthetic products it could be; an exact one ingests.
       if(/^\s*synthetic\s*$/i.test(name)){res.end(JSON.stringify({matches:[{name:'Synthetic Cash Card (United States)',note:'No annual fee · 2% back'},{name:'Synthetic Points Card (United States)',note:'$95 annual fee · 3x dining'}]}));return;}
       res.end(JSON.stringify({card:{...(/points/i.test(name)?cards[2]:cards[0]),name:`Researched ${name}`}}));return;
+    }
+    if(url.pathname.endsWith('/card-benefits')){
+      let text='';for await(const data of req)text+=data;const name=JSON.parse(text||'{}').name||'';
+      // A loose name answers with the synthetic products it could be; an exact one
+      // brings back the card and the recurring credits it carries.
+      if(/^\s*blue\s*cash\s*$/i.test(name)){res.end(JSON.stringify({matches:[{name:'Synthetic Blue Cash Everyday (United States)',note:'No annual fee'},{name:'Synthetic Blue Cash Preferred (United States)',note:'$95 annual fee'}]}));return;}
+      res.end(JSON.stringify({
+        card:{name:`Synthetic ${name} Card (United States)`,source:'Synthetic Bank',value:'5x flights and prepaid hotels, 1x everything else',url:'https://example.com/benefits',notes:'$895 annual fee. Synthetic terms for testing only.'},
+        benefits:[
+          {kind:'benefit',name:'Ride credit',value:'$15 per month',state:'activation',cadence:'monthly',notes:'Enroll once, then use it on eligible rides.'},
+          {kind:'benefit',name:'Dining credit at a very long partner restaurant program name',value:'Up to $100 per quarter',state:'activation',cadence:'quarterly',notes:''},
+          {kind:'benefit',name:'Prepaid hotel credit',value:'Up to $300 per half-year',state:'activation',cadence:'semiannual',notes:'Two-night minimum on eligible prepaid bookings.'},
+          {kind:'benefit',name:'Airline incidental fee credit',value:'$200 per year',state:'activation',cadence:'annual',notes:'Choose one qualifying airline each year.'},
+          {kind:'benefit',name:'Application fee credit',value:'Up to $120',state:'available',cadence:'',notes:'Once every four years.'},
+          {kind:'membership',name:'Lounge access',value:'Priority Pass Select and issuer lounges',state:'activation',cadence:'',notes:''},
+          {kind:'membership',name:'Hotel elite status',value:'Mid-tier status with two chains',state:'available',cadence:'',notes:''},
+          {kind:'membership',name:'Streaming partner benefit',value:'Included through 2027-06-30',state:'available',cadence:'',due:'2027-06-30',notes:''}
+        ]}));return;
     }
     if(url.pathname==='/v1/cards/snapshot'){res.end(JSON.stringify({records:cards}));return;}
     if(url.pathname.startsWith('/v1/cards/')){
