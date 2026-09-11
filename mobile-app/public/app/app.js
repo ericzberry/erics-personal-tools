@@ -1,4 +1,4 @@
-import './mobile-security.js';
+import {carrySession} from './mobile-security.js';
 import {VERSION, checkRelease, newer} from './releases.js';
 const el = id => document.getElementById(id);
 let registration;
@@ -77,7 +77,9 @@ el('apply-update').addEventListener('click', async () => {
         };
         waiting.addEventListener('statechange', ready); ready();
       });
-      navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {once: true});
+      // The owner unlocked the app moments ago, so the reload carries that unlock
+      // rather than asking for the same passkey again on the way back.
+      navigator.serviceWorker.addEventListener('controllerchange', () => { carrySession(); location.reload(); }, {once: true});
       waiting.postMessage({type: 'ACTIVATE'});
     } else { el('update-detail').textContent = 'Still preparing. Try again in a moment.'; }
   } catch { el('update-detail').textContent = 'Couldn’t update. Check your connection.'; }

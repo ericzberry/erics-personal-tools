@@ -47,7 +47,10 @@ them. The stored stamp carries the window's remaining time, so a restored
 session expires when it was always going to. The trade is deliberate: the key is
 readable by any extension page for as long as the window lasts, which is already
 true of the page that derived it. The mobile app has no such area and needs
-none — every tool there shares one page.
+none — every tool there shares one page. The one navigation it has to survive is
+the reload that applies an update, and `mobile-security.js` carries that unlock
+across it in the tab's session storage: written as the reload is triggered, read
+once and removed, and refused when it is stale or belongs to another saved lock.
 
 **On the phone, the app's own lock is the check.** The mobile app already asks
 for the passkey before it shows anything, to unwrap this device's access token.

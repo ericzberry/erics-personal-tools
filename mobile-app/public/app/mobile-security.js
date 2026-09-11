@@ -1,5 +1,5 @@
 import {autoUnlock} from './shared/auto-unlock.js';
-import {passkeyVault, VAULT_KEY, encode} from './passkey-vault.js';
+import {passkeyVault, VAULT_KEY, encode, decode} from './passkey-vault.js';
 import {PRF_SALT} from './shared/secret-vault.js';
 import {idleSession} from './shared/idle-session.js';
 const root = document.getElementById('capabilities-root');
@@ -75,13 +75,13 @@ async function run(action) {
     for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = false;
   }
 }
-function open({token: value, records: recordKey}, attempt) {
+function open({token: value, records: recordKey}, attempt, at) {
   if (attempt !== epoch) return;
   if (document.hidden) { status('Return to the app and unlock again.'); return; }
   token = value;
   forgetRecordKey();
   records = recordKey;
-  session.start();
+  session.start(at);
   root.querySelector('.mobile-lock').hidden = true;
   el('mobile-private').hidden = false;
   frame = document.createElement('iframe');
@@ -150,6 +150,39 @@ window.addEventListener('storage', event => {
     if (!busy) { vault?.cancel(); showGate(); }
   }
 });
+// A passkey opens this app once. Applying an update has to reload the shell,
+// and a reload empties the token and the record key this page is holding, so
+// the app asked again for the passkey it had just been given. The unlock rides
+// across that one reload instead: written only as the reload is triggered, read
+// once and removed before it is used, and stamped so an update that never
+// arrives leaves nothing usable behind. It resumes the window it had rather
+// than starting a new one, so the inactivity gate is exactly where it was.
+const HANDOFF_KEY = 'mobileUnlockHandoff.v1';
+const HANDOFF_MS = 15000;
+export function carrySession() {
+  try {
+    const saved = vault?.record();
+    if (!token || !saved || !session.check()) return false;
+    sessionStorage.setItem(HANDOFF_KEY, JSON.stringify({at: Date.now(), id: saved.id, token, records: records ? encode(records) : ''}));
+    return true;
+  } catch { return false; }
+}
+function resumeSession() {
+  let carried = null;
+  try {
+    carried = JSON.parse(sessionStorage.getItem(HANDOFF_KEY) || 'null');
+    sessionStorage.removeItem(HANDOFF_KEY);
+  } catch { return false; }
+  if (!carried || typeof carried.token !== 'string' || !carried.token || !Number.isFinite(carried.at)) return false;
+  const since = Date.now() - carried.at;
+  // Only the unlock this reload was handed: the lock must still be the one that
+  // was open, and a stamp older than the reload belongs to no session here.
+  if (since < 0 || since > HANDOFF_MS || vault.record()?.id !== carried.id) return false;
+  let recordKey = null;
+  try { if (carried.records) recordKey = decode(carried.records); } catch { recordKey = null; }
+  open({token: carried.token, records: recordKey}, epoch, carried.at);
+  return !!frame;
+}
 setInterval(() => session.check(), 1000);
 try {
   vault = passkeyVault({recordSalt: PRF_SALT});
@@ -158,7 +191,7 @@ try {
   if (!supported) {
     for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = true;
     status('Passkeys are unavailable here. Open the HTTPS address in Safari.');
-  } else automatic.request();
+  } else if (!resumeSession()) automatic.request();
 } catch (error) {
   for (const button of root.querySelectorAll('.mobile-lock button')) button.disabled = true;
   status(error.message || 'Device storage is unavailable. Enable website storage.');
