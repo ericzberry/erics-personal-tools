@@ -402,15 +402,14 @@ owner knows the anniversary.
 Only the card name typed in is sent; nothing already in the wallet leaves the
 device for it. See [docs/REWARDS.md](../docs/REWARDS.md).
 
-Validation: 261 extension, 32 mobile and 65 API tests pass, including new
+Validation: 283 extension, 32 mobile and 65 API tests pass, including new
 coverage for the reset calendar and how near a reset each period is raised, a
 benefit's link to its card, the fields the sync layer must carry, research that
 must cite an issuer page it opened, a loose name answered with alternatives, and
-a save that fails part way and is finished by saving again. `tests/draft.test.js`
-was excluded: another session's uncommitted `background.js` change breaks and
-hangs it, unrelated to this work. Reviewed in the shared wallet preview at 380px
-and 280px against synthetic research, populated, offline and empty states. Live
-issuer research was not exercised against a real OpenAI connection.
+a save that fails part way and is finished by saving again. Reviewed in the
+shared wallet preview at 380px and 280px against synthetic research, populated,
+offline and empty states. Live issuer research was not exercised against a real
+OpenAI connection.
 
 
 ## A reward program's offers arrive on their own (0.6.88 / mobile 0.1.49)
