@@ -99,6 +99,7 @@
 
 /* Connection setup and maintenance share compact, explicit groups. */
 .travel-wallet .connection-content{display:grid;gap:12px}
+.travel-wallet .connection-content .footnote:empty{display:none}
 .travel-wallet .connection-setup,.travel-wallet .connection-maintenance{display:grid;gap:8px}
 .travel-wallet .connection-setup .form-field{gap:4px}
 .travel-wallet .connection-setup label{font-size:12px;font-weight:500;color:var(--wallet-ink)}

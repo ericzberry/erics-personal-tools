@@ -15,3 +15,6 @@ gmail-sender/credentials/
 
 # Finance intake bearer token
 finance-intake/credentials/
+
+# Wrangler local cache
+.wrangler/

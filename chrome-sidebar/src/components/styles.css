@@ -270,9 +270,6 @@ th, td { padding: 8px 11px; }
 
 .settings-gear { color: inherit; background: transparent; border: 0; padding: 4px 6px; font-size: 20px; line-height: 1; cursor: pointer; }
 .settings-gear:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.credential-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
-.credential-row > div:first-child { min-width: 0; overflow-wrap: anywhere; }
-.credential-row .action-group { display: flex; gap: 4px; }
 
 /* Every page and section heading shares the Bedford Bridges typography. */
 .title-text { margin: 0; font: 400 20px/1.13 Georgia, "Times New Roman", serif; letter-spacing: -.4px; overflow-wrap: anywhere; }
@@ -296,7 +293,6 @@ summary > .title-text { display: inline; }
 .settings-panel .form-field > label { margin: 0; }
 .form-field > input, .form-field > select { margin: 0; width: 100%; min-height: 36px; }
 .settings-panel > summary { padding: var(--page-inset); }
-.credential-row { border-color: var(--line); }
 /* Native keyboard semantics, with a designed control and Chrome picker. */
 .select-control { appearance: none; cursor: pointer; padding-right: 32px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23526b60' stroke-width='1.5'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
@@ -326,17 +322,11 @@ summary > .title-text { display: inline; }
 .button-danger:disabled { opacity: .5; cursor: default; }
 .button-secondary:hover:not(:disabled) { background: #dce8d9; border-color: #93aa9b; }
 .button-danger:hover:not(:disabled) { background: #f6e9e5; border-color: #b97e70; }
-.credential-row { flex-wrap: wrap; padding: 10px 0; gap: 10px; }
-.credential-row:first-child { padding-top: 0; }
-.credential-row:last-child { padding-bottom: 0; border-bottom: 0; }
 
 /* Compact disclosure density preserves control sizes and section boundaries. */
 .settings-panel--compact { --page-inset: 10px; --section-gap: 8px; }
 .settings-panel--compact .settings-group { padding: 8px; gap: 6px; }
 .settings-panel--compact .form-field { gap: 4px; }
-.settings-panel--compact .credential-row { padding: 6px 0; gap: 6px; }
-.settings-panel--compact .credential-row:first-child { padding-top: 0; }
-.settings-panel--compact .credential-row:last-child { padding-bottom: 0; }
 
 /* Settings navigation scales as a flat list instead of stacked cards. */
 .settings-list { border-top: 1px solid var(--line); }

@@ -1,5 +1,4 @@
 import {CapabilityPicker} from './capabilities.js';
-import {credentialServices} from '../credential-services.js';
 import * as UI from './ui.js';
 import {AI_PROVIDERS} from '../ai-providers.js';
 const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
@@ -43,31 +42,15 @@ export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     UI.SettingsList([
-    UI.SettingsLink('AI connections','settings.html'),
+    // One cloud connection, owned by the wallet that holds this device's copies,
+    // and one link to the page that owns AI connections and their keys.
     Stack([],{id:'travel-settings-connection',className:'travel-wallet connection-only'}),
-    UI.SettingsItem('Credentials',[
-      UI.FormStack([
-      UI.SettingsGroup({title:'Cloud connection',children:[
-      Note('Worker not connected.',{id:'credential-cloud-state',role:'status'}),
-      Stack([
-        UI.FormField({id:'credential-token',label:'Worker access token',kind:'password',placeholder:'Your Worker’s API_TOKEN'}),
-        Button('Connect',{id:'credential-connect',variant:'primary'})
-      ],{id:'credential-connection',className:'form-stack'}),
-      ActionGroup([Button('Refresh',{id:'credential-refresh',variant:'secondary'}),Button('Disconnect',{id:'credential-disconnect',variant:'danger'})],{compact:true,id:'credential-maintenance',hidden:true})
-      ]}),
-      UI.SettingsGroup({title:'Saved credentials',children:[Stack([Note('Connect to load saved credentials.')],{id:'credential-list'})]}),
-      UI.SettingsGroup({title:'Add or replace a key',children:[UI.FormStack([
-      UI.FormField({id:'credential-name',label:'Service',kind:'select',options:[{text:'Select a service',value:''},...AI_PROVIDERS.filter(p=>p.id!=='custom').map(p=>({text:p.name,value:p.id}))]}),
-      UI.FormField({id:'credential-secret',label:'API key or secret',kind:'password',placeholder:'Enter a new key'}),
-      Button('Save credential',{id:'save-credential',variant:'primary'})
-      ])]}),
-      Notice('',{id:'credential-status',hidden:true})
-      ])
-    ]),
+    UI.SettingsLink('AI connections','settings.html'),
     UI.SettingsItem('Draft',[DraftSettings(),DraftReset()])
     ])
   ]});
 }
+
 export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),Section([],{id:'finance-tool',className:'tool-page',hidden:true}),SettingsView());}
 
 export function AISettingsView() {

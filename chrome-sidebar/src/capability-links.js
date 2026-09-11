@@ -1,10 +1,11 @@
 import {mountExtensionTravel} from './travel-page.js';
-import {showSettings} from './navigation.js';
 let mounted=false;
-document.getElementById('navigate-travel')?.addEventListener('click',()=>{
+// Settings shows the wallet's connection panel, so Settings mounts it too.
+export function mountTravelTool(){
   const root=document.getElementById('travel-tool');
   if(root&&!mounted){mountExtensionTravel(root);mounted=true;}
-});
+}
+document.getElementById('navigate-travel')?.addEventListener('click',mountTravelTool);
 
 // Finance opens in the sidebar, beside the account page it reads. The tool is
 // built on first use so a sidebar that never opens it pays nothing for it.
@@ -14,7 +15,7 @@ document.getElementById('navigate-finance')?.addEventListener('click',async()=>{
   if(!root||finance)return;
   finance=(async()=>{
     const [{mountExtensionFinance},{readOpenAccountPage}]=await Promise.all([import('./finance-page.js'),import('./finance-page-read.js')]);
-    return mountExtensionFinance(root,{readPage:()=>readOpenAccountPage(),onSettings:()=>showSettings(true)});
+    return mountExtensionFinance(root,{readPage:()=>readOpenAccountPage(),onSettings:()=>document.getElementById('open-settings')?.click()});
   })();
 });
 

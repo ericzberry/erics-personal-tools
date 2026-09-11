@@ -176,6 +176,8 @@ test('settings remain open across active-tab updates and return to the latest to
  const {showTool,showSettings}=await import('../src/navigation.js');
  showTool('football');showSettings(true);showTool('gmail');
  assert.equal(doc.getElementById('settings-tool').hidden,false);assert.equal(doc.getElementById('gmail-tool').hidden,true);
- assert.equal(doc.getElementById('credential-secret').getAttribute('type'),'password');
+ // Settings lists each thing once: the cloud connection, AI connections, Draft.
+ assert.equal(doc.querySelectorAll('#settings-tool .settings-list > *').length,3);
+ assert.equal(doc.getElementById('credential-secret'),null);
  showSettings(false);assert.equal(doc.getElementById('gmail-tool').hidden,false);assert.equal(doc.getElementById('settings-tool').hidden,true);
 });

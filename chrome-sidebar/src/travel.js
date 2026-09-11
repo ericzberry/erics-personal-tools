@@ -59,19 +59,21 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   }
   $('add').addEventListener('click',()=>run(async()=>{await onOpenEditor();status('Editor opened in a new tab.');}));
   async function refresh(){const result=await request(token,'/v1/travel');records=result.records;if(!dirty)loadEditor();render();onConnectionChange();return result.syncMessage??'';}
+  // Connection feedback belongs beside the connection, which Settings can host
+  // while the wallet itself is on another screen.
   $('connect').addEventListener('click',()=>run(async()=>{
     if(dirty)throw Error('Save or cancel your edits before reconnecting.');
     const next=$('token').value.trim()||await credentials.get();
     if(token&&next!==token&&await offline?.hasPending(token))throw Error('Sync or resolve pending changes before changing access tokens.');
     const result=await request(next,'/v1/travel');if(token&&next!==token)await offline?.disconnect(token);await credentials.set(next);token=next;records=result.records;
     $('token').value='';$('cloud').open=false;edit();loadEditor();render();status(result.syncMessage??'');onConnectionChange();
-  }));
+  },'connection-status'));
   $('disconnect').addEventListener('click',()=>run(async()=>{
     if(dirty)throw Error('Save or cancel your edits before disconnecting.');
     await credentials.beforeDisconnect?.();
     await offline?.disconnect(token);await credentials.remove();token='';records=[];$('cloud').open=true;edit();$('token').value='';render();status('Disconnected from this device. Cloud records remain saved.');onConnectionChange();
-  }));
-  $('refresh').addEventListener('click',()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before refreshing.');const message=await refresh();if(mode!=='editor')edit();status(message);}));
+  },'connection-status'));
+  $('refresh').addEventListener('click',()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before refreshing.');const message=await refresh();if(mode!=='editor')edit();status(message);},'connection-status'));
   $('search').addEventListener('input',render);
   $('form').addEventListener('input',()=>{dirty=true;});
   $('cancel').addEventListener('click',()=>{edit();loadEditor();$('editor').open=false;status('Edits canceled.','form-status');});
@@ -100,7 +102,7 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
     if(current===token)return;
     token=current;records=[];edit();$('cloud').open=!token;render();
     onConnectionChange();
-    if(token&&!busy)run(async()=>status(await refresh()));else if(!token)status('This device was disconnected in another window.');
+    if(token&&!busy)run(async()=>status(await refresh()));else if(!token)status('This device was disconnected in another window.','connection-status');
   });
   render();
   const ready=run(async()=>{token=await credentials.get();$('cloud').open=!token;status(token?await refresh():'Connect in Settings to download your records.');});

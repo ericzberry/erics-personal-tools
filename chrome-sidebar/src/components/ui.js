@@ -243,15 +243,6 @@ export function RosterCounts(counts,{known=true,alerts=[]}={}) {
 
 export const StickyGroup=children=>Stack(children,{className:'sticky-group'});
 
-export function CredentialRow(credential,{onEdit,onDelete}) {
-  const edit=Button('Replace',{variant:'secondary','aria-label':`Replace ${credential.name}`});edit.addEventListener('click',onEdit);
-  const remove=Button('Delete',{variant:'danger','aria-label':`Delete ${credential.name}`});remove.addEventListener('click',onDelete);
-  return Stack([Stack([Strong(credential.name),Note(credential.hasApiKey===false?'No API key saved':credential.hasApiKey===true?'API key saved in D1':'Key saved')]),ActionGroup([edit,remove],{compact:true})],{className:'credential-row'});
-}
-
-export function CredentialServiceOptions(services,savedNames=[]) {
-  return [Option('Select a service',''),...[...new Set([...services,...savedNames])].map(name=>Option(name,name))];
-}
 export const Form=(children,props={})=>element('form',props,children);
 export const Panel=(children,props={})=>Section(children,{className:'settings-card',...props});
 export const FormStack=children=>Stack(children,{className:'form-stack'});

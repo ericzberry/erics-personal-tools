@@ -8,10 +8,10 @@ export async function summarizeEmail({email,signal,onProgress=()=>{},send=messag
     if(!result?.ok)throw Error(result?.error||'Could not reach the Worker.');return result;
   }
   const status=await request('status');
-  if(!status.connected)throw Error('Connect your Worker in Settings → Credentials first.');
+  if(!status.connected)throw Error('Connect this browser in Settings first.');
   const {connections}=await request('list');
   const connection=connections?.find(c=>c.provider==='openai'&&c.hasApiKey);
-  if(!connection)throw Error('Save an OpenAI API key in Settings → Credentials first.');
+  if(!connection)throw Error('Save an OpenAI API key in Settings → AI connections first.');
   onProgress('Summarizing with OpenAI…');
   const result=await request('generate',{
     id:connection.id,task:'email.summary',maxTokens:700,

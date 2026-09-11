@@ -77,6 +77,16 @@ async function run(action) {
 }
 async function load() {
   const result=await send('list');connections=result.connections;renderList();
+  await migrate();
+}
+// Keys saved in this browser before connections moved to D1 follow them here,
+// where the connections that hold them now live.
+async function migrate() {
+  try {
+    const result=await send('migrate');
+    if (result.moved) {connections=(await send('list')).connections;renderList();status('Keys saved in this browser moved to your account.');}
+    else if (result.remaining) status('Some keys saved in this browser need review before they move.');
+  } catch (error) {status(`Keys saved in this browser were kept: ${error.message}`);}
 }
 $('settings-connect').addEventListener('click',()=>run(async()=>{
   await send('connect', {token:$('settings-token').value.trim()||undefined});

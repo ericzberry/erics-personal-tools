@@ -71,6 +71,7 @@ export function TravelConnection(){return Stack([Disclosure('Connection settings
         Stack([
           ActionGroup([Button('Refresh records',{id:'travel-refresh',variant:'secondary',size:'compact'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger',size:'compact'})],{compact:true}),
           Note('Disconnect removes this device’s offline copies. Cloud records stay saved.')
-        ],{id:'travel-maintenance',className:'connection-maintenance',hidden:true})
+        ],{id:'travel-maintenance',className:'connection-maintenance',hidden:true}),
+        Note('',{id:'travel-connection-status',role:'status'})
       ],{className:'connection-content'})
     ],{id:'travel-cloud'})],{className:'connection-surface'});}

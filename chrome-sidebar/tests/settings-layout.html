@@ -3,5 +3,9 @@ import {SettingsView} from '../src/components/views.js';
 import {mountTravel} from '../src/travel.js';
 const settings=SettingsView();settings.hidden=false;document.getElementById('app').append(settings);
 const wallet=document.createElement('div');wallet.hidden=true;document.body.append(wallet);
-mountTravel(wallet,{credentials:{get:async()=>''},request:async()=>({records:[]}),connectionRoot:document.getElementById('travel-settings-connection')});
+// Connected fixture: the Settings screen's one connection is the wallet's own.
+// The synthetic token stays in this page so connect and disconnect can be tried.
+let token='synthetic-preview-token-0123456789abcdef';
+const credentials={get:async()=>token,set:async value=>{token=value;},remove:async()=>{token='';}};
+mountTravel(wallet,{credentials,request:async()=>({records:[]}),connectionRoot:document.getElementById('travel-settings-connection')});
 </script></body></html>

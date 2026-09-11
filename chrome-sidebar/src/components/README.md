@@ -25,9 +25,9 @@ The tests in `tests/components.test.js` enforce controller hooks, accessible fie
 
 `SettingsGroup` provides a titled, bounded settings section. `ActionGroup(children, {compact: true})` keeps maintenance actions adjacent and allows wrapping. Use secondary buttons for maintenance and danger buttons for destructive actions.
 
-Use `settings-panel--compact` on a settings disclosure for tighter insets, group spacing, and field rhythm while retaining full control sizes. Credentials starts collapsed.
+Use `settings-panel--compact` on a settings disclosure for tighter insets, group spacing, and field rhythm while retaining full control sizes. Settings items start collapsed.
 
-`SettingsList`, `SettingsItem`, and `SettingsLink` compose flat settings navigation. Items use native disclosures, compact heading typography, dividers, and trailing chevrons; links use a trailing external-link indicator. Use these for top-level settings categories instead of separate cards.
+`SettingsList`, `SettingsItem`, and `SettingsLink` compose flat settings navigation. Each thing a settings screen manages appears once: the cloud connection is the travel wallet's own connection panel, and AI connections are a link to the page that owns them. Items use native disclosures, compact heading typography, dividers, and trailing chevrons; links use a trailing external-link indicator. Use these for top-level settings categories instead of separate cards.
 
 `CapabilityNavigation` renders the shared expandable sidebar navigation from `src/capabilities.js`, `CapabilityLauncher` the icon grid, and `CapabilityMenu` the mobile dropdown that wraps that grid. All three group entries by the registry's `section`, so an entry moves in both hosts at once; the sidebar shows a named section as one row that opens to reveal its tools, so give every section an icon in `src/capabilities.js`. Keep feature-specific actions inside their screens. The sidebar controller distinguishes Current tab automatic mode — which the toggle names and the menu does not list — from explicit capability selection, and marks the selected row with `aria-current` alone; Escape closes the list and returns focus to its summary. Mobile starts on Home with the grid shown in place and its summary hidden.
 

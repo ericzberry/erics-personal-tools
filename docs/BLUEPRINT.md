@@ -98,8 +98,11 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
   `email-ai.js` (on-device), `email-cloud.js` (via Worker).
-- **Credentials / settings** — `credentials.js`, `credential-services.js`,
-  `credential-migration.js`, `settings.js`, `settings-bridge.js`.
+- **Settings** — `settings.js` (the sidebar Settings screen: open, close, and
+  build the wallet whose connection panel is the screen's one cloud connection),
+  `settings-bridge.js`, `credential-migration.js` (legacy local keys → D1, run by
+  the AI connections page). AI connections and their keys live only on
+  `settings.html`; no second key form exists.
 - **Releases** — `release-check.js` (hourly throttle), `release-banner.js`.
 - **Fantasy football** — `draft-*.js`, `espn-*.js`, `manual-draft.js`,
   `player-identity.js`, `recommendations.js`, `session-selection.js`,
