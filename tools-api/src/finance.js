@@ -24,6 +24,12 @@ export async function readFinanceUpdates(connection,input,fetcher=fetch){
   if(!text.trim()&&!images.length)throw {status:400,message:'Send text or an image to read.'};
   if(text.length>MAX_INTAKE_TEXT)throw {status:400,message:`Send up to ${MAX_INTAKE_TEXT.toLocaleString('en-US')} characters of text to read.`};
   const today=/^\d{4}-\d{2}-\d{2}$/.test(input.today||'')?input.today:new Date().toISOString().slice(0,10);
+  // A live account page is the one source that dates itself by being open: the
+  // owner is signed in and looking at today's balances, which is why the
+  // otherwise strict "no stated date, no update" rule would drop every figure
+  // on it. The device says so explicitly; nothing here infers it.
+  const live=input.live===true;
+  const institution=typeof input.institution==='string'?input.institution.trim().slice(0,120):'';
   // A picture is read exactly like pasted text: same instructions, same
   // refusal to total or convert, same requirement that a date be stated.
   const source=images.length
@@ -44,7 +50,8 @@ Return JSON {"updates":[...],"unread":string}. Each update is {"name","instituti
 - reason: one short sentence naming what you read and anything the owner should check.
 
 unread: one or two sentences naming anything with a figure in it that you could not turn into an update, and why. Use "" when nothing was left over.
-Return only figures the source actually states. Do not invent accounts, estimate values, annualize, or fill in a missing number.${images.length?' When a figure is blurred, cropped or otherwise not legible, leave it out and name it under unread rather than guessing at the digits.':''}`},
+${live?`This text was read from an account page the owner is signed in to right now. Report one update per account, using the account's own total or net value — never an individual holding inside it, and never a figure summed across accounts. A balance the page shows without a date of its own is current, so give it asOf ${today} instead of dropping it; a figure the page itself dates keeps that date.${institution?` The institution is ${institution} unless the text names a different one.`:''}
+`:''}Return only figures the source actually states. Do not invent accounts, estimate values, annualize, or fill in a missing number.${images.length?' When a figure is blurred, cropped or otherwise not legible, leave it out and name it under unread rather than guessing at the digits.':''}`},
     {role:'user',content:[
       ...(text.trim()?[{type:'text',text}]:[]),
       ...images.map(dataUrl=>({type:'image',dataUrl})),

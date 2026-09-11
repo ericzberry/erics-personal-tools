@@ -10,3 +10,12 @@
 .trend-table{display:flex;flex-direction:column;gap:2px}
 .trend-row .footnote{margin:0;min-width:88px;text-align:end}
 .finance-ledger .record-row{gap:2px}
+.snapshot-panel{display:flex;flex-direction:column;gap:4px}
+.snapshot-heading{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px}
+.snapshot-meta{color:var(--muted);font-size:.8rem}
+.snapshot-row{display:flex;flex-direction:column;gap:2px}
+.snapshot-figure{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+/* A long account name wraps; the figure beside it never splits across lines. */
+.snapshot-figure span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.snapshot-figure strong{font-weight:600;white-space:nowrap}
+.snapshot-row .footnote{margin:0}

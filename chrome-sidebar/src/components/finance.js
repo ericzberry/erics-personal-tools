@@ -9,10 +9,47 @@ export function money(value,currency='USD'){
 }
 export const Figure=({label,value,id,tone=''})=>Stack([Label(label,{className:'figure-label'}),Strong(value,{id,className:`figure-value${tone?` figure-value--${tone}`:''}`})],{className:'figure'});
 
+// Offered when the owner is already signed in to an account site beside the
+// panel. Before anything is read it is one action; afterwards it is what came
+// off the page, with every amount editable, because the owner is the only one
+// who can see whether a figure is right.
+export function SnapshotPanel({site,rows=[],editing=false,disabled=false,onStore,onSave,onEdit,onDiscard,onAmount}){
+  const action=(label,variant,handler)=>{
+    const node=Button(label,{variant,size:'compact',disabled});
+    node.addEventListener('click',handler);
+    return node;
+  };
+  const heading=Stack([
+    Strong(site.label),
+    rows.length?Label(`${rows.length} account${rows.length===1?'':'s'} · as of ${rows[0].asOf}`,{className:'snapshot-meta'}):null
+  ],{className:'snapshot-heading'});
+  if(!rows.length)return Section([heading,ActionGroup([action('Store account snapshots','primary',onStore)],{compact:true})],{className:'record-row'});
+  return Section([heading,...rows.map((row,index)=>SnapshotRow(row,{index,editing,onAmount})),ActionGroup([
+    action('Save','primary',onSave),
+    ...(editing?[]:[action('Edit','secondary',onEdit)]),
+    action('Discard','subtle',onDiscard)
+  ],{compact:true})],{className:'record-row'});
+}
+// A read figure names the record it would land on and nothing else is implied:
+// until it is saved it is a proposal, the same as a draft.
+function SnapshotRow(row,{index,editing,onAmount}){
+  const target=row.match?`Updates ${row.match.name}`:row.ambiguous?'Several records match — saves as a new record':'New record';
+  if(!editing)return Stack([
+    Stack([Label(row.name),Strong(money(row.value,row.currency))],{className:'snapshot-figure'}),
+    Note(target)
+  ],{className:'snapshot-row'});
+  const field=FormField({id:`finance-snapshot-value-${index}`,label:row.name,kind:'text'});
+  const input=field.querySelector('input');
+  input.value=String(row.value);
+  input.addEventListener('input',()=>onAmount(index,input.value));
+  return Stack([field,Note(target)],{className:'snapshot-row'});
+}
+
 export function FinanceView(){
   const kinds=FINANCE_KINDS.map(kind=>({text:`${kind.label}${kind.side==='liability'?' (liability)':''}`,value:kind.id}));
   return Stack([
     ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
+    Stack([Stack([],{id:'finance-snapshot-body'}),Notice('',{id:'finance-snapshot-status'})],{id:'finance-snapshot',className:'snapshot-panel',hidden:true}),
     SettingsGroup({title:'Position',level:2,children:[
       Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
       Stack([],{id:'finance-totals',className:'finance-totals'}),

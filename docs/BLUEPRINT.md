@@ -93,6 +93,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   text snapshot of the tab the owner is looking at). All three ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
+  `account-sites.js` is the sidebar's alone: the registry of account sites worth
+  recognizing (E*TRADE) plus the in-page probe that says whether the owner is
+  already signed in to one. `context-panel.js` drives it from the tab it already
+  watches, and a signed-in site opens Finance with its snapshot prompt.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
   `finance.js`, `personal.js`, `data-library.js`, `restaurant-search.js`,
   `reservation-*.js`.

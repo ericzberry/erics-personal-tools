@@ -342,3 +342,32 @@ Validation: 235 extension and 24 mobile tests pass, including new coverage for
 naming the remembered credential, forgetting the twin that cannot open a value,
 and enrolling twice under one user handle. The native Touch ID and Face ID
 sheets were not directly tested.
+
+## Store account snapshots from a signed-in account page (0.6.83 / mobile 0.1.44)
+
+The sidebar recognizes an account site in the tab beside it — E*TRADE to start —
+and asks that page three things: its path, whether a password field is on
+screen, and whether a sign-out control is. That is enough to tell a signed-in
+session from a log-on form, and no page text crosses back to answer it. On a
+signed-in site the panel opens Finance and offers one action, **Store account
+snapshots**.
+
+Pressing it takes the same single snapshot of the visible page that **Read the
+open page** always did, and reads it as a live page: one figure per account,
+each account's own total rather than a holding inside it or a sum across them,
+and a balance shown without a date of its own is today's rather than dropped for
+want of a printed date. What comes back is one row per account, showing what it
+would update or create, with **Edit** to correct any amount and **Save** to
+write them all through the same validator and offline queue as a typed edit.
+Nothing is saved by reading, and **Discard** throws the whole reading away.
+
+It still never navigates, never signs in, and never opens a tab; the sidebar
+only ever reads a page the owner already has in front of them, and only when
+they ask.
+
+Validation: 252 extension, 32 mobile and 50 API tests pass, including new
+coverage for host matching, the sign-in probe, the once-per-throttle page ask,
+the snapshot rows, editing an amount before saving, and a bad amount that stops
+the save without losing the rest. The panel was reviewed at 380px and 280px
+against synthetic readings. The detection was not exercised against a live
+E*TRADE session.

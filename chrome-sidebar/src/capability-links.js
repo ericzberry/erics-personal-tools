@@ -10,14 +10,20 @@ document.getElementById('navigate-travel')?.addEventListener('click',mountTravel
 // Finance opens in the sidebar, beside the account page it reads. The tool is
 // built on first use so a sidebar that never opens it pays nothing for it.
 let finance=null;
-document.getElementById('navigate-finance')?.addEventListener('click',async()=>{
+export function openFinanceTool(){
   const root=document.getElementById('finance-tool');
-  if(!root||finance)return;
-  finance=(async()=>{
+  if(!root)return null;
+  finance??=(async()=>{
     const [{mountExtensionFinance},{readOpenAccountPage}]=await Promise.all([import('./finance-page.js'),import('./finance-page-read.js')]);
     return mountExtensionFinance(root,{readPage:()=>readOpenAccountPage(),onSettings:()=>document.getElementById('open-settings')?.click()});
   })();
-});
+  return finance;
+}
+// Whoever is already mounted, without building the tool to ask. Arriving at
+// Finance asks for the passkey, so nothing may mount it except a deliberate
+// arrival — a tab that has stopped being an account page included.
+export const mountedFinanceTool=()=>finance;
+document.getElementById('navigate-finance')?.addEventListener('click',openFinanceTool);
 
 // Standalone settings/data pages use the same data registry in the shared formatted picker.
 const {CAPABILITIES}=await import('./capabilities.js');

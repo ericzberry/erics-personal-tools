@@ -2,9 +2,12 @@ import {gmailConnection} from './gmail-connection.js';
 import {summarizeEmail} from './email-cloud.js';
 import {showTool} from './navigation.js';
 import {generateEmailText} from './email-ai.js';
+import {accountSiteWatcher} from './account-sites.js';
+import {openFinanceTool,mountedFinanceTool} from './capability-links.js';
 const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.tabs;
 const readCurrentEmail=extension?gmailConnection(chrome):null;
+const detectAccountSite=extension?accountSiteWatcher():null;
 let email = null, identity = '', generation = 0, controller, activeTab, polling = false, working = false;
 function clearEmail(next = null) {
   const nextIdentity = next ? JSON.stringify(next) : '';
@@ -19,6 +22,16 @@ function renderEmail() {
   $('email-source').hidden = !email;
   for (const id of ['summarize-email','reply-email']) $(id).disabled = !email || working;
 }
+// An account page the owner is already signed in to is the one thing that
+// opens Finance on its own, because reading it is only possible from beside
+// that tab. Leaving the page tells the tool so, but never builds it: a sidebar
+// that has not opened Finance keeps its passkey prompt to itself.
+async function announceAccountSite(site) {
+  try {
+    const tool = site ? openFinanceTool() : mountedFinanceTool();
+    if (tool) (await tool)?.site(site);
+  } catch {/* A tool that will not mount is not a Gmail failure, and must not be reported as one. */}
+}
 async function refresh() {
   if (!extension || polling) return;
   polling = true;
@@ -26,7 +39,9 @@ async function refresh() {
     const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
     const url = new URL(tab?.url || 'https://invalid.local');
     const gmail = url.hostname === 'mail.google.com';
-    const tool = gmail ? 'gmail' : url.hostname === 'fantasy.espn.com' ? 'football' : 'home';
+    const site = gmail ? null : await detectAccountSite(tab);
+    await announceAccountSite(site);
+    const tool = gmail ? 'gmail' : site ? 'finance' : url.hostname === 'fantasy.espn.com' ? 'football' : 'home';
     showTool(tool);
     if (activeTab !== tab?.id) {clearEmail();activeTab = tab?.id;}
     if (!gmail) {clearEmail();renderEmail();return;}

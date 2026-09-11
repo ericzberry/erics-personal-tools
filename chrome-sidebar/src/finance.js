@@ -1,4 +1,4 @@
-import {FinanceView,FinanceGroup,BreakdownList,TrendTable,DraftRow,Figure,money,AttachmentCard} from './components/finance.js';
+import {FinanceView,FinanceGroup,BreakdownList,TrendTable,DraftRow,SnapshotPanel,Figure,money,AttachmentCard} from './components/finance.js';
 import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue,Option} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
@@ -23,6 +23,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   gate.content.replaceChildren(FinanceView());
   const $=id=>gate.content.querySelector(`#finance-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',drafts=[],revealTimer=null,clearSecret=false;
+  // The account site the owner is already signed in to beside the panel, and
+  // what was read off it. A snapshot is a proposal until it is saved, exactly
+  // like a draft: the amounts stay editable and nothing is written by reading.
+  let site=null,snapshot=null,snapshotEditing=false;
   // A picture has no text to show, so it is held here and described instead.
   // Text from a file or a page goes straight into the box, where it can be
   // read, corrected, or thrown away before anything is sent.
@@ -173,6 +177,57 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     },'intake-status');
   }
 
+  // Rebuilt only when the snapshot itself changes, so editing an amount is not
+  // interrupted by an unrelated render. `syncSnapshot` keeps the controls in
+  // step with a busy or disconnected tool without replacing them.
+  function renderSnapshot(){
+    $('snapshot').hidden=!site;
+    if(!site){$('snapshot-body').replaceChildren();return;}
+    $('snapshot-body').replaceChildren(SnapshotPanel({
+      site,rows:snapshot||[],editing:snapshotEditing,disabled:busy||!loaded,
+      onStore:storeSnapshots,onSave:saveSnapshots,
+      onEdit:()=>{snapshotEditing=true;renderSnapshot();},
+      onDiscard:()=>{snapshot=null;snapshotEditing=false;renderSnapshot();status('','snapshot-status');},
+      onAmount:(index,value)=>{snapshot[index].value=value;}
+    }));
+  }
+  function syncSnapshot(){
+    for(const node of $('snapshot').querySelectorAll('button,input'))node.disabled=busy||!loaded;
+  }
+  // One press does the whole errand: read the page beside the panel, turn it
+  // into one figure per account, and show them. Nothing is saved yet.
+  async function storeSnapshots(){
+    if(!site||!readPage)return;
+    const id=$('connection').value;
+    if(!id){status('Choose a saved AI connection below, or add the record by hand.','snapshot-status');return;}
+    await run(async token=>{
+      status(`Reading your ${site.label} accounts…`,'snapshot-status');
+      const page=await readPage();
+      const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text:page.text,today:today(),live:true,institution:site.institution},timeoutMs:130000});
+      const parsed=parseFinanceUpdates(result);
+      snapshot=matchFinanceUpdates(parsed.updates,records).map(row=>({
+        ...row,
+        kind:row.kind==='other-asset'?site.kind:row.kind,
+        institution:row.institution||site.institution,
+        source:`${site.label} page · ${row.confidence} confidence`
+      }));
+      snapshotEditing=false;renderSnapshot();
+      status([snapshot.length?`${snapshot.length} account${snapshot.length===1?'':'s'} read. Nothing is saved yet.`:'No account totals were found on that page.',parsed.unread].filter(Boolean).join(' '),'snapshot-status');
+    },'snapshot-status');
+  }
+  // Saved one at a time through the same validator and queue as a typed edit.
+  // A row that fails leaves itself and the rest in place to be corrected.
+  async function saveSnapshots(){
+    if(!snapshot?.length)return;
+    let saved=0;
+    while(snapshot.length){
+      if(!await saveDraft(snapshot[0],'snapshot-status')){renderSnapshot();return;}
+      snapshot=snapshot.slice(1);saved++;
+    }
+    snapshot=null;snapshotEditing=false;renderSnapshot();onChanged();
+    status(`Saved ${saved} snapshot${saved===1?'':'s'}.`,'snapshot-status');
+  }
+
   function renderDrafts(){
     $('drafts').replaceChildren(...drafts.map((draft,index)=>DraftRow(draft,{
       onApply:()=>apply(index),
@@ -198,18 +253,20 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('value').focus();
     status('Review this draft, then save it.','form-status');
   }
-  async function apply(index){
-    const draft=drafts[index];
+  function saveDraft(draft,target='status'){
     const match=draft.ambiguous?null:draft.match;
     const id=match?.id||crypto.randomUUID();
-    const success=await run(async token=>{
+    return run(async token=>{
       const value=normalizeFinance({
         ...(match?{}:{kind:draft.kind,name:draft.name,institution:draft.institution,owner:draft.owner,currency:draft.currency}),
-        value:draft.value,asOf:draft.asOf,source:`AI reading · ${draft.confidence} confidence`
+        value:draft.value,asOf:draft.asOf,source:draft.source||`AI reading · ${draft.confidence} confidence`
       },match||{});
       return offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:{...value,id,revision:match?.revision??null}});
-    });
-    if(success){
+    },target);
+  }
+  async function apply(index){
+    const draft=drafts[index];
+    if(await saveDraft(draft)){
       drafts.splice(index,1);renderDrafts();onChanged();
       status(`Saved ${draft.name}.`,'intake-status');
     }
@@ -259,6 +316,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // Beside the title, only what applies: a loaded ledger can be refreshed, and
     // one that never loaded needs the connection rather than a dead Refresh.
     $('actions').replaceChildren(loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
+    syncSnapshot();
   }
 
   async function run(operation,target='status'){
@@ -291,7 +349,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     if(await run(token=>offline.request(token,'/v1/finance')))connectionList();
   }
   function clear(){
-    generation++;records=[];loaded=false;activeToken='';drafts=[];attachment=null;forget();clearForm();renderDrafts();renderAttachment();
+    generation++;records=[];loaded=false;activeToken='';drafts=[];attachment=null;snapshot=null;snapshotEditing=false;forget();clearForm();renderDrafts();renderAttachment();renderSnapshot();
+    status('','snapshot-status');
     status('Unlock this section with your passkey.');
     render();
   }
@@ -352,5 +411,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   window.addEventListener('online',reload);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   credentials.subscribe?.(()=>{clear();if(gate.unlocked())refresh();});
-  return {refresh,clear,stop(){gate.stop();clearTimeout(revealTimer);}};
+  // The host watches the tab beside the panel and says which account site is
+  // open, or passes nothing when the owner has moved on.
+  function detected(next){
+    if(!readPage||next?.id===site?.id)return;
+    site=next||null;snapshot=null;snapshotEditing=false;
+    status('','snapshot-status');renderSnapshot();
+  }
+  return {refresh,clear,site:detected,stop(){gate.stop();clearTimeout(revealTimer);}};
 }

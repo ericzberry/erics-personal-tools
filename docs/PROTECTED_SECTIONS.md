@@ -135,7 +135,7 @@ snapshot.
 
 ### Reading a statement
 
-Figures reach the ledger four ways, and all four end at the same place: draft
+Figures reach the ledger five ways, and all five end at the same place: draft
 updates the owner reviews before anything is saved.
 
 - **Drop a file.** PDF, CSV, XLSX, or an image. A PDF's text layer is extracted
@@ -156,6 +156,17 @@ updates the owner reviews before anything is saved.
   the original file never leaves. Images travel as content parts to a model
   marked `vision` in the catalog; a connection with no such model is refused
   rather than sent something it cannot read.
+- **Store account snapshots.** The sidebar recognizes the account sites in
+  `account-sites.js` from the tab beside it, and asks that page three things —
+  its path, whether a password field is on screen, and whether a sign-out
+  control is — to tell a signed-in session from a log-on form. No page text
+  crosses back to answer that, and a password field on screen settles it as
+  signed out. On a signed-in site the sidebar opens Finance and offers one
+  action. Pressing it takes the same single page snapshot as above and reads it
+  as a live page: one figure per account, using each account's own total, and a
+  balance the page shows without a date of its own is current rather than
+  dropped. What comes back is one row per account, matched to a record on the
+  device, with **Edit** to correct any amount before **Save** writes them.
 - **Paste text.** As before.
 
 What is not sent matters as much. Saved records never leave the device, so the
@@ -163,9 +174,10 @@ model cannot know what is already held, cannot pick the record a figure belongs
 to, and is instructed never to total, net, annualize or convert anything.
 Matching a draft to an existing record happens on the device by name and
 institution; an ambiguous name is reported rather than resolved by guessing. A
-draft with no usable date is dropped rather than assumed to be today, and a
-figure that is illegible in an image is named under `unread` rather than
-guessed at.
+draft with no usable date is dropped rather than assumed to be today — the one
+exception being a page the device says the owner is signed in to right now,
+where today's balances carry no printed date — and a figure that is illegible in
+an image is named under `unread` rather than guessed at.
 
 Nothing is saved by reading. Each draft is applied, edited first, or discarded
 by hand, and applying one writes through the same validator and offline queue as

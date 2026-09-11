@@ -49,3 +49,8 @@ Mobile 0.1.9 moves cloud connection maintenance and offline details into Setting
 Mobile 0.1.42 shows an available update at the top of the app, above the tools, rather than below them.
 
 Mobile 0.1.43 keeps the passkey that opened the app when an update reloads it: applying an update reopens the tools where they were instead of asking for the same passkey again. The unlock is handed to the reloading page for seconds only, read once, and keeps the inactivity window it already had.
+
+Mobile 0.1.44 carries the shared Finance modules behind the extension's new
+**Store account snapshots** action. Reading the tab beside the panel is the
+sidebar's alone — the phone has no such page and shows no snapshot prompt — so
+nothing changes here beyond keeping the shared ledger code in step.
