@@ -63,8 +63,11 @@ export function mountVaultGate(root,{
     $('content').hidden=!unlocked;
     // The actions stay put while the passkey sheet is up — disabled, not
     // removed — so a dismissed sheet returns to the same panel it left.
+    // A borrowed session has none to offer: the host's own lock took the passkey
+    // and is what closes the session, so Lock now here would only ask again for
+    // what the reader has already given, and recovery belongs to that lock too.
     $('actions').replaceChildren(...(unlocked
-      ?[action('Lock now',lock,'subtle'),action('Recovery code',showRecovery,'subtle')]
+      ?(vault.borrowed?.()?[]:[action('Lock now',lock,'subtle'),action('Recovery code',showRecovery,'subtle')])
       :[...(available?[action('Unlock',unlock,'primary')]:[]),action('Use recovery code',()=>{$('recovery').hidden=false;$('recovery-code').focus();})]));
   }
   function announce(){

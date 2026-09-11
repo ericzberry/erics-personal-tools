@@ -212,3 +212,23 @@ test('the twin that cannot open a sealed value is forgotten, so the next check o
   await recovering.vault.unlockWithRecoveryCode(recoveryCode(new Uint8Array(32).fill(1)));
   assert.equal(local.values.get(CREDENTIAL_KEY),undefined);
 });
+
+test('a key borrowed from the host’s own lock opens the records and is marked as borrowed',async()=>{
+  // The mobile app's lock evaluates PRF_SALT beside its own and hands the result
+  // over, so the vault opens without a check of its own — and says so, because a
+  // section must not offer to lock what another lock governs.
+  const sealed=await sealSecret(await fixture().vault.key(),'entry-1',{number:'4111111111111111'});
+  const borrowed=fixture();
+  assert.equal(borrowed.vault.borrowed(),false);
+  // The seed the lock's assertion returned for the record vault's salt.
+  await borrowed.vault.unlockWithPasskeySeed(new Uint8Array(32).fill(9));
+  assert.equal(borrowed.count(),0,'no passkey check of its own');
+  assert.equal(borrowed.vault.unlocked(),true);
+  assert.equal(borrowed.vault.borrowed(),true);
+  assert.deepEqual(await borrowed.vault.open('entry-1',sealed),{number:'4111111111111111'});
+  // Its own check is not borrowed, and neither is a recovery code.
+  borrowed.vault.lock();
+  assert.equal(borrowed.vault.borrowed(),false);
+  await borrowed.vault.key();
+  assert.equal(borrowed.vault.borrowed(),false);
+});

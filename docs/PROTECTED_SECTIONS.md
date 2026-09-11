@@ -26,7 +26,8 @@ card numbers. One vault is shared per host (`sharedVault()`), so a single
 passkey prompt opens every protected section on the page and one 15-minute idle
 window governs them together: activity in the ledger keeps the personal records
 open, and going idle closes both and drops anything already revealed. Locking is
-also explicit — **Lock now** is always reachable while unlocked.
+also explicit — **Lock now** is reachable while unlocked, except where the
+session was borrowed from the host's own lock (see below).
 
 **Open says nothing.** A section that is unlocked shows its records; it does not
 announce that it is unlocked or count down the idle window. The gate's status
@@ -60,6 +61,14 @@ just given. The two keys stay independent: neither can be derived from the
 other, and the record key lives only as long as the unlocked session does. An
 authenticator that evaluates only one salt returns nothing for the second, and
 each section asks for itself exactly as it did before.
+
+A session opened that way reports itself as **borrowed** (`vault.borrowed()`),
+and a gate over a borrowed session offers no controls at all. **Lock now** there
+would close a session the reader never opened from this panel, and the next
+arrival would ask for the passkey they had already given — the very prompt this
+removes. Recovery belongs to the same lock: the phone's own **Recover access**
+is the way back, and the code itself stays available in the rewards wallet. In
+the extension nothing is borrowed, so both controls stay where they were.
 
 **The check names the passkey that answered last.** A request that names no
 credential leaves the browser to ask which passkey to use, and that chooser is

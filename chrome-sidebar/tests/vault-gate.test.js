@@ -181,3 +181,18 @@ test('a section arriving at an already-open vault shows itself instead of asking
   assert.equal(h.document.getElementById('adopted-vault-status').textContent,'');
   gate.stop();h.restore();
 });
+
+test('a borrowed session offers no lock of its own',async()=>{
+  // On the phone the app's lock takes the passkey and hands the record key over.
+  // Lock now here would close a session that lock opened, so the next arrival
+  // would ask for the passkey the reader has already given — and recovery
+  // belongs to that lock too. Neither control applies, so neither appears.
+  const h=harness();
+  const vault={idleMs:900000,available:()=>true,unlocked:()=>true,borrowed:()=>true,touch(){},lock(){},
+    async key(){return 'key';},async unlockWithRecoveryCode(){},recoveryCode:()=>'EV1'};
+  const gate=mountVaultGate(h.document.querySelector('main'),{id:'borrowed-vault',title:'Finance',vault});
+  await settle(()=>true,50);
+  assert.equal(h.document.getElementById('borrowed-vault-actions').textContent,'');
+  assert.equal(gate.content.hidden,false);
+  gate.stop();h.restore();
+});

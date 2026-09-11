@@ -147,8 +147,8 @@ export function secretVault({
   credentialStore = vaultCredentialStore()
 } = {}) {
   const clock = now || Date.now;
-  let key = null, raw = null, pending = null, stamp = 0;
-  const session = idleSession({now, onLock: reason => { key = null; if (raw) { raw.fill(0); raw = null; } stamp = 0; store?.clear(); onLock(reason); }});
+  let key = null, raw = null, pending = null, stamp = 0, borrowed = false;
+  const session = idleSession({now, onLock: reason => { key = null; if (raw) { raw.fill(0); raw = null; } stamp = 0; borrowed = false; store?.clear(); onLock(reason); }});
   // A remembered credential is named directly, and named as a passkey held on
   // this device, so the browser goes straight to the biometric check. With none
   // remembered the request stays discoverable: the passkey is synced, so any
@@ -190,9 +190,10 @@ export function secretVault({
       throw error;
     }
   }
-  async function adopt(next, {at = clock(), persist = true} = {}) {
+  async function adopt(next, {at = clock(), persist = true, lent = false} = {}) {
     if (raw) raw.fill(0);
     raw = next;
+    borrowed = lent;
     key = await keyFrom(raw);
     session.start(at);
     stamp = at;
@@ -228,6 +229,11 @@ export function secretVault({
     available: () => !!(globalThis.isSecureContext && globalThis.PublicKeyCredential && credentials?.get),
     // True while the key is held and the session has not gone idle.
     unlocked: () => session.check() && !!key,
+    // True when this session was opened by the host's own lock rather than by a
+    // check of its own. A section then has no lock of its own to offer: locking
+    // it would ask for a passkey the host has already taken, and the host's lock
+    // is what closes it.
+    borrowed: () => session.check() && !!key && borrowed,
     touch() { session.touch(); if (key && clock() - stamp >= REFRESH_MS) { stamp = clock(); store?.write({key: encode(raw), at: stamp}); } },
     lock: () => session.lock(),
     // Returns the live key, prompting for the passkey only when the session is
@@ -258,7 +264,7 @@ export function secretVault({
     async unlockWithPasskeySeed(seed) {
       const material = seed instanceof Uint8Array ? seed : new Uint8Array(seed);
       if (material.byteLength !== 32) throw Error('That passkey did not produce a key for these records.');
-      try { return await adopt(await stretch(material)); } finally { material.fill(0); }
+      try { return await adopt(await stretch(material), {lent: true}); } finally { material.fill(0); }
     },
     async unlockWithRecoveryCode(code) { await credentialStore?.clear(); return adopt(recoveryBytes(code)); },
     recoveryCode() {
