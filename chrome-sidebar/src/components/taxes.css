@@ -1,0 +1,8 @@
+.tax-filing{display:flex;flex-direction:column;gap:8px}
+.tax-connection{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.tax-destination-line{display:flex;flex-direction:column;gap:2px}
+.tax-destination-name{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tax-filed-row{display:flex;flex-direction:column;gap:2px}
+.tax-filed-row a{overflow-wrap:anywhere}
+.tax-filed-row .footnote{margin:0}
+.tax-filing .record-row{gap:2px}

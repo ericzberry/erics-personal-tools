@@ -8,12 +8,13 @@ import {cardsOffline} from './shared/cards-offline.js';
 import {mountFinance} from './shared/finance.js';
 import {financeOffline} from './shared/finance-offline.js';
 import {mountPersonal} from './shared/personal.js';
+import {mountTaxes} from './shared/taxes.js';
 import {personalOffline} from './shared/personal-offline.js';
 import {mountTravel} from './shared/travel.js';
 import {travelOffline} from './shared/travel-offline.js';
 import {offlineResource} from './shared/offline-resource.js';
 import {encryptedDeviceStore} from './shared/offline-storage.js';
-import {mobileCredentials, protectedStore, mobileRequest as cloudRequest} from './mobile-session.js';
+import {mobileCredentials, protectedStore, mobileRequest as cloudRequest, mobileUpload} from './mobile-session.js';
 import {mountLibrary} from './shared/data-library.js';
 import {mountRestaurants} from './restaurants.js';
 import {restaurantCache} from './restaurant-cache.js';
@@ -33,18 +34,22 @@ const credentials={
   async beforeDisconnect(){const token=await this.get();if(token&&(await cardStore.hasPending(token)||await rewardStore.hasPending(token)||await financeStore.hasPending(token)||await personalStore.hasPending(token)))throw Error('Sync or resolve pending changes before disconnecting.');},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token){await cardStore.disconnect(token);await rewardStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token){await cardStore.disconnect(token);await rewardStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,remote:cloudRequest});
 const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
 const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,onSettings:openSettings});
 const financeTool=mountFinance(document.getElementById('capability-finance'),{credentials,offline:financeStore,remote:cloudRequest,onSettings:openSettings});
 const personalTool=mountPersonal(document.getElementById('capability-personal'),{credentials,offline:personalStore,onSettings:openSettings});
+// Taxes keeps nothing on the device: a document is read here and goes straight
+// to Drive, so it has no offline store to disconnect - only a tool to clear.
+const taxTool=mountTaxes(document.getElementById('capability-taxes'),{credentials,remote:cloudRequest,upload:mobileUpload,
+  openExternal:url=>!!window.open(url,'_blank','noopener'),onSettings:openSettings});
 const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai',level:2,load:async()=>{
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
-async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();}}catch{aiLibrary.clear();}}
+async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
 const offline=travelOffline({includeNumbers:true,remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 mountTravel(document.getElementById('capability-travel'),{credentials,offline,showNumbers:true,request:offline.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
 const rankings=mountLibrary(document.getElementById('capability-rankings'),{kind:'rankings',load:async()=>({value:await (await fetch('/app/data/rankings-2026.json')).json()})});

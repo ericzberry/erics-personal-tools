@@ -20,6 +20,7 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | Cloudflare runtime, D1 lifecycle, or Worker release | [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md) |
 | AI calls or provider integrations | [model routing](tools-api/MODEL_ROUTING.md), [providers](tools-api/PROVIDERS.md) |
 | Gmail or restaurant workflows | [Gmail](docs/GMAIL.md) or [restaurants](chrome-sidebar/RESTAURANTS.md) |
+| Filing tax documents or Google Drive access | [docs/TAXES.md](docs/TAXES.md) |
 
 ## Keep the blueprint current
 

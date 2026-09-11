@@ -50,4 +50,19 @@ The extension migrates legacy device records only after acknowledgement and refr
 `POST /v1/ai-connections/<uuid>/restaurants` accepts `{search}` and uses the saved OpenAI key and central restaurant research policy. It requires live web-search sources, filters ungrounded restaurant/booking URLs, and returns an explicitly bounded shortlist. It never returns live reservation inventory from web snippets. The extension separately reads rendered booking pages, with `restaurant.availability` handling uncertain layouts through the existing generate endpoint. Research has a 120-second provider timeout; other requests retain their existing limits. See [reservation behavior and validation](../chrome-sidebar/RESTAURANTS.md).
 ## Travel wallet
 
+## Taxes and Google Drive
+
+`/v1/drive/*` files tax documents into the owner's Drive. Apply
+`npx wrangler d1 execute erics-personal-tools --remote --file drive-schema.sql`
+and set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` with `npx wrangler secret
+put`; without them the routes report that Drive is not configured rather than
+failing. The refresh token is encrypted with the same `SETTINGS_ENCRYPTION_KEY`
+and never leaves the Worker. `GET /v1/drive/callback` is deliberately outside
+the access-token check, because Google's redirect carries none; a single-use
+`state` this Worker issued stands in for it. `POST /v1/drive/plan` resolves a
+destination and returns a ticket, and `POST /v1/drive/upload` takes the file
+itself with that ticket — the one route whose body is not JSON, capped at 20 MB
+by its declared `Content-Length`. Consent, the scope and the one-time Google
+Cloud setup are in [docs/TAXES.md](../docs/TAXES.md).
+
 Apply `npx wrangler d1 execute erics-personal-tools --remote --file travel-schema.sql` before deploying the travel endpoints. `GET /v1/travel` returns only record metadata; authenticated `GET /v1/travel/:id` retrieves a number and notes. Authenticated `GET /v1/travel/snapshot` returns full records for encrypted offline synchronization. `PUT` and `DELETE` require the current revision (null for new records). Records use the existing AES-GCM encryption key with travel-specific authenticated context. The phone and extension use the same authenticated endpoints. Service-worker caching excludes all API responses.

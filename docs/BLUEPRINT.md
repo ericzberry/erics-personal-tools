@@ -40,6 +40,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `cards.html` | `src/cards-page.js` | Best card |
 | `finance.html` | `src/finance-page.js` | Finance ledger (passkey-gated); also mounts inside the side panel |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
+| `taxes.html` | `src/taxes-page.js` | Taxes: file a K-1 or 1099 into Google Drive |
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
 | `data.html` | `src/data-page.js` | Read-only player rankings reference data |
 
@@ -61,8 +62,8 @@ them) · `tokens.css` (design tokens) · `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
-`vault.*` (the shared lock screen), `restaurant-views.js`, `workspace.css`,
-`sidebar-launcher.js`.
+`vault.*` (the shared lock screen), `taxes.*`, `restaurant-views.js`,
+`workspace.css`, `sidebar-launcher.js`.
 See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 
 ### `src/` shared core (used by more than one host or feature)
@@ -71,8 +72,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   read; every entry needs an `icon`), `navigation.js`, `capability-links.js`.
 - **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),
   `offline-storage.js` (encrypted IndexedDB), `cloud-storage.js` (`CLOUD_URL`,
-  `cloudRequest`, `CONNECTION_KEY`), `travel-changes.js` (cross-window change
-  notification), `private-disconnect.js`.
+  `cloudRequest`, `cloudUpload` for a file too big to travel as JSON,
+  `CONNECTION_KEY`), `travel-changes.js` (cross-window change notification),
+  `private-disconnect.js`.
 - **Device-held secrets** — `secret-vault.js` (WebAuthn PRF key derivation,
   sealed envelopes, the recovery code, `sharedVault()` — one vault per host so a
   single passkey opens every protected section — and `vaultSessionStore()`,
@@ -85,8 +87,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
   `rewards-sync.js`, `finance-data.js`/`finance-offline.js`,
-  `personal-data.js`/`personal-offline.js`. The `*-data.js` modules own validation
-  and are also imported by the Worker.
+  `personal-data.js`/`personal-offline.js`, `tax-data.js` (no offline wrapper:
+  Taxes keeps nothing on the device). The `*-data.js` modules own validation and
+  are also imported by the Worker.
 - **Statement intake** — `statement-text.js` (turns a dropped file into text or
   a downscaled image, entirely on the device), `pdf-text.js` (the PDF text-layer
   extractor, with its own confidence reporting), `finance-page-read.js` (one
@@ -98,8 +101,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   already signed in to one. `context-panel.js` drives it from the tab it already
   watches, and a signed-in site opens Finance with its snapshot prompt.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
-  `finance.js`, `personal.js`, `data-library.js`, `restaurant-search.js`,
-  `reservation-*.js`.
+  `finance.js`, `personal.js`, `taxes.js`, `data-library.js`,
+  `restaurant-search.js`, `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
   `email-ai.js` (on-device), `email-cloud.js` (via Worker).
 - **Settings** — `settings.js` (the sidebar Settings screen: open, close, and
@@ -148,13 +151,17 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
   `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research}`,
   `/v1/rewards`, `/v1/cards[/…]`, `/v1/travel[/…]`, `/v1/finance[/…]`,
-  `/v1/personal[/…]`. The AI-connection family also serves `finance-intake`,
-  the one route allowed a request body over 64 KB because a statement image
-  travels inline.
+  `/v1/personal[/…]`, `/v1/drive/…`. The AI-connection family also serves
+  `finance-intake` and `tax-intake`, the routes allowed a request body over
+  64 KB because a statement or document image travels inline.
+  `/v1/drive/callback` is the one route outside the bearer check — Google's
+  redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
   `src/finance.js` and `src/personal.js` reuse it for `card_records`,
   `finance_records` and `personal_records`. `src/rewards.js`, `src/releases.js`,
-  `src/ai-settings.js`.
+  `src/ai-settings.js`. `src/drive.js` is not a record store: it holds the
+  owner's Google Drive connection and files tax documents through it, and
+  `src/taxes.js` is the reading that names one.
 - `src/providers.js` (provider adapters, including the text/image content parts
   every format renders in its own shape) and `src/model-policy.js` (the central
   task → model policy and priced catalogue, where `vision` marks a model that may
@@ -162,6 +169,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_records`), `personal-schema.sql` (`personal_records`),
+  `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of
@@ -230,4 +238,4 @@ node scripts/release.js
 release) · `docs/DESIGN.md`, `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`,
-`docs/PROTECTED_SECTIONS.md`, `chrome-sidebar/RESTAURANTS.md`.
+`docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `chrome-sidebar/RESTAURANTS.md`.

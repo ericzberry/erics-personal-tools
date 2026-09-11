@@ -27,6 +27,27 @@ export async function mobileRequest(value, path, {method = 'GET', value: body, t
   return result;
 }
 
+// A document goes up as itself rather than as JSON, for the same reason it does
+// on the desktop: base64 in a record body would not fit. Every guard the JSON
+// path has still applies - the frame must be unlocked before and after.
+export async function mobileUpload(value, path, {file, timeoutMs = 120000} = {}) {
+  assertMobileAccess();
+  if (!token || value !== token) throw Error('Unlock the mobile app first.');
+  if (!/^\/v1\//.test(path)) throw Error('Unknown mobile request.');
+  const response = await fetch(path, {
+    method: 'POST', headers: {Authorization: `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream'},
+    body: file, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(timeoutMs)
+  });
+  assertMobileAccess();
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw Object.assign(Error(response.status === 401 ? 'Your access token was rejected. Check your connection credentials.' : data.error || 'The upload did not complete. Try filing it again.'), {status: response.status});
+  }
+  const result = await response.json();
+  assertMobileAccess();
+  return result;
+}
+
 export function protectedStore(store) {
   return Object.fromEntries(['read','write','remove'].map(method => [method, async (...args) => {
     assertMobileAccess();
