@@ -175,6 +175,16 @@ gates every route, so nothing there is reachable without presenting it first. Ch
 `chrome-sidebar/src/finance-data.js`, which is the validator both this and the
 Worker answer to.
 
+## scripts/
+
+`release.js` — the whole release as one command, meant to be aliased. It refuses
+a checkout with uncommitted changes or with untracked files inside a directory
+the builds copy, pushes only when there is something to push (so an unreachable
+GitHub does not abort a release already on origin), runs the three test suites,
+builds and packages the extension, builds mobile, deploys the Worker, publishes
+both versions to D1, and then reads the release endpoint back to confirm.
+`--skip-tests`, `--repackage`, `--open`.
+
 ## Common tasks → where to start
 
 | Task | Start at |
@@ -200,6 +210,12 @@ npm --prefix chrome-sidebar run build && npm --prefix mobile-app run build
 ```
 
 `npm --prefix tools-api run deploy` (builds mobile first) · `node tools-api/scripts/publish-release.js`.
+
+A whole release, in the required order, is one command:
+
+```sh
+node scripts/release.js
+```
 
 ## Where the rules are
 
