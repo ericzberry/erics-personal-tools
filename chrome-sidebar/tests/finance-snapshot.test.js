@@ -186,3 +186,39 @@ test('a reading needs a connection, and a bad amount is reported without losing 
   assert.match(document.getElementById('finance-snapshot-body').textContent,/Individual Brokerage/,'the rows stay put to be corrected');
   tool.stop();restore();
 });
+
+// Nothing about the snapshot flow is one broker's: a second site brings its own
+// label, its own institution, and its own default for an account the reading
+// could not place.
+const CHASE={id:'chase',label:'Chase',institution:'Chase',kind:'bank'};
+test('a second account site reads under its own name and its own default kind',async()=>{
+  const {document,restore}=setup();
+  let sent=null;
+  const {tool,writes}=financeHost(document,{
+    reading:{updates:[
+      {name:'Total Checking',institution:'',owner:'',kind:'other-asset',currency:'USD',value:8420.11,asOf:'2026-09-11',confidence:'high',reason:'Available balance.'},
+      {name:'JPM Self-Directed',institution:'J.P. Morgan',owner:'',kind:'brokerage',currency:'USD',value:51200,asOf:'2026-09-11',confidence:'high',reason:'Account value.'}
+    ],unread:''},
+    readPage:async()=>({text:'Total Checking  |  $8,420.11',host:'secure.chase.com',title:'Chase Online',trimmed:0,tables:1}),
+    onIntake:value=>{sent=value;}
+  });
+  await ready(document);
+  tool.site(CHASE);
+  const panel=()=>document.getElementById('finance-snapshot-body');
+  assert.match(panel().textContent,/Chase/);
+  document.getElementById('finance-connection').value='connection-1';
+  panel().querySelector('button').click();
+  await settle(()=>panel().textContent.includes('Total Checking'));
+  assert.equal(sent.institution,'Chase','the site names the institution the page belongs to');
+  assert.equal(sent.live,true);
+
+  panel().querySelector('button').click();
+  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 snapshots.'));
+  const [checking,brokerage]=writes;
+  assert.equal(checking.kind,'bank','an account the reading could not place takes the site’s own kind');
+  assert.equal(checking.institution,'Chase','a page that names no institution is filed under the site’s');
+  assert.match(checking.history,/Chase page/,'the snapshot says which site the figure came from');
+  assert.equal(brokerage.kind,'brokerage','a kind the reading did state is kept');
+  assert.equal(brokerage.institution,'J.P. Morgan','and so is an institution the page names for itself');
+  tool.stop();restore();
+});

@@ -453,3 +453,41 @@ uses, which is what had been hanging it. Reviewed in a new shared rewards
 preview at 380px and 280px against synthetic offers. The reader itself was run
 against the live `msreserved.com` from an offer page, reading all 136 offers;
 the end-to-end save was not exercised against a signed-in session.
+
+## Chase joins the account pages that can be read (0.6.89)
+
+Chase is now one of the sites the sidebar recognizes beside it, on the same
+terms as E*TRADE: signed in to chase.com, Finance opens with **Store account
+snapshots**, and one press reads the accounts on screen into one row each.
+jpmorganonline.com signs in through the same host, so J.P. Morgan accounts
+arrive with the banking and card ones. An account the reading cannot place is
+filed as a bank account rather than a brokerage, and a page that names no
+institution is filed under Chase — while an account the page names for itself,
+such as a J.P. Morgan brokerage, keeps that name.
+
+Recognizing it took two corrections to how a signed-in page is told from a
+log-on form. Chase serves both from the same `/web/auth/` path and puts its
+log-on form inside a frame, so the question is now put to every frame of the
+page rather than the top one alone: a password field in a frame is still a
+password field. And because that frame arrives partway through the load, a
+matching path only counts once the page has finished loading — a half-built
+shell would otherwise read as the application it is about to refuse to become.
+A rendered sign-out control still counts the moment it appears, since no log-on
+page carries one. Only the top frame's path and loading state describe the tab;
+a frame's own path never stands for it.
+
+What the page hands back is unchanged — a path, a loading state and two yes/no
+answers, no page text — and so is everything after it: the extension still
+never navigates, never signs in, never opens a tab, and reads only the page
+already in front of the owner, only when asked.
+
+Validation: 286 extension, 32 mobile and 65 API tests pass, including new
+coverage for Chase host matching, a still-loading page that must not be read as
+signed in by its path, a log-on frame under the application's own path, the top
+frame being found by its id rather than its position, and a second site carrying
+its own label, institution and default kind through a save. The snapshot panel
+was reviewed at 380px and 280px in the passkey-gate harness, which now shows one
+open state per registered site; the Chase reading was driven through Store,
+Edit and Save against synthetic figures. Detection was verified against the real
+signed-out chase.com and secure.chase.com — including the frame timing that
+motivated the loading rule — but not against a signed-in Chase session.

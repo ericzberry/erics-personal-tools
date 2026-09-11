@@ -157,16 +157,20 @@ updates the owner reviews before anything is saved.
   marked `vision` in the catalog; a connection with no such model is refused
   rather than sent something it cannot read.
 - **Store account snapshots.** The sidebar recognizes the account sites in
-  `account-sites.js` from the tab beside it, and asks that page three things —
-  its path, whether a password field is on screen, and whether a sign-out
-  control is — to tell a signed-in session from a log-on form. No page text
-  crosses back to answer that, and a password field on screen settles it as
-  signed out. On a signed-in site the sidebar opens Finance and offers one
-  action. Pressing it takes the same single page snapshot as above and reads it
-  as a live page: one figure per account, using each account's own total, and a
-  balance the page shows without a date of its own is current rather than
-  dropped. What comes back is one row per account, matched to a record on the
-  device, with **Edit** to correct any amount before **Save** writes them.
+  `account-sites.js` from the tab beside it, and asks every frame of that page
+  four things — its path, whether it has finished loading, whether a password
+  field is on screen, and whether a sign-out control is — to tell a signed-in
+  session from a log-on form. No page text crosses back to answer that, and a
+  password field on screen settles it as signed out. Every frame is asked
+  because Chase serves its log-on form inside one, under the same path its
+  signed-in application uses; for the same reason a path only counts once the
+  page has finished loading, while a rendered sign-out control counts at once.
+  On a signed-in site the sidebar opens Finance and offers one action. Pressing
+  it takes the same single page snapshot as above and reads it as a live page:
+  one figure per account, using each account's own total, and a balance the page
+  shows without a date of its own is current rather than dropped. What comes
+  back is one row per account, matched to a record on the device, with **Edit**
+  to correct any amount before **Save** writes them.
 - **Paste text.** As before.
 
 What is not sent matters as much. Saved records never leave the device, so the

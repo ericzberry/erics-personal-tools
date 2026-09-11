@@ -32,7 +32,15 @@ const vault=({answer='open'}={})=>{
     recoveryCode:()=>'EV1-SYNTHETIC0000-SYNTHETIC0000-SYNTHETIC0000-0000'};
 };
 const root=document.getElementById('gate-states');
-for(const [label,answer] of [['Waiting for the passkey sheet','wait'],['Sheet dismissed','dismiss'],['Open','open']]){
+// The open state is shown once per registered account site, so a site added to
+// the registry brings its own snapshot prompt to this page to be reviewed
+// rather than sitting behind whichever one happens to be listed first.
+const states=[
+  ['Waiting for the passkey sheet','wait',null],
+  ['Sheet dismissed','dismiss',null],
+  ...ACCOUNT_SITES.map(site=>[`Open · beside a signed-in ${site.label} page`,'open',site])
+];
+for(const [label,answer,site] of states){
   const heading=document.createElement('h2');
   heading.textContent=`Synthetic state · ${label}`;
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:16px 0 8px;color:#666';
@@ -45,7 +53,7 @@ for(const [label,answer] of [['Waiting for the passkey sheet','wait'],['Sheet di
     remote:async(token,path)=>path.endsWith('/finance-intake')?reading:({connections:[{id:'c1',name:'Synthetic',provider:'openai',hasApiKey:true}]})});
   // The open state also stands in for arriving at Finance because the tab beside
   // the panel is an account site the owner is already signed in to.
-  if(answer==='open')tool.site(ACCOUNT_SITES[0]);
+  if(site)tool.site(site);
   // The pane a preview runs in reports itself hidden, which is exactly when the
   // gate declines to raise a sheet, so each state is driven from its button.
   host.querySelector('.vault-gate button')?.click();

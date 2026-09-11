@@ -99,9 +99,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
   `account-sites.js` is the sidebar's alone: the registry of account sites worth
-  recognizing (E*TRADE) plus the in-page probe that says whether the owner is
-  already signed in to one. `context-panel.js` drives it from the tab it already
-  watches, and a signed-in site opens Finance with its snapshot prompt.
+  recognizing (E*TRADE, Chase) plus the in-page probe that says whether the
+  owner is already signed in to one. `context-panel.js` drives it from the tab
+  it already watches, and a signed-in site opens Finance with its snapshot
+  prompt.
   `reward-programs.js` is the counterpart for reward programs (MS Reserved): the
   in-page reader that lifts the published offer catalogue off the program's own
   pages, and the watcher `background.js` registers, so a visit updates the
