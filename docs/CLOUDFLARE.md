@@ -87,6 +87,21 @@ Follow the release requirements in [AGENTS.md](../AGENTS.md). Release from a tes
 
 The service is [erics-tools-api.ezberry.workers.dev](https://erics-tools-api.ezberry.workers.dev); the mobile entry point is [/app/](https://erics-tools-api.ezberry.workers.dev/app/). A push, deployment, D1 publication, delivered extension directory, and installed client version are separate outcomes. Chrome may still need Reload, and an open mobile client may retain its older service worker. State any live or device verification that could not be completed.
 
+## The Worker's own hostname
+
+The Worker answers on `tools.ezberry.net` as well as its `workers.dev` host. Both are served at once, deliberately: `workers_dev` stays `true`, so an extension or phone app still on an older version keeps reaching the host it was built with. There is no flag day and no version that must be installed by a deadline.
+
+`CLOUD_URL` in [`chrome-sidebar/src/cloud-storage.js`](../chrome-sidebar/src/cloud-storage.js) is the single place a client's host is decided; `scripts/release.js` reads the same constant, so a release can never confirm a host the apps no longer call. Changing it is an app change like any other and follows the release rules above.
+
+Moving the clients to a new host is two releases, in this order, never one:
+
+1. **Serve it.** Add the hostname to `routes` in the ignored `wrangler.jsonc` as a `custom_domain` (the checked-in template shows the shape), then deploy. Cloudflare creates the DNS record and the certificate itself — add nothing to the zone by hand, and delete any imported placeholder record left over from the zone's previous DNS. Confirm `/health` answers on the new hostname before going further.
+2. **Point at it.** Only then change `CLOUD_URL`, rebuild both apps, package, release and publish. A client that has not updated is still served by `workers.dev`.
+
+The zone must live in the same Cloudflare account as the Worker, or the custom domain cannot be claimed. `/` redirects to `/app/`, so the bare hostname opens the phone app rather than returning the `401` that every other unrecognized path gets.
+
+Hosts also reach Google's OAuth redirect. `src/drive.js` derives the redirect URI from the origin the request arrived on, so both hosts work as long as both are registered in the Google OAuth client — see [TAXES.md](TAXES.md).
+
 These documentation instructions do not themselves require a deployment or release publication.
 
 ## Resource use

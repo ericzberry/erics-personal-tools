@@ -9,7 +9,9 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 const root=new URL('../',import.meta.url);
 const cwd=fileURLToPath(root);
-const API='https://erics-tools-api.ezberry.workers.dev';
+// The clients' own constant, so a move of the API is one edit in one file and
+// the release cannot end up confirming a host the apps no longer call.
+const {CLOUD_URL:API}=await import(new URL('chrome-sidebar/src/cloud-storage.js',root));
 const flags=new Set(process.argv.slice(2));
 const take=name=>flags.delete(name);
 const open=take('--open'),skipTests=take('--skip-tests'),repackage=take('--repackage');

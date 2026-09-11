@@ -60,7 +60,9 @@ async function readValue(request, limit = MAX_BYTES) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === '/app') return Response.redirect(`${url.origin}/app/`, 308);
+    // The bare hostname is the address a person types; send it to the app
+    // rather than answering the 401 that every other unknown path gets.
+    if (url.pathname === '/' || url.pathname === '/app') return Response.redirect(`${url.origin}/app/`, 308);
     if (url.pathname.startsWith('/app/')) {
       if (!['GET', 'HEAD'].includes(request.method)) return json({error: 'Method not allowed.'}, 405);
       // Serve the frame without the host's .html canonical redirect so its

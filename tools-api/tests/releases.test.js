@@ -16,6 +16,11 @@ test('public app assets retain their body, security headers and API authorizatio
  const page=await worker.fetch(new Request('https://example.com/app/'),env);assert.match(await page.text(),/Eric’s Tools/);assert.match(page.headers.get('Content-Security-Policy'),/frame-ancestors 'none'/);
  const frame=await worker.fetch(new Request('https://example.com/app/unlocked.html'),env);assert.match(frame.headers.get('Content-Security-Policy'),/frame-ancestors 'self'/);assert.match(frame.headers.get('Content-Security-Policy'),/form-action 'none'/);
  assert.equal((await worker.fetch(new Request('https://example.com/app'),env)).status,308);
+ // On its own hostname the bare address is the one a person types, so it opens
+ // the app instead of answering the 401 every other unknown path gets.
+ const bare=await worker.fetch(new Request('https://example.com/'),env);
+ assert.equal(bare.status,308);
+ assert.equal(bare.headers.get('Location'),'https://example.com/app/');
  assert.equal((await worker.fetch(new Request('https://example.com/v1/ai-connections'),env)).status,401);
 });
 

@@ -59,7 +59,9 @@ replace. There is no delete path.
 
 `GET /v1/drive/callback` is the one route outside the bearer check, because
 Google's redirect arrives without one. A single-use `state` this Worker issued,
-expiring in fifteen minutes, stands in for it.
+expiring in fifteen minutes, stands in for it. The `state` records the redirect
+URI it was issued against, so a consent begun on one hostname is completed on
+that same hostname.
 
 ### One-time setup (owner)
 
@@ -73,8 +75,17 @@ The Worker reports "Google Drive is not configured" until these exist.
    user, and **set the publishing status to In production**: an app left in
    *Testing* has its refresh token expired by Google every seven days. The
    unverified-app warning at consent is expected; there is one user.
-3. Create an **OAuth client ID** of type **Web application** with the redirect
-   URI `https://erics-tools-api.ezberry.workers.dev/v1/drive/callback`.
+3. Create an **OAuth client ID** of type **Web application**. Register **both**
+   of the Worker's hostnames as authorized redirect URIs:
+
+   - `https://tools.ezberry.net/v1/drive/callback`
+   - `https://erics-tools-api.ezberry.workers.dev/v1/drive/callback`
+
+   `src/drive.js` derives the redirect URI from the origin the request arrived
+   on, so a client still calling the `workers.dev` host consents against that
+   host and one on `tools.ezberry.net` consents against that one. Registering
+   both means moving hosts never touches the OAuth client — see
+   [CLOUDFLARE.md](CLOUDFLARE.md).
 4. From the repository root:
 
 ```sh

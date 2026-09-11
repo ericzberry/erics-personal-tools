@@ -3,6 +3,14 @@
   "main": "src/index.js",
   "compatibility_date": "2026-09-08",
   "workers_dev": true,
+  // The Worker's own hostname. The zone must be in the same Cloudflare account
+  // as the Worker; Cloudflare creates the DNS record and the certificate, so
+  // nothing is added to the zone by hand. `workers_dev` stays true beside it on
+  // purpose: an extension or phone app still on an older version keeps talking
+  // to the workers.dev host until it updates, so moving hosts needs no flag day.
+  "routes": [
+    {"pattern": "tools.ezberry.net", "custom_domain": true}
+  ],
   "d1_databases": [
     {
       "binding": "DB",
