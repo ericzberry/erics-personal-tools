@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
+import {readFileSync} from 'node:fs';
 import {mountApp} from '../src/components/views.js';
 import {selectTool} from '../src/navigation.js';
 import {capabilities} from '../src/capabilities.js';
@@ -101,4 +102,32 @@ test('reading the open page is offered only where there is a page beside the too
   assert.equal(asked,1,'the page is read once, and only when asked');
   assert.match(document.getElementById('finance-attachment').textContent,/example.invalid/);
   sidebar.stop();restore();
+});
+
+// A tool that mounts inside the side panel brings its markup but not its
+// stylesheet links: those belong to the page. Finance's unlocked gate leaves an
+// empty live region behind, and without vault.css that empty line painted a
+// notice bar across the top of the panel. Whatever a tool's own page needs to
+// render, the panel that also mounts it needs too.
+function stylesheets(page){
+  const seen=new Set();
+  const visit=(file,base)=>{
+    const path=new URL(file,base);
+    const name=path.pathname.split('/').pop();
+    if(seen.has(name))return;
+    seen.add(name);
+    const source=readFileSync(path,'utf8');
+    for(const [,imported] of source.matchAll(/@import\s+url\(['"]([^'"]+)['"]\)/g))visit(imported,path);
+  };
+  const markup=readFileSync(new URL(`../${page}`,import.meta.url),'utf8');
+  for(const [,href] of markup.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g))visit(href,new URL('../x',import.meta.url));
+  return seen;
+}
+test('the side panel loads the styles of every tool it mounts in place',()=>{
+  const panel=stylesheets('sidepanel.html');
+  // capability-links.js mounts these three inside the panel rather than opening
+  // their pages; capabilities.js keeps the rest as links to their own tabs.
+  for(const page of ['finance.html','travel.html','rewards.html'])
+    for(const sheet of stylesheets(page))
+      assert.ok(panel.has(sheet),`sidepanel.html is missing ${sheet}, which ${page} loads`);
 });
