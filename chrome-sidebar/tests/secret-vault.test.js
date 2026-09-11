@@ -52,6 +52,10 @@ test('one passkey derives the same key on every device, and an envelope stays bo
   await assert.rejects(async()=>openSecret(await other.vault.key(),'entry-1',sealed),/cannot open this protected value/);
 });
 
+test('the idle window is an hour',()=>{
+  assert.equal(IDLE_MS,60*60*1000);
+});
+
 test('the passkey is requested once, then not again until the idle window passes',async()=>{
   const f=fixture();
   await f.vault.key();

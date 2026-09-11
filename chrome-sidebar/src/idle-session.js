@@ -1,7 +1,7 @@
 // Canonical inactivity gate, shared by the mobile app lock and the sidebar's
 // protected-secret vault. A backwards clock is treated as expiry, never as
 // extra time.
-export const IDLE_MS = 15 * 60 * 1000;
+export const IDLE_MS = 60 * 60 * 1000;
 export function idleSession({now = Date.now, onLock = () => {}, idleMs = IDLE_MS} = {}) {
   let active = false, last = 0;
   return {

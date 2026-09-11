@@ -80,7 +80,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   single passkey opens every protected section — and `vaultSessionStore()`,
   which keeps the unlocked session in `chrome.storage.session` so it survives a
   page and covers every extension tab), `idle-session.js` (the canonical
-  15-minute inactivity gate, used by the mobile app lock and the vault),
+  one-hour inactivity gate, used by the mobile app lock and the vault),
   `auto-unlock.js` (one unlock attempt per arrival, shared by the mobile app
   lock and the gate), and `vault-gate.js` (the whole-section lock screen used by
   Finance and Personal information, which asks for the passkey on arrival).

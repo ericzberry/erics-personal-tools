@@ -56,7 +56,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const panel=document.createElement('section'); panel.setAttribute('aria-label','Synthetic test controls'); panel.style.cssText='margin:24px;padding:16px;border:1px dashed #777';
   const title=document.createElement('h2');title.textContent='Synthetic test controls';panel.append(title);
   for(const [label,action] of [
-    ['Simulate 15 minutes idle',()=>{offset+=900001;for(const f of document.querySelectorAll('iframe'))f.contentWindow.postMessage({type:'fixture-idle',ms:900001},location.origin);}],
+    ['Simulate an hour idle',()=>{offset+=3600001;for(const f of document.querySelectorAll('iframe'))f.contentWindow.postMessage({type:'fixture-idle',ms:3600001},location.origin);}],
     ['Cancel next passkey',()=>{canceled=true;}],
     ['Disable passkey encryption',()=>{unsupported=true;}],
     ['Go offline',()=>{localStorage.setItem('fixture-offline','yes');window.dispatchEvent(new Event('offline'));for(const f of document.querySelectorAll('iframe'))f.contentWindow.dispatchEvent(new Event('offline'));}],

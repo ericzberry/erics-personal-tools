@@ -41,7 +41,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const panel=document.createElement('section'); panel.setAttribute('aria-label','Synthetic test controls'); panel.style.cssText='margin:24px;padding:16px;border:1px dashed #777';
   const title=document.createElement('h2');title.textContent='Synthetic test controls';panel.append(title);
   for(const [label,action] of [
-    ['Simulate 15 minutes idle',()=>{offset+=900001;}],
+    ['Simulate an hour idle',()=>{offset+=3600001;}],
     ['Cancel next passkey',()=>{canceled=true;}],
     ['Disable passkey encryption',()=>{unsupported=true;}],
     ['Go offline',()=>{localStorage.setItem('fixture-offline','yes');window.dispatchEvent(new Event('offline'));}],

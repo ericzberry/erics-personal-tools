@@ -454,6 +454,25 @@ preview at 380px and 280px against synthetic offers. The reader itself was run
 against the live `msreserved.com` from an offer page, reading all 136 offers;
 the end-to-end save was not exercised against a signed-in session.
 
+## An unlock lasts an hour (0.6.91 / mobile 0.1.50)
+
+The inactivity window is an hour rather than fifteen minutes. One passkey now
+covers a working session instead of expiring in the middle of one.
+
+There is one window, not several: `idle-session.js` holds it, and the phone's
+lock, the sidebar's protected sections, and the wallet's card numbers all read
+it from there, so they still open and close together. Nothing else about the
+lock changed — a full restart starts locked, activity extends the window, a
+clock that moves backwards is treated as expiry rather than extra time, a
+restored session still expires when it was always going to, and **Lock now** is
+still immediate.
+
+Validation: 288 extension, 32 mobile and 65 API tests pass, including a new
+check that pins the window to an hour; the existing idle tests read the same
+constant and cover the longer window as they always did. Both builds pass. No
+interface changed: the window is never displayed or counted down anywhere, so
+there was nothing new to review on screen.
+
 ## Morgan Stanley accounts read into the snapshot (0.6.90)
 
 Morgan Stanley joins the sites the sidebar recognizes beside it. Signed in to

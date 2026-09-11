@@ -23,7 +23,7 @@ shared with the mobile app's own lock screen.
 
 The gate is built on `secret-vault.js`, the same WebAuthn PRF key that seals
 card numbers. One vault is shared per host (`sharedVault()`), so a single
-passkey prompt opens every protected section on the page and one 15-minute idle
+passkey prompt opens every protected section on the page and one hour-long idle
 window governs them together: activity in the ledger keeps the personal records
 open, and going idle closes both and drops anything already revealed. Locking is
 also explicit — **Lock now** is reachable while unlocked, except where the
