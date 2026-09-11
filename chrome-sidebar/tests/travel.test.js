@@ -129,3 +129,24 @@ test('records group by category in registry order, keeping retired categories an
   assert.deepEqual(layout(),[]);
   assert.equal(document.querySelector('#travel-list').textContent,'No matching records.');
 });
+
+test('a connection hosted on another screen reports its own work there',async()=>{
+  const {window,document}=parseHTML('<html><body><main></main><aside id="panel"></aside></body></html>');
+  globalThis.window=window;globalThis.document=document;
+  let token='synthetic-access-token-0123456789';
+  const credentials={get:async()=>token,set:async value=>{token=value;},remove:async()=>{token='';}};
+  const wallet=mountTravel(document.querySelector('main'),{
+    credentials,request:async()=>({records:[]}),connectionRoot:document.getElementById('panel')
+  });
+  await wallet.ready;
+  const $=id=>document.getElementById(`travel-${id}`);
+  // The wallet itself can be a hidden screen, so connection feedback belongs
+  // beside the connection rather than in the wallet's own status line.
+  assert.ok(document.getElementById('panel').contains($('connection-status')));
+  $('refresh').click();await tick();
+  assert.equal($('connection-status').textContent,'Records are up to date.');
+  assert.equal($('status').textContent,'');
+  $('disconnect').click();await tick();
+  assert.equal($('connection-status').textContent,'Disconnected from this device. Cloud records remain saved.');
+  assert.equal($('setup').hidden,false);assert.equal($('status').textContent,'');
+});
