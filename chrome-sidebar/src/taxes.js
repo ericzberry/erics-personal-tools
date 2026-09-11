@@ -218,7 +218,9 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   function render(){
     $('connection').replaceChildren(ConnectionPanel({connected:drive.connected,account:drive.account,
       consentUrl,onConnect:connect,onDisconnect:disconnect}));
-    for(const node of $('connection').querySelectorAll('button'))node.disabled=busy||!drive.configured;
+    // Connecting Drive goes through this device's cloud connection, so without
+    // one the button would only repeat what the status line already says.
+    for(const node of $('connection').querySelectorAll('button'))node.disabled=busy||!drive.configured||!activeToken;
     $('filed').replaceChildren(FiledList(filed.year||$('year').value,filed.files));
     // Only what applies: the type and the name describe a document, so they
     // appear once there is one. The year stays, because it also says which
