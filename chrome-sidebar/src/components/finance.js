@@ -1,7 +1,7 @@
 import * as UI from './ui.js';
 import {FINANCE_KINDS,LIQUIDITY} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
-const {Stack,Section,Heading,GroupTitle,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text}=UI;
+const {Stack,Section,GroupTitle,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle}=UI;
 
 export function money(value,currency='USD'){
   try{return new Intl.NumberFormat('en-US',{style:'currency',currency,maximumFractionDigits:Math.abs(value)>=1000?0:2}).format(value);}
@@ -12,7 +12,7 @@ export const Figure=({label,value,id,tone=''})=>Stack([Label(label,{className:'f
 export function FinanceView(){
   const kinds=FINANCE_KINDS.map(kind=>({text:`${kind.label}${kind.side==='liability'?' (liability)':''}`,value:kind.id}));
   return Stack([
-    Heading('Finance',1),
+    ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
     SettingsGroup({title:'Position',level:2,children:[
       Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
       Stack([],{id:'finance-totals',className:'finance-totals'}),
@@ -21,21 +21,19 @@ export function FinanceView(){
       Disclosure('Value over time',[Stack([],{id:'finance-trend'})],{id:'finance-trend-panel'})
     ]}),
     SettingsGroup({title:'Read an update',level:2,children:[
-      Note('Drop a statement, read the page you are logged into, or paste figures in by hand. Everything is pulled out on this device and shown below before it is read, and nothing is saved until you apply a draft. Your saved records are never sent.'),
       UI.UploadField({id:'finance-drop',inputId:'finance-file',statusId:'finance-file-status',
-        label:'Drop a statement',formats:'PDF, CSV, XLSX, or an image',accept:ACCEPTED.join(','),
+        label:'Drop a statement',formats:'PDF, CSV, XLSX or image',accept:ACCEPTED.join(','),
         status:'',resetId:'finance-file-clear',resetLabel:'Remove file'}),
       ActionGroup([Button('Read the open page',{id:'finance-page',variant:'secondary',size:'compact'})],{compact:true}),
-      Note('Reads the visible text of whatever tab you are looking at — useful for a balance behind a login. It never signs in, never opens a page, and never sends anything until you press Read this.',{className:'footnote'}),
       Stack([],{id:'finance-attachment',hidden:true}),
-      FormField({id:'finance-intake',label:'What changed?',kind:'textarea',rows:3}),
+      FormField({id:'finance-intake',label:'Notes',kind:'textarea',rows:3}),
       FormField({id:'finance-connection',label:'AI connection',kind:'select',options:[{text:'Choose a connection',value:''}]}),
       Note('',{id:'finance-ai-status',role:'status'}),
       ActionGroup([Button('Read this',{id:'finance-read',variant:'primary',size:'compact'}),Button('Clear',{id:'finance-intake-clear',variant:'secondary',size:'compact'})],{compact:true}),
       Notice('',{id:'finance-intake-status',role:'status'}),
       Stack([],{id:'finance-drafts'})
     ]}),
-    SettingsGroup({title:'Ledger',level:2,children:[
+    SettingsGroup({title:'Accounts & assets',level:2,children:[
       FormField({id:'finance-search',label:'Find a record',kind:'search',placeholder:'Name, institution, owner, tag…'}),
       Stack([],{id:'finance-list',className:'travel-list'})
     ]}),
@@ -48,7 +46,6 @@ export function FinanceView(){
         FormField({id:'finance-owner',label:'Owner (optional)',kind:'text',placeholder:'A person, trust, or entity'}),
         FormField({id:'finance-value',label:'Current value',kind:'text',placeholder:'0.00'}),
         FormField({id:'finance-asOf',label:'As of',kind:'date'}),
-        Note('Saving a value files it under that date. A date you already have is replaced, and a backdated correction is filed in history without changing today’s total.'),
         Disclosure('More detail',[
           FormField({id:'finance-currency',label:'Currency',kind:'text',placeholder:'USD'}),
           FormField({id:'finance-ownership',label:'Your ownership share (%)',kind:'text',placeholder:'100'}),
@@ -59,17 +56,12 @@ export function FinanceView(){
           FormField({id:'finance-tags',label:'Tags (optional)',kind:'text',placeholder:'Comma separated'}),
           FormField({id:'finance-notes',label:'Notes (optional)',kind:'textarea',rows:3}),
           UI.ProtectedField({id:'finance-secret',label:'Account details (optional)',
-            numberLabel:'Account or reference number',expiryLabel:'Short hint for the list (e.g. ends 4321)',
-            help:'Encrypted with your passkey before it leaves this device, so the cloud stores only unreadable text. The hint is stored readable — keep it short and non-identifying. Leave blank to keep any details already saved.'})
+            numberLabel:'Account or reference number',expiryLabel:'Short hint for the list (e.g. ends 4321)'})
         ],{id:'finance-advanced'}),
         Notice('',{id:'finance-form-status',role:'status'}),
         ActionGroup([Button('Save record',{id:'finance-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-cancel',variant:'secondary'})])
       ],{id:'finance-form',className:'form-stack'})
-    ],{id:'finance-editor'}),
-    SettingsGroup({title:'Cloud sync',level:2,children:[
-      Notice('Loading records…',{id:'finance-status'}),
-      ActionGroup([Button('Refresh records',{id:'finance-refresh',variant:'secondary',size:'compact'}),Button('Connection settings',{id:'finance-connect',variant:'secondary',size:'compact'})],{compact:true})
-    ]})
+    ],{id:'finance-editor'})
   ],{className:'finance-ledger'});
 }
 

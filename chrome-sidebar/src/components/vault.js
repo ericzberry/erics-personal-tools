@@ -2,7 +2,8 @@ import {Stack,Section,Heading,Note,Notice,Button,ActionGroup,FormField} from './
 // The lock screen for a capability whose whole contents are protected. While
 // locked it is the only thing rendered — record names are as revealing as
 // values in these sections — so it carries the page's heading. Once unlocked it
-// collapses to a single quiet line and hands the heading back to the tool.
+// says nothing about being open: it collapses to its controls and hands the
+// heading back to the tool.
 export function VaultGateView({id='vault',title='Locked',detail=''}={}){
   return Stack([
     Section([

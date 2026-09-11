@@ -107,7 +107,7 @@ export function PurchaseConditions(cards,purchase){
     const control=FormField({id:`cards-confirm-${card.id}-${index}`,label:`${card.name}: ${rule.condition}`,kind:'checkbox'});
     control.querySelector('input').setAttribute('data-confirm',`${card.id}:${index}`);return [control];
   }));
-  return fields.length?[Note('Confirm only the requirements that this purchase meets. The comparison updates when you check a box.'),...fields]:[];
+  return fields.length?[Note('Confirm only the requirements that this purchase meets.'),...fields]:[];
 }
 const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(value);
 const percent=value=>`${value.toFixed(2)}%`;
@@ -128,7 +128,7 @@ const near=(a,b)=>Math.abs(a-b)<0.000001;
 // Each row therefore names the reward program that applied and how far apart the
 // cards actually are.
 export function ComparisonResults(rows){
-  if(!rows.length)return [Note('Add a card with reviewed reward rates to compare. Conflicted or deleted cards are excluded.')];
+  if(!rows.length)return [Note('Add a card with reviewed reward rates to compare.')];
   const top=rows[0].dollars,tied=rows.filter(row=>near(row.dollars,top)).length>1,runnerUp=rows.find(row=>!near(row.dollars,top));
   const estimated=rows[0].estimated;
   const program=row=>row.matched

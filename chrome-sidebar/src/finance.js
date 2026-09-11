@@ -2,7 +2,7 @@ import {FinanceView,FinanceGroup,BreakdownList,TrendTable,DraftRow,Figure,money,
 import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue,Option} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
-import {readOpenAccountPage,MAX_PAGE_TEXT} from './finance-page-read.js';
+import {MAX_PAGE_TEXT} from './finance-page-read.js';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,valueHistory,parseFinanceUpdates,matchFinanceUpdates,kindLabel,FINANCE_KINDS,effectiveValue} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {sealSecret} from './secret-vault.js';
@@ -11,7 +11,10 @@ const extra=['currency','ownership','liquidity','rate','commitment','unfunded','
 const REVEAL_MS=60000;
 const today=()=>new Date().toISOString().slice(0,10);
 
-export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},onChanged=()=>{},vault,clipboard=globalThis.navigator?.clipboard}){
+// `readPage` is the host's ability to read the tab the owner is looking at.
+// The sidebar sits beside that tab and supplies it; a full tab and the phone
+// have no such page, so they pass nothing and the action never appears.
+export function mountFinance(root,{credentials,offline,remote,readPage=null,onSettings=()=>{},onChanged=()=>{},vault,clipboard=globalThis.navigator?.clipboard}){
   const gate=mountVaultGate(root,{
     id:'finance-vault',title:'Finance',
     ...(vault?{vault}:{}),
@@ -28,6 +31,11 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
   const status=(text,target='status')=>{$(target).textContent=text||'';};
   const action=(label,handler,variant='secondary')=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||!loaded});
+    button.addEventListener('click',handler);
+    return button;
+  };
+  const toolAction=(label,handler)=>{
+    const button=Button(label,{variant:'secondary',size:'compact',disabled:busy});
     button.addEventListener('click',handler);
     return button;
   };
@@ -151,10 +159,10 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
     renderAttachment();render();
     return result.confidence==='good'?'Check the text below, then read it.':'Check the text below carefully before reading it.';
   }
-  async function readPage(){
+  async function intakeFromPage(){
     await run(async()=>{
       status('Reading the open page…','intake-status');
-      const page=await readOpenAccountPage();
+      const page=await readPage();
       $('intake').value=page.text;
       attachment={kind:'text',label:`${page.host}`,
         detail:`Visible text from the open page · ${page.text.length.toLocaleString('en-US')} characters${page.tables?` · ${page.tables} table${page.tables===1?'':'s'}`:''}`,
@@ -242,12 +250,15 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
     renderPosition();
     for(const key of [...core,...extra])$(key).disabled=busy||!loaded;
     for(const key of ['number','expiry'])$(`secret-${key}`).disabled=busy||!loaded;
-    $('save').disabled=busy||!loaded;$('cancel').disabled=busy;$('refresh').disabled=busy;
+    $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
     $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     $('intake').disabled=busy||!loaded;
     $('drop').disabled=busy||!loaded;
-    $('page').disabled=busy||!loaded||!globalThis.chrome?.scripting;
-    $('page').hidden=!globalThis.chrome?.scripting;
+    $('page').disabled=busy||!loaded;
+    $('page').hidden=!readPage;
+    // Beside the title, only what applies: a loaded ledger can be refreshed, and
+    // one that never loaded needs the connection rather than a dead Refresh.
+    $('actions').replaceChildren(loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
   }
 
   async function run(operation,target='status'){
@@ -314,11 +325,9 @@ export function mountFinance(root,{credentials,offline,remote,onSettings=()=>{},
   }
 
   $('search').addEventListener('input',render);
-  $('refresh').addEventListener('click',refresh);
-  $('connect').addEventListener('click',onSettings);
   $('read').addEventListener('click',read);
   $('intake-clear').addEventListener('click',()=>{$('intake').value='';drafts=[];attachment=null;renderAttachment();renderDrafts();render();status('','intake-status');status('','file-status');});
-  $('page').addEventListener('click',readPage);
+  $('page').addEventListener('click',intakeFromPage);
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_BYTES});
   $('cancel').addEventListener('click',()=>{clearForm();$('editor').open=false;});
   $('kind').addEventListener('change',()=>{

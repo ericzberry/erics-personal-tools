@@ -54,8 +54,9 @@ export function mountVaultGate(root,{
     // While locked the gate is the page, so it carries the heading. Unlocked, it
     // steps aside and the tool's own heading leads.
     $('title').hidden=unlocked;
-    $('status').textContent=message||(unlocked
-      ?`Unlocked · closes after ${Math.round(vault.idleMs/60000)} minutes without activity`
+    // Being open is not news. Unlocked, the gate says nothing at all and simply
+    // shows the section; only a failed attempt still has something to report.
+    $('status').textContent=message||(unlocked?''
       :busy?'Waiting for your passkey…'
       :available?'Locked'
       :'Locked · This browser cannot use passkeys. Use your recovery code.');

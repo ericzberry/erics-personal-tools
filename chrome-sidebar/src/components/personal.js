@@ -1,16 +1,15 @@
 import * as UI from './ui.js';
 import {PERSONAL_CATEGORIES} from '../personal-data.js';
-const {Stack,Heading,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,GroupTitle,Section}=UI;
+const {Stack,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,GroupTitle,Section,ToolTitle}=UI;
 export function PersonalView(){
   return Stack([
-    Heading('Personal information',1),
+    ToolTitle('Personal information',{actionsId:'personal-actions',statusId:'personal-status'}),
     SettingsGroup({title:'Expiring soon',level:2,children:[Stack([],{id:'personal-expiring'})]}),
     SettingsGroup({title:'Your records',level:2,children:[
       FormField({id:'personal-search',label:'Find a record',kind:'search',placeholder:'Name, category, person…'}),
       Stack([],{id:'personal-list',className:'travel-list'})
     ]}),
     Disclosure('Add or edit a record',[
-      Note('The value and its notes are encrypted on this device before they are saved. Only the record name, category, person, hint and expiration are stored readable, so a record can be found without unlocking every value.'),
       Form([
         UI.Strong('New record',{id:'personal-editor-title'}),
         FormField({id:'personal-category',label:'Category',kind:'select',options:PERSONAL_CATEGORIES.map(text=>({text,value:text}))}),
@@ -25,10 +24,6 @@ export function PersonalView(){
         ActionGroup([Button('Save record',{id:'personal-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'personal-cancel',variant:'secondary'})])
       ],{id:'personal-form',className:'form-stack'})
     ],{id:'personal-editor'}),
-    SettingsGroup({title:'Cloud sync',level:2,children:[
-      Notice('Loading records…',{id:'personal-status'}),
-      ActionGroup([Button('Refresh records',{id:'personal-refresh',variant:'secondary',size:'compact'}),Button('Connection settings',{id:'personal-connect',variant:'secondary',size:'compact'})],{compact:true})
-    ]})
   ],{className:'personal-records'});
 }
 export function PersonalGroup(category,rows){

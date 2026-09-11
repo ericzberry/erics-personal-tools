@@ -42,6 +42,8 @@ test('the gate keeps its content out of the document tree’s visible state unti
   await settle(()=>changes.length>0);
   assert.equal(gate.content.hidden,false);
   assert.equal(h.document.getElementById('test-vault-title').hidden,true,'unlocked, the gate hands the heading back to the tool');
+  assert.equal(h.document.getElementById('test-vault-status').textContent,'','an open section shows itself rather than announcing that it is unlocked');
+  assert.equal(h.document.getElementById('test-vault-detail').hidden,true);
   assert.deepEqual(changes,[true]);
   gate.lock();
   assert.equal(gate.content.hidden,true);

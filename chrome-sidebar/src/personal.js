@@ -94,7 +94,10 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
     })));
     $('expiring').closest('section').hidden=!expiring.length;
     for(const key of [...fields,'value','notes'])$(key).disabled=busy||!loaded;
-    $('save').disabled=busy||!loaded;$('cancel').disabled=busy;$('refresh').disabled=busy;
+    $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
+    // Beside the title, only what applies: loaded records can be refreshed, and
+    // records that never loaded need the connection instead.
+    $('actions').replaceChildren(loaded?action('Refresh',refresh):action('Connection settings',onSettings,'secondary',{enabled:true}));
   }
   async function run(operation){
     if(busy)return false;
@@ -132,8 +135,6 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
     render();
   }
   $('search').addEventListener('input',render);
-  $('refresh').addEventListener('click',refresh);
-  $('connect').addEventListener('click',onSettings);
   $('cancel').addEventListener('click',()=>{clearForm();$('editor').open=false;});
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();

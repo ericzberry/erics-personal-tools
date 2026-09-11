@@ -46,6 +46,14 @@ export const Notice=(text='',props={})=>Text(text,{className:'notice',role:'stat
 // reads as a divider between groups rather than competing with record names.
 export const GroupTitle=(text,{className='',...props}={})=>element('h2',{text,...props,className:`group-title ${className}`.trim()});
 export const SectionTitle=(title,action,props={})=>Stack([Heading(title,props.level||2,{id:props.titleId}),action],{className:'section-title'});
+// A tool's own title line: the name, the whole-tool actions that currently
+// apply beside it, and a status line that collapses when there is nothing to
+// report. The controller fills the action group, so a tool that is connected
+// and idle shows a title and nothing else.
+export const ToolTitle=(title,{actionsId,statusId}={})=>Stack([
+  Stack([Heading(title,1),ActionGroup([],{id:actionsId,compact:true})],{className:'tool-title'}),
+  statusId?Notice('',{id:statusId}):null
+],{className:'tool-title-block'});
 export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>element('details',props,[titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),...children]);
 export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list}) {
   const caption=element('label',{for:id,id:kind==='select'?`${id}-label`:undefined,text:label,className:hiddenLabel?'sr-only':undefined});

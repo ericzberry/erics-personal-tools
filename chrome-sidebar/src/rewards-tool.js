@@ -22,6 +22,7 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
   const revealed=new Map();
   const status=text=>{$('rewards-status').textContent=text;};
   const action=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:busy||!loaded});b.addEventListener('click',fn);return b;};
+  const connectAction=()=>{const b=Button('Connection settings',{variant:'secondary',size:'compact',disabled:busy});b.addEventListener('click',onSettings);return b;};
   const vaultAction=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:vaultBusy});b.addEventListener('click',fn);return b;};
   function forget(){revealed.clear();clearTimeout(revealTimer);revealTimer=null;$('vault-code').replaceChildren();}
   function hold(){clearTimeout(revealTimer);revealTimer=setTimeout(()=>{forget();renderVault();render();},REVEAL_MS);}
@@ -57,13 +58,19 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
   function renderVault(){
     const open=vault.unlocked(),available=vault.available();
     vaultOpen=open;
-    $('vault-status').closest('section').hidden=!entries.some(e=>e.secret)&&!open;
+    // The shared vault can be unlocked from Finance or Personal without Rewards
+    // having a single card number of its own — that unlock is not this page's
+    // business, so Lock now / recovery controls only appear here when Rewards
+    // itself has something protected.
+    $('vault-status').closest('section').hidden=!entries.some(e=>e.secret);
     root.querySelector('.rewards-wallet').classList.toggle('vault-locked',!open);
-    $('vault-status').textContent=vaultMessage||(open
-      ?`Unlocked · Card numbers stay readable for ${Math.round(vault.idleMs/60000)} minutes of activity.`
+    // Open is the quiet state: no banner announcing it, just readable numbers
+    // and the controls that still apply. Only a failed attempt speaks up.
+    $('vault-status').textContent=vaultMessage||(open?''
       :available?'Locked · Your passkey is required to show a card number.'
       :'Locked · This browser cannot use passkeys. Unlock with your recovery code.');
-    $('vault-detail').textContent='Numbers are sealed with a key only your passkey can derive, so the cloud stores unreadable text. Keep your recovery code safe: without the passkey or that code, a saved number cannot be recovered.';
+    $('vault-detail').textContent=open?''
+      :'Numbers are sealed with a key only your passkey can derive, so the cloud stores unreadable text. Keep your recovery code safe: without the passkey or that code, a saved number cannot be recovered.';
     $('vault-actions').replaceChildren(...(open
       ?[vaultAction('Lock now',()=>{vault.lock();forget();vaultMessage='';renderVault();render();}),vaultAction('Show recovery code',showRecovery)]
       :[...(available?[vaultAction('Unlock',unlockVault)]:[]),vaultAction('Use recovery code',()=>{$('vault-recovery').hidden=false;$('vault-recovery-code').focus();})]));
@@ -131,6 +138,9 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
     for(const key of fields)$(`reward-${key}`).disabled=busy||!loaded;
     for(const key of ['number','expiry'])$(`reward-secret-${key}`).disabled=busy||!loaded||vaultBusy;
     $('reward-save').disabled=busy||!loaded;$('reward-cancel').disabled=busy;
+    // The wallet syncs on its own, so the title carries no Refresh. A wallet
+    // that never loaded is the one case with something to press.
+    $('rewards-connection').replaceChildren(...(loaded?[]:[connectAction()]));
   }
   async function run(operation){if(busy)return false;busy=true;const current=++generation;render();try{const token=await credentials.get();if(!token)throw Error('Open Settings to connect this device.');if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. This wallet is reloading for the new connection.');}activeToken=token;const result=await operation(token);if(current!==generation)return false;entries=result.records;loaded=true;syncFailed=false;status(result.syncMessage||'');return true;}catch(error){if(current!==generation)return false;syncFailed=true;status(error.message);$('reward-form-status').textContent=error.message;return false;}finally{busy=false;render();renderVault();}}
   async function save(entry,method='PUT'){
@@ -142,7 +152,6 @@ export function mountRewards(root,{credentials,offline,onSettings=()=>{},onChang
   async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…');await run(token=>offline.request(token,'/v1/rewards'));}
   function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';forget();vault.lock();clearForm();status('Open Settings to connect this device.');render();renderVault();}
   $('rewards-search').addEventListener('input',render);
-  $('rewards-connect').addEventListener('click',onSettings);
   $('reward-cancel').addEventListener('click',()=>{clearForm();$('reward-editor').open=false;});
   $('vault-recovery-cancel').addEventListener('click',()=>{$('vault-recovery-code').value='';$('vault-recovery').hidden=true;});
   $('vault-recovery-submit').addEventListener('click',()=>vaultRun(async()=>{

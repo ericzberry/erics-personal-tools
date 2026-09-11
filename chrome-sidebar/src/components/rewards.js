@@ -1,8 +1,8 @@
 import * as UI from './ui.js';
-const {Stack,Heading,Note,Notice,Button,ActionGroup,Disclosure}=UI;
+const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle}=UI;
 export function RewardsView(){
   const field=(key,label,kind='text',options,placeholder)=>UI.FormField({id:`reward-${key}`,label,kind,options,placeholder});
-  return Stack([Heading('Rewards & benefits',1),
+  return Stack([ToolTitle('Rewards & benefits',{actionsId:'rewards-connection',statusId:'rewards-status'}),
     UI.SettingsGroup({title:'Next actions',level:2,children:[Stack([],{id:'rewards-actions'})]}),
     UI.SettingsGroup({title:'Your wallet',level:2,children:[
       UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
@@ -35,7 +35,6 @@ export function RewardsView(){
         Notice('',{id:'reward-form-status'}),
         ActionGroup([Button('Save reward',{id:'reward-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'reward-cancel',variant:'secondary'})])
       ],{id:'reward-form',className:'form-stack'})
-    ],{id:'reward-editor'}),
-    UI.SettingsGroup({title:'Cloud sync',level:2,children:[Notice('Loading rewards…',{id:'rewards-status'}),ActionGroup([Button('Connection settings',{id:'rewards-connect',variant:'secondary',size:'compact'})],{compact:true})]})
+    ],{id:'reward-editor'})
   ],{className:'travel-wallet rewards-wallet'});
 }

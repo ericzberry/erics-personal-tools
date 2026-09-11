@@ -31,7 +31,11 @@ for(const [label,answer] of [['Waiting for the passkey sheet','wait'],['Sheet di
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:16px 0 8px;color:#666';
   const host=document.createElement('div');
   root.append(heading,host);
-  mountFinance(host,{vault:vault({answer}),credentials,offline,remote:async()=>({connections:[]})});
+  mountFinance(host,{vault:vault({answer}),credentials,offline,
+    // The open state stands in for the sidebar, the one host that sits beside a
+    // logged-in account page, so the page action can be reviewed too.
+    ...(answer==='open'?{readPage:async()=>({text:'Synthetic balances from the open page',host:'accounts.example',title:'',trimmed:0,tables:1})}:{}),
+    remote:async()=>({connections:[{id:'c1',name:'Synthetic',provider:'openai',hasApiKey:true}]})});
   // The pane a preview runs in reports itself hidden, which is exactly when the
   // gate declines to raise a sheet, so each state is driven from its button.
   host.querySelector('.vault-gate button')?.click();

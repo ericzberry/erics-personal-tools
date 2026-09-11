@@ -32,16 +32,17 @@ export function readAccountPage() {
 
 const EXTENSION = /^(chrome|edge|about|chrome-extension|moz-extension|devtools|view-source):/i;
 
-// Finds the page the owner is actually looking at. The Finance tool runs in its
-// own extension tab, so "the active tab" is this one; the wanted tab is the
-// active tab of the most recent ordinary window that is not an extension page.
+// Finds the page the owner is actually looking at. In the sidebar that is the
+// active tab of this window, sitting right beside the panel. Opened as a full
+// tab instead, the active tab is this tool itself, so the search falls through
+// to the active tab of another ordinary window.
+const readable=tab=>!!tab?.url&&!EXTENSION.test(tab.url)&&tab.id!==undefined;
 export async function activeAccountTab(api = globalThis.chrome) {
-  const candidates = await api.tabs.query({active: true, windowType: 'normal'});
-  const usable = candidates.filter(tab => tab.url && !EXTENSION.test(tab.url) && tab.id !== undefined);
-  if (!usable.length) throw Error('No ordinary web page is open. Open the account page you want read, leave it in front, then come back.');
-  const [current] = await api.tabs.query({active: true, currentWindow: true});
-  // Prefer a tab in another window over this one, then the most recent.
-  return usable.find(tab => tab.id !== current?.id) || usable[0];
+  const [beside] = await api.tabs.query({active: true, currentWindow: true});
+  if (readable(beside)) return beside;
+  const elsewhere = (await api.tabs.query({active: true, windowType: 'normal'})).filter(readable);
+  if (!elsewhere.length) throw Error('No ordinary web page is open. Open the account page you want read, leave it in front, then come back.');
+  return elsewhere[0];
 }
 
 export async function readOpenAccountPage(api = globalThis.chrome) {

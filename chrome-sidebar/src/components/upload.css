@@ -1,0 +1,22 @@
+/* Drop-or-browse upload surface. Shared by every tool that takes a file, so the
+   zone reads the same whether it sits in the sidebar, a full tab, or mobile.
+   The symbol, the label and the accepted formats form one compact card rather
+   than a stack of centred lines that grows taller than the file list below it. */
+.upload-panel{display:grid;gap:6px}
+.file-drop{
+  width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);
+  grid-template-areas:'symbol label' 'symbol formats';
+  column-gap:10px;row-gap:1px;align-items:center;text-align:left;
+  border:1px dashed var(--wallet-control-line,#aab6ad);border-radius:8px;
+  background:var(--sage,#f0f3eb);color:var(--forest);padding:10px 12px;cursor:pointer;font:inherit;
+}
+.file-drop .upload-symbol{grid-area:symbol;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#e1e8d9;font-size:15px;line-height:1}
+.file-drop strong{grid-area:label;font-size:13px;font-weight:600}
+.file-drop>span:last-child{grid-area:formats;font-size:11px;line-height:1.35;color:#65735f;overflow-wrap:anywhere}
+.file-drop:hover,.file-drop.dragging{background:#e5eddd;border-color:#678756}
+.file-drop.dragging{outline:2px solid #678756;outline-offset:2px}
+.file-drop[aria-busy=true]{opacity:.65;cursor:progress}
+.upload-status{margin:0;font-size:11px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.upload-status:empty{display:none}
+.upload-status[data-state=error]{color:#974c36}
+.upload-status[data-state=success]{color:#436c45}

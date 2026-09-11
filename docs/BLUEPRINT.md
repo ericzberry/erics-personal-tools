@@ -38,10 +38,15 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
 | `rewards.html` | `src/rewards.js` | Rewards & benefits |
 | `cards.html` | `src/cards-page.js` | Best card |
-| `finance.html` | `src/finance-page.js` | Finance ledger (passkey-gated) |
+| `finance.html` | `src/finance-page.js` | Finance ledger (passkey-gated); also mounts inside the side panel |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
 | `data.html` | `src/data-page.js` | Read-only player rankings reference data |
+
+Travel, Rewards and Finance are side-panel tools as well as tabs: they have no
+`href` in the capability registry, and `capability-links.js` mounts each into the
+panel on first use. Their `.html` pages above still stand on their own, so each
+controller mounts only when its own root element is present.
 
 Not page-mounted: `src/background.js` (service worker: settings bridge, draft
 state, release checks, launcher) and the content scripts
@@ -54,7 +59,7 @@ state, release checks, launcher) and the content scripts
 `ui.js` (primitives and reusable presentation) · `views.js` (screens composed from
 them) · `tokens.css` (design tokens) · `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
-every dropdown) · `file-drop.js` (all uploads) · plus per-feature component
+every dropdown) · `file-drop.js`/`upload.css` (all uploads) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
 `vault.*` (the shared lock screen), `restaurant-views.js`, `workspace.css`,
 `sidebar-launcher.js`.

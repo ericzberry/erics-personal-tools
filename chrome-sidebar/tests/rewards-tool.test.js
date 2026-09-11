@@ -97,8 +97,11 @@ test('showing a number needs the vault; the list masks it until then and re-mask
  await settle(()=>$('rewards-list').textContent.includes('4111 1111'));
  assert.equal(vault.prompts(),before+1,'revealing prompts the vault');
  assert.match($('rewards-list').textContent,/4111 1111 1111 1111 · exp 12\/28/);
+ assert.equal($('vault-status').textContent,'','an unlocked wallet reads its numbers rather than reporting that it is unlocked');
+ assert.equal($('vault-detail').textContent,'');
  [...h.document.querySelectorAll('#vault-actions button')].find(b=>b.textContent==='Lock now').click();
  assert.equal($('rewards-list').textContent.includes('4111 1111'),false,'locking re-masks the number');
+ assert.match($('vault-status').textContent,/passkey is required/,'locked, it says what is needed');
  tool.stop();h.restore();
 });
 
