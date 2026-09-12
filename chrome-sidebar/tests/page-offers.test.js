@@ -67,7 +67,12 @@ test('a reward program’s own site offers its offers, and Gmail and a draft off
   const [mail]=pageOffers({url:'https://mail.google.com/mail/u/0/#inbox'});
   assert.equal(mail.label,'Summarize or reply');
   assert.ok(mail.icon,'Gmail has no menu row, so the offer carries its own icon');
-  assert.equal(pageOffers({url:'https://fantasy.espn.com/football/draft'})[0]?.label,'Draft advice');
+  assert.equal(pageOffers({url:'https://fantasy.espn.com/football/draft?leagueId=1998678762'})[0]?.label,'Draft advice');
+  // A draft board is worth nothing between one draft and the next, and the room
+  // is the only thing that says a draft is on. The rest of a fantasy season is
+  // not a draft.
+  for(const url of ['https://fantasy.espn.com/football/team','https://fantasy.espn.com/football/league','https://fantasy.espn.com/'])
+    assert.deepEqual(pageOffers({url}),[],url);
 });
 
 test('what is already on screen is never offered',()=>{

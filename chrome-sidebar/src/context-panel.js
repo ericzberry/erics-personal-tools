@@ -46,7 +46,10 @@ async function refresh() {
     const site = gmail ? null : await detectAccountSite(tab);
     await announceAccountSite(site);
     strip?.update({url:tab?.url||'',site});
-    const tool = gmail ? 'gmail' : site ? 'finance' : url.hostname === 'fantasy.espn.com' ? 'football' : 'home';
+    // The draft board follows the draft room, not the whole of ESPN fantasy:
+    // outside a draft it is a tool for something that is not happening.
+    const draft = url.hostname === 'fantasy.espn.com' && /^\/football\/draft/i.test(url.pathname);
+    const tool = gmail ? 'gmail' : site ? 'finance' : draft ? 'football' : 'home';
     showTool(tool);
     if (activeTab !== tab?.id) {clearEmail();activeTab = tab?.id;}
     if (!gmail) {clearEmail();renderEmail();return;}

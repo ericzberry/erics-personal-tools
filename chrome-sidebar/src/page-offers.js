@@ -57,7 +57,11 @@ export const OFFER_SOURCES=[
     return program?`${program.label} offers`:null;
   }},
   {id:'gmail',capability:'gmail',viaTab:true,icon:MAIL_GLYPH,match:({page})=>page.hostname==='mail.google.com'?'Summarize or reply':null},
-  {id:'draft',capability:'football',viaTab:true,match:({page})=>page.hostname==='fantasy.espn.com'?'Draft advice':null}
+  // Only inside a draft room. Advice on a draft is worth nothing between one
+  // draft and the next, and the room itself is the one thing that says a draft
+  // is happening — so this offer leaves when the draft ends and comes back next
+  // August without a date in the code.
+  {id:'draft',capability:'football',viaTab:true,match:({page})=>page.hostname==='fantasy.espn.com'&&/^\/football\/draft/i.test(page.pathname)?'Draft advice':null}
 ];
 
 const entry=id=>capabilities.find(item=>item.id===id)||null;

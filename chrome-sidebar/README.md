@@ -672,3 +672,15 @@ under its header. The states were reviewed at 380px and 280px in the new
 `tests/page-strip-preview.html` harness, which renders the real header and strip
 against synthetic pages. Mobile has no tab beside it and so has no strip; it
 takes this version because it ships the two shared modules this change touched.
+
+## The draft board follows the draft, not the whole of ESPN (0.6.102)
+
+Draft advice is worth nothing between one draft and the next, so it is offered
+only inside a draft room — the same `/football/draft` pages the capture content
+script already runs on. The strip stops offering it the day a draft ends and
+offers it again next August with no date anywhere in the code, and Automatic
+mode no longer swaps the panel to a draft board for every other page of a
+fantasy season.
+
+Validation: 316 extension tests pass, including a draft room that offers advice
+and three ordinary fantasy pages that do not.
