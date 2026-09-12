@@ -25,6 +25,18 @@ export function openFinanceTool(){
 export const mountedFinanceTool=()=>finance;
 document.getElementById('navigate-finance')?.addEventListener('click',openFinanceTool);
 
+// Taxes opens in the panel beside the mail a document arrives in, so a K-1 can
+// go from the message straight into the drop zone without a tab in between.
+let taxes=null;
+export function openTaxesTool(){
+  const root=document.getElementById('taxes-tool');
+  if(!root)return null;
+  taxes??=import('./taxes-page.js').then(({mountExtensionTaxes})=>
+    mountExtensionTaxes(root,{onSettings:()=>document.getElementById('open-settings')?.click()}));
+  return taxes;
+}
+document.getElementById('navigate-taxes')?.addEventListener('click',openTaxesTool);
+
 // Standalone settings/data pages use the same data registry in the shared formatted picker.
 const {CAPABILITIES}=await import('./capabilities.js');
 const picker=document.getElementById('capability-picker');

@@ -44,6 +44,14 @@ its name is whatever you call it. `chrome-sidebar/src/tax-data.js` owns the
 types, the years, the naming and the validation, and both the app and the
 Worker answer to it.
 
+**It opens in the side panel**, beside the message a document arrives in, so a
+K-1 can be dragged out of an open mail message and onto the drop zone without a
+tab in between. An attachment dragged that way is not a file yet — the page
+hands over Chrome's `DownloadURL`, a type, a name and a URL — so
+`components/file-drop.js` fetches it with the session's cookies, because an
+attachment URL resolves only for the signed-in reader. A real file dropped from
+the desktop still takes the direct path and never touches the network.
+
 Documents up to 20 MB. Nothing is stored on the device or in D1 except the Drive
 connection itself — Drive is the record, so there is nothing here to keep
 offline.
@@ -133,7 +141,7 @@ first use. Two folders for the same year is reported rather than guessed at.
 | Types, years, naming, validation | `chrome-sidebar/src/tax-data.js` |
 | The tool, shared by both hosts | `chrome-sidebar/src/taxes.js` |
 | Its DOM | `chrome-sidebar/src/components/taxes.js` / `.css` |
-| Extension page | `chrome-sidebar/taxes.html` → `src/taxes-page.js` |
+| Extension page | `chrome-sidebar/taxes.html` → `src/taxes-page.js`; also mounted into the side panel by `capability-links.js` |
 | Mobile mounting | `mobile-app/public/app/capabilities.js` |
 | Drive access and the routes | `tools-api/src/drive.js`, `tools-api/drive-schema.sql` |
 | The reading | `tools-api/src/taxes.js` (`/v1/ai-connections/:id/tax-intake`) |

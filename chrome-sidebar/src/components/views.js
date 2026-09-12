@@ -51,7 +51,7 @@ export function SettingsView() {
   ]});
 }
 
-export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),Section([],{id:'finance-tool',className:'tool-page',hidden:true}),SettingsView());}
+export function mountApp(root) {root.replaceChildren(AppHeader({}),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),Section([],{id:'finance-tool',className:'tool-page',hidden:true}),Section([],{id:'taxes-tool',className:'tool-page',hidden:true}),SettingsView());}
 
 export function AISettingsView() {
   const field=UI.FormField;

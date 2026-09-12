@@ -46,9 +46,11 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
 | `data.html` | `src/data-page.js` | Read-only player rankings reference data |
 
-Travel, Rewards and Finance are side-panel tools as well as tabs: they have no
-`href` in the capability registry, and `capability-links.js` mounts each into the
-panel on first use. Their `.html` pages above still stand on their own, so each
+Travel, Rewards, Finance and Taxes are side-panel tools as well as tabs: they
+have no `href` in the sidebar's capability list, and `capability-links.js` mounts
+each into the panel on first use. The panel is the default home for a tool —
+it sits beside the page the work comes from, which is why a K-1 can be dragged
+out of an open mail message straight into Taxes. Their `.html` pages above still stand on their own, so each
 controller mounts only when its own root element is present.
 
 Not page-mounted: `src/background.js` (service worker: settings bridge, draft

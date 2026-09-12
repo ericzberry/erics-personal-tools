@@ -3,7 +3,7 @@ let currentTool='football',selection=AUTO_CAPABILITY.id,settingsOpen=false;
 const $=id=>document.getElementById(id);
 function render(){
   const active=selection===AUTO_CAPABILITY.id?currentTool:selection;
-  for(const key of ['football','finance','gmail','home','rewards','travel'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
+  for(const key of ['football','finance','gmail','home','rewards','taxes','travel'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
   $('settings-tool').hidden=!settingsOpen;
   $('current-function').textContent=settingsOpen?'Settings':selection===AUTO_CAPABILITY.id?AUTO_CAPABILITY.label:capabilities.find(item=>item.id===selection)?.label;
   $('open-settings').setAttribute('aria-expanded',String(settingsOpen));
