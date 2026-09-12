@@ -94,12 +94,17 @@ The Worker answers on `tools.ezberry.net` as well as its `workers.dev` host. Bot
 
 `CLOUD_URL` in [`chrome-sidebar/src/cloud-storage.js`](../chrome-sidebar/src/cloud-storage.js) is the single place a client's host is decided; `scripts/release.js` reads the same constant, so a release can never confirm a host the apps no longer call. Changing it is an app change like any other and follows the release rules above.
 
-Moving the clients to a new host is two releases, in this order, never one:
+**Adding a hostname is easy. Moving the clients onto it is not, and the two must not be confused.**
 
-1. **Serve it.** Add the hostname to `routes` in the ignored `wrangler.jsonc` as a `custom_domain` (the checked-in template shows the shape), then deploy. Cloudflare creates the DNS record and the certificate itself — add nothing to the zone by hand, and delete any imported placeholder record left over from the zone's previous DNS. Confirm `/health` answers on the new hostname before going further.
-2. **Point at it.** Only then change `CLOUD_URL`, rebuild both apps, package, release and publish. A client that has not updated is still served by `workers.dev`.
+Serving a new hostname costs nothing: bind it to the Worker — a `custom_domain` entry in `routes`, or a proxied placeholder record plus a Worker route where the dashboard's custom-domain flow misbehaves — and confirm it answers. `workers_dev` stays on beside it. No client is affected, because no client knows about it.
 
-The zone must live in the same Cloudflare account as the Worker, or the custom domain cannot be claimed. `/` redirects to `/app/`, so the bare hostname opens the phone app rather than returning the `401` that every other unrecognized path gets.
+Pointing the clients at it is a **vault migration**, not a release. `CLOUD_URL` is also the passkey's relying-party identity: `secret-vault.js` derives `VAULT_RP_ID` from this hostname for extension pages, and the phone app reaches the same ID through `location.hostname` because it is served from that very host. One passkey opens the protected sections in both places precisely because those two agree.
+
+Change the host and that breaks in three ways at once. A credential registered against one relying-party ID cannot be asserted against another, so the passkey stops answering. The key that seals card numbers, account details and personal records is the PRF output of that credential, so the envelopes stop opening. And the extension and the phone would derive *different* IDs from each other during any partial move, splitting the vault in two. The recovery code still opens existing records — it carries the key material itself — but a passkey enrolled against the new hostname produces a different key, and nothing in the code re-seals existing records under it.
+
+So treat `CLOUD_URL` as an identity anchor that happens to also be a URL. A second hostname is not a reason to move it. If it must move, plan the re-keying first — recovery code in hand, a decision about every sealed record, and both apps moved together — and consider pinning `VAULT_RP_ID` to a literal independent of `CLOUD_URL` first, so that a future move only affects the phone.
+
+`/` redirects to `/app/`, so a bare hostname opens the phone app rather than returning the `401` that every other unrecognized path gets. A Worker route needs a proxied DNS record for the hostname to match against; a custom domain creates its own.
 
 Hosts also reach Google's OAuth redirect. `src/drive.js` derives the redirect URI from the origin the request arrived on, so both hosts work as long as both are registered in the Google OAuth client — see [TAXES.md](TAXES.md).
 

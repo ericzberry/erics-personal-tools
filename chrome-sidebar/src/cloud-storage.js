@@ -1,3 +1,18 @@
+// This is not only where the API lives. `secret-vault.js` derives VAULT_RP_ID
+// from this hostname, so it is also the passkey's relying-party identity — and
+// the phone app, served from the same host, arrives at the same ID through its
+// own origin. That is why one passkey opens the protected sections on both.
+//
+// Changing it therefore re-keys the vault. A credential registered against one
+// relying-party ID cannot be asserted against another, the PRF output behind it
+// is what the sealed envelopes are encrypted with, and there is no built-in
+// path that re-seals existing records under a new key. The recovery code still
+// opens them, because it carries the key material itself — but a passkey
+// enrolled on a new hostname does not.
+//
+// So the Worker gaining a second hostname is not a reason to change this.
+// Moving it is a deliberate vault migration, and the reasoning belongs in
+// docs/CLOUDFLARE.md before anyone edits this line.
 export const CLOUD_URL = 'https://erics-tools-api.ezberry.workers.dev';
 export const CONNECTION_KEY = 'cloudConnection';
 export async function cloudRequest(token, path, {method = 'GET', value, fetcher = globalThis.fetch, timeoutMs = 30000, maxBytes = 64 * 1024} = {}) {
