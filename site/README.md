@@ -4,9 +4,9 @@ The `ezberry-site` Worker: a home page, `/privacy` and `/terms` — the three li
 Google's OAuth consent screen asks for. `www.` and trailing slashes redirect to
 the canonical path; anything else is a 404.
 
-All of it is string constants in `src/index.js`, with no build step. `CONTACT`
-and `UPDATED` at the top are the two most likely to need a change. Keep the
-privacy policy true of what `tools-api/src/drive.js` actually does.
+All of it is string constants in `src/index.js`, with no build step. Move
+`UPDATED` at the top when either document's wording changes, and keep the privacy
+policy true of what `tools-api/src/drive.js` actually does.
 
 A separate Worker from the API on purpose: no bindings, no secrets, no D1, so the
 public apex is never a way into private data, and it deploys without rebuilding

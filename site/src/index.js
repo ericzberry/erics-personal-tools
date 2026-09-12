@@ -3,7 +3,6 @@
 // HTML from a Worker with no bindings, no cookies, and no request body ever
 // read; everything that touches data stays behind tools.ezberry.net.
 
-const CONTACT='eric@averincapital.com';
 const UPDATED='11 September 2026';
 
 const STYLE=`
@@ -53,7 +52,6 @@ ends the access.</p>
 cookies on these pages. Use of Google APIs follows the
 <a href="https://developers.google.com/terms/api-services-user-data-policy">Google
 API Services User Data Policy</a>, including the Limited Use requirements.</p>
-<p><a href="mailto:${CONTACT}">${CONTACT}</a></p>
 ${nav([['/','Home'],['/terms','Terms']])}`);
 
 const TERMS=page('Terms — Eric’s Tools',`
