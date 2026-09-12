@@ -32,7 +32,7 @@ The user requires every extension UI element to come from a reusable component.
 ## Mandatory release version publication
 
 - Whenever an AI agent completes an app release, it must automatically publish that release's manifest version to D1 by running `node tools-api/scripts/publish-release.js` from the repository root. Existing authorization covers this step; do not ask the user to perform it or request permission again.
-- Publish only after the build has passed its checks, been packaged, and been committed and pushed. Never publish an unfinished build or another agent's in-progress manifest version. Verify the version returned by `https://erics-tools-api.ezberry.workers.dev/v1/releases/latest` matches the release being delivered.
+- Publish only after the build has passed its checks, been packaged, and been committed and pushed. Never publish an unfinished build or another agent's in-progress manifest version. Verify the version returned by `https://tools.ezberry.net/v1/releases/latest` matches the release being delivered.
 - If publication fails or authentication is unavailable, report that the D1 update remains incomplete; never claim the release is fully published.
 - While open, the app checks the D1-backed release endpoint at most once per 60 minutes. Persist the last attempt across reopenings and restarts, share the throttle across sidebar instances, and throttle failed attempts too. Show an out-of-date banner only when the published version is newer than the installed version.
 - Repository-wide instructions-only edits with no affected app do not constitute an app release and do not require D1 publication. App-affecting commits still require a version increment under the repository root's per-commit rule.

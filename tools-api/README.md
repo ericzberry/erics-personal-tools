@@ -1,6 +1,6 @@
 # Eric’s AI settings service
 
-Worker: `https://erics-tools-api.ezberry.workers.dev`. Existing D1 database: `erics-personal-tools`, binding `DB`.
+Worker: `https://tools.ezberry.net`. Existing D1 database: `erics-personal-tools`, binding `DB`.
 
 The extension-only settings page is `chrome-sidebar/settings.html`. Open it with the `ericberry` address-bar keyword (Tab, Enter), the extension’s Options menu, or Settings in its sidebar header. Chrome must have the extension installed and enabled. It is not a hosted website or a custom URL scheme.
 

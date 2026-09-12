@@ -1,6 +1,6 @@
 # Eric’s Tools for iPhone
 
-Open https://erics-tools-api.ezberry.workers.dev/app/ in Safari, then Share → Add to Home Screen. Leave Open as Web App enabled if shown. Open the installed app once online and wait for Offline access: Ready before trying airplane mode.
+Open https://tools.ezberry.net/app/ in Safari, then Share → Add to Home Screen. Leave Open as Web App enabled if shown. Open the installed app once online and wait for Offline access: Ready before trying airplane mode.
 
 Version 0.1.32 opens on a home screen that holds nothing but the tool icons: Travel wallet, Rewards & benefits, Best card, Finance, Personal information, Restaurants, and Player rankings under **Misc**, plus Settings. Opening a tool — or Settings — collapses those icons behind a hamburger menu naming the open screen; Home appears there as the way back. Settings is one of those screens rather than a header button, and it holds the cloud connection, AI connections, offline access, and a **Check for a new version** button. AI connections moved into Settings, and League rules was removed. There is no featured travel callout. Reference data is bundled for offline use. Set up a mobile passkey using the same private access token as the extension, then download private records and AI connection metadata.
 
