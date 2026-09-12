@@ -1,5 +1,6 @@
 import {normalizeReminder,describeReminder,reminderDue,duePhrase,REMINDER_KINDS,REMINDER_EVENT_KINDS,DEFAULT_NOTICE_DAYS} from './reminder-data.js';
 import {normalizeGift,isBought,GIFT_STATUSES} from './gift-data.js';
+import {normalizeProperty,describeProperty,PROPERTY_STATUSES} from './property-data.js';
 // What a typed note can become. Each target names the capability that owns the
 // record, the path its store writes to, the validator the tool itself uses —
 // so a captured record is indistinguishable from a typed one and cannot arrive
@@ -37,6 +38,20 @@ export const CAPTURE_TARGETS=[
 - status: one of ${GIFT_STATUSES.join(', ')}. Use ${GIFT_STATUSES[1]} only when the note says it has already been bought.
 There is nowhere to put an occasion, a price or a comment: anything worth keeping goes in idea, and anything else is left out.`,
     summary:record=>[record.idea,`for ${record.person}`,isBought(record)?'Bought':''].filter(Boolean).join(' · ')
+  },
+  {
+    capability:'properties',label:'properties',path:'/v1/properties',normalize:normalizeProperty,
+    when:'the note is about a house, apartment or other property the owner is considering buying or renting',
+    fields:today=>`- address: the street address as the note gives it, or the most specific description of the place it names. Required.
+- status: exactly one of ${PROPERTY_STATUSES.join(', ')}. Seen when the note says the owner has been to it, Offer when they have made one, Passed when they have ruled it out, otherwise Looking.
+- price: the asking price or rent in whole dollars as a number ("1.2M" is 1200000), or null when the note gives none.
+- beds, baths, sqft: the numbers the note states, or null. Baths may be a half.
+- taxes: annual property taxes in whole dollars, or null. hoa: the monthly HOA or common charges in whole dollars, or null.
+- link: an https:// address the note contains, otherwise "".
+- notes: what the owner said about it that none of the fields above carries — impressions, problems, questions — in their own words, otherwise "".
+- since: ${today}.
+Never estimate a figure the note does not state.`,
+    summary:record=>[record.address,describeProperty(record),record.status].filter(Boolean).join(' · ')
   }
 ];
 export const captureTarget=capability=>CAPTURE_TARGETS.find(target=>target.capability===capability)||null;

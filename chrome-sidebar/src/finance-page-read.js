@@ -60,6 +60,7 @@ export async function readOpenAccountPage(api = globalThis.chrome) {
   if (!text.trim()) throw Error('That page has no readable text on it yet.');
   return {
     text,
+    url: page.url,
     host: page.host,
     title: page.title,
     trimmed: Math.max(0, combined.length - text.length),

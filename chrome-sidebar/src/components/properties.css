@@ -1,0 +1,17 @@
+@import url('./travel.css');
+@import url('./capture.css');
+/* A property reads as its address, one line of facts, and what the owner said. */
+.property-list .record-row{padding:6px 0;gap:2px}
+.property-list .record-row p{margin:0}
+.property-list .record-row p+p{color:var(--wallet-muted)}
+.property-list .footnote:empty,.property-list .notice:empty{display:none}
+.property-list .travel-list{gap:12px}
+.property-list #properties-page:not([hidden]){margin:4px 0 10px}
+/* A link looks like a link, so it is not mistaken for one of the row's actions. */
+.property-list .record-row .action-group a{font-size:var(--control-text-compact);color:var(--wallet-forest);text-underline-offset:3px;align-self:center}
+/* Figures that belong together share a line, and wrap rather than squeeze. */
+.property-list .property-figures{display:flex;flex-wrap:wrap;gap:8px}
+.property-list .property-figures>.form-field{flex:1 1 72px;min-width:0}
+/* Passed is a quieter copy of the same rows. */
+.property-list #properties-passed-view>summary{font-size:13px}
+.property-list #properties-passed .record-row strong{font-weight:400;color:var(--wallet-muted)}

@@ -14,6 +14,7 @@ export const CAPABILITIES = [
   {id:'rewards',label:'Rewards & benefits',href:'rewards.html',icon:'M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.3-4.8-2.5-4.8 2.5.9-5.3L4.2 9.7l5.4-.8L12 4Z'},
   {id:'cards',label:'Best card',href:'cards.html',icon:'M3 7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z M3 10.5h18'},
   {id:'finance',label:'Finance',href:'finance.html',icon:'M4 20V10 M9.5 20V5 M15 20v-7 M20.5 20V8 M3 20h18'},
+  {id:'properties',label:'Properties',href:'properties.html',icon:'M3.5 11 12 4l8.5 7 M5.5 9.5V20h13V9.5 M10 20v-5.5h4V20'},
   {id:'personal',label:'Personal information',href:'personal.html',icon:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M5 20a7 7 0 0 1 14 0'},
   {id:'taxes',label:'Taxes',href:'taxes.html',icon:'M6 3h7l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z M13 3v5h5 M9 13h6 M9 17h4'},
   {id:'rankings',label:'Player rankings',href:'data.html?capability=rankings',section:MISC_SECTION,icon:'M5 20v-6 M12 20V5 M19 20v-9'},
@@ -38,6 +39,6 @@ export function capabilitySections(items=CAPABILITIES){
 // the toggle names it, so listing it again would be a row for "no tool chosen".
 export const AUTO_CAPABILITY={id:'auto',label:'Current tab'};
 export const capabilities=[
-  ...CAPABILITIES.map(({href,...rest})=>['travel','rewards','finance','taxes'].includes(rest.id)?rest:{...rest,href}),
+  ...CAPABILITIES.map(({href,...rest})=>['travel','rewards','finance','taxes','properties'].includes(rest.id)?rest:{...rest,href}),
   {id:'football',label:'Fantasy football',section:MISC_SECTION,icon:'M7.5 4h9v5a4.5 4.5 0 0 1-9 0V4Z M12 13.5V17 M8.5 20h7'}
 ];

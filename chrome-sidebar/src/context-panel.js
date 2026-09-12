@@ -1,17 +1,33 @@
 import {gmailConnection} from './gmail-connection.js';
 import {summarizeEmail} from './email-cloud.js';
-import {showTool} from './navigation.js';
+import {showTool,selectCapability} from './navigation.js';
 import {generateEmailText} from './email-ai.js';
 import {accountSiteWatcher} from './account-sites.js';
-import {openFinanceTool,mountedFinanceTool} from './capability-links.js';
+import {openFinanceTool,mountedFinanceTool,openPanelTool,mountedPropertiesTool} from './capability-links.js';
 import {mountPageStrip} from './page-strip.js';
+import {listingSite} from './listing-sites.js';
 const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.tabs;
 const readCurrentEmail=extension?gmailConnection(chrome):null;
 const detectAccountSite=extension?accountSiteWatcher():null;
 // One strip for the whole panel, under the header: it outlives every tool,
 // because the point of it is to be there when the owner is somewhere else.
-const strip=extension?mountPageStrip($('page-offers')):null;
+// Going somewhere from it builds the tool the way its own menu row would, and an
+// offer that asks for something — keeping the listing that is open — asks the
+// tool once it is there.
+async function goTo(capability,offer){
+  const tool=openPanelTool(capability);
+  selectCapability(capability);
+  try{if(offer?.intent==='save-listing')(await tool)?.saveListing();}
+  catch{/* The tool reports its own failure where it is shown. */}
+}
+const strip=extension?mountPageStrip($('page-offers'),{select:goTo}):null;
+// Properties is told which page is beside it, but only once something has
+// built it: a panel that never opened the tool pays nothing for it.
+async function announcePage(url) {
+  try {(await mountedPropertiesTool())?.page({url,listing:listingSite(url)});}
+  catch {/* A tool that will not mount has nothing to be told. */}
+}
 let email = null, identity = '', generation = 0, controller, activeTab, polling = false, working = false;
 function clearEmail(next = null) {
   const nextIdentity = next ? JSON.stringify(next) : '';
@@ -46,6 +62,7 @@ async function refresh() {
     const site = gmail ? null : await detectAccountSite(tab);
     await announceAccountSite(site);
     strip?.update({url:tab?.url||'',site});
+    announcePage(tab?.url||'');
     // The draft board follows the draft room, not the whole of ESPN fantasy:
     // outside a draft it is a tool for something that is not happening.
     const draft = url.hostname === 'fantasy.espn.com' && /^\/football\/draft/i.test(url.pathname);

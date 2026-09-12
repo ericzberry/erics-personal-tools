@@ -8,3 +8,14 @@ export function safePublicURL(value) {
     u.hash=''; return u.href;
   } catch { return null; }
 }
+
+// Whether two links name the same page: same host, same path. Query strings and
+// fragments are left out because a link that was saved and the page in front of
+// the owner rarely carry the same tracking parameters, and a host on its own
+// would match every page of a site where one thing was saved once.
+const pagePath=url=>url.pathname.replace(/\/+$/,'')||'/';
+export function samePage(left,right){
+  let one,two;
+  try{one=new URL(left);two=new URL(right);}catch{return false;}
+  return one.hostname===two.hostname&&pagePath(one)===pagePath(two);
+}

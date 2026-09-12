@@ -75,6 +75,31 @@ test('a reward program’s own site offers its offers, and Gmail and a draft off
     assert.deepEqual(pageOffers({url}),[],url);
 });
 
+const listing='https://www.zillow.com/homedetails/85-Greenway-Ter-Forest-Hills-Gardens-NY-11375/32004593_zpid/';
+const house=(status='Seen',price=1250000)=>({id:'h1',address:'85 Greenway Ter',link:listing,status,price,prices:[]});
+
+test('a listing not on the shortlist is one press from being on it',()=>{
+  const [offer]=pageOffers({url:listing});
+  assert.equal(offer.label,'Save this listing');
+  assert.equal(offer.capability,'properties');
+  assert.equal(offer.intent,'save-listing','pressing it asks the tool to read the page, not merely to open');
+  assert.equal(offer.href,'','Properties lives in the panel beside the listing it reads');
+  // A search results page is not a listing, and neither is a site that is not
+  // a real estate site at all.
+  assert.deepEqual(pageOffers({url:'https://www.zillow.com/new-york-ny/'}),[]);
+  assert.deepEqual(pageOffers({url:'https://example.com/homedetails/1'}),[]);
+});
+
+test('a listing already on the shortlist says where the search stands with it',()=>{
+  const offers=pageOffers({url:`${listing}?utm_source=email`,properties:[house('Seen')]});
+  assert.deepEqual(offers.map(offer=>offer.label),['Seen · $1,250,000'],'and it is not also offered for saving');
+  assert.equal(offers[0].intent,'');
+  assert.deepEqual(pageOffers({url:listing,properties:[house('Passed',null)]}).map(offer=>offer.label),['Passed']);
+  // A property saved with a link to its broker's own page is recognized there
+  // too, even though that site is not one the strip knows.
+  assert.equal(pageOffers({url:'https://broker.example.com/listings/12-elm',properties:[{...house('Offer'),link:'https://broker.example.com/listings/12-elm/'}]})[0].label,'Offer · $1,250,000');
+});
+
 test('what is already on screen is never offered',()=>{
   const open=pageOffers({url:'https://mail.google.com/mail/u/0/#inbox',active:'gmail'});
   assert.deepEqual(open,[],'an offer to go where the owner already is would name a visible state');
@@ -115,6 +140,7 @@ test('the strip shows the tab’s offers, hides itself when there are none, and 
   let notify=()=>{};
   const strip=mountPageStrip(root,{
     gifts:{saved:async()=>[gift('Maisie','https://shop.example.com/thing/42')]},
+    properties:{saved:async()=>[]},
     credentials:{get:async()=>'token'},
     changes:onChange=>{notify=onChange;return {close(){}};},
     active:()=>'',subscribe:()=>()=>{},
@@ -138,6 +164,7 @@ test('a browser with no access token still offers what the page alone says',asyn
   const root=document.getElementById('strip');
   const strip=mountPageStrip(root,{
     gifts:{saved:async()=>{throw Error('never asked');}},
+    properties:{saved:async()=>{throw Error('never asked');}},
     credentials:{get:async()=>''},
     changes:()=>({close(){}}),active:()=>'',subscribe:()=>()=>{},select(){},toTab(){}
   });

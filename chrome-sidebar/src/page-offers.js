@@ -23,6 +23,9 @@
 import {capabilities} from './capabilities.js';
 import {rewardProgram} from './program-data.js';
 import {isBought} from './gift-data.js';
+import {money} from './property-data.js';
+import {listingSite} from './listing-sites.js';
+import {samePage} from './public-url.js';
 
 // Gmail has no capability entry, because it is not a tool you choose: it
 // appears when the tab is Gmail. So its offer carries its own icon.
@@ -32,18 +35,14 @@ const MAIL_GLYPH='M3 7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0
 export const MAX_STRIP_OFFERS=3;
 
 const parse=value=>{try{const url=new URL(value);return /^https?:$/.test(url.protocol)?url:null;}catch{return null;}};
-const path=url=>url.pathname.replace(/\/+$/,'')||'/';
-// A saved link is about this page when it is the same page: same host, same
-// path. Query strings are left out because the link that was saved and the one
-// in front of the owner rarely carry the same tracking parameters, and a host
-// on its own would light up every page of a shop where one thing was saved once.
-const samePage=(left,right)=>!!left&&!!right&&left.hostname===right.hostname&&path(left)===path(right);
+// A saved link is about this page when it names the same page; see samePage.
+const savedHere=(records,page)=>records.filter(record=>record.link&&samePage(record.link,page.href));
 
 export const OFFER_SOURCES=[
   // A record about this exact page comes first: it is the only offer that knows
   // something the owner may have forgotten.
   {id:'gift-link',capability:'gifts',match:({page,gifts})=>{
-    const saved=gifts.filter(record=>samePage(parse(record.link||''),page));
+    const saved=savedHere(gifts,page);
     if(!saved.length)return null;
     if(saved.length>1)return `${saved.length} saved ideas`;
     const [record]=saved;
@@ -51,6 +50,15 @@ export const OFFER_SOURCES=[
     // present being bought twice.
     return `${isBought(record)?'Bought':'Saved'} for ${record.person}`;
   }},
+  // A property already on the shortlist says where the search stands with it,
+  // which is what stops the same house being reviewed twice.
+  {id:'property-link',capability:'properties',match:({page,properties})=>{
+    const [record]=savedHere(properties,page);
+    return record?[record.status,money(record.price)].filter(Boolean).join(' · '):null;
+  }},
+  // A listing not on the shortlist yet is one press from being on it.
+  {id:'listing-site',capability:'properties',intent:'save-listing',match:({page,properties})=>
+    listingSite(page.href)&&!savedHere(properties,page).length?'Save this listing':null},
   {id:'account-site',capability:'finance',viaTab:true,match:({site})=>site?`Store ${site.label} snapshots`:null},
   {id:'reward-program',capability:'rewards',match:({page})=>{
     const program=rewardProgram(page.href);
@@ -67,20 +75,21 @@ export const OFFER_SOURCES=[
 const entry=id=>capabilities.find(item=>item.id===id)||null;
 // `active` is the capability already on screen. An offer to go where the owner
 // already is would be a label for a visible state, so it is left out.
-export function pageOffers({url='',site=null,gifts=[],active=''}={}){
+export function pageOffers({url='',site=null,gifts=[],properties=[],active=''}={}){
   const page=parse(url);
   if(!page)return [];
   const offers=[];
   for(const source of OFFER_SOURCES){
     if(source.capability===active)continue;
-    const label=source.match({page,site,gifts});
+    const label=source.match({page,site,gifts,properties});
     if(!label)continue;
     const item=entry(source.capability);
     offers.push({
       id:source.id,capability:source.capability,label,
       icon:source.icon||item?.icon||'',
       href:item?.href||'',
-      viaTab:!!source.viaTab
+      viaTab:!!source.viaTab,
+      intent:source.intent||''
     });
     if(offers.length===MAX_STRIP_OFFERS)break;
   }

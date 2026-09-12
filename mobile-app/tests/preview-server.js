@@ -32,6 +32,10 @@ let gifts=[
   {id:'41111111-1111-4111-8111-111111111111',person:'Ariana',idea:'Cast iron skillet, the 12 inch one',status:'Idea',link:'https://example.com/skillet',revision:'first',updatedAt:new Date().toISOString()},
   {id:'41111111-1111-4111-8111-111111111112',person:'Celeste',idea:'Roller skates, size 3',status:'Bought',link:'',revision:'first',updatedAt:new Date().toISOString()}
 ];
+let properties=[
+  {id:'51111111-1111-4111-8111-111111111111',address:'85 Greenway Ter, Forest Hills, NY 11375',link:'https://www.zillow.com/homedetails/85-Greenway-Ter-Forest-Hills-Gardens-NY-11375/32004593_zpid/',status:'Seen',price:1195000,beds:4,baths:2.5,sqft:2400,taxes:18200,hoa:null,notes:'Backs onto the park. Kitchen needs work.',since:'2026-09-01',prices:[{price:1250000,on:'2026-09-01'},{price:1195000,on:'2026-09-10'}],revision:'first',updatedAt:new Date().toISOString()},
+  {id:'51111111-1111-4111-8111-111111111112',address:'12 Elm St, Maplewood, NJ 07040',link:'',status:'Looking',price:950000,beds:3,baths:2,sqft:null,taxes:21400,hoa:null,notes:'',since:'2026-09-12',prices:[{price:950000,on:'2026-09-12'}],revision:'first',updatedAt:new Date().toISOString()}
+];
 let apiCalls = 0;
 // A throwaway application-server identity, so the preview can subscribe to the
 // real push service and receive a real, really-encrypted notification. The
@@ -135,7 +139,7 @@ createServer(async (req, res) => {
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
       cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
     }
-    for(const [name,list,set] of [['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}]]){
+    for(const [name,list,set] of [['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}],['properties',()=>properties,value=>{properties=value;}]]){
       if(url.pathname===`/v1/${name}/snapshot`){res.end(JSON.stringify({records:list()}));return;}
       if(url.pathname.startsWith(`/v1/${name}/`)){
         const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
@@ -151,6 +155,11 @@ createServer(async (req, res) => {
     if(url.pathname===`/v1/ai-connections/${id}/capture`){
       let text='';for await(const data of req)text+=data;const {note,today}=JSON.parse(text);
       if(String(note).includes('failure')){res.statusCode=422;res.end('{"error":"That does not name anything to keep."}');return;}
+      if(/\$|house|listing|kitchen/i.test(String(note))){
+        res.end(JSON.stringify({capability:'properties',path:'/v1/properties',
+          record:{address:'3 Oak Ln, Montclair, NJ 07042',status:'Seen',price:875000,beds:3,baths:1.5,sqft:null,taxes:null,hoa:null,link:'',notes:'Kitchen needs work.',since:today},
+          summary:'3 Oak Ln, Montclair, NJ 07042 · $875,000 · 3 bd · 1.5 ba · Seen'}));return;
+      }
       if(/gift|would like|wants/i.test(String(note))){
         res.end(JSON.stringify({capability:'gifts',path:'/v1/gifts',
           record:{person:'Celeste',idea:'Butterfly net',link:'',status:'Idea'},

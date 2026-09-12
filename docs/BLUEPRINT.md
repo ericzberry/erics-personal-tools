@@ -42,11 +42,12 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
 | `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
+| `properties.html` | `src/properties-page.js` | Properties: the shortlist for a real estate search |
 | `taxes.html` | `src/taxes-page.js` | Taxes: file a K-1 or 1099 into Google Drive |
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
 | `data.html` | `src/data-page.js` | Read-only player rankings reference data |
 
-Travel, Rewards, Finance and Taxes are side-panel tools as well as tabs: they
+Travel, Rewards, Finance, Taxes and Properties are side-panel tools as well as tabs: they
 have no `href` in the sidebar's capability list, and `capability-links.js` mounts
 each into the panel on first use. The panel is the default home for a tool —
 it sits beside the page the work comes from, which is why a K-1 can be dragged
@@ -66,7 +67,7 @@ them) · `tokens.css` (design tokens) · `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
-`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `capture.*`
+`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `properties.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js`,
 `workspace.css`, `sidebar-launcher.js`.
@@ -105,6 +106,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored),
   `gift-data.js`/`gifts-offline.js` (gift ideas, grouped by who they are for),
+  `property-data.js`/`properties-offline.js` (the properties in a search, with
+  the price history each one keeps; `listing-sites.js` is the sidebar's alone —
+  the listing sites recognized by URL),
   `capture-data.js`/`capture-stores.js` (what a typed note may become: the
   capability that owns the record, the path its store writes to, the validator
   that decides it, and the stores a host offers quick add),
@@ -127,7 +131,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   pages, and the watcher `background.js` registers, so a visit updates the
   catalogue whether or not the panel is open.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
-  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `capture.js`, `taxes.js`, `data-library.js`,
+  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `properties.js`, `capture.js`, `taxes.js`, `data-library.js`,
   `restaurant-search.js`, `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
   `email-ai.js` (on-device), `email-cloud.js` (via Worker).
@@ -179,21 +183,22 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 ## tools-api/
 
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
-  `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,capture}`,
+  `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,capture,listing}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
-  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`,
+  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/properties[/…]`,
   `/v1/push/…`, `/v1/drive/…`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
   body over 64 KB because a statement or document image travels inline;
   `/v1/rewards/programs/:id` is allowed 256 KB because a program's whole offer
-  catalogue is one document.
+  catalogue is one document, and `listing` 128 KB because it carries a page's text.
   `/v1/drive/callback` is the one route outside the bearer check — Google's
   redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
-  `src/finance.js`, `src/personal.js`, `src/reminders.js` and `src/gifts.js`
+  `src/finance.js`, `src/personal.js`, `src/reminders.js`, `src/gifts.js` and `src/properties.js`
   reuse it for `card_records`, `finance_records`, `personal_records`,
-  `reminder_records` and `gift_records`.
+  `reminder_records`, `gift_records` and `property_records`; `src/properties.js`
+  also reads one listing page into a property.
   `src/capture.js` is not a store: it reads one typed note into a record one of
   them already accepts. `src/push.js` and `src/web-push.js` are the
   notification side: subscriptions, the morning digest, and Web Push itself
@@ -213,6 +218,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_records`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`),
+  `properties-schema.sql` (`property_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade

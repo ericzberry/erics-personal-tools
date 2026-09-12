@@ -27,3 +27,5 @@ of starting a second one beside it; the first spelling seen is the one shown.
 
 
 Quick add can create an idea from a typed note: see [quick add](QUICK_ADD.md).
+The [page strip](../chrome-sidebar/src/page-offers.js) recognizes the page an idea
+was saved from, and says whether it was already bought.

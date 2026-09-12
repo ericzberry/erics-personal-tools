@@ -37,6 +37,24 @@ export function openTaxesTool(){
 }
 document.getElementById('navigate-taxes')?.addEventListener('click',openTaxesTool);
 
+// Properties opens in the panel, beside the listing it reads, and is built on
+// first use like the other panel tools.
+let properties=null;
+export function openPropertiesTool(){
+  const root=document.getElementById('properties-tool');
+  if(!root)return null;
+  properties??=Promise.all([import('./properties-page.js'),import('./finance-page-read.js')]).then(([{mountExtensionProperties},{readOpenAccountPage}])=>
+    mountExtensionProperties(root,{readPage:()=>readOpenAccountPage(),onSettings:()=>document.getElementById('open-settings')?.click()}));
+  return properties;
+}
+export const mountedPropertiesTool=()=>properties;
+document.getElementById('navigate-properties')?.addEventListener('click',openPropertiesTool);
+
+// A panel tool reached from anywhere other than its own menu row — the strip
+// under the header — has to be built the same way its row would build it.
+const PANEL_TOOLS={travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,properties:openPropertiesTool};
+export const openPanelTool=id=>PANEL_TOOLS[id]?.()??null;
+
 // Standalone settings/data pages use the same data registry in the shared formatted picker.
 const {CAPABILITIES}=await import('./capabilities.js');
 const picker=document.getElementById('capability-picker');
