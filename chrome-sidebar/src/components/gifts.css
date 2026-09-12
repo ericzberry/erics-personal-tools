@@ -3,8 +3,10 @@
 /* One person's ideas read as a short run of lines under their name. */
 .gift-list .record-row{padding:6px 0;gap:2px}
 .gift-list .record-row p{margin:0}
+.gift-list .footnote:empty,.gift-list .notice:empty{display:none}
 .gift-list .travel-list{gap:12px}
 /* A link looks like a link, so it is not mistaken for one of the row's actions. */
 .gift-list .record-row .action-group a{font-size:var(--control-text-compact);color:var(--wallet-forest);text-underline-offset:3px;align-self:center}
-/* What has been given stays visible under its person, and stops competing. */
-.gift-list .record-row--given strong{color:var(--wallet-muted);font-weight:400}
+/* The bought list is a quieter copy of the same rows. */
+.gift-list #gifts-bought-view>summary{font-size:13px}
+.gift-list #gifts-bought .record-row strong{font-weight:400;color:var(--wallet-muted)}

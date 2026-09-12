@@ -5,11 +5,11 @@ import {mountGifts} from '../src/gifts.js';
 import {mountCapture} from '../src/capture.js';
 import {normalizeGift} from '../src/gift-data.js';
 const records=[
-  {person:'Ariana',idea:'Cast iron skillet with a very long product name',occasion:'Birthday',date:'2027-04-17',price:89,link:'https://example.com/skillet'},
-  {person:'Ariana',idea:'Weekend in the mountains',occasion:'Anniversary',price:1200,status:'Bought'},
-  {person:'Maisie',idea:'Telescope',occasion:'Birthday',date:'2026-09-20',price:220},
-  {person:'maisie',idea:'Ant farm',notes:'She asked twice.'},
-  {person:'Celeste',idea:'Roller skates',occasion:'Christmas',status:'Given',price:75}
+  {person:'Ariana',idea:'Cast iron skillet, the 12 inch one with the long handle',link:'https://example.com/skillet'},
+  {person:'Ariana',idea:'Weekend in the mountains',status:'Bought'},
+  {person:'Maisie',idea:'Telescope with a tripod',link:'https://example.com/telescope'},
+  {person:'maisie',idea:'Ant farm'},
+  {person:'Celeste',idea:'Roller skates, size 3',status:'Bought'}
 ].map((record,index)=>({...normalizeGift(record),id:`3000000${index}-0000-4000-8000-00000000000${index}`,revision:'first'}));
 const store=list=>{
   let saved=[...list];
@@ -30,10 +30,10 @@ const reading=async(token,path)=>path==='/v1/ai-connections'
   ?{connections:[{id:'c1',name:'Synthetic',provider:'openai',hasApiKey:true}]}
   :{capability:'gifts',path:'/v1/gifts',
     record:normalizeGift({person:'Celeste',idea:'Butterfly net'}),
-    summary:'Butterfly net · for Celeste · Idea'};
+    summary:'Butterfly net · for Celeste'};
 const root=document.getElementById('gift-states');
 for(const [label,list,credentials] of [
-  ['Populated · three people, one already given',records,connected],
+  ['Populated · three people, two already bought',records,connected],
   ['Connected with nothing saved yet',[],connected],
   ['Not connected',[],{get:async()=>''}]
 ]){

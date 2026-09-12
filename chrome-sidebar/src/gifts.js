@@ -1,7 +1,7 @@
 import {GiftsView,GiftGroup} from './components/gifts.js';
 import {RecordRow,Button,Note,Stack,ActionGroup,Link} from './components/ui.js';
-import {normalizeGift,groupGifts,describeGift,advanced,nextStatus,GIFT_STATUSES} from './gift-data.js';
-const fields=['person','idea','occasion','date','price','link','status','notes'];
+import {normalizeGift,groupGifts,isBought,bought,unbought} from './gift-data.js';
+const fields=['person','idea','link'];
 
 export function mountGifts(root,{credentials,offline,onSettings=()=>{},onChanged=()=>{}}){
   root.replaceChildren(GiftsView());
@@ -15,15 +15,13 @@ export function mountGifts(root,{credentials,offline,onSettings=()=>{},onChanged
   };
   function clearForm(){
     editing=null;
-    for(const key of ['person','idea','occasion','date','price','link','notes'])$(key).value='';
-    $('status').value=GIFT_STATUSES[0];
+    for(const key of fields)$(key).value='';
     $('editor-title').textContent='New idea';
     $('form-status').textContent='';
   }
   function edit(record){
-    editing={id:record.id,revision:record.revision};
+    editing={id:record.id,revision:record.revision,record};
     for(const key of fields)$(key).value=record[key]??'';
-    $('price').value=record.price===null||record.price===undefined?'':String(record.price);
     $('editor-title').textContent=`Editing ${record.idea}`;
     $('editor').open=true;$('idea').focus();
   }
@@ -32,24 +30,23 @@ export function mountGifts(root,{credentials,offline,onSettings=()=>{},onChanged
     const yes=action('Delete from all devices',()=>save(record,'DELETE'),'danger');
     const no=action('Keep idea',()=>{confirmation.hidden=true;remove.focus();});
     const confirmation=Stack([Note(`Permanently delete “${record.idea}” from all devices?`),ActionGroup([yes,no],{compact:true})],{hidden:true});
-    // One step, named for what it does: an idea becomes bought, a bought thing
-    // becomes given, and a given one goes back to being an idea for next time.
-    const forward=nextStatus(record);
-    const actions=[action(record.status==='Given'?'Back to ideas':`Mark ${forward.toLowerCase()}`,()=>save(advanced(record)))];
+    const actions=[action(isBought(record)?'Back to ideas':'Bought',()=>save(isBought(record)?unbought(record):bought(record)))];
     if(record.link)actions.push(Link('Open',record.link));
     actions.push(action('Edit',()=>edit(record),'subtle'),remove);
     if(record.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))));
-    const detail=[describeGift(record),record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
-    const entry=RecordRow({title:record.idea,detail,notes:record.notes,actions});
-    if(record.status==='Given')entry.classList.add('record-row--given');
-    return Stack([entry,confirmation]);
+    const detail=record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):'';
+    return Stack([RecordRow({title:record.idea,detail,actions}),confirmation]);
   }
   function render(){
     const query=$('search').value.trim().toLowerCase();
-    const visible=records.filter(record=>[record.person,record.idea,record.occasion,record.status].join(' ').toLowerCase().includes(query));
-    $('list').replaceChildren(...(visible.length
-      ?groupGifts(visible).map(group=>GiftGroup(group.person,group.records.map(row)))
-      :[Note(!loaded?'':records.length?'No matching ideas. Clear the search to see all of them.':'No ideas yet. Add one above.')]));
+    const matching=records.filter(record=>[record.person,record.idea].join(' ').toLowerCase().includes(query));
+    const open=matching.filter(record=>!isBought(record)),done=matching.filter(isBought);
+    $('list').replaceChildren(...(open.length
+      ?groupGifts(open).map(group=>GiftGroup(group.person,group.records.map(row)))
+      :[Note(!loaded?'':records.length?'Nothing left to decide here.':'No ideas yet. Add one above.')]));
+    $('bought').replaceChildren(...groupGifts(done).map(group=>GiftGroup(group.person,group.records.map(row))));
+    $('bought-view').hidden=!done.length;
+    $('bought-view').querySelector('summary').textContent=`Bought · ${done.length}`;
     for(const key of fields)$(key).disabled=busy||!loaded;
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
     $('actions').replaceChildren(loaded?action('Refresh',refresh):action('Connection settings',onSettings,'secondary',{enabled:true}));
@@ -90,8 +87,7 @@ export function mountGifts(root,{credentials,offline,onSettings=()=>{},onChanged
     event.preventDefault();
     if(busy||!loaded)return;
     try{
-      const input=Object.fromEntries(fields.map(key=>[key,$(key).value]));
-      const value=normalizeGift({...input,price:input.price===''?null:Number(input.price)});
+      const value=normalizeGift(Object.fromEntries(fields.map(key=>[key,$(key).value])),editing?.record||{});
       const id=editing?.id||crypto.randomUUID();
       if(await save({...value,id,revision:editing?.revision??null})){clearForm();$('editor').open=false;}
     }catch(error){$('form-status').textContent=error?.message||'Check the idea and try again.';}

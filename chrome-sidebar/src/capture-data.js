@@ -1,5 +1,5 @@
 import {normalizeReminder,describeReminder,reminderDue,duePhrase,REMINDER_KINDS,REMINDER_EVENT_KINDS,DEFAULT_NOTICE_DAYS} from './reminder-data.js';
-import {normalizeGift,describeGift,GIFT_STATUSES} from './gift-data.js';
+import {normalizeGift,isBought,GIFT_STATUSES} from './gift-data.js';
 // What a typed note can become. Each target names the capability that owns the
 // record, the path its store writes to, the validator the tool itself uses —
 // so a captured record is indistinguishable from a typed one and cannot arrive
@@ -32,14 +32,11 @@ export const CAPTURE_TARGETS=[
     capability:'gifts',label:'gift ideas',path:'/v1/gifts',normalize:normalizeGift,
     when:'the note is about something to give someone',
     fields:()=>`- person: who the gift is for, as the note names them. Required.
-- idea: the gift itself, in a few words. Required.
-- occasion: the occasion it is for — a birthday, Christmas, an anniversary — or "" when the note names none.
-- date: the occasion's date as YYYY-MM-DD when the note gives one, otherwise "".
-- price: the price as a plain number when the note states one, otherwise null. Never estimate what something costs.
+- idea: the gift itself, in the owner's own words — enough to recognize it later, including a size, colour or model the note mentions. Required.
 - link: an https:// address the note contains, otherwise "".
-- status: one of ${GIFT_STATUSES.join(', ')}. A note that only has an idea is ${GIFT_STATUSES[0]}; use the later ones only when the note says it was bought or given.
-- notes: anything in the note that none of the fields above carries, otherwise "".`,
-    summary:record=>[record.idea,`for ${record.person}`,describeGift(record)].filter(Boolean).join(' · ')
+- status: one of ${GIFT_STATUSES.join(', ')}. Use ${GIFT_STATUSES[1]} only when the note says it has already been bought.
+There is nowhere to put an occasion, a price or a comment: anything worth keeping goes in idea, and anything else is left out.`,
+    summary:record=>[record.idea,`for ${record.person}`,isBought(record)?'Bought':''].filter(Boolean).join(' · ')
   }
 ];
 export const captureTarget=capability=>CAPTURE_TARGETS.find(target=>target.capability===capability)||null;

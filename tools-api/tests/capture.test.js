@@ -22,10 +22,10 @@ test('a typed note becomes a record the tool would have accepted anyway',async()
 
 test('a note about something to give lands in gifts, with only what it said',async()=>{
   const reading=await readCapture(connection,{note:'Maisie would like a telescope for her birthday',today:'2026-09-11'},
-    reply({capability:'gifts',record:{person:'Maisie',idea:'Telescope',occasion:'Birthday',date:'',price:null,link:'',status:'Idea',notes:''}}));
+    reply({capability:'gifts',record:{person:'Maisie',idea:'Telescope with a tripod',link:'',status:'Idea'}}));
   assert.equal(reading.path,'/v1/gifts');
-  assert.equal(reading.record.price,null,'a price nobody stated is not invented');
-  assert.equal(reading.summary,'Telescope · for Maisie · Idea · Birthday');
+  assert.equal(reading.record.occasion,undefined,'the record has nowhere to put an occasion');
+  assert.equal(reading.summary,'Telescope with a tripod · for Maisie');
 });
 
 test('a note that names no date comes back as the owner’s problem, not a server error',async()=>{
@@ -65,7 +65,7 @@ test('reminders store and validate through the shared record route',async()=>{
   // Gifts are the same store over their own table and their own validator.
   const giftPath='/v1/gifts/33333333-3333-4333-8333-333333333333';
   assert.equal((await call(giftPath,'PUT',{person:'Ariana',idea:'Cast iron pan',link:'http://example.com'})).status,400);
-  const gift=(await (await call(giftPath,'PUT',{person:'Ariana',idea:'Cast iron pan',status:'Idea'})).json()).record;
+  const gift=(await (await call(giftPath,'PUT',{person:'Ariana',idea:'Cast iron pan',status:'Idea',link:''})).json()).record;
   assert.equal(gift.idea,'Cast iron pan');
   assert.equal(sql.prepare('SELECT value FROM gift_records').get().value.includes('Ariana'),false);
   assert.equal((await call(giftPath,'DELETE',{revision:gift.revision})).status,200);

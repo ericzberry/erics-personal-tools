@@ -27,8 +27,8 @@ let reminders=[
   {id:'21111111-1111-4111-8111-111111111113',kind:'Renewal',title:'Passport renewal',subject:'Eric',date:'2026-12-01',every:0,since:'',notice:90,completed:'',notes:'',revision:'first',updatedAt:new Date().toISOString()}
 ];
 let gifts=[
-  {id:'41111111-1111-4111-8111-111111111111',person:'Ariana',idea:'Cast iron skillet',occasion:'Birthday',date:'2027-04-17',status:'Idea',price:89,link:'https://example.com/skillet',notes:'',revision:'first',updatedAt:new Date().toISOString()},
-  {id:'41111111-1111-4111-8111-111111111112',person:'Celeste',idea:'Roller skates',occasion:'Christmas',date:'',status:'Given',price:75,link:'',notes:'',revision:'first',updatedAt:new Date().toISOString()}
+  {id:'41111111-1111-4111-8111-111111111111',person:'Ariana',idea:'Cast iron skillet, the 12 inch one',status:'Idea',link:'https://example.com/skillet',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'41111111-1111-4111-8111-111111111112',person:'Celeste',idea:'Roller skates, size 3',status:'Bought',link:'',revision:'first',updatedAt:new Date().toISOString()}
 ];
 let apiCalls = 0;
 const fixture = `
@@ -139,8 +139,8 @@ createServer(async (req, res) => {
       if(String(note).includes('failure')){res.statusCode=422;res.end('{"error":"That does not name anything to keep."}');return;}
       if(/gift|would like|wants/i.test(String(note))){
         res.end(JSON.stringify({capability:'gifts',path:'/v1/gifts',
-          record:{person:'Celeste',idea:'Butterfly net',occasion:'',date:'',price:null,link:'',status:'Idea',notes:''},
-          summary:'Butterfly net · for Celeste · Idea'}));return;
+          record:{person:'Celeste',idea:'Butterfly net',link:'',status:'Idea'},
+          summary:'Butterfly net · for Celeste'}));return;
       }
       res.end(JSON.stringify({capability:'reminders',path:'/v1/reminders',
         record:{kind:'Birthday',title:'Derek’s birthday',subject:'',date:today,every:12,since:'',notice:14,completed:'',notes:''},
