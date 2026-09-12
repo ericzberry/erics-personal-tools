@@ -12,6 +12,9 @@ import {mountPersonal} from './shared/personal.js';
 import {mountReminders} from './shared/reminders.js';
 import {remindersOffline} from './shared/reminders-offline.js';
 import {mountCapture} from './shared/capture.js';
+import {captureStores} from './shared/capture-stores.js';
+import {mountGifts} from './shared/gifts.js';
+import {giftsOffline} from './shared/gifts-offline.js';
 import {mountTaxes} from './shared/taxes.js';
 import {personalOffline} from './shared/personal-offline.js';
 import {mountTravel} from './shared/travel.js';
@@ -39,11 +42,12 @@ const cardStore=cardsOffline({remote:cloudRequest,store:protectedStore(encrypted
 const financeStore=financeOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const personalStore=personalOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const reminderStore=remindersOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
+const giftStore=giftsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const credentials={
-  async beforeDisconnect(){const token=await this.get();if(token&&(await cardStore.hasPending(token)||await rewardStore.hasPending(token)||await financeStore.hasPending(token)||await personalStore.hasPending(token)||await reminderStore.hasPending(token)))throw Error('Sync or resolve pending changes before disconnecting.');},
+  async beforeDisconnect(){const token=await this.get();if(token&&(await cardStore.hasPending(token)||await rewardStore.hasPending(token)||await financeStore.hasPending(token)||await personalStore.hasPending(token)||await reminderStore.hasPending(token)||await giftStore.hasPending(token)))throw Error('Sync or resolve pending changes before disconnecting.');},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token){await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await reminderStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token){await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await reminderStore.disconnect(token);await giftStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,remote:cloudRequest});
 const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
@@ -51,11 +55,13 @@ const rewardTool=mountRewards(document.getElementById('capability-rewards'),{cre
 const financeTool=mountFinance(document.getElementById('capability-finance'),{credentials,offline:financeStore,remote:cloudRequest,onSettings:openSettings});
 const personalTool=mountPersonal(document.getElementById('capability-personal'),{credentials,offline:personalStore,onSettings:openSettings});
 const reminderTool=mountReminders(document.getElementById('capability-reminders'),{credentials,offline:reminderStore,onSettings:openSettings});
+const giftTool=mountGifts(document.getElementById('capability-gifts'),{credentials,offline:giftStore,onSettings:openSettings});
 // Quick add sits on the home screen and writes through the same offline store
 // the tool uses, so a note typed with no signal queues like any other change.
 const captureRoot=document.getElementById('capability-capture');
 captureRoot.className='travel-wallet';
-mountCapture(captureRoot,{credentials,remote:cloudRequest,stores:{reminders:reminderStore},onSaved:()=>reminderTool.refresh()});
+mountCapture(captureRoot,{credentials,remote:cloudRequest,stores:captureStores({reminders:reminderStore,gifts:giftStore}),
+  onSaved:capability=>{(capability==='gifts'?giftTool:reminderTool).refresh();}});
 // Taxes keeps nothing on the device: a document is read here and goes straight
 // to Drive, so it has no offline store to disconnect - only a tool to clear.
 const taxTool=mountTaxes(document.getElementById('capability-taxes'),{credentials,remote:cloudRequest,upload:mobileUpload,
@@ -64,7 +70,7 @@ const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai'
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
-async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
+async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
 const offline=travelOffline({includeNumbers:true,remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 mountTravel(document.getElementById('capability-travel'),{credentials,offline,showNumbers:true,request:offline.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
 const rankings=mountLibrary(document.getElementById('capability-rankings'),{kind:'rankings',load:async()=>({value:await (await fetch('/app/data/rankings-2026.json')).json()})});

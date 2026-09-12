@@ -6,9 +6,8 @@ can create a record without a form.
 
 Files: [`reminder-data.js`](../chrome-sidebar/src/reminder-data.js) (the shared
 validator and all the date arithmetic), `reminders-offline.js`, `reminders.js`
-and `components/reminders.*` for the tool; `capture-data.js`, `capture.js` and
-`components/capture.*` for quick add; [`tools-api/src/reminders.js`](../tools-api/src/reminders.js)
-and [`tools-api/src/capture.js`](../tools-api/src/capture.js) on the Worker.
+and `components/reminders.*` for the tool;
+[`tools-api/src/reminders.js`](../tools-api/src/reminders.js) on the Worker.
 
 ## A record is an anchor and an interval
 
@@ -44,25 +43,8 @@ decide what leads the list.
 
 ## Quick add
 
-`mountCapture()` renders one text field and one button. The note goes to
-`POST /v1/ai-connections/:id/capture` with the device's own day; the Worker
-reads it into `{capability, record}` and `parseCapture()` puts it through the
-same validator the tool uses, so a captured record is indistinguishable from a
-typed one and cannot arrive in a shape the tool would refuse. A note that names
-no date comes back as 422 with its own explanation, not as a server error.
-
-Nothing is confirmed before saving. The line read back afterwards is built from
-the stored record — never from the model's own account of what it did — and Undo
-is beside it. The write goes through the capability's offline store, so a note
-typed with no signal queues like any other change; only the reading needs the
-network.
-
-`CAPTURE_TARGETS` is the list of what a note may become. Adding a capability to
-it is what lets quick add create that kind of record, and the host must pass
-that capability's store in `stores`.
-
-Quick add lives on the mobile home screen (`#capability-capture`, hidden as soon
-as a tool is open) and at the top of the Reminders tool on both hosts.
+A typed note can create a reminder without the form. The note field is shared
+with every other capability it can write to — see [quick add](QUICK_ADD.md).
 
 ## What the Worker does not do
 

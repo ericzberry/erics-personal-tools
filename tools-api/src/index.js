@@ -6,6 +6,7 @@ import {drive,driveCallback} from './drive.js';
 import {readTaxDocument} from './taxes.js';
 import {personal} from './personal.js';
 import {reminders} from './reminders.js';
+import {gifts} from './gifts.js';
 import {readCapture} from './capture.js';
 import {latestRelease} from './releases.js';
 import {rewardsSettings,researchCardBenefits} from './rewards.js';
@@ -121,6 +122,7 @@ export default {
       if(path==='/v1/finance'||path.startsWith('/v1/finance/'))return await finance(request,env,readValue,json);
       if(path==='/v1/personal'||path.startsWith('/v1/personal/'))return await personal(request,env,readValue,json);
       if(path==='/v1/reminders'||path.startsWith('/v1/reminders/'))return await reminders(request,env,readValue,json);
+      if(path==='/v1/gifts'||path.startsWith('/v1/gifts/'))return await gifts(request,env,readValue,json);
       if(path==='/v1/cards'||path.startsWith('/v1/cards/'))return await cards(request,env,readValue,json);
       if (path === '/v1/travel' || path.startsWith('/v1/travel/')) return await travel(request, env, readValue, json);
       return await aiSettings(request, env, readValue, json);

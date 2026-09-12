@@ -19,7 +19,9 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | API, authentication, storage, or deployment | [tools-api/README.md](tools-api/README.md), the affected schema files, and the package scripts |
 | Cloudflare runtime, D1 lifecycle, or Worker release | [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md) |
 | AI calls or provider integrations | [model routing](tools-api/MODEL_ROUTING.md), [providers](tools-api/PROVIDERS.md) |
-| Reminders, dates, or the quick-add note | [docs/REMINDERS.md](docs/REMINDERS.md) |
+| Reminders and dates | [docs/REMINDERS.md](docs/REMINDERS.md) |
+| Gift ideas | [docs/GIFTS.md](docs/GIFTS.md) |
+| Turning a typed note into a record | [docs/QUICK_ADD.md](docs/QUICK_ADD.md) |
 | Gmail or restaurant workflows | [Gmail](docs/GMAIL.md) or [restaurants](chrome-sidebar/RESTAURANTS.md) |
 | Filing tax documents or Google Drive access | [docs/TAXES.md](docs/TAXES.md) |
 | Rewards wallet, card benefits, or card comparisons | [rewards](docs/REWARDS.md), [best card](docs/BEST_CARD.md) |

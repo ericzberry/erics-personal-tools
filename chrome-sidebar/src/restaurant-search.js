@@ -1,3 +1,4 @@
+import {safePublicURL} from './public-url.js';
 // Shared, deterministic search rules. No catalogue or availability is invented here.
 export const normalizeName = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 export const isNYC = city => ['nyc','new york','new york city','new york ny','manhattan'].includes(normalizeName(city));
@@ -50,12 +51,7 @@ export function searchInput(input, today = localDate()) {
   return {mode,query,city:isNYC(city)?'New York City':city,neighborhood:text(input.neighborhood,120),date,endDate,flexibleDates,flexible,...(flexible?{}:{partySize:size}),minParty,maxParty,startTime,endTime,includeLongTravel:isNYC(city)&&input.includeLongTravel===true,limit:[6,12,24].includes(Number(input.limit))?Number(input.limit):12};
 }
 export const partySizes = search => Array.from({length:search.maxParty-search.minParty+1},(_,i)=>search.minParty+i);
-export function safePublicURL(value) {
-  try { const u = new URL(value); const h=u.hostname;
-    if (u.protocol!=='https:' || u.username || u.password || !h.includes('.') || /^\d+\.\d+\.\d+\.\d+$/.test(h) || h.includes(':') || /(?:^|\.)(localhost|local|internal|test|invalid)$/.test(h)) return null;
-    u.hash=''; return u.href;
-  } catch { return null; }
-}
+export {safePublicURL} from './public-url.js';
 export function bookingProvider(value) {
   const safe=safePublicURL(value); if(!safe)return null;
   const u=new URL(safe), h=u.hostname.replace(/^www\./,'');

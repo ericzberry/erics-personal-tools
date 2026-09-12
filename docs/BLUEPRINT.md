@@ -41,6 +41,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `finance.html` | `src/finance-page.js` | Finance ledger (passkey-gated); also mounts inside the side panel |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
+| `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
 | `taxes.html` | `src/taxes-page.js` | Taxes: file a K-1 or 1099 into Google Drive |
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
 | `data.html` | `src/data-page.js` | Read-only player rankings reference data |
@@ -63,7 +64,7 @@ them) · `tokens.css` (design tokens) · `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
-`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `capture.*`
+`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js`,
 `workspace.css`, `sidebar-launcher.js`.
@@ -73,6 +74,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 
 - **Navigation / registry** — `capabilities.js` (the capability registry both hosts
   read; every entry needs an `icon`), `navigation.js`, `capability-links.js`.
+- **Links** — `public-url.js`: the one reading of "a link safe to show and
+  open", used by gift links and restaurant booking links alike.
 - **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),
   `offline-storage.js` (encrypted IndexedDB), `cloud-storage.js` (`CLOUD_URL`,
   `cloudRequest`, `cloudUpload` for a file too big to travel as JSON,
@@ -95,8 +98,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `personal-data.js`/`personal-offline.js`,
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored),
-  `capture-data.js` (what a typed note may become: the capability that owns the
-  record, the path its store writes to, and the validator that decides it),
+  `gift-data.js`/`gifts-offline.js` (gift ideas, grouped by who they are for),
+  `capture-data.js`/`capture-stores.js` (what a typed note may become: the
+  capability that owns the record, the path its store writes to, the validator
+  that decides it, and the stores a host offers quick add),
   `tax-data.js` (no offline wrapper:
   Taxes keeps nothing on the device). The `*-data.js` modules own validation and
   are also imported by the Worker.
@@ -116,7 +121,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   pages, and the watcher `background.js` registers, so a visit updates the
   catalogue whether or not the panel is open.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
-  `finance.js`, `personal.js`, `reminders.js`, `capture.js`, `taxes.js`, `data-library.js`,
+  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `capture.js`, `taxes.js`, `data-library.js`,
   `restaurant-search.js`, `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
   `email-ai.js` (on-device), `email-cloud.js` (via Worker).
@@ -167,7 +172,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
   `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
-  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/drive/…`. The AI-connection family
+  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`,
+  `/v1/drive/…`. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
   body over 64 KB because a statement or document image travels inline;
   `/v1/rewards/programs/:id` is allowed 256 KB because a program's whole offer
@@ -175,8 +181,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/v1/drive/callback` is the one route outside the bearer check — Google's
   redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
-  `src/finance.js`, `src/personal.js` and `src/reminders.js` reuse it for
-  `card_records`, `finance_records`, `personal_records` and `reminder_records`.
+  `src/finance.js`, `src/personal.js`, `src/reminders.js` and `src/gifts.js`
+  reuse it for `card_records`, `finance_records`, `personal_records`,
+  `reminder_records` and `gift_records`.
   `src/capture.js` is not a store: it reads one typed note into a record one of
   them already accepts. `src/rewards.js` (the
   wallet, plus the issuer research that turns one card name into the card and the
@@ -192,7 +199,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_records`), `personal-schema.sql` (`personal_records`),
-  `reminders-schema.sql` (`reminder_records`),
+  `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
@@ -263,5 +270,5 @@ release) · `docs/DESIGN.md`, `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/REWARDS.md`,
 `docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/REWARD_PROGRAMS.md`,
-`docs/REMINDERS.md`,
+`docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/QUICK_ADD.md`,
 `chrome-sidebar/RESTAURANTS.md`.

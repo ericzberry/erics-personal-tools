@@ -26,6 +26,10 @@ let reminders=[
   {id:'21111111-1111-4111-8111-111111111112',kind:'Birthday',title:'Maisie’s birthday',subject:'',date:'2016-09-20',every:12,since:'2016',notice:14,completed:'',notes:'',revision:'first',updatedAt:new Date().toISOString()},
   {id:'21111111-1111-4111-8111-111111111113',kind:'Renewal',title:'Passport renewal',subject:'Eric',date:'2026-12-01',every:0,since:'',notice:90,completed:'',notes:'',revision:'first',updatedAt:new Date().toISOString()}
 ];
+let gifts=[
+  {id:'41111111-1111-4111-8111-111111111111',person:'Ariana',idea:'Cast iron skillet',occasion:'Birthday',date:'2027-04-17',status:'Idea',price:89,link:'https://example.com/skillet',notes:'',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'41111111-1111-4111-8111-111111111112',person:'Celeste',idea:'Roller skates',occasion:'Christmas',date:'',status:'Given',price:75,link:'',notes:'',revision:'first',updatedAt:new Date().toISOString()}
+];
 let apiCalls = 0;
 const fixture = `
 const fixtureEncode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
@@ -117,7 +121,7 @@ createServer(async (req, res) => {
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
       cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
     }
-    for(const [name,list,set] of [['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}]]){
+    for(const [name,list,set] of [['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}]]){
       if(url.pathname===`/v1/${name}/snapshot`){res.end(JSON.stringify({records:list()}));return;}
       if(url.pathname.startsWith(`/v1/${name}/`)){
         const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
@@ -132,7 +136,12 @@ createServer(async (req, res) => {
     // model call. The note itself decides only whether it fails.
     if(url.pathname===`/v1/ai-connections/${id}/capture`){
       let text='';for await(const data of req)text+=data;const {note,today}=JSON.parse(text);
-      if(String(note).includes('failure')){res.statusCode=422;res.end('{"error":"That does not name a date to remember."}');return;}
+      if(String(note).includes('failure')){res.statusCode=422;res.end('{"error":"That does not name anything to keep."}');return;}
+      if(/gift|would like|wants/i.test(String(note))){
+        res.end(JSON.stringify({capability:'gifts',path:'/v1/gifts',
+          record:{person:'Celeste',idea:'Butterfly net',occasion:'',date:'',price:null,link:'',status:'Idea',notes:''},
+          summary:'Butterfly net · for Celeste · Idea'}));return;
+      }
       res.end(JSON.stringify({capability:'reminders',path:'/v1/reminders',
         record:{kind:'Birthday',title:'Derek’s birthday',subject:'',date:today,every:12,since:'',notice:14,completed:'',notes:''},
         summary:'Derek’s birthday · Every year · Today'}));return;

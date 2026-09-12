@@ -20,6 +20,14 @@ test('a typed note becomes a record the tool would have accepted anyway',async()
   assert.equal(reading.summary,'Oil change · Outback · Every 6 months · last done 2026-09-11 · In 181 days');
 });
 
+test('a note about something to give lands in gifts, with only what it said',async()=>{
+  const reading=await readCapture(connection,{note:'Maisie would like a telescope for her birthday',today:'2026-09-11'},
+    reply({capability:'gifts',record:{person:'Maisie',idea:'Telescope',occasion:'Birthday',date:'',price:null,link:'',status:'Idea',notes:''}}));
+  assert.equal(reading.path,'/v1/gifts');
+  assert.equal(reading.record.price,null,'a price nobody stated is not invented');
+  assert.equal(reading.summary,'Telescope · for Maisie · Idea · Birthday');
+});
+
 test('a note that names no date comes back as the owner’s problem, not a server error',async()=>{
   await assert.rejects(readCapture(connection,{note:'buy milk'},reply({error:'That does not name a date to remember.'})),
     error=>error.status===422&&/does not name a date/.test(error.message));
@@ -31,6 +39,7 @@ test('a note that names no date comes back as the owner’s problem, not a serve
 
 test('reminders store and validate through the shared record route',async()=>{
   const sql=new DatabaseSync(':memory:');sql.exec(readFileSync(new URL('../reminders-schema.sql',import.meta.url),'utf8'));
+  sql.exec(readFileSync(new URL('../gifts-schema.sql',import.meta.url),'utf8'));
   const token='synthetic-token-at-least-32-characters';
   const env={API_TOKEN:token,SETTINGS_ENCRYPTION_KEY:'12'.repeat(32),DB:{
     prepare(query){
@@ -52,4 +61,12 @@ test('reminders store and validate through the shared record route',async()=>{
   assert.equal(snapshot.records[0].since,'1985');
   assert.equal((await call(path,'PUT',record)).status,409,'a stale revision cannot overwrite');
   assert.equal((await call(path,'DELETE',{revision:saved.revision})).status,200);
+
+  // Gifts are the same store over their own table and their own validator.
+  const giftPath='/v1/gifts/33333333-3333-4333-8333-333333333333';
+  assert.equal((await call(giftPath,'PUT',{person:'Ariana',idea:'Cast iron pan',link:'http://example.com'})).status,400);
+  const gift=(await (await call(giftPath,'PUT',{person:'Ariana',idea:'Cast iron pan',status:'Idea'})).json()).record;
+  assert.equal(gift.idea,'Cast iron pan');
+  assert.equal(sql.prepare('SELECT value FROM gift_records').get().value.includes('Ariana'),false);
+  assert.equal((await call(giftPath,'DELETE',{revision:gift.revision})).status,200);
 });
