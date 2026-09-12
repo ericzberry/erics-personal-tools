@@ -1,4 +1,4 @@
 /* Mobile sizing for the shared tool launcher and its menu. */
-.unlocked-tools .capability-navigation{margin:0 0 12px;padding:0 0 12px;border-bottom:1px solid var(--line);}
+.unlocked-tools .capability-navigation{margin:0 0 12px;padding:0;border-bottom:0;}
 .unlocked-tools .capability-navigation--home{margin:0;padding:0;border-bottom:0;}
 .unlocked-tools .launcher-tile{min-height:66px;}

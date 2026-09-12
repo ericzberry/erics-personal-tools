@@ -22,7 +22,7 @@ The catalogue below describes existing exports, not a promise that each componen
 
 | Need | Existing component | Guidance |
 | --- | --- | --- |
-| App identity and tool selection | `AppHeader`, `CapabilityNavigation`, `CapabilityMenu`, `CapabilityLauncher` | Use the capabilities registry and general Tools navigation; a registry `section` groups entries in both hosts: a heading over the mobile launcher grid, and a row that opens to reveal its tools in the sidebar menu |
+| App identity and tool selection | `AppHeader`, `CapabilityNavigation`, `CapabilityMenu`, `CapabilityLauncher` | Use the capabilities registry and general Tools navigation; a registry `section` groups entries in both hosts: a heading over the mobile launcher grid, and a row that opens to reveal its tools in the sidebar menu. The mobile menu button and its open panel follow the shared `Select` trigger and list, so the Tools menu reads as the dropdown it is |
 | Page heading and body | `PageHeader`, `PageBody`; `ToolHeading` and `Main` aliases | One page title; shared insets and section rhythm |
 | Section heading or secondary view | `SectionTitle`, `SubPage`, `Section` | Name the group and provide a meaningful return path |
 | Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceFlow`, `FieldGrid` | Compose layout before introducing new wrappers; a full-tab workspace runs down the page rather than into a side column |

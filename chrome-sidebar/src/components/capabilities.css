@@ -28,11 +28,20 @@
 @media (pointer:coarse){.launcher-tile{min-height:66px;}}
 @media (prefers-reduced-motion:no-preference){.launcher-tile{transition:background-color .12s ease;}}
 
-/* Mobile Tools menu: the same grid, behind a hamburger once a tool is open. */
-.capability-navigation--launcher .capability-launcher{padding-top:10px;}
-.capability-navigation--launcher .capability-toggle{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;min-height:44px;}
+/* Mobile Tools menu: the same grid, behind a menu button once a tool is open.
+   The button wears the formatted Select's chrome — surface, border, caret, open
+   state — and the open grid is the panel joined to its lower edge, so the menu
+   is plainly the thing that button opens. The home screen shows the same grid
+   in place: no button above it, and no panel drawn around it. */
+.capability-navigation--launcher .capability-toggle{box-sizing:border-box;list-style:none;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--control-border,#b8c3b9);border-radius:var(--control-radius,6px);background:var(--control-surface,#fffefa);}
 .capability-navigation--launcher .capability-toggle::-webkit-details-marker{display:none;}
 .capability-navigation--launcher .capability-toggle .glyph{color:var(--forest,#173e37);}
 .capability-navigation--launcher .capability-toggle>strong{min-width:0;font-size:14px;overflow-wrap:anywhere;}
-.capability-navigation--launcher[open] .capability-toggle{border-bottom:1px solid var(--line,#dedfd5);}
+.capability-navigation--launcher .capability-toggle::after{content:'';box-sizing:border-box;width:6px;height:6px;margin:0 2px;border-right:1.5px solid var(--muted,#626f67);border-bottom:1.5px solid var(--muted,#626f67);transform:translateY(-2px) rotate(45deg);}
+.capability-navigation--launcher .capability-toggle:hover{background:#f2f5ee;}
+.capability-navigation--launcher[open] .capability-toggle{border-color:var(--forest,#173e37);border-bottom-left-radius:0;border-bottom-right-radius:0;}
+.capability-navigation--launcher[open] .capability-toggle::after{transform:translateY(2px) rotate(225deg);border-color:var(--forest,#173e37);}
 .capability-navigation--launcher .capability-toggle:focus-visible{outline:2px solid var(--forest,#173e37);outline-offset:-2px;}
+.capability-navigation--launcher .capability-launcher{padding-top:10px;}
+.capability-navigation--launcher[open]:not(.capability-navigation--home) .capability-launcher{margin-top:-1px;padding:8px;border:1px solid var(--forest,#173e37);border-radius:0 0 var(--control-radius,6px) var(--control-radius,6px);background:var(--surface,#fffefa);box-shadow:0 6px 16px #173e371f;}
+@media (prefers-reduced-motion:no-preference){.capability-navigation--launcher .capability-toggle::after{transition:transform .15s;}}
