@@ -207,6 +207,14 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   every app release). `wrangler.example.jsonc` — config template; real config and
   credentials stay outside Git.
 
+## site/
+
+The public `ezberry-site` Worker on `ezberry.net`: a home page, `/privacy` and
+`/terms`, which are the links Google's OAuth consent screen asks for. Markup,
+styles and text are string constants in `src/index.js`; no build step. Separate
+from the API Worker on purpose — no bindings, no secrets, no D1 — and not part of
+an app release: no version, nothing published to D1. `cd site && npm run deploy`.
+
 ## finance-intake/
 
 Not an app: a small operator directory Claude uses to file statements into the
@@ -256,6 +264,7 @@ npm --prefix chrome-sidebar run build && npm --prefix mobile-app run build
 ```
 
 `npm --prefix tools-api run deploy` (builds mobile first) · `node tools-api/scripts/publish-release.js`.
+The public site deploys on its own: `cd site && npm run deploy`.
 
 A whole release, in the required order, is one command:
 

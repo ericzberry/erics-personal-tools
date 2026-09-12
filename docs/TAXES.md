@@ -75,6 +75,13 @@ The Worker reports "Google Drive is not configured" until these exist.
    user, and **set the publishing status to In production**: an app left in
    *Testing* has its refresh token expired by Google every seven days. The
    unverified-app warning at consent is expected; there is one user.
+
+   Branding asks for a home page, a privacy policy and terms of service. The
+   [`site/`](../site) Worker serves all three on `ezberry.net`, which must also
+   be listed as an authorized domain: `https://ezberry.net`,
+   `https://ezberry.net/privacy`, `https://ezberry.net/terms`. Keep what that
+   policy claims true of `src/drive.js`.
+
 3. Create an **OAuth client ID** of type **Web application**. Register **both**
    of the Worker's hostnames as authorized redirect URIs:
 

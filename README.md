@@ -10,6 +10,7 @@ backs them both.
 | [`chrome-sidebar/`](./chrome-sidebar) | Chrome side panel extension — travel wallet, best-card advice, rewards, restaurant reservations, ESPN draft board, and Gmail assistance. Canonical home of the shared UI components and data adapters. |
 | [`mobile-app/`](./mobile-app) | Installable iPhone web app for the same tools, unlocked by passkey and usable offline. Built from the sidebar's shared modules. |
 | [`tools-api/`](./tools-api) | Cloudflare Worker and D1 database — encrypted record storage, AI provider routing, release metadata. Also serves the mobile app. |
+| [`site/`](./site) | Cloudflare Worker for `ezberry.net` — the public home page, privacy policy, and terms that Google's OAuth consent screen links to. Nothing private is served here. |
 | [`docs/`](./docs) | Repository blueprint, design system, UI component catalogue, visual QA process, and the Cloudflare runbook. |
 
 Agents working in this repository start at [AGENTS.md](./AGENTS.md). For a map of

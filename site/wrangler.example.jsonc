@@ -1,0 +1,17 @@
+{
+  "name": "ezberry-site",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-08",
+  // Kept true only as a second address to check a deploy against; the site's
+  // real home is the apex, which is what Google's consent screen links to.
+  "workers_dev": true,
+  // The zone is already in this account — Cloudflare creates the DNS record and
+  // the certificate for a custom domain, so nothing is added to the zone by
+  // hand. `www.ezberry.net` can be added the same way; the Worker redirects it
+  // to the apex either way.
+  "routes": [
+    {"pattern": "ezberry.net", "custom_domain": true}
+  ],
+  "preview_urls": false,
+  "observability": {"enabled": true}
+}

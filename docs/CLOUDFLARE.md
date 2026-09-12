@@ -104,6 +104,23 @@ Hosts also reach Google's OAuth redirect. `src/drive.js` derives the redirect UR
 
 These documentation instructions do not themselves require a deployment or release publication.
 
+## The public site on the apex
+
+`ezberry.net` is a second Worker, `ezberry-site`, in [`site/`](../site). It serves
+the home page, `/privacy` and `/terms` that Google's OAuth consent screen links
+to, and nothing else.
+
+Separate rather than a few public routes here: this service authenticates almost
+everything and holds the Drive token, the settings key and D1, while the site has
+no bindings and no secrets, so a public page cannot become a path to a private
+record. It also deploys in seconds instead of packaging mobile with it.
+
+The apex is a `custom_domain` in the site's own ignored `wrangler.jsonc`, claimed
+the way `tools.ezberry.net` was — Cloudflare creates the DNS record and the
+certificate. Deploy from that directory with `npm run deploy`. It has no version,
+publishes nothing to D1, and is not part of an app release. Its pages change when
+the access they describe changes; see [TAXES.md](TAXES.md).
+
 ## Resource use
 
 Budget the service's capabilities together, including mobile asset requests that pass through the Worker, API polling, D1 operations, and external provider calls. Verify the account's current plan and measured usage when assessing capacity; do not copy another project's quota or assume all request types have the same billing treatment.
