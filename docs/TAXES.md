@@ -86,19 +86,26 @@ The Worker reports "Google Drive is not configured" until these exist.
    host and one on `tools.ezberry.net` consents against that one. Registering
    both means moving hosts never touches the OAuth client — see
    [CLOUDFLARE.md](CLOUDFLARE.md).
-4. From the repository root:
+4. From `tools-api/`, not the repository root — every one of these reads the
+   ignored `wrangler.jsonc` beside them to know which Worker and database it is
+   talking to, and hangs looking for it anywhere else:
 
 ```sh
-npx wrangler d1 execute erics-personal-tools --remote --file tools-api/drive-schema.sql
+cd tools-api && npx wrangler d1 execute erics-personal-tools --remote --file drive-schema.sql
 ```
 
 ```sh
-npx wrangler secret put GOOGLE_CLIENT_ID
+cd tools-api && npx wrangler secret put GOOGLE_CLIENT_ID
 ```
 
 ```sh
-npx wrangler secret put GOOGLE_CLIENT_SECRET
+cd tools-api && npx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
+
+   Each secret command prompts for the value on a hidden input: paste it and
+   press Return, and expect to see nothing as you type. Run these in a terminal
+   you can type into rather than through an editor's run button, which may not
+   attach a keyboard to the prompt.
 
 5. Deploy, open **Taxes**, press **Connect Google Drive**, and approve. The tool
    waits for the consent tab and shows the connected account when it is done.
