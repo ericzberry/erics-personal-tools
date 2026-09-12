@@ -1,5 +1,6 @@
 import {carrySession} from './mobile-security.js';
 import {VERSION, checkRelease, newer} from './releases.js';
+import {mountPush} from './push.js';
 const el = id => document.getElementById(id);
 let registration;
 // The tools frame owns navigation, so the shell mirrors whichever screen it
@@ -86,7 +87,7 @@ el('apply-update').addEventListener('click', async () => {
   finally { button.disabled = false; }
 });
 el('version-status').textContent = `Version ${VERSION}`;
-connection(); render(); offlineSetup(); releases();
+connection(); render(); offlineSetup(); releases(); mountPush();
 window.addEventListener('online', () => { connection(); releases(); });
 window.addEventListener('offline', connection);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { connection(); render(); releases(); } });

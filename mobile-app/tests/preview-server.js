@@ -3,6 +3,8 @@ import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import worker from '../../tools-api/src/index.js';
+import {sendPush, base64url, fromBase64url} from '../../tools-api/src/web-push.js';
+import {normalizePushSubscription, reminderDigest} from '../../tools-api/src/push.js';
 const root = new URL('../dist/', import.meta.url);
 const previewRevision=crypto.randomUUID();
 const port = Number(process.env.PORT || 8791);
@@ -31,6 +33,16 @@ let gifts=[
   {id:'41111111-1111-4111-8111-111111111112',person:'Celeste',idea:'Roller skates, size 3',status:'Bought',link:'',revision:'first',updatedAt:new Date().toISOString()}
 ];
 let apiCalls = 0;
+// A throwaway application-server identity, so the preview can subscribe to the
+// real push service and receive a real, really-encrypted notification. The
+// sending path is the Worker's own; only the keys and the store are synthetic.
+const vapidPair = await crypto.subtle.generateKey({name:'ECDSA', namedCurve:'P-256'}, true, ['sign','verify']);
+const vapid = {
+  publicKey: new Uint8Array(await crypto.subtle.exportKey('raw', vapidPair.publicKey)),
+  privateKey: fromBase64url((await crypto.subtle.exportKey('jwk', vapidPair.privateKey)).d),
+  subject: 'mailto:preview@example.invalid'
+};
+let pushSubscriptions = [];
 const fixture = `
 const fixtureEncode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
 let canceled = false, unsupported = false, offset = 0;
@@ -99,6 +111,8 @@ createServer(async (req, res) => {
     apiCalls++;
     res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
     if (url.pathname === '/v1/releases/latest') {res.end(JSON.stringify({version:'0.1.2'}));return;}
+    // Public, exactly as on the Worker: a device needs it before it can subscribe.
+    if (url.pathname === '/v1/push/key') {res.end(JSON.stringify({key: base64url(vapid.publicKey)}));return;}
     if (req.headers.authorization !== 'Bearer ' + token) {res.statusCode=401;res.end('{}');return;}
     if (url.pathname === '/health') {res.end('{"ok":true}');return;}
     if (url.pathname === '/v1/ai-connections') {res.end(JSON.stringify({connections:[{id,name:'Synthetic research connection',provider:'openai',hasApiKey:true}]}));return;}
@@ -153,6 +167,30 @@ createServer(async (req, res) => {
         {name:'Synthetic brokerage',institution:'Synthetic Broker',owner:'',kind:'brokerage',currency:'USD',value:412350,asOf:'2026-09-05',confidence:'high',reason:'The text states a balance and a date.'},
         {name:'Synthetic private fund II',institution:'',owner:'Family trust',kind:'private',currency:'USD',value:250000,asOf:'2026-08-31',confidence:'low',reason:'The sponsor and the valuation date should be confirmed.'}
       ],unread:'One line mentioned a wire with no amount, so it was left out.'}));return;
+    }
+    if (url.pathname === '/v1/push/subscriptions') {res.end(JSON.stringify({records:pushSubscriptions.map(({id,revision,timeZone,hour})=>({id,revision,timeZone,hour,host:'preview'}))}));return;}
+    if (url.pathname.startsWith('/v1/push/subscriptions/')) {
+      const id=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
+      const previous=pushSubscriptions.find(record=>record.id===id);
+      if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
+      pushSubscriptions=pushSubscriptions.filter(record=>record.id!==id);
+      if(req.method==='PUT'){
+        const record={...normalizePushSubscription(value,previous||{}),id,revision:crypto.randomUUID()};
+        pushSubscriptions.push(record);res.end(JSON.stringify({record:{id,revision:record.revision}}));return;
+      }
+      res.end('{}');return;
+    }
+    // The real sending path against the real push service, so the encryption is
+    // exercised end to end rather than only against itself.
+    if (url.pathname === '/v1/push/test') {
+      if(!pushSubscriptions.length){res.statusCode=400;res.end('{"error":"No device is subscribed yet."}');return;}
+      const digest=reminderDigest(reminders,new Date().toISOString().slice(0,10))||{title:'Eric’s Tools',body:'Reminders are working on this device.'};
+      const results=[];
+      for(const subscription of pushSubscriptions){
+        try{results.push(await sendPush(subscription,JSON.stringify({...digest,url:'/app/',tag:'test'}),vapid));}
+        catch(error){results.push({ok:false,status:0,error:String(error?.message||error)});}
+      }
+      res.end(JSON.stringify({results}));return;
     }
     if (url.pathname === '/v1/travel/snapshot') {res.end(JSON.stringify({records}));return;}
     if (url.pathname.startsWith('/v1/travel/')) {

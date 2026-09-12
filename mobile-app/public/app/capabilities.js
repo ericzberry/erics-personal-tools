@@ -12,6 +12,7 @@ import {mountPersonal} from './shared/personal.js';
 import {mountReminders} from './shared/reminders.js';
 import {remindersOffline} from './shared/reminders-offline.js';
 import {mountCapture} from './shared/capture.js';
+import {mountPushBridge} from './push-bridge.js';
 import {captureStores} from './shared/capture-stores.js';
 import {mountGifts} from './shared/gifts.js';
 import {giftsOffline} from './shared/gifts-offline.js';
@@ -97,6 +98,7 @@ function showScreen(screen){
   if(selectedTool==='rewards')rewardTool.refresh({quiet:true});
   parent.postMessage({type:'mobile-screen',screen:settings?SETTINGS_SCREEN:selectedTool||'home'},location.origin);
 }
+mountPushBridge();
 const navigation=mountToolNavigation(root.querySelector('.capability-navigation'),{onScreen:showScreen});
 await connectionChanged();
 window.addEventListener('online',connectionChanged);

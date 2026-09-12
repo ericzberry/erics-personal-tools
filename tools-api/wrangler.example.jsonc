@@ -11,6 +11,11 @@
   "routes": [
     {"pattern": "tools.ezberry.net", "custom_domain": true}
   ],
+  // Reminders are delivered at each device's own morning hour, so the Worker
+  // wakes every hour and sends only to the devices whose hour it is.
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
   "d1_databases": [
     {
       "binding": "DB",

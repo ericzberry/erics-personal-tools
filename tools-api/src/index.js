@@ -8,6 +8,7 @@ import {personal} from './personal.js';
 import {reminders} from './reminders.js';
 import {gifts} from './gifts.js';
 import {readCapture} from './capture.js';
+import {pushSubscriptions, sendTestPush, deliverDueReminders} from './push.js';
 import {latestRelease} from './releases.js';
 import {rewardsSettings,researchCardBenefits} from './rewards.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
@@ -61,6 +62,12 @@ async function readValue(request, limit = MAX_BYTES) {
 }
 
 export default {
+  // Every hour, because a device is told at its own morning hour and those are
+  // spread across time zones. The handler decides who is due; nothing is sent
+  // to a device outside the hour it asked for.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(deliverDueReminders(env, {log: message => console.log(message)}));
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     // The bare hostname is the address a person types; send it to the app
@@ -84,6 +91,15 @@ export default {
       const app = url.searchParams.get('app') || 'chrome-sidebar';
       if (!['chrome-sidebar', 'mobile-app'].includes(app)) return json({error:'Unknown app.'},400);
       try{return await latestRelease(env, app);}catch{return json({error:'Release unavailable.'},503);}
+    }
+    // The application server's own public key. It is public by design — every
+    // subscription is made with it and every push carries it — and the phone
+    // needs it before it has anything to authenticate with.
+    if (url.pathname === '/v1/push/key') {
+      if (request.method !== 'GET') return json({error:'Method not allowed.'}, 405);
+      return env.VAPID_PUBLIC_KEY
+        ? json({key: env.VAPID_PUBLIC_KEY})
+        : json({error:'Push is not configured on this Worker.'}, 503);
     }
     // Google's OAuth redirect arrives with no bearer of this Worker's own, so
     // it is the one route outside the check below. Its single-use `state`,
@@ -123,6 +139,11 @@ export default {
       if(path==='/v1/personal'||path.startsWith('/v1/personal/'))return await personal(request,env,readValue,json);
       if(path==='/v1/reminders'||path.startsWith('/v1/reminders/'))return await reminders(request,env,readValue,json);
       if(path==='/v1/gifts'||path.startsWith('/v1/gifts/'))return await gifts(request,env,readValue,json);
+      if(path==='/v1/push/test'){
+        if(request.method!=='POST')return json({error:'Method not allowed.'},405);
+        return json(await sendTestPush(env));
+      }
+      if(path==='/v1/push/subscriptions'||path.startsWith('/v1/push/subscriptions/'))return await pushSubscriptions(request,env,readValue,json);
       if(path==='/v1/cards'||path.startsWith('/v1/cards/'))return await cards(request,env,readValue,json);
       if (path === '/v1/travel' || path.startsWith('/v1/travel/')) return await travel(request, env, readValue, json);
       return await aiSettings(request, env, readValue, json);

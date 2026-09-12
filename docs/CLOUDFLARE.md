@@ -11,6 +11,7 @@ The repository is the source of truth for Worker code, schema SQL, dependency me
 | `tools-api/src/index.js` | Request entry point, shared authentication and request limits, mobile asset responses, and capability routing |
 | `tools-api/src/ai-settings.js`, `rewards.js`, `travel.js`, `cards.js`, `finance.js`, `personal.js` | Capability-specific storage and operations; `travel.js` is the generic encrypted record store the others reuse |
 | `tools-api/src/providers.js`, `model-policy.js` | Provider dispatch and central task-based model selection |
+| `tools-api/src/push.js`, `web-push.js` | Device subscriptions, the morning digest, and Web Push itself; reached from the `scheduled` handler as well as from routes |
 | `tools-api/src/releases.js` | Public, per-app release metadata lookup |
 | `tools-api/*schema.sql` | Explicit D1 schema setup and upgrades |
 | `tools-api/wrangler.example.jsonc` | Versioned configuration template; actual account/database settings live in ignored `wrangler.jsonc` |
@@ -74,7 +75,7 @@ Follow the release requirements in [AGENTS.md](../AGENTS.md). Release from a tes
 1. Install locked dependencies in `tools-api` with `npm ci`. Confirm that the ignored Wrangler configuration targets the existing Worker and database, using the checked-in template. Follow the API README for initial authentication and secret provisioning.
 2. Run the affected behavior and architecture checks and final app builds. From the repository root, the API suite is `npm --prefix tools-api test`; shared API behavior requires both app builds and relevant client checks. Node's SQLite-based tests require the runtime specified in the API README.
 3. Align affected app versions, package the verified artifacts, inspect the staged diff, then commit and push as required by AGENTS.md. Preserve the fixed Chrome release destination.
-4. Apply required schema upgrades from the release checkout using the documented D1 commands. Deploy with `npm --prefix tools-api run deploy`. Its `predeploy` script rebuilds mobile assets before Wrangler deploys the Worker and assets; it does not run the test suite, apply schema SQL, or publish release metadata.
+4. Apply required schema upgrades from the release checkout using the documented D1 commands. A deploy also publishes the cron triggers in `wrangler.jsonc`; the hourly one drives [notifications](NOTIFICATIONS.md) and needs `push-schema.sql` applied and the three `VAPID_*` secrets set, or its runs end with "push is not configured" rather than failing loudly. Deploy with `npm --prefix tools-api run deploy`. Its `predeploy` script rebuilds mobile assets before Wrangler deploys the Worker and assets; it does not run the test suite, apply schema SQL, or publish release metadata.
 5. Verify the deployed service and changed behavior using synthetic records where writes are necessary. Check mobile assets and the affected authenticated operation, not just `/health`. Its current `version: 2` is a service marker, not a Git revision or app release version. Record the deployment identity reported by Wrangler; do not infer it from local Git history.
 6. After successful deployment and the required packaging, commit, and push, publish each affected app separately from the repository root:
 

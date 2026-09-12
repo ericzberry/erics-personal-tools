@@ -53,10 +53,10 @@ different table. It validates the anchor and the interval and never computes a
 due date, an age, or what needs attention — the device does that, against its
 own day. See [CLOUDFLARE.md](CLOUDFLARE.md) for the store's contract.
 
-## Not built yet
+## Getting told
 
-Nothing delivers a reminder off the screen. A due date is surfaced when a host
-is opened, and that is all: there is no push notification, no email, and no
-scheduled job. Delivery needs a Worker cron trigger, stored push subscriptions,
-and the installed mobile app's permission; it is deliberately a separate piece
-of work from the records themselves.
+A reminder reaches the phone as a notification at its own morning hour, on the
+days something is due. See [notifications](NOTIFICATIONS.md).
+
+The extension has no equivalent: it is a side panel that is either open or not,
+and a browser that is closed cannot be told anything.

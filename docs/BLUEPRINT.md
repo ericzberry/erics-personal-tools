@@ -164,7 +164,10 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   hamburger menu.
 - `restaurants.js` + `restaurant-cache.js` — mobile restaurant view and its
   read-only download cache.
-- `sw.js` — offline shell cache; its cache name carries the version.
+- `push.js` (in the shell) and `push-bridge.js` (in the frame) — notifications:
+  the browser half where the page is, the authenticated half where the token is.
+- `sw.js` — offline shell cache; its cache name carries the version, plus the
+  `push` and `notificationclick` handlers.
 - `tests/` behavior tests plus `preview-server.js` / `cards-preview-server.js`.
 
 ## tools-api/
@@ -173,7 +176,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`,
-  `/v1/drive/…`. The AI-connection family
+  `/v1/push/…`, `/v1/drive/…`. `/v1/push/key` is public like the release route,
+  because a device needs it before it can subscribe to anything. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
   body over 64 KB because a statement or document image travels inline;
   `/v1/rewards/programs/:id` is allowed 256 KB because a program's whole offer
@@ -185,7 +189,10 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   reuse it for `card_records`, `finance_records`, `personal_records`,
   `reminder_records` and `gift_records`.
   `src/capture.js` is not a store: it reads one typed note into a record one of
-  them already accepts. `src/rewards.js` (the
+  them already accepts. `src/push.js` and `src/web-push.js` are the
+  notification side: subscriptions, the morning digest, and Web Push itself
+  (RFC 8291 and 8292) written against WebCrypto with no dependency. The
+  `scheduled` export in `src/index.js` is the hourly trigger they run on. `src/rewards.js` (the
   wallet, plus the issuer research that turns one card name into the card and the
   benefits it carries),
   `src/programs.js` (one catalogue document per reward program, folded into what
@@ -200,6 +207,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_records`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`),
+  `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
@@ -279,5 +287,5 @@ release) · `docs/DESIGN.md`, `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/REWARDS.md`,
 `docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/REWARD_PROGRAMS.md`,
-`docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/QUICK_ADD.md`,
+`docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/QUICK_ADD.md`, `docs/NOTIFICATIONS.md`,
 `chrome-sidebar/RESTAURANTS.md`.
