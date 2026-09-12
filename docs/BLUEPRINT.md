@@ -112,7 +112,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
   `account-sites.js` is the sidebar's alone: the registry of account sites worth
-  recognizing (E*TRADE, Chase, Morgan Stanley) plus the in-page probe that says
+  recognizing (E*TRADE, Chase, Morgan Stanley, Schwab) plus the in-page probe that says
   whether the owner is already signed in to one. `context-panel.js` drives it
   from the tab it already watches, and a signed-in site opens Finance with its
   snapshot prompt.

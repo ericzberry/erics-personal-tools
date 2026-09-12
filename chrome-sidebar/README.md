@@ -590,3 +590,45 @@ open state per registered site; the Chase reading was driven through Store,
 Edit and Save against synthetic figures. Detection was verified against the real
 signed-out chase.com and secure.chase.com — including the frame timing that
 motivated the loading rule — but not against a signed-in Chase session.
+
+## Schwab accounts read into the snapshot (0.6.97)
+
+Schwab joins the sites the sidebar recognizes beside it, on the same terms as
+E*TRADE, Chase and Morgan Stanley: signed in to Schwab, Finance opens with
+**Store account snapshots**, and one press reads the accounts on screen into one
+row each. An account the reading cannot place is filed as a brokerage, and a page
+that names no institution is filed under Charles Schwab.
+
+It is the first site to be given a subdomain rather than a registrable domain.
+The balances are only ever on client.schwab.com — www.schwab.com is the marketing
+site, and schwaballiance.com now redirects there — so an ordinary visit to
+schwab.com is never asked anything at all. The signed-in application is
+everything under `/app/`, where signing on lands, and nothing signed out sits on
+that prefix: a deep link followed with no session comes back as
+`/Areas/Access/Login` carrying the path it wanted in a ReturnUrl, which is also
+where the older `/Login/SignOn/` form and `/Areas/Access/SignOut` end up, and the
+host's own public pages are under `/Public/`. A signed-in page outside `/app/` is
+still recognized the way any other is, by its sign-out control.
+
+Schwab serves its log-on form from a frame on a different host,
+sws-gateway-nr.schwab.com. That is the rule Chase already established doing its
+work again on a harder case: the top frame of that page has no password field at
+all, and only a probe that asks every frame finds the one that does.
+
+Nothing else changed. What the page hands back is still a path, a loading state
+and two yes/no answers and no page text, and the extension still never
+navigates, never signs in, never opens a tab, and reads only the page already in
+front of the owner, only when asked.
+
+Validation: 303 extension, 33 mobile and 75 API tests pass. `account-sites.js` is
+the sidebar's alone, so mobile and the Worker are untouched by this release. New
+coverage: Schwab host matching — the client subdomain recognized, the marketing
+site and Schwab Alliance left alone, look-alike hosts refused — the `/app/`
+application against the log-on, legacy log-on and public paths on the same host,
+and the gateway frame answering for a page whose top frame carries no password
+field. The snapshot panel was reviewed at 380px and 280px in the passkey-gate
+harness, which shows one open state per registered site, and the Schwab reading
+was driven through Store, Edit and Save against synthetic figures. Detection was
+checked against the live signed-out client.schwab.com — its log-on page, the
+redirect a signed-out `/app/` deep link produces, the legacy log-on path and the
+sign-out path — but not against a signed-in Schwab session.

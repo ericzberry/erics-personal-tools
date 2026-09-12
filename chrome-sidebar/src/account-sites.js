@@ -39,7 +39,28 @@ export const ACCOUNT_SITES=[
     //
     // Self-directed accounts at E*TRADE from Morgan Stanley sign in separately
     // and are already their own entry above.
-    hosts:['morganstanleyclientserv.com'],app:/^\/cs\/(?!free)/i}
+    hosts:['morganstanleyclientserv.com'],app:/^\/cs\/(?!free)/i},
+  {id:'schwab',label:'Schwab',institution:'Charles Schwab',kind:'brokerage',
+    // The balances are on client.schwab.com and nowhere else: www.schwab.com is
+    // the marketing site, and schwaballiance.com now redirects there too. So
+    // this entry names the client subdomain instead of the registrable domain,
+    // and an ordinary visit to schwab.com is never asked anything.
+    //
+    // The signed-in application is everything under /app/ — /app/accounts/summary/
+    // is where signing on lands. Nothing signed out sits on that prefix: an
+    // unauthenticated request for one is redirected to /Areas/Access/Login
+    // carrying it back as a ReturnUrl, which is also where the legacy
+    // /Login/SignOn/ form and /Areas/Access/SignOut end up, and the host's own
+    // public pages are under /Public/. A signed-in page that is not under /app/
+    // is still recognized the way any other is, by its sign-out control.
+    //
+    // Schwab serves its log-on form from a frame on another host
+    // (sws-gateway-nr.schwab.com), so the password field is visible only to a
+    // probe that asks every frame — which is what Chase already established.
+    //
+    // The label is what the panel calls the site; the institution is the name
+    // the ledger's own field asks for, and the one a new record should carry.
+    hosts:['client.schwab.com'],app:/^\/app\//i}
 ];
 
 const hostMatches=(hostname,host)=>hostname===host||hostname.endsWith(`.${host}`);

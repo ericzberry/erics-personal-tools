@@ -5,6 +5,7 @@ import {accountSite,signedIn,readSignInState,combineSignInState,accountSiteWatch
 const etrade=ACCOUNT_SITES.find(site=>site.id==='etrade');
 const chase=ACCOUNT_SITES.find(site=>site.id==='chase');
 const morganStanley=ACCOUNT_SITES.find(site=>site.id==='morgan-stanley');
+const schwab=ACCOUNT_SITES.find(site=>site.id==='schwab');
 const frame=(result,frameId=0)=>({frameId,result});
 
 test('an account site is recognized by its host, and nothing else is',()=>{
@@ -20,8 +21,15 @@ test('an account site is recognized by its host, and nothing else is',()=>{
     assert.equal(accountSite(url)?.id,'morgan-stanley',url);
   // The firm's public site is not where the accounts are, and is left alone.
   assert.equal(accountSite('https://www.morganstanley.com/what-we-do/wealth-management'),null);
+  // Schwab's balances are on the client subdomain alone, which serves the log-on
+  // form as well as the application.
+  for(const url of ['https://client.schwab.com/app/accounts/summary/','https://client.schwab.com/Areas/Access/Login'])
+    assert.equal(accountSite(url)?.id,'schwab',url);
+  // The marketing site has nothing to read, and Schwab Alliance redirects to it.
+  for(const url of ['https://www.schwab.com/','https://schwab.com/branches','https://www.schwaballiance.com/'])
+    assert.equal(accountSite(url),null,url);
   // A look-alike host is not the site, and neither is an unencrypted one.
-  for(const url of ['https://etrade.com.example.invalid/','https://notetrade.com/','http://us.etrade.com/etx/','https://chase.com.example.invalid/','https://notchase.com/','https://morganstanleyclientserv.com.example.invalid/','https://notmorganstanleyclientserv.com/','chrome://extensions','',undefined])
+  for(const url of ['https://etrade.com.example.invalid/','https://notetrade.com/','http://us.etrade.com/etx/','https://chase.com.example.invalid/','https://notchase.com/','https://morganstanleyclientserv.com.example.invalid/','https://notmorganstanleyclientserv.com/','https://client.schwab.com.example.invalid/','https://notclient.schwab.com/','chrome://extensions','',undefined])
     assert.equal(accountSite(url),null,String(url));
 });
 
@@ -60,6 +68,24 @@ test('a site’s public pages are held out of its application paths',()=>{
   assert.equal(signedIn(morganStanley,page('/cs/freeContent/FreeContentFixedWidth.aspx')),false,'the prefix is held out however the site capitalizes it');
   assert.equal(signedIn(morganStanley,page('/cs/freecontentenrollment/enrollments/identification.aspx')),false,'creating a username is not being signed in');
   assert.equal(signedIn(morganStanley,page('/ux/')),false,'the log-on form is on the same site, under its own path');
+});
+
+// Schwab puts everything signed out somewhere other than its application: a deep
+// link to /app/ with no session comes back as /Areas/Access/Login carrying the
+// path it wanted, and the log-on form's password field is in a frame served from
+// another host.
+test('the Schwab application is /app/, and nothing signed out is there',()=>{
+  const page=(path,extra={})=>({path,ready:true,password:false,exit:false,...extra});
+  assert.equal(signedIn(schwab,page('/app/accounts/summary/')),true,'where signing on lands');
+  assert.equal(signedIn(schwab,page('/app/whatever-the-application-adds-next')),true,'the whole prefix is the application');
+  assert.equal(signedIn(schwab,page('/Areas/Access/Login')),false,'every signed-out page is redirected here');
+  assert.equal(signedIn(schwab,page('/Login/SignOn/CustomerCenterLogin.aspx')),false,'the older log-on form is on this host too');
+  assert.equal(signedIn(schwab,page('/Public/BranchLocator/AccessSchwab.aspx')),false,'a public page on the application’s own host');
+  // Only a probe that asks every frame sees the password field, because the top
+  // frame of the log-on page does not have one.
+  const combined=combineSignInState([frame(page('/Areas/Access/Login'),0),frame(page('/ui/host/',{password:true}),4)]);
+  assert.equal(combined.password,true,'the gateway frame answers for the page');
+  assert.equal(signedIn(schwab,combined),false);
 });
 
 test('the page probe reports four facts and no page content',()=>{
