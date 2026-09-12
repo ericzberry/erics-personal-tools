@@ -75,7 +75,11 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 ### `src/` shared core (used by more than one host or feature)
 
 - **Navigation / registry** — `capabilities.js` (the capability registry both hosts
-  read; every entry needs an `icon`), `navigation.js`, `capability-links.js`.
+  read; every entry needs an `icon`), `navigation.js`, `capability-links.js`,
+  `page-offers.js` (which capabilities have something for the page in front of
+  the owner — one entry per source, and no page is read to answer it) and
+  `page-strip.js` (the controller for the row under the header that offers
+  them; `context-panel.js` hands it the tab it already watches).
 - **Links** — `public-url.js`: the one reading of "a link safe to show and
   open", used by gift links and restaurant booking links alike.
 - **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),

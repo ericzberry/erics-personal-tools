@@ -15,6 +15,13 @@
 // existed anywhere. That was the only cheap moment it will ever have.
 export const CLOUD_URL = 'https://tools.ezberry.net';
 export const CONNECTION_KEY = 'cloudConnection';
+// This device's saved access token, which is also the key its offline copies
+// are encrypted with. The page controllers each grew their own copy of these
+// four lines; this is where they belong, beside the key they read.
+export const deviceCredentials=(storage=globalThis.chrome?.storage?.local)=>({
+  async get(){return storage?(await storage.get(CONNECTION_KEY))[CONNECTION_KEY]?.token||'':'';},
+  subscribe(callback){storage&&globalThis.chrome?.storage?.onChanged?.addListener((changes,area)=>{if(area==='local'&&changes[CONNECTION_KEY])callback();});}
+});
 export async function cloudRequest(token, path, {method = 'GET', value, fetcher = globalThis.fetch, timeoutMs = 30000, maxBytes = 64 * 1024} = {}) {
   if (!token || token.length < 32) throw Error('Enter your private access token (at least 32 characters).');
   const body = value === undefined ? undefined : JSON.stringify(value);

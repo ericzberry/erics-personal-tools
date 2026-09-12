@@ -1,5 +1,9 @@
 import {AUTO_CAPABILITY,capabilities} from './capabilities.js';
 let currentTool='football',selection=AUTO_CAPABILITY.id,settingsOpen=false;
+// Anyone who wants to know which tool is on screen now: the strip under the
+// header, which must not offer what the owner is already looking at.
+const navigated=new Set();
+export function onNavigate(listener){navigated.add(listener);return()=>navigated.delete(listener);}
 const $=id=>document.getElementById(id);
 function render(){
   const active=selection===AUTO_CAPABILITY.id?currentTool:selection;
@@ -12,7 +16,12 @@ function render(){
     if(!settingsOpen&&selection===item.id){node.setAttribute('aria-current','page');node.closest('.capability-submenu')?.setAttribute('open','');}
     else node.removeAttribute('aria-current');
   }
+  for(const listener of navigated)listener(activeCapability());
 }
+// The capability actually on screen: the chosen one, or in Automatic mode
+// whichever tool the tab is showing. The strip under the header reads this so
+// it never offers to go where the owner already is.
+export const activeCapability=()=>settingsOpen?'settings':selection===AUTO_CAPABILITY.id?currentTool:selection;
 function closeNavigation(){ $('app-navigation').open=false; }
 export function showTool(tool){currentTool=tool;render();}
 export function showSettings(open){settingsOpen=open;closeNavigation();render();}

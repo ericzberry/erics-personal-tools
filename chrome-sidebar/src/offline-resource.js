@@ -71,6 +71,11 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
   });
   return {
     request,
+    // The device's own copy, with no request and no sync. Recognizing what the
+    // owner is looking at has to cost nothing, so it must not reach for the
+    // cloud, and records that were never downloaded are simply none rather than
+    // an error the caller has to catch.
+    saved:token=>token?exclusive(async()=>rows(await load(token)).map(metadata)):Promise.resolve([]),
     resolve:(token,id,choice)=>exclusive(async()=>{
       const state=await load(token),change=state.pending[id];
       if(!change)throw Error('This change was already resolved. Refresh your records.');

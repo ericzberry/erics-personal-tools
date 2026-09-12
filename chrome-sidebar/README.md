@@ -632,3 +632,43 @@ was driven through Store, Edit and Save against synthetic figures. Detection was
 checked against the live signed-out client.schwab.com — its log-on page, the
 redirect a signed-out `/app/` deep link produces, the legacy log-on path and the
 sign-out path — but not against a signed-in Schwab session.
+
+## The page in front of you says what these tools can do with it (0.6.101 / mobile 0.1.60)
+
+The sidebar has always recognized a handful of pages, but recognizing one meant
+being moved: Automatic mode follows the tab, and a tool chosen by hand never
+heard about the tab at all. Now every page is looked at, and whatever these tools
+can do with it appears as one row of destinations under the header — present only
+when there is something, and changing nothing until it is pressed.
+
+What a page can offer today: a gift idea saved from this exact page — including
+**Bought for Celeste**, which is the half of it that stops a present being bought
+twice — the snapshot beside a signed-in account site, a reward program's offers
+on the program's own site, the email tools in Gmail, and draft advice on ESPN.
+Pressing one goes exactly where the Tools menu goes: a capability with a page of
+its own opens in a tab, a tool that lives in the panel is selected there, and the
+tools that follow the tab hand the panel back to the tab. Adding another source
+is one entry in `page-offers.js`.
+
+It never offers the tool already on screen, because that would be a label for a
+visible state, and it never moves the owner on its own: Automatic mode still
+follows the tab, and a tool chosen by hand stays chosen.
+
+Recognizing a page costs nothing. No page is read to answer the question — the
+strip is handed the tab's URL and the sign-in answer the account-site probe had
+already given — and the saved gift ideas it matches against are read from this
+device's own encrypted copy through a new `saved()` on the offline adapter, which
+returns what is on the device with no request and no sync. A browser that has
+never been connected has no records to recognize a page with, and everything else
+in the strip still works.
+
+Validation: 316 extension, 33 mobile and 75 API tests pass, including new
+coverage for a page nothing knows, a saved link matched across tracking
+parameters and a trailing slash but not across a different path or host, bought
+and several-ideas labels, the signed-in site's offer and its absence on the same
+site's log-on page, suppression of the tool already on screen, source order, the
+strip's links and buttons and where each goes, and the shell mounting the strip
+under its header. The states were reviewed at 380px and 280px in the new
+`tests/page-strip-preview.html` harness, which renders the real header and strip
+against synthetic pages. Mobile has no tab beside it and so has no strip; it
+takes this version because it ships the two shared modules this change touched.

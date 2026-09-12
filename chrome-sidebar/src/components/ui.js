@@ -106,6 +106,23 @@ export function CapabilityNavigation(items){
   });
   return disclosure;
 }
+// What the page in front of the owner has to offer, as one row under the
+// header: the same icon and label the Tools menu uses for the same
+// destination, because pressing one goes to exactly where that row goes. The
+// bar is empty and hidden until a page offers something.
+export const PageOfferBar=()=>element('nav',{id:'page-offers',className:'page-offers','aria-label':'This page',hidden:true});
+export function PageOfferStrip(offers=[],{onSelect=()=>{}}={}){
+  return offers.map(offer=>{
+    const props={id:`page-offer-${offer.id}`,className:'page-offer'};
+    const children=[Glyph(offer.icon,{size:14}),Strong(offer.label)];
+    // A capability with a page of its own is a link to it, as in the menu; one
+    // that lives in the panel is a button that selects it there.
+    if(offer.href)return element('a',{...props,href:offer.href,target:'_blank',rel:'noreferrer'},children);
+    const node=element('button',{...props,type:'button'},children);
+    node.addEventListener('click',()=>onSelect(offer));
+    return node;
+  });
+}
 // Mobile Tools menu: the same icon grid, collapsed behind a hamburger once a
 // tool is open. On the home screen the caller unhides the grid in place.
 export function CapabilityMenu(items=capabilitiesByName,{current='Home'}={}){

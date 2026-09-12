@@ -4,10 +4,14 @@ import {showTool} from './navigation.js';
 import {generateEmailText} from './email-ai.js';
 import {accountSiteWatcher} from './account-sites.js';
 import {openFinanceTool,mountedFinanceTool} from './capability-links.js';
+import {mountPageStrip} from './page-strip.js';
 const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.tabs;
 const readCurrentEmail=extension?gmailConnection(chrome):null;
 const detectAccountSite=extension?accountSiteWatcher():null;
+// One strip for the whole panel, under the header: it outlives every tool,
+// because the point of it is to be there when the owner is somewhere else.
+const strip=extension?mountPageStrip($('page-offers')):null;
 let email = null, identity = '', generation = 0, controller, activeTab, polling = false, working = false;
 function clearEmail(next = null) {
   const nextIdentity = next ? JSON.stringify(next) : '';
@@ -41,6 +45,7 @@ async function refresh() {
     const gmail = url.hostname === 'mail.google.com';
     const site = gmail ? null : await detectAccountSite(tab);
     await announceAccountSite(site);
+    strip?.update({url:tab?.url||'',site});
     const tool = gmail ? 'gmail' : site ? 'finance' : url.hostname === 'fantasy.espn.com' ? 'football' : 'home';
     showTool(tool);
     if (activeTab !== tab?.id) {clearEmail();activeTab = tab?.id;}
