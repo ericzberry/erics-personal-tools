@@ -726,3 +726,11 @@ with Save and Update driven against synthetic readings; on the phone preview the
 launcher shows Properties, the shortlist renders, and an edit made offline queued
 and synced on reconnect. A model's reading of a live listing page was not
 exercised.
+
+## Needs attention and subscriptions
+
+Tools now includes **Needs attention** and **Subscriptions & renewals**. Review
+upcoming dates, unused benefits, stale balances and recurring charges together.
+Read bank / card statements into review candidates, confirm terms, and research
+cheaper plans for a chosen country with dated sources. Saved charges and comparison
+results remain available offline. See [behavior and limits](../docs/ATTENTION.md).

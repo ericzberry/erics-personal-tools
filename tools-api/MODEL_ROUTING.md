@@ -57,3 +57,13 @@ and currency conversion. Drafts are matched to records and all arithmetic is
 performed on the device. A draft without a usable as-of date is dropped rather
 than dated today. Fixtures cover that drop, the untrusted-text framing, input
 limits, and rejection of unparseable output.
+
+# Subscription tasks
+
+`subscriptions.intake` uses the existing reviewed level-2 catalog, up to 7,000
+output tokens and a $0.05 estimated ceiling; images require vision support.
+`subscriptions.research` requires level 3 and live web search, with 4,000 output
+tokens and a $0.10 estimated ceiling. No model IDs live in feature controllers.
+Synthetic evaluations cover missing evidence / dates / currencies, incomplete
+reads, invalid source URLs and absent web search. No paid quality evaluation was
+performed for this release; statement identification remains reviewable.

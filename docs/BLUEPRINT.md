@@ -42,12 +42,14 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
 | `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
+| `attention.html` | `src/attention-page.js` | Needs attention across saved records |
+| `subscriptions.html` | `src/subscriptions-page.js` | Recurring charges, renewal decisions and alternatives |
 | `properties.html` | `src/properties-page.js` | Properties: the shortlist for a real estate search |
 | `taxes.html` | `src/taxes-page.js` | Taxes: file a K-1 or 1099 into Google Drive |
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
 | `data.html` | `src/data-page.js` | Read-only player rankings reference data |
 
-Travel, Rewards, Finance, Taxes and Properties are side-panel tools as well as tabs: they
+Travel, Rewards, Finance, Taxes, Properties, Needs attention and Subscriptions are side-panel tools as well as tabs: they
 have no `href` in the sidebar's capability list, and `capability-links.js` mounts
 each into the panel on first use. The panel is the default home for a tool —
 it sits beside the page the work comes from, which is why a K-1 can be dragged
@@ -258,6 +260,21 @@ GitHub does not abort a release already on origin), runs the three test suites,
 builds and packages the extension, builds mobile, deploys the Worker, publishes
 both versions to D1, and then reads the release endpoint back to confirm.
 `--skip-tests`, `--repackage`, `--open`.
+
+## Attention and subscription modules
+
+`src/attention-data.js` is the shared attention projection; `attention.js` and
+`components/attention.js` render it, with `attention-stores.js` wiring extension
+stores. `subscription-data.js`, `subscriptions-offline.js`, `subscriptions.js`
+and `components/subscriptions.js` own subscription validation, storage and UI.
+Mobile copies all except extension-only `attention-stores.js` and page controllers;
+its existing stores are passed directly. All copied modules are in its offline shell.
+
+`tools-api/src/subscriptions.js` serves `/v1/subscriptions[/snapshot|/:id]` through
+the generic store and the `subscription-intake` / `subscription-research` AI
+operations. `tools-api/subscriptions-schema.sql` adds `subscription_records`.
+See [attention and subscriptions](ATTENTION.md) for behavior and release limits.
+The extension build now includes `attention.html` and `subscriptions.html`.
 
 ## Common tasks → where to start
 

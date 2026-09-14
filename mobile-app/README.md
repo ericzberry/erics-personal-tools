@@ -65,3 +65,11 @@ Mobile 0.1.49 shows a reward program's published offers under **Program offers**
 in Rewards & benefits, downloaded like any other record so they stay readable
 with no signal. The phone never reads one: that needs the browser signed in to
 the program's site. See [reward programs](../docs/REWARD_PROGRAMS.md).
+
+## Needs attention and subscriptions
+
+Tools now includes **Needs attention** and **Subscriptions & renewals**. Review
+upcoming dates, unused benefits, stale balances and recurring charges together.
+Read bank / card statements into review candidates, confirm terms, and research
+cheaper plans for a chosen country with dated sources. Saved charges and comparison
+results remain available offline. See [behavior and limits](../docs/ATTENTION.md).

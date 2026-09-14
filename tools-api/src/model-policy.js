@@ -18,6 +18,8 @@ export const TASK_POLICIES = {
   'cards.category':{label:'Purchase reading',level:1,outputTokens:600,web:false,maxCost:0.01},
   'cards.research':{label:'Card issuer research',level:3,outputTokens:4000,web:true,maxCost:0.10},
   'rewards.benefits':{label:'Card benefit research',level:3,outputTokens:6000,web:true,maxCost:0.15},
+  'subscriptions.intake':{label:'Recurring charge reading',level:2,outputTokens:7000,web:false,maxCost:0.05},
+  'subscriptions.research':{label:'Subscription alternatives',level:3,outputTokens:4000,web:true,maxCost:0.10},
   'finance.intake':{label:'Finance reading',level:2,outputTokens:2500,web:false,maxCost:0.03},
   'capture.note':{label:'Quick note reading',level:1,outputTokens:500,web:false,maxCost:0.01},
   'properties.listing':{label:'Listing reading',level:2,outputTokens:600,web:false,maxCost:0.02},

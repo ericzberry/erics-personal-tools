@@ -1,3 +1,6 @@
+import {mountAttention} from './shared/attention.js';
+import {mountSubscriptions} from './shared/subscriptions.js';
+import {subscriptionsOffline} from './shared/subscriptions-offline.js';
 import {mountRewards} from './shared/rewards-tool.js';
 import {rewardsOffline} from './shared/rewards-offline.js';
 import {programsOffline} from './shared/program-offline.js';
@@ -50,11 +53,12 @@ const giftStore=giftsOffline({remote:cloudRequest,store:protectedStore(encrypted
 // downloaded whole like every other record. The phone never reads a listing:
 // that needs the browser the listing is open in.
 const propertyStore=propertiesOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
+const subscriptionStore=subscriptionsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const credentials={
-  async beforeDisconnect(){const token=await this.get();if(token&&(await cardStore.hasPending(token)||await rewardStore.hasPending(token)||await financeStore.hasPending(token)||await personalStore.hasPending(token)||await reminderStore.hasPending(token)||await giftStore.hasPending(token)||await propertyStore.hasPending(token)))throw Error('Sync or resolve pending changes before disconnecting.');},
+  async beforeDisconnect(){const token=await this.get();if(token&&(await subscriptionStore.hasPending(token)||await cardStore.hasPending(token)||await rewardStore.hasPending(token)||await financeStore.hasPending(token)||await personalStore.hasPending(token)||await reminderStore.hasPending(token)||await giftStore.hasPending(token)||await propertyStore.hasPending(token)))throw Error('Sync or resolve pending changes before disconnecting.');},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token){await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await reminderStore.disconnect(token);await giftStore.disconnect(token);await propertyStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();propertyTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token){await subscriptionStore.disconnect(token);await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await reminderStore.disconnect(token);await giftStore.disconnect(token);await propertyStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();propertyTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,remote:cloudRequest});
 const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
@@ -78,9 +82,11 @@ const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai'
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
-async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();propertyTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
+async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();propertyTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
 const offline=travelOffline({includeNumbers:true,remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 mountTravel(document.getElementById('capability-travel'),{credentials,offline,showNumbers:true,request:offline.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
+const subscriptionTool=mountSubscriptions(document.getElementById('capability-subscriptions'),{credentials,offline:subscriptionStore,remote:cloudRequest,onSettings:openSettings});
+const attentionTool=mountAttention(document.getElementById('capability-attention'),{credentials,stores:{reminders:reminderStore,rewards:rewardStore,travel:offline,personal:personalStore,finance:financeStore,subscriptions:subscriptionStore},onSettings:openSettings,onOpen:(id)=>navigation.show(id,{focus:true})});
 const rankings=mountLibrary(document.getElementById('capability-rankings'),{kind:'rankings',load:async()=>({value:await (await fetch('/app/data/rankings-2026.json')).json()})});
 await rankings.refresh();
 let selectedTool;
@@ -101,6 +107,8 @@ function showScreen(screen){
   // the page is for.
   captureRoot.hidden=settings||!!selectedTool;
   for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=selectedTool!==capability.id;
+  if(selectedTool==='attention')attentionTool.refresh();
+  if(selectedTool==='subscriptions')subscriptionTool.refresh();
   if(selectedTool==='restaurants')restaurants.open();
   if(selectedTool==='rewards')rewardTool.refresh({quiet:true});
   parent.postMessage({type:'mobile-screen',screen:settings?SETTINGS_SCREEN:selectedTool||'home'},location.origin);

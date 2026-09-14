@@ -52,7 +52,29 @@ document.getElementById('navigate-properties')?.addEventListener('click',openPro
 
 // A panel tool reached from anywhere other than its own menu row — the strip
 // under the header — has to be built the same way its row would build it.
-const PANEL_TOOLS={travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,properties:openPropertiesTool};
+let attention=null,subscriptions=null;
+export function openSubscriptionsTool(){
+  const root=document.getElementById('subscriptions-tool');
+  if(!root)return null;
+  subscriptions??=import('./subscriptions-page.js').then(({mountExtensionSubscriptions})=>mountExtensionSubscriptions(root,{onSettings:()=>document.getElementById('open-settings')?.click()}));
+  return subscriptions;
+}
+export function openAttentionTool(){
+  const root=document.getElementById('attention-tool');
+  if(!root)return null;
+  attention??=import('./attention-page.js').then(({mountExtensionAttention})=>mountExtensionAttention(root,{onSettings:()=>document.getElementById('open-settings')?.click(),onOpen:async id=>{
+    const item=CAPABILITIES.find(c=>c.id===id);
+    if(['travel','rewards','finance','subscriptions'].includes(id)){
+      const {selectCapability}=await import('./navigation.js');selectCapability(id);await openPanelTool(id);
+    }else if(globalThis.chrome?.tabs?.create)chrome.tabs.create({url:chrome.runtime.getURL(item.href)});
+    else location.assign(item.href);
+  }}));
+  attention.then(tool=>tool.refresh());
+  return attention;
+}
+document.getElementById('navigate-attention')?.addEventListener('click',openAttentionTool);
+document.getElementById('navigate-subscriptions')?.addEventListener('click',openSubscriptionsTool);
+const PANEL_TOOLS={attention:openAttentionTool,subscriptions:openSubscriptionsTool,travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,properties:openPropertiesTool};
 export const openPanelTool=id=>PANEL_TOOLS[id]?.()??null;
 
 // Standalone settings/data pages use the same data registry in the shared formatted picker.

@@ -20,7 +20,7 @@ const programOffers=[
 const programCatalog={id:'ms-reserved',programId:'ms-reserved',label:'Morgan Stanley Reserved',source:'Morgan Stanley Reserved Living & Giving',
   complete:true,offers:programOffers,readAt:new Date().toISOString(),listedAt:new Date().toISOString(),
   revision:'synthetic-catalog',updatedAt:new Date().toISOString()};
-let finance=[];let personal=[];
+let finance=[];let personal=[];let subscriptions=[];
 // Dated commitments, as the phone receives them: one overdue service, one
 // birthday inside its notice, one renewal with months of warning.
 let reminders=[
@@ -139,7 +139,7 @@ createServer(async (req, res) => {
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
       cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
     }
-    for(const [name,list,set] of [['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}],['properties',()=>properties,value=>{properties=value;}]]){
+    for(const [name,list,set] of [['subscriptions',()=>subscriptions,value=>{subscriptions=value;}],['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}],['properties',()=>properties,value=>{properties=value;}]]){
       if(url.pathname===`/v1/${name}/snapshot`){res.end(JSON.stringify({records:list()}));return;}
       if(url.pathname.startsWith(`/v1/${name}/`)){
         const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
