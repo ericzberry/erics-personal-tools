@@ -93,7 +93,26 @@ The additive, repeatable upgrade preserves existing tables and records. New rout
 are `/v1/subscriptions[/snapshot|/:id]` and the AI operations `subscription-intake`
 and `subscription-research`. Old clients remain compatible.
 
-This first release does not expand the existing reminder-only morning push digest.
+Extension 0.6.105 / mobile 0.1.63 add higher-charge and post-cancellation reviews.
+A higher-charge alert compares the two latest distinct observation dates only when
+each has one charge and their interval matches the confirmed cycle. It describes
+an observed change, not a confirmed contract increase; taxes, usage and partial
+bills need review. Future-dated observations are excluded. Canceled records require
+an optional user-entered cancellation effective date before later charges can be
+flagged. Same-day charges are not assumed to follow cancellation.
+
+Mark charges reviewed acknowledges the exact saved date/amount/description evidence
+without changing price, status or renewal terms. Reimporting identical evidence stays
+reviewed; newly discovered charges, including older dates, can alert again. The
+optional `canceledOn` and `reviewedCharges` fields live in the existing encrypted
+JSON record, so no table migration is needed. Older API writes preserve these
+fields when omitted. Review candidates also offer Review terms and Not recurring.
+
+The existing morning push digest now uses the same six-source attention projection.
+Financial, subscription and document items appear as category counts without private
+names or amounts on the lock screen. Reminder-only notifications retain their existing
+wording. Only cloud-synced records are visible to the Worker. A failed source read
+aborts the run rather than sending an incomplete digest. See [notifications](NOTIFICATIONS.md).
 Needs attention is checked when opened/refreshed, foregrounded or reconnected;
 subscription extraction and price research are always explicit online actions.
 

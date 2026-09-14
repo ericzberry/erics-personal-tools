@@ -1,6 +1,6 @@
 import {SubscriptionsView,SubscriptionEvidence,SubscriptionResearch,subscriptionFields} from './components/subscriptions.js';
 import {Button,Option,RecordRow,Stack,Note,ActionGroup,Link} from './components/ui.js';
-import {normalizeSubscription,parseSubscriptionReading,mergeSubscriptionReading,subscriptionKey,annualCost,money,BILLING_CYCLES,estimatedRenewal} from './subscription-data.js';
+import {normalizeSubscription,parseSubscriptionReading,mergeSubscriptionReading,subscriptionKey,annualCost,money,BILLING_CYCLES,estimatedRenewal,subscriptionAlerts,chargeKey} from './subscription-data.js';
 import {mountVaultGate} from './vault-gate.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,MAX_BYTES,ACCEPTED} from './statement-text.js';
@@ -20,10 +20,13 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
     const rows=records.map(r=>{
       const remove=action('Delete',()=>{confirm.hidden=false;},'danger-subtle');
       const confirm=Stack([Note(`Delete ${r.name} and its saved charge evidence from all devices?`),ActionGroup([action('Delete record',()=>save(r,'DELETE'),'danger'),action('Keep record',()=>{confirm.hidden=true;})],{compact:true})],{hidden:true});
-      const due=r.renewal||estimatedRenewal(r);
-      const controls=[action('Edit',()=>edit(r),'subtle'),...(!r.conflict&&!r.deleting?[action('Find alternatives',()=>research(r))]:[]),remove];
+      const due=['Canceled','Not recurring'].includes(r.state)?'':r.renewal||estimatedRenewal(r);
+      const alerts=subscriptionAlerts(r);
+      const controls=[...(r.state!=='Review'||r.conflict?[action('Edit',()=>edit(r),'subtle')]:[]),...(!r.conflict&&!r.deleting?[action('Find alternatives',()=>research(r))]:[]),remove];
+      if(!r.conflict&&!r.deleting&&r.state==='Review')controls.unshift(action('Review terms',()=>edit(r),'primary'),action('Not recurring',()=>save({...r,state:'Not recurring'})));
+      if(alerts.length)controls.unshift(action('Mark charges reviewed',()=>save({...r,reviewedCharges:r.charges.map(chargeKey)})));
       if(r.conflict)controls.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>run(token=>offline.resolve(token,r.id,choice)))));
-      return Stack([RecordRow({title:r.name,detail:[r.state,money(r.amount,r.currency),BILLING_CYCLES[r.cycle],r.account,due?`${r.renewal?'Renewal':'Estimated next charge'} ${due}`:'',r.pending?(r.conflict?'Conflict':r.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · '),notes:r.notes,actions:controls}),...(r.url?[Link('Open account',r.url,{rel:'noopener noreferrer'})]:[]),SubscriptionEvidence(r),SubscriptionResearch(r),confirm].filter(Boolean));
+      return Stack([RecordRow({title:r.name,detail:[r.state,money(r.amount,r.currency),BILLING_CYCLES[r.cycle],r.account,r.state==='Canceled'?(r.canceledOn?`Cancellation effective ${r.canceledOn}`:'Add the cancellation date to check later charges'):'',due?`${r.renewal?'Renewal':'Estimated next charge'} ${due}`:'',r.pending?(r.conflict?'Conflict':r.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · '),notes:[...alerts.map(a=>a.reason),r.notes].filter(Boolean).join('\n'),actions:controls}),...(r.url?[Link('Open account',r.url,{rel:'noopener noreferrer'})]:[]),SubscriptionEvidence(r),SubscriptionResearch(r),confirm].filter(Boolean));
     });
     $('records').replaceChildren(...(rows.length?rows:loaded?[Note('No subscriptions saved yet. Read a statement or add one below.')]:[]));
     for(const key of [...subscriptionFields,'connection','import-account','text','country','requirements','file','read','save','cancel','drop','clear-statement'])$(key).disabled=busy||!loaded;
@@ -54,8 +57,8 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
       if(!connections.length)status('Add an OpenAI connection in Settings to read statements or research prices.','intake-status');
     },'intake-status');
   }
-  async function save(r,method='PUT'){
-    const ok=await run(token=>offline.request(token,`/v1/subscriptions/${r.id}`,{method,value:r}),'form-status');if(ok)onChanged();return ok;
+  async function save(r,method='PUT',target='status'){
+    const ok=await run(token=>offline.request(token,`/v1/subscriptions/${r.id}`,{method,value:r}),target);if(ok)onChanged();return ok;
   }
   async function read(){
     const connection=$('connection').value,account=$('import-account').value.trim(),text=$('text').value;
@@ -93,7 +96,7 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
   }
   function clearStatement(){image='';source='';$('text').value='';status('','file-status');status('','intake-status');}
   function clear(){generation++;busy=false;records=[];loaded=false;activeToken='';clearStatement();resetForm();$('connection').replaceChildren(Option('Choose AI connection',''));$('import-account').value='';$('requirements').value='';status('');status('','research-status');render();}
-  $('form').addEventListener('submit',async e=>{e.preventDefault();if(busy||!loaded)return;try{const values=Object.fromEntries(subscriptionFields.map(k=>[k,$(k).value]));const value=normalizeSubscription({...editing,...values,...(editing&&(values.name!==editing.name||values.currency.toUpperCase()!==editing.currency)?{research:null}:{})});if(await save({...value,id:editing?.id||crypto.randomUUID(),revision:editing?.revision??null})){resetForm();$('editor').open=false;}}catch(error){status(error.message,'form-status');}});
+  $('form').addEventListener('submit',async e=>{e.preventDefault();if(busy||!loaded)return;try{const values=Object.fromEntries(subscriptionFields.map(k=>[k,$(k).value]));const value=normalizeSubscription({...editing,...values,...(editing&&(values.name!==editing.name||values.currency.toUpperCase()!==editing.currency)?{research:null}:{})});if(await save({...value,id:editing?.id||crypto.randomUUID(),revision:editing?.revision??null},'PUT','form-status')){resetForm();$('editor').open=false;}}catch(error){status(error.message,'form-status');}});
   $('cancel').addEventListener('click',()=>{resetForm();$('editor').open=false;});
   $('read').addEventListener('click',read);$('clear-statement').addEventListener('click',clearStatement);
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),accept:ACCEPTED,maxBytes:MAX_BYTES,onFile:async file=>{

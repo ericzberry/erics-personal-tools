@@ -20,7 +20,7 @@ test('subscriptions preserve rejected edits, accept decimal prices, and exclude 
   mountSubscriptions(root,{vault,credentials,offline,remote:async()=>({connections:[]})});
   await settle(()=>root.textContent.includes('Add an OpenAI connection')&&!root.querySelector('#subscriptions-save').disabled);
   assert.equal(root.querySelector('#subscriptions-total').textContent,'');assert.equal(root.querySelector('#subscriptions-amount').getAttribute('step'),'0.01');
-  [...root.querySelectorAll('button')].find(b=>b.textContent==='Edit').click();
+  [...root.querySelectorAll('button')].find(b=>b.textContent==='Review terms').click();
   assert.equal(root.querySelector('#subscriptions-cycle').value,'monthly');root.querySelector('#subscriptions-name').value='Edited name';root.querySelector('#subscriptions-state').value='Active';fail=true;
   root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await settle(()=>root.textContent.includes('Could not save'));
   assert.equal(root.querySelector('#subscriptions-name').value,'Edited name');
@@ -32,4 +32,15 @@ test('locking during an in-flight read prevents late private data from repopulat
   const tool=mountSubscriptions(root,{vault:{...vault,unlocked:()=>open},credentials,offline:{request:async()=>wait}});
   await settle(()=>root.querySelector('#subscriptions-save').disabled);open=false;tool.clear();finish({records:[{...normalizeSubscription({name:'Private old data',currency:'USD'}),id:'one'}]});await new Promise(r=>setTimeout(r,10));
   assert.ok(!root.textContent.includes('Private old data'));
+});
+
+test('review actions preserve terms and show failed acknowledgment beside the records',async()=>{
+  const {root}=setup();let fail=false;
+  let records=[{...normalizeSubscription({name:'Canceled example',currency:'USD',state:'Canceled',canceledOn:'2026-01-01',charges:[{on:'2026-02-01',amount:20,description:'TEST'}]}),id:'one'}];
+  mountSubscriptions(root,{vault,credentials,offline:{request:async(t,p,o={})=>{if(o.method){if(fail)throw Error('Review was not saved');records=[{...normalizeSubscription(o.value),id:'one'}];}return {records};}},remote:async()=>({connections:[]})});
+  const button=()=>[...root.querySelectorAll('button')].find(b=>b.textContent==='Mark charges reviewed');
+  await settle(()=>button()&&!button().disabled);fail=true;button().click();
+  await settle(()=>root.querySelector('#subscriptions-status').textContent==='Review was not saved');
+  assert.equal(records[0].reviewedCharges.length,0);fail=false;button().click();
+  await settle(()=>!button());assert.equal(records[0].state,'Canceled');assert.equal(records[0].reviewedCharges.length,1);
 });

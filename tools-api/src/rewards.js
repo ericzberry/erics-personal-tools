@@ -3,7 +3,8 @@ import {validateReward,parseCardBenefits,BENEFIT_LIMIT,CADENCES} from '../../chr
 import {parseCardMatches,CARD_MATCH_LIMIT} from '../../chrome-sidebar/src/card-data.js';
 import {issuerSourceKey} from './cards.js';
 import {providerConfig,providerJSON,routeTask} from './providers.js';
-const ID='owner-rewards';
+export const REWARDS_WALLET_ID='owner-rewards';
+const ID=REWARDS_WALLET_ID;
 const conflict=()=>{throw {status:409,message:'Rewards changed in another browser. This wallet reloaded; review and save your changes again.'};};
 export async function rewardsSettings(request,env,readValue,json){
   if(!['GET','PUT'].includes(request.method))return json({error:'Method not allowed.'},405);

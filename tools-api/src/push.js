@@ -2,6 +2,8 @@ import {travel} from './travel.js';
 import {encryptSettings, decryptSettings} from './ai-settings.js';
 import {sendPush, fromBase64url, base64url} from './web-push.js';
 import {reminderDue, duePhrase, isDueSoon} from '../../chrome-sidebar/src/reminder-data.js';
+import {attentionItems,ATTENTION_SOURCES} from '../../chrome-sidebar/src/attention-data.js';
+import {REWARDS_WALLET_ID} from './rewards.js';
 const fail = message => { throw {status:400, message}; };
 
 // One device, one subscription row: where to reach it, the keys that encrypt to
@@ -75,6 +77,24 @@ export function reminderDigest(reminders, today) {
   return {title:`${due.length} reminders`, body:due.slice(0, 3).map(name).join(' · ') + (due.length > 3 ? '…' : ''), count:due.length};
 }
 
+// Counts keep financial and document details off the lock screen. The same
+// projection powers the unlocked view; queued device-only edits are not visible here.
+export function attentionDigest(data,today){
+  const items=attentionItems(data,{today});
+  if(!items.length)return null;
+  if(items.every(item=>item.tool==='reminders'))return reminderDigest(data.reminders||[],today);
+  const counts=new Map();for(const item of items)counts.set(item.tool,(counts.get(item.tool)||0)+1);
+  return {title:`${items.length} item${items.length===1?'':'s'} need${items.length===1?'s':''} attention`,
+    body:[...counts].map(([tool,count])=>`${ATTENTION_SOURCES[tool]}: ${count}`).join(' · '),count:items.length};
+}
+async function attentionRecords(env){
+  const sources=['reminders','travel','personal','finance','subscriptions'];
+  const tables=['reminder_records','travel_records','personal_records','finance_records','subscription_records'];
+  const records=await Promise.all(sources.map(async(resource,i)=>[resource,(await rows(env,tables[i],resource)).map(row=>({...row.value,id:row.id}))]));
+  const wallet=await env.DB.prepare('SELECT value FROM rewards_wallet WHERE id = ?').bind(REWARDS_WALLET_ID).first();
+  return {...Object.fromEntries(records),rewards:wallet?await decryptSettings(wallet.value,REWARDS_WALLET_ID,env):[]};
+}
+
 // Runs every hour; sends to a device only in the hour it asked for, and at most
 // once per its own day. Nothing is sent when nothing is due — an empty
 // notification every morning would train the owner to ignore the full ones.
@@ -84,12 +104,12 @@ export async function deliverDueReminders(env, {now = new Date(), fetcher = fetc
   const due = subscriptions.filter(row => zonedHour(row.value.timeZone, now) === row.value.hour
     && row.value.lastSentOn !== zonedDate(row.value.timeZone, now));
   if (!due.length) return {sent:0, skipped:subscriptions.length};
-  const reminders = (await rows(env, 'reminder_records', 'reminders')).map(row => row.value);
+  const data = await attentionRecords(env);
   const vapid = vapidKeys(env);
   let sent = 0;
   for (const row of due) {
     const today = zonedDate(row.value.timeZone, now);
-    const digest = reminderDigest(reminders, today);
+    const digest = attentionDigest(data, today);
     if (!digest) continue;
     try {
       const result = await sendPush(row.value, JSON.stringify({...digest, url:'/app/', tag:'reminders'}), vapid, {fetcher});
@@ -110,7 +130,7 @@ export async function sendTestPush(env, {fetcher = fetch} = {}) {
   const vapid = vapidKeys(env);
   const results = [];
   for (const row of subscriptions) {
-    const result = await sendPush(row.value, JSON.stringify({title:'Eric’s Tools', body:'Reminders are working on this device.', url:'/app/', tag:'test'}), vapid, {fetcher});
+    const result = await sendPush(row.value, JSON.stringify({title:'Eric’s Tools', body:'Morning attention notifications are working on this device.', url:'/app/', tag:'test'}), vapid, {fetcher});
     if (result.gone) await forget(env, row.id);
     results.push({id:row.id, status:result.status, ok:result.ok});
   }

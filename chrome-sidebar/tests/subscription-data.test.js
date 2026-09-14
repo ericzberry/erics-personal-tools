@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeSubscription,parseSubscriptionReading,mergeSubscriptionReading,subscriptionKey,annualCost,estimatedRenewal,subscriptionAttention,suggestedCycle} from '../src/subscription-data.js';
+import {normalizeSubscription,parseSubscriptionReading,mergeSubscriptionReading,subscriptionKey,annualCost,estimatedRenewal,subscriptionAttention,suggestedCycle,subscriptionAlerts,chargeKey} from '../src/subscription-data.js';
 import {attentionItems} from '../src/attention-data.js';
 import {subscriptionsOffline} from '../src/subscriptions-offline.js';
 const charge=(on,amount=15)=>({on,amount,description:'SYNTHETIC STREAM',source:'Statement'});
@@ -42,4 +42,30 @@ test('saved charges and alternatives survive cold offline edits, conflict resolu
   adapter=create();assert.equal((await adapter.request('token','/v1/subscriptions')).records[0].state,'Active');await assert.rejects(adapter.disconnect('token'),/pending/);
   cloud.set('one',{...cloud.get('one'),revision:'other',notes:'Other device'});online=true;assert.equal((await adapter.request('token','/v1/subscriptions')).records[0].conflict,true);
   await adapter.resolve('token','one','local');assert.equal(cloud.get('one').state,'Active');await adapter.disconnect('token');online=false;await assert.rejects(adapter.request('token','/v1/subscriptions'),/download/);
+});
+
+test('higher charges require comparable periods and reviewed evidence survives reimport',()=>{
+  const r={...base(),state:'Active',charges:[charge('2026-08-01',15),charge('2026-09-01',19)]};
+  assert.match(subscriptionAlerts(r,'2026-09-14')[0].reason,/15.00.*19.00/);
+  assert.equal(subscriptionAlerts({...r,cycle:'annual'},'2026-09-14').length,0);
+  assert.equal(subscriptionAlerts({...r,charges:[...r.charges,charge('2026-09-01',2)]},'2026-09-14').length,0);
+  assert.equal(subscriptionAlerts(r,'2026-08-14').length,0,'future evidence is not an observed change');
+  const reviewed=normalizeSubscription({...r,reviewedCharges:r.charges.map(chargeKey)});
+  assert.equal(subscriptionAlerts(mergeSubscriptionReading(reviewed,r),'2026-09-14').length,0);
+  const changed=mergeSubscriptionReading(reviewed,{charges:[charge('2026-10-01',22)]});
+  assert.equal(subscriptionAlerts(changed,'2026-10-14').length,1);
+  assert.equal(changed.amount,15,'import preserves confirmed terms');
+});
+test('post-cancellation evidence is explicit, individually reviewed and compatible with older writes',()=>{
+  const r=normalizeSubscription({...base(),state:'Canceled',canceledOn:'2026-08-15',charges:[charge('2026-08-15'),charge('2026-09-01')]});
+  assert.equal(subscriptionAlerts({...r,canceledOn:''},'2026-09-14').length,0);
+  assert.match(subscriptionAlerts(r,'2026-09-14')[0].reason,/1 charge after recorded cancellation/);
+  const reviewed=normalizeSubscription({...r,reviewedCharges:r.charges.map(chargeKey)});
+  assert.equal(subscriptionAttention([reviewed],'2026-09-14').length,0);
+  const earlier=mergeSubscriptionReading(reviewed,{charges:[charge('2026-08-20')]});
+  assert.equal(subscriptionAlerts(earlier,'2026-09-14').length,1,'newly discovered earlier charges still need review');
+  const oldClient={name:r.name,currency:r.currency,state:'Canceled'};
+  assert.equal(normalizeSubscription(oldClient,reviewed).canceledOn,r.canceledOn);
+  assert.deepEqual(normalizeSubscription(oldClient,reviewed).reviewedCharges,reviewed.reviewedCharges);
+  assert.throws(()=>normalizeSubscription({...r,canceledOn:'2026-02-30'}));
 });

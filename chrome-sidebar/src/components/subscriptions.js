@@ -1,6 +1,6 @@
 import {Stack,ToolTitle,SettingsGroup,Disclosure,Form,FormField,Notice,ActionGroup,Button,Note,UploadField,RecordRow,Link} from './ui.js';
 import {BILLING_CYCLES,SUBSCRIPTION_STATES,annualCost,money} from '../subscription-data.js';
-export const subscriptionFields=['name','account','amount','currency','cycle','state','renewal','notice','url','notes'];
+export const subscriptionFields=['name','account','amount','currency','cycle','state','canceledOn','renewal','notice','url','notes'];
 export function SubscriptionsView(){
   const field=(key,label,kind='text',extra={})=>FormField({id:`subscriptions-${key}`,label,kind,...extra});
   return Stack([
@@ -21,6 +21,7 @@ export function SubscriptionsView(){
         field('amount','Price per billing period','number',{step:'0.01',min:'0'}),field('currency','Currency','text'),
         field('cycle','Billing cycle','select',{options:Object.entries(BILLING_CYCLES).map(([value,text])=>({value,text}))}),
         field('state','Status','select',{options:SUBSCRIPTION_STATES.map(value=>({value,text:value}))}),
+        field('canceledOn','Cancellation effective date (for canceled services)','date'),
         field('renewal','Confirmed next renewal / decision date (optional)','date'),field('notice','Days of advance notice','number'),
         field('url','Account or cancellation link (optional)','url'),field('notes','Notes (optional)','textarea',{rows:3}),
         Notice('',{id:'subscriptions-form-status',role:'status'}),

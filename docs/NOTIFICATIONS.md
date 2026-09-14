@@ -1,7 +1,7 @@
 # Notifications
 
-How a reminder reaches Eric when the app is closed. One notification, at his
-own morning hour, on the days something is actually due.
+How the attention list reaches Eric when the app is closed. One notification, at his
+own morning hour, on days saved records need attention.
 
 Files: [`tools-api/src/web-push.js`](../tools-api/src/web-push.js) (the
 protocol), [`tools-api/src/push.js`](../tools-api/src/push.js) (subscriptions,
@@ -47,7 +47,16 @@ that device's own day.
 Nothing is sent when nothing is due. A notification every morning saying there
 is nothing to say would train the owner to ignore the ones that matter.
 
-One reminder speaks for itself — its title, and how long until it is due. More
+The digest reads reminders, rewards, travel documents, personal documents, finance
+metadata and subscriptions, and calls the same attention projection as the app.
+It cannot see edits still queued on a device. Reads must all succeed before a
+notification is sent; a failed source does not become an empty source. Financial
+and document details are never put in the payload: combined notifications contain
+only counts by capability. Acknowledged charge evidence stays out of subsequent
+digests, while unresolved dates and other items can repeat on later mornings.
+The existing daily throttle and device time zone remain in effect.
+
+When only reminders need attention, one reminder speaks for itself — its title, and how long until it is due. More
 than one becomes a count and the first few names: a notification is a reason to
 open the app, not a replacement for it.
 

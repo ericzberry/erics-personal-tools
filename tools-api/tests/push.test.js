@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import worker from '../src/index.js';
 import {encryptPayload, vapidAuthorization, sendPush, base64url, fromBase64url} from '../src/web-push.js';
-import {normalizePushSubscription, reminderDigest, zonedDate, zonedHour, deliverDueReminders} from '../src/push.js';
+import {normalizePushSubscription, attentionDigest,reminderDigest, zonedDate, zonedHour, deliverDueReminders} from '../src/push.js';
 import {normalizeReminder} from '../../chrome-sidebar/src/reminder-data.js';
 
 const concat=(...parts)=>{const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let at=0;for(const p of parts){out.set(p,at);at+=p.length;}return out;};
@@ -92,7 +92,7 @@ test('a device is told at its own morning hour, once a day, and only when someth
 
 test('the hourly run reaches each device once, drops the ones that are gone, and keeps the rest',async()=>{
   const sql=new DatabaseSync(':memory:');
-  for(const file of ['push-schema.sql','reminders-schema.sql'])sql.exec(readFileSync(new URL(`../${file}`,import.meta.url),'utf8'));
+  for(const file of ['schema.sql','push-schema.sql','reminders-schema.sql','travel-schema.sql','personal-schema.sql','finance-schema.sql','subscriptions-schema.sql'])sql.exec(readFileSync(new URL(`../${file}`,import.meta.url),'utf8'));
   const env={API_TOKEN:'synthetic-token-at-least-32-characters',SETTINGS_ENCRYPTION_KEY:'12'.repeat(32),
     VAPID_PUBLIC_KEY:base64url(new Uint8Array(await crypto.subtle.exportKey('raw',(await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify'])).publicKey))),
     VAPID_SUBJECT:'mailto:eric@example.com',DB:{
@@ -140,4 +140,21 @@ test('the hourly run reaches each device once, drops the ones that are gone, and
   assert.deepEqual([later.sent,sent.length],[0,2]);
   assert.equal(sent[1].url,'https://push.example/tablet');
   assert.equal((await (await call('/v1/push/subscriptions')).json()).records.length,1,'a gone device is forgotten');
+  await call('/v1/subscriptions/dddddddd-dddd-4ddd-8ddd-dddddddddddd','PUT',{name:'PRIVATE CANCELED SERVICE',currency:'USD',state:'Canceled',canceledOn:'2026-09-01',charges:[{on:'2026-09-10',amount:15,description:'PRIVATE BILL'}],revision:null});
+  const nextMorning=new Date('2026-09-12T12:00:00Z');
+  assert.equal((await deliverDueReminders(env,{now:nextMorning,fetcher})).sent,1);
+  const combined=JSON.parse(await openRecord(new Uint8Array(sent.at(-1).options.body),phone.keyPair,phone.auth));
+  assert.equal(combined.count,1);assert.match(combined.body,/Subscriptions & renewals: 1/);assert.ok(!JSON.stringify(combined).includes('PRIVATE'));
+  sql.exec('DROP TABLE finance_records');
+  await assert.rejects(deliverDueReminders(env,{now:new Date('2026-09-13T12:00:00Z'),fetcher}));
+  assert.equal(sent.length,3,'a failed source read never produces an incomplete digest');
+
+});
+
+test('combined morning digest includes subscription anomalies without leaking private details',()=>{
+  const data={subscriptions:[{id:'s',name:'PRIVATE SERVICE',account:'PRIVATE ACCOUNT',state:'Canceled',canceledOn:'2026-09-01',charges:[{on:'2026-09-10',amount:123,description:'PRIVATE CHARGE'}]}],personal:[{id:'p',label:'PRIVATE PASSPORT',expires:'2026-09-20',number:'PRIVATE NUMBER'}],finance:[{id:'f',name:'PRIVATE BANK',asOf:'2026-01-01',balance:123456}]};
+  const digest=attentionDigest(data,'2026-09-14');
+  assert.equal(digest.count,3);assert.match(digest.body,/Subscriptions & renewals: 1/);
+  assert.ok(!JSON.stringify(digest).includes('PRIVATE'));assert.ok(!JSON.stringify(digest).includes('123'));
+  assert.equal(attentionDigest({},'2026-09-14'),null);
 });
