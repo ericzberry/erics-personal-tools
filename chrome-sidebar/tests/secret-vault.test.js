@@ -217,6 +217,43 @@ test('the twin that cannot open a sealed value is forgotten, so the next check o
   assert.equal(local.values.get(CREDENTIAL_KEY),undefined);
 });
 
+test('a page that cannot raise the passkey sheet adopts the session another page opens for it',async()=>{
+  // The side panel: Chrome sends its request and never shows the sheet, so the
+  // check runs in a window of the extension's own and the panel reads the result.
+  const session=sessionArea();
+  let now=1000,asked=0,delegated=0,failNext=null,storeNothing=false;
+  const clock=()=>now;
+  const elsewhere=fixture({store:vaultSessionStore(session.area,session.changes),clock});
+  // No change notifications at all, so the panel has to read the stored session
+  // back rather than count on hearing about it first.
+  const panel=secretVault({credentials:{async get(){asked++;return new Promise(()=>{});}},origin:ORIGIN,subtle:crypto.subtle,now:clock,
+    store:vaultSessionStore(session.area,{addListener(){}}),credentialStore:null,
+    unlockElsewhere:async()=>{
+      delegated++;
+      if(failNext){const error=failNext;failNext=null;throw error;}
+      if(!storeNothing)await elsewhere.vault.key();
+    }});
+
+  failNext=Object.assign(Error('Canceled'),{name:'NotAllowedError'});
+  await assert.rejects(()=>panel.key(),error=>error.name==='NotAllowedError','a dismissed sheet is reported as dismissed');
+  assert.equal(panel.unlocked(),false);
+
+  storeNothing=true;
+  await assert.rejects(()=>panel.key(),/could not be unlocked/,'success with no session stored opens nothing');
+  storeNothing=false;
+
+  const [first,second]=await Promise.all([panel.key(),panel.key()]);
+  assert.equal(first,second);
+  assert.equal(delegated,3,'two sections opening at once share one window');
+  assert.equal(asked,0,'the panel never sends a passkey request of its own');
+  assert.equal(elsewhere.count(),1);
+  assert.equal(panel.unlocked(),true);
+  const sealed=await sealSecret(await elsewhere.vault.key(),'entry-1',{number:'4111111111111111'});
+  assert.deepEqual(await panel.open('entry-1',sealed),{number:'4111111111111111'});
+  await panel.key();
+  assert.equal(delegated,3,'an open session asks nothing more');
+});
+
 test('a key borrowed from the host’s own lock opens the records and is marked as borrowed',async()=>{
   // The mobile app's lock evaluates PRF_SALT beside its own and hands the result
   // over, so the vault opens without a check of its own — and says so, because a

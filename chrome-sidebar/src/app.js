@@ -1,4 +1,10 @@
 import {mountApp} from './components/views.js';
+import {sharedVault} from './secret-vault.js';
+import {unlockInWindow} from './vault-window.js';
+// The side panel cannot raise the passkey sheet, so every protected section in
+// it asks through a small window instead. Configured before any tool asks for
+// the shared vault, because the first request is the one that creates it.
+sharedVault({unlockElsewhere:unlockInWindow()});
 mountApp(document.getElementById('app'));
 const {initializeNavigation}=await import('./navigation.js');
 initializeNavigation();

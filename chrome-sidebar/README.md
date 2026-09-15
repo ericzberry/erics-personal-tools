@@ -734,3 +734,29 @@ upcoming dates, unused benefits, stale balances and recurring charges together.
 Read bank / card statements into review candidates, confirm terms, and research
 cheaper plans for a chosen country with dated sources. Saved charges and comparison
 results remain available offline. See [behavior and limits](../docs/ATTENTION.md).
+
+## Ask for the passkey where Chrome will show it (0.6.106 / mobile 0.1.64)
+
+A locked section in the side panel — Needs attention, Finance, Subscriptions, a
+card number in Rewards — sat on "Waiting for your passkey…" and no sheet ever
+appeared. The gate was asking: Chrome received the request from the side panel
+and never presented it, so the section waited on a prompt nobody could answer
+until the request timed out a minute later.
+
+The panel now hands the check to a small window of the extension's own
+(`unlock.html`), centred over the browser window. It asks as soon as it opens,
+stores the unlocked session the way any extension tab does, and closes; the
+panel adopts that session and opens the section, or shows the reason and
+**Unlock** when the sheet is dismissed or the window is closed. Extension tabs
+and the mobile app still ask on their own page, and the recovery code is still
+entered in the panel.
+
+Validation: new coverage for a vault that delegates its check (dismissed, stored
+nothing, two sections sharing one window, a session read back without a change
+notification) and for the window itself (placement, another panel's answer
+ignored, a failure's reason kept, a window closed by hand, a window that never
+answers). The side-panel shell was driven in a browser with Chrome's window,
+message and storage APIs stubbed: arriving at Needs attention opened one window
+and no in-panel request, a dismissed check left **Unlock**, and a completed one
+opened the section. The native Touch ID sheet inside that window, in installed
+Chrome, was not directly tested.

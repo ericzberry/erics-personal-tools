@@ -44,6 +44,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
 | `attention.html` | `src/attention-page.js` | Needs attention across saved records |
 | `subscriptions.html` | `src/subscriptions-page.js` | Recurring charges, renewal decisions and alternatives |
+| `unlock.html` | `src/unlock-page.js` | The small window the side panel opens to ask for the passkey, which the panel cannot raise itself |
 | `properties.html` | `src/properties-page.js` | Properties: the shortlist for a real estate search |
 | `taxes.html` | `src/taxes-page.js` | Taxes: file a K-1 or 1099 into Google Drive |
 | `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
@@ -99,6 +100,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `auto-unlock.js` (one unlock attempt per arrival, shared by the mobile app
   lock and the gate), and `vault-gate.js` (the whole-section lock screen used by
   Finance and Personal information, which asks for the passkey on arrival).
+  `vault-window.js` is the sidebar's alone: Chrome shows no passkey sheet for a
+  request from the side panel, so `app.js` gives the panel's vault
+  `unlockInWindow()`, which runs the check in `unlock.html` and lets the panel
+  adopt the session it stores.
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
   `rewards-sync.js`, `program-data.js`/`program-offline.js` (the offer

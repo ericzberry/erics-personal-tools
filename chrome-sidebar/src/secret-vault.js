@@ -144,7 +144,13 @@ export function secretVault({
   subtle = globalThis.crypto?.subtle,
   now, onLock = () => {},
   store = vaultSessionStore(),
-  credentialStore = vaultCredentialStore()
+  credentialStore = vaultCredentialStore(),
+  // A page that cannot raise the passkey sheet itself hands the check to one
+  // that can. Chrome's side panel is such a page: the request leaves it and no
+  // sheet ever appears, so the section waits on a prompt nobody can see. The
+  // delegate resolves once that other page has stored the session this vault
+  // then adopts, or rejects with the reason the check failed.
+  unlockElsewhere = null
 } = {}) {
   const clock = now || Date.now;
   let key = null, raw = null, pending = null, stamp = 0, borrowed = false;
@@ -190,6 +196,15 @@ export function secretVault({
       throw error;
     }
   }
+  // The other page's session reaches this one through the store, usually by
+  // the subscription below before the delegate even settles; reading it back
+  // covers a change notification that has not arrived yet.
+  async function fromElsewhere() {
+    await unlockElsewhere();
+    if (!(session.check() && key)) await restore(await store.read());
+    if (!(session.check() && key)) throw Error('This section could not be unlocked.');
+    return key;
+  }
   async function adopt(next, {at = clock(), persist = true, lent = false} = {}) {
     if (raw) raw.fill(0);
     raw = next;
@@ -197,7 +212,9 @@ export function secretVault({
     key = await keyFrom(raw);
     session.start(at);
     stamp = at;
-    if (persist) store?.write({key: encode(raw), at});
+    // Awaited, so a page that unlocked on another's behalf has stored the
+    // session before it reports success.
+    if (persist) await store?.write({key: encode(raw), at});
     return key;
   }
   // A stored session is adopted, never trusted blindly: an expired or damaged
@@ -242,7 +259,7 @@ export function secretVault({
     async key() {
       await ready;
       if (session.check() && key) { this.touch(); return key; }
-      if (!pending) pending = (async () => adopt(await fromPasskey()))().finally(() => { pending = null; });
+      if (!pending) pending = (unlockElsewhere && store ? fromElsewhere() : (async () => adopt(await fromPasskey()))()).finally(() => { pending = null; });
       return pending;
     },
     // Opening a sealed value is also the only test of whether the passkey that

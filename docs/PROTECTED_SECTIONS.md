@@ -21,6 +21,20 @@ reader is looking at, and **Lock now** means locked: it is the one lock the gate
 does not offer to undo by itself. `auto-unlock.js` holds that one-attempt rule,
 shared with the mobile app's own lock screen.
 
+**In the side panel, the check runs in a small window.** Chrome sends a passkey
+request from the side panel and never shows the sheet, so a section there sat on
+"Waiting for your passkey…" with nothing to answer — every protected section
+alike: Finance, Needs attention, Subscriptions, and a card number in Rewards.
+The panel's vault is configured in `app.js` with `unlockInWindow()`
+(`vault-window.js`), which opens `unlock.html` as a popup centred over the
+browser window. That page asks as soon as it is on screen, stores the session in
+`chrome.storage.session`, reports how the check ended, and closes itself; the
+panel adopts the session exactly as another tab's unlock would, or shows the
+reason and an **Unlock** button. Closing the window by hand counts as canceling,
+and a window that never answers is closed after 90 seconds. Extension tabs and
+the mobile app still ask on their own page. The recovery code needs no sheet
+and is entered in the panel itself.
+
 The gate is built on `secret-vault.js`, the same WebAuthn PRF key that seals
 card numbers. One vault is shared per host (`sharedVault()`), so a single
 passkey prompt opens every protected section on the page and one hour-long idle
