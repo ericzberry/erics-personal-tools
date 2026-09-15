@@ -148,7 +148,7 @@ test('arriving at a locked section asks for the passkey, and a dismissed prompt 
   gate.stop();h.restore();
 });
 
-test('a hidden section waits its turn, and Lock now stays locked',async()=>{
+test('a hidden section waits its turn, and a deliberate lock stays locked',async()=>{
   const h=harness();
   let prompts=0,open=false;
   const vault={idleMs:900000,available:()=>true,unlocked:()=>open,touch(){},lock(){open=false;},
@@ -163,7 +163,7 @@ test('a hidden section waits its turn, and Lock now stays locked',async()=>{
   assert.equal(gate.unlocked(),true);
   gate.lock();
   await settle(()=>true,50);
-  assert.equal(prompts,1,'Lock now is an instruction, not an invitation to ask again');
+  assert.equal(prompts,1,'a deliberate lock is an instruction, not an invitation to ask again');
   gate.stop();h.restore();
 });
 
@@ -184,17 +184,17 @@ test('a section arriving at an already-open vault shows itself instead of asking
   gate.stop();h.restore();
 });
 
-test('a borrowed session offers no lock of its own',async()=>{
-  // On the phone the app's lock takes the passkey and hands the record key over.
-  // Lock now here would close a session that lock opened, so the next arrival
-  // would ask for the passkey the reader has already given — and recovery
-  // belongs to that lock too. Neither control applies, so neither appears.
+test('an unlocked gate offers nothing: the tool is what the reader came for',async()=>{
+  // A row of lock maintenance above every protected heading is a label for a
+  // visible state. The session closes on its own idle window, and the recovery
+  // code lives in Settings, so the open gate has no control left to show.
   const h=harness();
-  const vault={idleMs:900000,available:()=>true,unlocked:()=>true,borrowed:()=>true,touch(){},lock(){},
+  const vault={idleMs:900000,available:()=>true,unlocked:()=>true,touch(){},lock(){},
     async key(){return 'key';},async unlockWithRecoveryCode(){},recoveryCode:()=>'EV1'};
-  const gate=mountVaultGate(h.document.querySelector('main'),{id:'borrowed-vault',title:'Finance',vault});
+  const gate=mountVaultGate(h.document.querySelector('main'),{id:'open-vault',title:'Finance',vault});
   await settle(()=>true,50);
-  assert.equal(h.document.getElementById('borrowed-vault-actions').textContent,'');
+  assert.equal(h.document.getElementById('open-vault-actions').textContent,'');
+  assert.equal(h.document.getElementById('open-vault-actions').querySelector('button'),null);
   assert.equal(gate.content.hidden,false);
   gate.stop();h.restore();
 });

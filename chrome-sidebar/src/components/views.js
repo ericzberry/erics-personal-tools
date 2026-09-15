@@ -46,12 +46,23 @@ export function SettingsView() {
     // and one link to the page that owns AI connections and their keys.
     Stack([],{id:'travel-settings-connection',className:'travel-wallet connection-only'}),
     UI.SettingsLink('AI connections','settings.html'),
+    // The recovery code is device maintenance, not part of any tool, so this is
+    // where it lives — out of the way of the sections it can open.
+    UI.SettingsItem('Recovery code',[
+      ActionGroup([Button('Show recovery code',{id:'show-recovery-code',variant:'secondary',size:'compact'})],{compact:true}),
+      Stack([],{id:'recovery-code-output'}),
+      Note('',{id:'recovery-code-status',role:'status'})
+    ]),
     UI.SettingsItem('Draft',[DraftSettings(),DraftReset()])
     ])
   ]});
 }
 
-export function mountApp(root) {root.replaceChildren(AppHeader({}),UI.PageOfferBar(),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),Section([],{id:'finance-tool',className:'tool-page',hidden:true}),Section([],{id:'taxes-tool',className:'tool-page',hidden:true}),Section([],{id:'properties-tool',className:'tool-page',hidden:true}),Section([],{id:'attention-tool',className:'tool-page',hidden:true}),Section([],{id:'subscriptions-tool',className:'tool-page',hidden:true}),SettingsView());}
+// Every capability that lives in the panel gets an empty section here; the
+// controller for it fills the section in on first use.
+const PanelTool=id=>Section([],{id:`${id}-tool`,className:'tool-page',hidden:true});
+export function mountApp(root) {root.replaceChildren(AppHeader({}),UI.PageOfferBar(),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),
+  ...['finance','taxes','attention','subscriptions','gifts','reminders','cards','personal'].map(PanelTool),SettingsView());}
 
 export function AISettingsView() {
   const field=UI.FormField;

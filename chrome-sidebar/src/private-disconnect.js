@@ -1,7 +1,6 @@
 import {subscriptionsOffline} from './subscriptions-offline.js';
 import {remindersOffline} from './reminders-offline.js';
 import {giftsOffline} from './gifts-offline.js';
-import {propertiesOffline} from './properties-offline.js';
 import {rewardsOffline} from './rewards-offline.js';
 import {travelOffline} from './travel-offline.js';
 import {cardsOffline} from './cards-offline.js';
@@ -13,7 +12,7 @@ export async function disconnectPrivateData(token){
   if(!token||!globalThis.indexedDB)return;
   // A program catalogue queues nothing — only a visit to the program's site
   // writes one — so it is cleared with the rest but never blocks a disconnect.
-  const resources=[subscriptionsOffline(),remindersOffline(),giftsOffline(),propertiesOffline(),travelOffline(),cardsOffline(),rewardsOffline(),financeOffline(),personalOffline(),programsOffline()];
+  const resources=[subscriptionsOffline(),remindersOffline(),giftsOffline(),travelOffline(),cardsOffline(),rewardsOffline(),financeOffline(),personalOffline(),programsOffline()];
   for(const resource of resources)if(await resource.hasPending(token))throw Error('Sync or resolve your pending private changes before disconnecting.');
   for(const resource of resources)await resource.disconnect(token);
   await forgetProgramReads();

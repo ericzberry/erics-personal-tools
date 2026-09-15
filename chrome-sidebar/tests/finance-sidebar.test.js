@@ -4,7 +4,7 @@ import {parseHTML} from 'linkedom';
 import {readFileSync} from 'node:fs';
 import {mountApp} from '../src/components/views.js';
 import {selectTool} from '../src/navigation.js';
-import {capabilities} from '../src/capabilities.js';
+import {capabilities,PANEL_CAPABILITIES} from '../src/capabilities.js';
 import {FinanceView} from '../src/components/finance.js';
 import {activeAccountTab} from '../src/finance-page-read.js';
 import {mountFinance} from '../src/finance.js';
@@ -125,9 +125,26 @@ function stylesheets(page){
 }
 test('the side panel loads the styles of every tool it mounts in place',()=>{
   const panel=stylesheets('sidepanel.html');
-  // capability-links.js mounts these three inside the panel rather than opening
-  // their pages; capabilities.js keeps the rest as links to their own tabs.
-  for(const page of ['finance.html','travel.html','rewards.html'])
+  // capability-links.js mounts each of these inside the panel rather than
+  // opening its page, so the panel has to carry the styles that page carries.
+  for(const id of PANEL_CAPABILITIES){
+    const page=`${id}.html`;
     for(const sheet of stylesheets(page))
       assert.ok(panel.has(sheet),`sidepanel.html is missing ${sheet}, which ${page} loads`);
+  }
+});
+
+test('a capability in the panel opens there, and nothing left opens a tab but the two that have no panel home',()=>{
+  const doc=setup();mountApp(doc.getElementById('app'));
+  for(const id of PANEL_CAPABILITIES){
+    const entry=capabilities.find(item=>item.id===id);
+    assert.equal(entry.href,undefined,`${id} must not carry a tab link`);
+    assert.ok(doc.getElementById(`${id}-tool`),`${id} has no section in the panel to mount into`);
+    selectTool(id);
+    assert.equal(doc.getElementById(`${id}-tool`).hidden,false,`${id} did not open in the panel`);
+    assert.equal(doc.getElementById('current-function').textContent,entry.label);
+  }
+  // Player rankings is reference data and Restaurants is a workspace of its own;
+  // neither has a panel home yet, so both stay links.
+  assert.deepEqual(capabilities.filter(item=>item.href).map(item=>item.id),['rankings','restaurants']);
 });

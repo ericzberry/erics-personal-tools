@@ -84,8 +84,8 @@ at rest in D1 and device IndexedDB, like finance metadata; they are not individu
 sealed end-to-end. Account numbers are not requested. Raw uploads are not retained.
 Queued edits survive restart; conflicts need explicit resolution. Disconnect clears
 device copies only after pending changes are settled; cloud deletion is a separate
-confirmed action. The extension's disconnect inventory now also includes reminders,
-gifts and properties, which the attention view can download.
+confirmed action. The extension's disconnect inventory now also includes reminders
+and gifts, which the attention view can download.
 
 Upgrade the existing D1 database with `subscriptions-schema.sql` before deploying:
 `cd tools-api && npx wrangler d1 execute erics-personal-tools --remote --file subscriptions-schema.sql`.

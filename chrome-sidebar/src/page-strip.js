@@ -10,19 +10,18 @@ import {pageOffers} from './page-offers.js';
 import {PageOfferStrip} from './components/ui.js';
 import {activeCapability,onNavigate,selectCapability,selectTool} from './navigation.js';
 import {giftsOffline} from './gifts-offline.js';
-import {propertiesOffline} from './properties-offline.js';
 import {travelChanges} from './travel-changes.js';
 import {deviceCredentials} from './cloud-storage.js';
 
 export function mountPageStrip(root,{
-  gifts=giftsOffline(),properties=propertiesOffline(),credentials=deviceCredentials(),changes=travelChanges,
+  gifts=giftsOffline(),credentials=deviceCredentials(),changes=travelChanges,
   active=activeCapability,subscribe=onNavigate,
   // Pressing an offer goes exactly where the Tools menu would: a tool of the
   // tab's own hands the panel back to the tab, which is what Automatic mode
   // shows; anything else is selected in the panel.
   select=selectCapability,toTab=selectTool
 }={}){
-  let page={url:'',site:null},saved={gifts:[],properties:[]},stopped=false;
+  let page={url:'',site:null},saved={gifts:[]},stopped=false;
   function render(){
     const offers=pageOffers({...page,...saved,active:active()});
     root.replaceChildren(...PageOfferStrip(offers,{onSelect:offer=>offer.viaTab?toTab():select(offer.capability,offer)}));
@@ -34,12 +33,11 @@ export function mountPageStrip(root,{
     // works.
     try{
       const token=await credentials.get();
-      const [giftRecords,propertyRecords]=token?await Promise.all([gifts.saved(token),properties.saved(token)]):[[],[]];
-      saved={gifts:giftRecords,properties:propertyRecords};
-    }catch{saved={gifts:[],properties:[]};}
+      saved={gifts:token?await gifts.saved(token):[]};
+    }catch{saved={gifts:[]};}
     if(!stopped)render();
   }
-  const watches=['gifts','properties'].map(resource=>changes(load,{resource}));
+  const watches=['gifts'].map(resource=>changes(load,{resource}));
   const unsubscribe=subscribe(render);
   credentials.subscribe?.(load);
   load();

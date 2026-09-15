@@ -23,8 +23,6 @@
 import {capabilities} from './capabilities.js';
 import {rewardProgram} from './program-data.js';
 import {isBought} from './gift-data.js';
-import {money} from './property-data.js';
-import {listingSite} from './listing-sites.js';
 import {samePage} from './public-url.js';
 
 // Gmail has no capability entry, because it is not a tool you choose: it
@@ -50,15 +48,6 @@ export const OFFER_SOURCES=[
     // present being bought twice.
     return `${isBought(record)?'Bought':'Saved'} for ${record.person}`;
   }},
-  // A property already on the shortlist says where the search stands with it,
-  // which is what stops the same house being reviewed twice.
-  {id:'property-link',capability:'properties',match:({page,properties})=>{
-    const [record]=savedHere(properties,page);
-    return record?[record.status,money(record.price)].filter(Boolean).join(' · '):null;
-  }},
-  // A listing not on the shortlist yet is one press from being on it.
-  {id:'listing-site',capability:'properties',intent:'save-listing',match:({page,properties})=>
-    listingSite(page.href)&&!savedHere(properties,page).length?'Save this listing':null},
   {id:'account-site',capability:'finance',viaTab:true,match:({site})=>site?`Store ${site.label} snapshots`:null},
   {id:'reward-program',capability:'rewards',match:({page})=>{
     const program=rewardProgram(page.href);
@@ -75,13 +64,13 @@ export const OFFER_SOURCES=[
 const entry=id=>capabilities.find(item=>item.id===id)||null;
 // `active` is the capability already on screen. An offer to go where the owner
 // already is would be a label for a visible state, so it is left out.
-export function pageOffers({url='',site=null,gifts=[],properties=[],active=''}={}){
+export function pageOffers({url='',site=null,gifts=[],active=''}={}){
   const page=parse(url);
   if(!page)return [];
   const offers=[];
   for(const source of OFFER_SOURCES){
     if(source.capability===active)continue;
-    const label=source.match({page,site,gifts,properties});
+    const label=source.match({page,site,gifts});
     if(!label)continue;
     const item=entry(source.capability);
     offers.push({

@@ -12,7 +12,7 @@
 import {sharedVault} from './secret-vault.js';
 import {autoUnlock} from './auto-unlock.js';
 import {VaultGateView} from './components/vault.js';
-import {Button,ActionGroup,MaskedValue} from './components/ui.js';
+import {Button} from './components/ui.js';
 
 export const vaultReason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
   ?'Passkey verification was canceled or timed out.'
@@ -64,22 +64,21 @@ export function mountVaultGate(root,{
     $('content').hidden=!unlocked;
     // The actions stay put while the passkey sheet is up — disabled, not
     // removed — so a dismissed sheet returns to the same panel it left.
-    // A borrowed session has none to offer: the host's own lock took the passkey
-    // and is what closes the session, so Lock now here would only ask again for
-    // what the reader has already given, and recovery belongs to that lock too.
-    $('actions').replaceChildren(...(unlocked
-      ?(vault.borrowed?.()?[]:[action('Lock now',lock,'subtle'),action('Recovery code',showRecovery,'subtle')])
+    // Unlocked, the gate offers nothing: the tool is what the reader came for,
+    // and a row of lock maintenance above every heading is not part of it. The
+    // session closes on its own idle window, and the recovery code lives in
+    // Settings, where the rest of this device's maintenance lives.
+    $('actions').replaceChildren(...(unlocked?[]
       :[...(available?[action('Unlock',unlock,'primary')]:[]),action('Use recovery code',()=>{$('recovery').hidden=false;$('recovery-code').focus();})]));
   }
   function announce(){
     const unlocked=vault.unlocked();
     if(unlocked===open)return;
     open=unlocked;
-    if(!unlocked)$('code').replaceChildren();
     render();
     onChange(unlocked);
     // An idle window that runs out in front of the reader re-asks rather than
-    // leaving a locked panel where the tool was. Lock now means locked.
+    // leaving a locked panel where the tool was. A deliberate lock means locked.
     if(!unlocked&&!deliberate)arrive();
     deliberate=false;
   }
@@ -96,14 +95,7 @@ export function mountVaultGate(root,{
     attempt.suppress();
     vault.lock();
     message='';
-    $('code').replaceChildren();
     render();announce();
-  }
-  function showRecovery(){
-    try{
-      const code=vault.recoveryCode();
-      $('code').replaceChildren(MaskedValue(code),ActionGroup([action('Hide recovery code',()=>$('code').replaceChildren())],{compact:true}));
-    }catch(error){message=vaultReason(error);render();}
   }
   $('recovery-cancel').addEventListener('click',()=>{$('recovery-code').value='';$('recovery').hidden=true;});
   $('recovery-submit').addEventListener('click',()=>{

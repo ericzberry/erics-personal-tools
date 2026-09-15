@@ -685,48 +685,6 @@ fantasy season.
 Validation: 316 extension tests pass, including a draft room that offers advice
 and three ordinary fantasy pages that do not.
 
-## Properties: a shortlist for a real estate search (0.6.103 / mobile 0.1.61)
-
-A new capability, in the side panel beside the listing it reads and on the phone
-offline. A property is its address, where the search stands with it — Looking,
-Seen, Offer or Passed — the facts the listing states, your own notes, and the
-history of its asking price.
-
-Beside a listing on Zillow, Redfin, Realtor.com, Compass, StreetEasy, Trulia or
-Homes.com, the panel offers **Save this listing**, and so does the page strip from
-wherever the panel is. One press reads the page and the property is on the
-shortlist: price, beds, baths, size, annual taxes and monthly HOA, with nothing
-typed. Beside a listing already saved, the strip says where the search stands
-with it — *Seen · $1,250,000* — and the tool offers **Update from this page**,
-which records a price change with its date and leaves your status and notes
-alone. The row then reads `$1,195,000 ↓ $55,000`. A line typed into quick add —
-"saw 12 Elm today, $950k, kitchen needs work" — becomes a property too.
-
-The shortlist groups by stage, cheapest first, with one row of actions per
-property: the next step, Pass, Open, Edit. Passed properties keep their own view.
-There is no score, no mortgage and no estimate: a number the app made up would sit
-beside the listing's own and look as authoritative.
-
-Assumptions to refine: this is built for a home to live in rather than an
-investment, so it carries no rent, comps or return math; the shortlist is the
-product, so there is no separate comparison table; and it recognizes the seven
-largest listing sites, of which only Zillow's URLs could be checked live — the
-others refuse automated browsing, and a page that matches but is not a listing
-costs one reading that says so and saves nothing.
-
-Validation: 328 extension, 33 mobile and 80 API tests pass, including new
-coverage for the record's validation and nulls, the price history's start, growth
-and ordering, stage grouping, listing-site recognition, a typed line becoming a
-property, saving a listing read off the page, updating a saved one without
-touching status or notes, a host with no page offering nothing, a typed price
-change joining the history, delete confirmation, the listing reader's refusals,
-its registered task and cost ceiling, and the encrypted store route. The panel was
-reviewed at 380px and 280px in the new `tests/properties-preview.html` harness
-with Save and Update driven against synthetic readings; on the phone preview the
-launcher shows Properties, the shortlist renders, and an edit made offline queued
-and synced on reconnect. A model's reading of a live listing page was not
-exercised.
-
 ## Needs attention and subscriptions
 
 Tools now includes **Needs attention** and **Subscriptions & renewals**. Review
@@ -760,3 +718,33 @@ message and storage APIs stubbed: arriving at Needs attention opened one window
 and no in-panel request, a dismissed check left **Unlock**, and a completed one
 opened the section. The native Touch ID sheet inside that window, in installed
 Chrome, was not directly tested.
+
+## Every tool in the panel, and no lock row above it (0.6.107 / mobile 0.1.65)
+
+Gift ideas, Reminders, Best card and Personal information used to open in a tab
+of their own. They now mount in the side panel like the rest, beside the page the
+work comes from: `PANEL_CAPABILITIES` in `capabilities.js` names the ten tools
+that live there, and only Player rankings and Restaurants are still links.
+
+An unlocked section no longer carries **Lock now** and **Recovery code** above
+its heading. A row of lock maintenance over every protected tool is a label for a
+state the reader can already see; the session still closes on its own idle
+window, and the recovery code moved to Settings, where the rest of this device's
+maintenance lives. The locked state is unchanged — **Unlock** and **Use recovery
+code**.
+
+Properties has been removed: the capability, its records, its store, the listing
+reader, the listing sites it recognized, and `/v1/properties`. A note typed into
+quick add is now a reminder or a gift idea. `property_records` is left in D1 and
+is no longer read or written.
+
+Taxes lists a saved AI connection by its name alone, without the provider.
+
+Validation: 332 extension, 33 mobile and 79 API tests pass, including new
+coverage that every panel capability has a section to mount into, opens in the
+panel, and has its stylesheet loaded there, that only rankings and restaurants
+remain links, and that an unlocked gate renders no actions at all. The panel was
+driven at 400px: Gift ideas, Reminders, Best card and Personal information each
+mounted in place, the locked gate showed Unlock and Use recovery code with no
+other row, the unlocked gate in the vault preview showed the tool's own heading
+and nothing else, and Settings listed Recovery code with one action.

@@ -243,7 +243,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       const result=await remote(activeToken,'/v1/ai-connections');
       const usable=result.connections.filter(connection=>connection.hasApiKey);
       const previous=$('connection-picker').value;
-      $('connection-picker').replaceChildren(Option('Choose a connection',''),...usable.map(connection=>Option(`${connection.name} · ${connection.provider}`,connection.id)));
+      $('connection-picker').replaceChildren(Option('Choose a connection',''),...usable.map(connection=>Option(connection.name,connection.id)));
       if(usable.some(connection=>connection.id===previous))$('connection-picker').value=previous;
       else if(usable.length===1)$('connection-picker').value=usable[0].id;
       status(usable.length?'':'Save an AI connection in Settings to have a dropped document named for you.','ai-status');

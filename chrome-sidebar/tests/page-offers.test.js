@@ -43,10 +43,10 @@ test('an idea already bought says so, and several say how many',()=>{
   assert.equal(pageOffers({url,gifts:[gift('Ariana',url),gift('Maisie',url)]})[0].label,'2 saved ideas');
 });
 
-test('the gift offer opens the page the Tools menu opens, with its own icon',()=>{
+test('the gift offer goes to Gift ideas in the panel, with its own icon',()=>{
   const [offer]=pageOffers({url:'https://shop.example.com/thing/42',gifts:[gift('Maisie','https://shop.example.com/thing/42')]});
   assert.equal(offer.capability,'gifts');
-  assert.equal(offer.href,'gifts.html','a capability with a page of its own is a link to it');
+  assert.equal(offer.href,'','Gift ideas lives in the panel, beside the page the idea came from');
   assert.ok(offer.icon,'the row carries the same icon as the menu row it leads to');
   assert.equal(offer.viaTab,false);
 });
@@ -75,31 +75,6 @@ test('a reward program’s own site offers its offers, and Gmail and a draft off
     assert.deepEqual(pageOffers({url}),[],url);
 });
 
-const listing='https://www.zillow.com/homedetails/85-Greenway-Ter-Forest-Hills-Gardens-NY-11375/32004593_zpid/';
-const house=(status='Seen',price=1250000)=>({id:'h1',address:'85 Greenway Ter',link:listing,status,price,prices:[]});
-
-test('a listing not on the shortlist is one press from being on it',()=>{
-  const [offer]=pageOffers({url:listing});
-  assert.equal(offer.label,'Save this listing');
-  assert.equal(offer.capability,'properties');
-  assert.equal(offer.intent,'save-listing','pressing it asks the tool to read the page, not merely to open');
-  assert.equal(offer.href,'','Properties lives in the panel beside the listing it reads');
-  // A search results page is not a listing, and neither is a site that is not
-  // a real estate site at all.
-  assert.deepEqual(pageOffers({url:'https://www.zillow.com/new-york-ny/'}),[]);
-  assert.deepEqual(pageOffers({url:'https://example.com/homedetails/1'}),[]);
-});
-
-test('a listing already on the shortlist says where the search stands with it',()=>{
-  const offers=pageOffers({url:`${listing}?utm_source=email`,properties:[house('Seen')]});
-  assert.deepEqual(offers.map(offer=>offer.label),['Seen · $1,250,000'],'and it is not also offered for saving');
-  assert.equal(offers[0].intent,'');
-  assert.deepEqual(pageOffers({url:listing,properties:[house('Passed',null)]}).map(offer=>offer.label),['Passed']);
-  // A property saved with a link to its broker's own page is recognized there
-  // too, even though that site is not one the strip knows.
-  assert.equal(pageOffers({url:'https://broker.example.com/listings/12-elm',properties:[{...house('Offer'),link:'https://broker.example.com/listings/12-elm/'}]})[0].label,'Offer · $1,250,000');
-});
-
 test('what is already on screen is never offered',()=>{
   const open=pageOffers({url:'https://mail.google.com/mail/u/0/#inbox',active:'gmail'});
   assert.deepEqual(open,[],'an offer to go where the owner already is would name a visible state');
@@ -115,15 +90,13 @@ test('offers arrive most specific first, and stop at one row',()=>{
   assert.ok(OFFER_SOURCES.every(source=>source.capability&&typeof source.match==='function'));
 });
 
-test('the strip renders one row: links to pages, buttons to panel tools',()=>{
+test('the strip renders one row of buttons, because every tool it offers is in the panel',()=>{
   const document=setup();
   const chosen=[];
   const offers=pageOffers({url:'https://www.msreserved.com/offers',site:schwab,gifts:[gift('Maisie','https://www.msreserved.com/offers')]});
   document.getElementById('strip').replaceChildren(...PageOfferStrip(offers,{onSelect:offer=>chosen.push(offer.id)}));
   const rows=[...document.querySelectorAll('#strip > *')];
-  assert.deepEqual(rows.map(row=>row.tagName.toLowerCase()),['a','button','button']);
-  assert.equal(rows[0].getAttribute('href'),'gifts.html');
-  assert.equal(rows[0].getAttribute('target'),'_blank');
+  assert.deepEqual(rows.map(row=>row.tagName.toLowerCase()),['button','button','button']);
   for(const row of rows){
     assert.ok(row.querySelector('svg'),'every row shows its capability’s icon');
     assert.equal(row.querySelector('svg').getAttribute('aria-hidden'),'true');
@@ -140,7 +113,6 @@ test('the strip shows the tab’s offers, hides itself when there are none, and 
   let notify=()=>{};
   const strip=mountPageStrip(root,{
     gifts:{saved:async()=>[gift('Maisie','https://shop.example.com/thing/42')]},
-    properties:{saved:async()=>[]},
     credentials:{get:async()=>'token'},
     changes:onChange=>{notify=onChange;return {close(){}};},
     active:()=>'',subscribe:()=>()=>{},
@@ -164,7 +136,6 @@ test('a browser with no access token still offers what the page alone says',asyn
   const root=document.getElementById('strip');
   const strip=mountPageStrip(root,{
     gifts:{saved:async()=>{throw Error('never asked');}},
-    properties:{saved:async()=>{throw Error('never asked');}},
     credentials:{get:async()=>''},
     changes:()=>({close(){}}),active:()=>'',subscribe:()=>()=>{},select(){},toTab(){}
   });

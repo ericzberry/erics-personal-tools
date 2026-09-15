@@ -10,7 +10,6 @@ export function VaultGateView({id='vault',title='Locked',detail=''}={}){
       Heading(title,1,{id:`${id}-title`}),
       Notice('',{id:`${id}-status`,role:'status','aria-live':'polite'}),
       ActionGroup([],{id:`${id}-actions`,compact:true}),
-      Stack([],{id:`${id}-code`}),
       Stack([
         FormField({id:`${id}-recovery-code`,label:'Recovery code',kind:'text',placeholder:'EV1-…'}),
         ActionGroup([
