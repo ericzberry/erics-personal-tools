@@ -1,5 +1,5 @@
 import {TaxesView,DocumentCard,Destination,ConflictPanel,FiledList,ConnectionPanel,fileSize} from './components/taxes.js';
-import {Button,Option} from './components/ui.js';
+import {Button} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED} from './statement-text.js';
 import {taxFileName,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,MAX_DOCUMENT_BYTES,extensionOf} from './tax-data.js';
@@ -20,7 +20,10 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   let drive={connected:false,account:'',configured:true};
   // The dropped file, what the device pulled out of it, and — once the
   // destination has been resolved — the plan the owner is answering about.
-  let dropped=null,reading=null,plan=null,filed={year:'',files:[]},polling=0,consentUrl='';
+  // The reading's connection is chosen here rather than asked for. The Worker
+  // lists connections most recently changed first, so the one in use is the one
+  // last touched, and it is kept for as long as it still exists.
+  let dropped=null,reading=null,plan=null,filed={year:'',files:[]},polling=0,consentUrl='',connectionId='';
 
   const status=(text,target='status')=>{$(target).textContent=text||'';};
   const action=(label,handler,variant='secondary',extra={})=>{
@@ -50,11 +53,11 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   async function refreshStatus({quiet=false}={}){
     return run(async token=>{
       drive=await remote(token,'/v1/drive/status');
-      if(!quiet)status(drive.configured?'':'Google Drive is not configured on the Worker yet.','connection-status');
+      if(!quiet)status(drive.configured?'':'Google Drive is not configured on the Worker yet.');
       if(drive.connected)await loadFiled(token);
       else filed={year:'',files:[]};
       return drive;
-    },'connection-status');
+    },'status');
   }
   async function connect(){
     await run(async token=>{
@@ -62,9 +65,9 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       // A blocked popup is not a failure: the link is kept beside the button so
       // the owner can open the same consent page themselves.
       consentUrl=openExternal(url)?'':url;
-      status(consentUrl?'Open the consent page, then come back.':'Waiting for Google…','connection-status');
+      status(consentUrl?'Open the consent page, then come back.':'Waiting for Google…','status');
       awaitConsent();
-    },'connection-status');
+    },'status');
   }
   // Polls only while this mount is the current one and only until it is
   // answered. Every exit path stops it.
@@ -73,16 +76,16 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     let tries=0;
     const tick=async()=>{
       if(current!==polling)return;
-      if(++tries>CONNECT_POLL_LIMIT){status('Google did not answer. Try connecting again.','connection-status');return;}
+      if(++tries>CONNECT_POLL_LIMIT){status('Google did not answer. Try connecting again.','status');return;}
       try{
         const token=await credentials.get();
         const next=await remote(token,'/v1/drive/status');
         if(current!==polling)return;
         if(next.connected){
           drive=next;polling=0;consentUrl='';
-          status('','connection-status');
+          status('','status');
           render();
-          await run(loadFiled,'connection-status');
+          await run(loadFiled,'status');
           return;
         }
       }catch{}
@@ -96,8 +99,8 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       await remote(token,'/v1/drive/disconnect',{method:'POST',value:{}});
       drive={...drive,connected:false,account:''};
       filed={year:'',files:[]};
-      status('','connection-status');
-    },'connection-status');
+      status('','status');
+    },'status');
   }
 
   async function loadFiled(token){
@@ -126,12 +129,12 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     }
     renderDocument();render();
     if(reading.kind==='none')return 'Choose the type and year yourself, then file it.';
-    if(!$('connection-picker').value)return 'Choose an AI connection to name it, or fill the fields in yourself.';
+    if(!connectionId)return 'Save an AI connection in Settings to have a document named for you, or fill the fields in yourself.';
     await readDocument();
     return 'Ready to file.';
   }
   async function readDocument(){
-    const id=$('connection-picker').value;
+    const id=connectionId;
     if(!id||!reading||reading.kind==='none')return;
     await run(async token=>{
       status('Reading the document…','file-form-status');
@@ -159,14 +162,14 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     let filing;
     try{filing=currentFiling();}catch(error){status(error.message,'file-form-status');return;}
     await run(async token=>{
-      status('Checking Drive…','file-form-status');
+      status('Checking the year folder…','file-form-status');
       plan=await remote(token,'/v1/drive/plan',{method:'POST',value:{...filing,fileName:dropped.name},timeoutMs:60000});
       if(plan.existing){renderConflict();status('','file-form-status');return;}
       await send(token,'new');
     },'file-form-status');
   }
   async function send(token,mode){
-    status(mode==='replace'?'Replacing in Drive…':'Filing to Drive…','file-form-status');
+    status(mode==='replace'?'Replacing…':'Filing…','file-form-status');
     const result=await upload(token,`/v1/drive/upload?ticket=${encodeURIComponent(plan.ticket)}&mode=${mode}`,{file:dropped});
     const {name,year}=result.filed;
     clearFiling({keepFields:false});
@@ -211,11 +214,14 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   // zone has nothing to offer at all.
   function renderActions(){
     $('file-actions').replaceChildren(...(!dropped||plan?.existing?[]:[
-      action('File to Drive',file,'primary',{disabled:busy||!drive.connected}),
+      action('File it',file,'primary',{disabled:busy||!drive.connected}),
       action('Clear',()=>{clearFiling({keepFields:false});status('','file-form-status');render();})
     ]));
   }
   function render(){
+    // A connected Drive is not mentioned at all: the account, its heading and
+    // its maintenance action belong to the state where something is missing.
+    $('connection-section').hidden=drive.connected;
     $('connection').replaceChildren(ConnectionPanel({connected:drive.connected,account:drive.account,
       consentUrl,onConnect:connect,onDisconnect:disconnect}));
     // Connecting Drive goes through this device's cloud connection, so without
@@ -242,10 +248,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     try{
       const result=await remote(activeToken,'/v1/ai-connections');
       const usable=result.connections.filter(connection=>connection.hasApiKey);
-      const previous=$('connection-picker').value;
-      $('connection-picker').replaceChildren(Option('Choose a connection',''),...usable.map(connection=>Option(connection.name,connection.id)));
-      if(usable.some(connection=>connection.id===previous))$('connection-picker').value=previous;
-      else if(usable.length===1)$('connection-picker').value=usable[0].id;
+      if(!usable.some(connection=>connection.id===connectionId))connectionId=usable[0]?.id||'';
       status(usable.length?'':'Save an AI connection in Settings to have a dropped document named for you.','ai-status');
     }catch(error){status(error.message,'ai-status');}
   }
@@ -257,15 +260,14 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     plan=null;renderConflict();renderDestination();
     run(loadFiled,'status').then(render);
   });
-  $('connection-picker').addEventListener('change',()=>{if(reading&&reading.kind!=='none'&&!$('type').value)readDocument();});
 
   function clear(){
     generation++;polling=0;activeToken='';
     drive={connected:false,account:'',configured:true};
-    filed={year:'',files:[]};consentUrl='';
+    filed={year:'',files:[]};consentUrl='';connectionId='';
     $('year').value=defaultTaxYear();
     clearFiling({keepFields:false});
-    for(const target of ['status','connection-status','file-form-status','ai-status'])status('',target);
+    for(const target of ['status','file-form-status','ai-status'])status('',target);
     render();
   }
   async function refresh(){

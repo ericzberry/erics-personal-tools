@@ -12,15 +12,17 @@ const filedOn=stamp=>{
 export function TaxesView({today=new Date()}={}){
   return Stack([
     ToolTitle('Taxes',{actionsId:'taxes-actions',statusId:'taxes-status'}),
-    SettingsGroup({title:'Google Drive',level:2,children:[
-      Stack([],{id:'taxes-connection'}),
-      Notice('',{id:'taxes-connection-status',role:'status'})
-    ]}),
+    // Only when it is not connected: a working connection is plumbing, and the
+    // tool is about the document in front of you, not the account behind it.
+    Stack([SettingsGroup({title:'Google Drive',level:2,children:[
+      Stack([],{id:'taxes-connection'})
+    ]})],{id:'taxes-connection-section',hidden:true}),
     SettingsGroup({title:'File a document',level:2,children:[
       UI.UploadField({id:'taxes-drop',inputId:'taxes-file',statusId:'taxes-file-status',
         label:'Drop a tax document',formats:`PDF, image, CSV or XLSX · up to ${MAX_DOCUMENT_BYTES/1000000} MB`,
         accept:ACCEPTED.join(','),status:'',resetId:'taxes-file-clear',resetLabel:'Remove file'}),
-      FormField({id:'taxes-connection-picker',label:'AI connection',kind:'select',options:[{text:'Choose a connection',value:''}]}),
+      // The reading picks its own connection. This line speaks only when there
+      // is none to pick.
       Note('',{id:'taxes-ai-status',role:'status'}),
       Stack([],{id:'taxes-document',hidden:true}),
       FormField({id:'taxes-type',label:'Document type',kind:'select',
@@ -31,11 +33,11 @@ export function TaxesView({today=new Date()}={}){
       Stack([],{id:'taxes-destination',className:'tax-destination',hidden:true}),
       Stack([],{id:'taxes-conflict',hidden:true}),
       Notice('',{id:'taxes-file-form-status',role:'status'}),
-      Stack([],{id:'taxes-file-actions'})
+      Stack([],{id:'taxes-file-actions',className:'action-group action-group--compact'})
     ]}),
-    Stack([SettingsGroup({title:'In Drive',level:2,children:[
+    Stack([SettingsGroup({title:'Already filed',level:2,children:[
       Stack([],{id:'taxes-filed'}),
-      Link('Open the tax folder',TAX_ROOT_FOLDER_URL,{className:'footnote'})
+      Link('Open the tax folder',TAX_ROOT_FOLDER_URL,{className:'footnote tax-folder-link'})
     ]})],{id:'taxes-drive-contents',hidden:true})
     // The shared wallet surface every tool's root carries: record rows, action
     // roles and the danger colouring all hang off it. Finance and Personal
@@ -78,7 +80,7 @@ export function ConflictPanel({existing,keepBothName,onKeepBoth,onReplace,onCanc
   return Section([
     Strong(`${existing.name} is already filed there`),
     Note([filedOn(existing.modifiedTime)&&`Last changed ${filedOn(existing.modifiedTime)}`,existing.size&&fileSize(existing.size)].filter(Boolean).join(' · ')),
-    Note(`Keeping both files this one as ${keepBothName}. Replacing overwrites the copy in Drive.`),
+    Note(`Keeping both files this one as ${keepBothName}. Replacing overwrites the copy already filed.`),
     ActionGroup([keep,replace,cancel],{compact:true})
   ],{className:'record-row'});
 }
@@ -91,7 +93,7 @@ export function FiledList(year,files){
       file.webViewLink?Link(file.name,file.webViewLink):Strong(file.name),
       Note([filedOn(file.modifiedTime),file.size&&fileSize(file.size)].filter(Boolean).join(' · '))
     ],{className:'tax-filed-row'}))
-  ],{className:'record-group'});
+  ],{className:'record-group tax-filed-list'});
 }
 
 // One row, and only what applies: a connected account offers Disconnect, an

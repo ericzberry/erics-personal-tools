@@ -1,8 +1,18 @@
 .tax-filing{display:flex;flex-direction:column;gap:8px}
 .tax-connection{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+/* A status line with nothing to say takes no room: an empty notice would
+   otherwise sit under the destination as a blank highlighted bar. */
+.tax-filing .notice:empty,.tax-filing .footnote:empty,.tax-filing .action-group:empty{display:none}
 .tax-destination-line{display:flex;flex-direction:column;gap:2px}
 .tax-destination-name{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.tax-filed-row{display:flex;flex-direction:column;gap:2px}
-.tax-filed-row a{overflow-wrap:anywhere}
-.tax-filed-row .footnote{margin:0}
+/* Already filed: a ruled run of rows, the name in the body weight rather than
+   as a page of underlined links, the date and size quiet beneath it. */
+.tax-filed-list{display:grid;gap:0}
+.tax-filed-list .record-group-title{padding:0 0 6px}
+.tax-filed-row{display:grid;gap:1px;padding:7px 0;border-bottom:1px solid var(--wallet-line)}
+.tax-filed-row:last-child{border-bottom:0}
+.tax-filed-row a,.tax-filed-row strong{font-size:13px;font-weight:500;line-height:1.35;color:var(--wallet-ink);text-decoration:none;overflow-wrap:anywhere}
+@media(hover:hover){.tax-filed-row a:hover{color:var(--wallet-forest);text-decoration:underline;text-underline-offset:3px}}
+.tax-filed-row .footnote{margin:0;font-size:11px}
+.tax-folder-link{justify-self:start;color:var(--wallet-forest)}
 .tax-filing .record-row{gap:2px}

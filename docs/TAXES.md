@@ -14,6 +14,15 @@ of a PDF or a spreadsheet, or downscales a photo, exactly as it does for a
 Finance statement. Only that text — or the downscaled picture — is sent to the
 reading. The file itself goes one place: Drive.
 
+**The connection is not part of the tool.** A connected Drive is named nowhere:
+no heading, no account, no maintenance row. The Google Drive group appears only
+while the tool is not connected, where **Connect Google Drive** is the whole
+point of it. Nor is an AI connection asked for — the tool uses the saved
+connection with a key that was changed most recently (`/v1/ai-connections`
+answers most recent first) and keeps it while it exists. With no usable
+connection saved, one line under the drop zone says where to save one.
+Disconnecting Drive is therefore not offered from the tool once it is connected.
+
 **The reading is asked three questions and nothing else.** `tax-intake` returns
 the form type, the issuer and the tax year printed on the document, with a
 confidence and a sentence saying what it read them off. It is not asked what the
@@ -123,10 +132,14 @@ cd tools-api && npx wrangler secret put GOOGLE_CLIENT_SECRET
    attach a keyboard to the prompt.
 
 5. Deploy, open **Taxes**, press **Connect Google Drive**, and approve. The tool
-   waits for the consent tab and shows the connected account when it is done.
+   waits for the consent tab, and when it is answered the group disappears: a
+   connected tool is a drop zone, the fields and what is already filed.
 
 **Disconnect** deletes the stored token and the access token this Worker was
-holding. It changes nothing in Drive: every filed document stays where it is.
+holding. It changes nothing in Drive: every filed document stays where it is. It
+sits beside **Connect Google Drive**, so it is reachable only while the tool
+shows that group — a connected tool shows nothing about its connection, and
+disconnecting means calling `POST /v1/drive/disconnect`.
 
 ## The folder
 
@@ -146,3 +159,4 @@ first use. Two folders for the same year is reported rather than guessed at.
 | Drive access and the routes | `tools-api/src/drive.js`, `tools-api/drive-schema.sql` |
 | The reading | `tools-api/src/taxes.js` (`/v1/ai-connections/:id/tax-intake`) |
 | Synthetic states to look at | `chrome-sidebar/tests/taxes-preview.html` |
+| What the states must hold to | `chrome-sidebar/tests/taxes-tool.test.js` |

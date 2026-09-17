@@ -748,3 +748,33 @@ driven at 400px: Gift ideas, Reminders, Best card and Personal information each
 mounted in place, the locked gate showed Unlock and Use recovery code with no
 other row, the unlocked gate in the vault preview showed the tool's own heading
 and nothing else, and Settings listed Recovery code with one action.
+
+## Taxes is the document in front of you, not the account behind it (0.6.108 / mobile 0.1.66)
+
+A connected Google Drive is named nowhere in Taxes: no heading, no
+`ezberry@gmail.com`, no maintenance row. That group appears only while the tool
+is not connected, where **Connect Google Drive** is the whole point of it.
+Filing says **File it**, and the steps say *Checking the year folder…*,
+*Filing…* and *Replacing…* rather than repeating where they are going.
+
+The **AI connection** picker is gone. The tool uses the saved connection whose
+key was changed most recently and keeps it while it exists; with none saved, a
+single line under the drop zone says where to save one.
+
+A status line with nothing to say no longer draws a blank highlighted bar —
+under **Files as**, under the title and wherever else one sits — and **File it**
+and **Clear** are a proper action group with a gap between them rather than two
+buttons touching.
+
+**Already filed** (was *In Drive*) reads as a list instead of a column of large
+underlined links: the name in the body weight, ruled rows, the date and size
+quiet beneath it, and an underline only on hover.
+
+Validation: 334 extension, 33 mobile and 79 API tests pass, including new
+coverage that a connected tool renders nothing naming Drive or the account and
+no connection picker, that a dropped document is read through the connection the
+Worker lists first, that a sure reading leaves the status line empty, and that an
+unconnected tool still offers **Connect Google Drive** and says where to save an
+AI connection. The synthetic states were driven at 400px with the panel's own
+stylesheet loaded: the empty notices collapse, the action group gaps, and the
+filed list rules. Archive: `release/erics-sidebar-0.6.108.zip`.
