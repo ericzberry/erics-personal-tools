@@ -855,8 +855,8 @@ naming stops there for good.
 
 Validation: 349 extension and 33 mobile tests pass, including a browser that
 answers a discoverable check with the passkey it refuses by name. The native
-Touch ID sheet and Chrome's own dialog were not directly tested. Archive:
-`release/erics-sidebar-0.6.111.zip`.
+Touch ID sheet and Chrome's own dialog were not directly tested. Packaged with
+the next release: `release/erics-sidebar-0.6.113.zip`.
 
 ## The email screen stops treating a summary and a reply as one thing (0.6.113 / mobile 0.1.69)
 
