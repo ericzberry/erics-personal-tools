@@ -13,7 +13,7 @@
 // once it has been read: the stored state holds the pending samples and the
 // accounts, and the samples are dropped as soon as they are folded into one.
 import {generate} from './providers.js';
-import {accessToken,storedAccount,GMAIL_SCOPE} from './drive.js';
+import {accessToken,storedAccount,noteMailRefused,GMAIL_SCOPE} from './drive.js';
 import {encryptSettings,decryptSettings,savedConnection} from './ai-settings.js';
 import {voiceSample,voiceChunk,normalizeVoiceProfile,VOICE_SAMPLE_TARGET,MAX_VOICE_CHUNKS,MAX_VOICE_PROMPT}
   from '../../chrome-sidebar/src/voice-data.js';
@@ -55,8 +55,18 @@ async function gmailFetch(env,request,fetcher,path){
     response=await fetcher(`${GMAIL}${path}`,{headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(20000)});
   }catch{fail(504,'Gmail did not answer in time. Try again.');}
   if(response.status===401||response.status===403){
-    await response.body?.cancel();
-    fail(409,'Google would not allow reading your sent mail. Connect Google again and approve reading mail.');
+    // Two different refusals wear the same status code, and they need
+    // different things done about them: a project that has never switched the
+    // Gmail API on is fixed in the Google console, and no amount of consenting
+    // again will touch it. Google's own sentence says which this is, so it is
+    // passed on rather than replaced with a guess.
+    const detail=await response.json().catch(()=>({}));
+    const reason=detail?.error?.errors?.[0]?.reason||'';
+    const said=String(detail?.error?.message||'').slice(0,300);
+    if(reason==='accessNotConfigured'||/has not been used in project|is disabled/i.test(said))
+      fail(409,`The Gmail API is switched off in your Google Cloud project. Turn it on there, then study again. Google said: ${said}`);
+    await noteMailRefused(env);
+    fail(409,`Google would not allow reading your sent mail. Connect Google again and approve reading mail.${said?` Google said: ${said}`:''}`);
   }
   if(!response.ok){await response.body?.cancel();fail(502,`Gmail is unavailable (${response.status}).`);}
   return response.json();
@@ -134,7 +144,9 @@ async function buildProfile(connection,accounts,sampled,fetcher){
 const progress=({profile,scan},account)=>({
   profile,
   scan:scan?{sampled:scan.sampled,scanned:scan.scanned,accounts:scan.accounts.length,startedAt:scan.startedAt}:null,
-  google:{connected:!!account?.refreshToken,sentMail:(account?.scopes||[]).includes(GMAIL_SCOPE)}
+  // Granted once and not since refused: a connection Google has turned away
+  // from mail is not one the panel should offer a study on.
+  google:{connected:!!account?.refreshToken,sentMail:(account?.scopes||[]).includes(GMAIL_SCOPE)&&!account?.mailRefused}
 });
 
 export async function voice(request,env,readValue,json,fetcher=fetch){

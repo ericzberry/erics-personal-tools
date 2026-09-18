@@ -305,6 +305,21 @@ summary > .title-text { display: inline; }
    the 16px control font that pages and the phone use to avoid a zoom. A
    typed row keeps its own height from `rows`; the floor is for the short one. */
 .form-field.form-field--compact > textarea { font: 12px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; min-height: 64px; }
+/* The two things this screen does with the message open beside it. Reading it
+   and answering it are different jobs, so each is its own section — its name,
+   the action that makes it, its own progress and its own result — and the rule
+   above each is what says so. The name sits below the subject rather than
+   beside it in size, because the subject is still what the screen is about. */
+.result-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.result-section > .section-title { margin: 0; gap: 8px; }
+.result-section > .section-title > .title-text { font-size: 15px; letter-spacing: -.2px; }
+.result-section > .section-title .action-group { margin: 0; flex: 0 0 auto; }
+.result-section > .footnote { margin: 8px 0 0; }
+.result-section > .footnote:empty { display: none; }
+.result-section > .form-field { margin-top: 10px; }
+.result-section > .action-group { margin: 10px 0 0; }
+.result-section > .result-output { margin-top: 10px; }
+.result-section > details { margin: 12px 0 0; }
 /* A section whose state and action share one line: the state reads on the left,
    the action sits at the end of the same line, and a state with nothing to say
    leaves the action a line of its own rather than an empty paragraph above it. */

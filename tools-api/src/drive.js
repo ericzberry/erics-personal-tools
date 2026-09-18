@@ -58,6 +58,15 @@ export async function storedAccount(env){
   const row=await env.DB.prepare('SELECT value FROM drive_accounts WHERE id = ?').bind(ACCOUNT_ID).first();
   return row?decryptSettings(row.value,ACCOUNT_ID,env):null;
 }
+// A refusal from Google that is about permission rather than about one
+// request is written down, because the panel's next question is what the
+// connection can do — and the answer has just changed. Re-connecting replaces
+// this record wholesale, which is what clears it.
+export async function noteMailRefused(env){
+  const account=await storedAccount(env);
+  if(!account||account.mailRefused)return;
+  await storeAccount(env,{...account,mailRefused:true});
+}
 async function storeAccount(env,value){
   await env.DB.prepare('INSERT INTO drive_accounts (id, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at')
     .bind(ACCOUNT_ID,await encryptSettings(value,ACCOUNT_ID,env),now()).run();

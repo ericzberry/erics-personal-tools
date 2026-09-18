@@ -1,16 +1,26 @@
 # Gmail in Eric’s Personal Tools
 
 The panel follows the active Gmail tab. It reads the latest expanded message’s
-subject, sender and rendered text, then offers two things: a reply written the
-way Eric writes, and a summary. Earlier collapsed messages and attachments are
-not included.
+subject, sender and rendered text, then offers two things: a summary of it, and
+a reply written the way Eric writes. Earlier collapsed messages and attachments
+are not included.
 
 ## The screen
 
 **The message is not shown here.** It is open in the tab beside the panel, and
 a second copy of it only pushed the reply further down. The panel shows who it
-is from, that it is reading the latest expanded message, and then the one thing
-Eric has to type.
+is from, that it is reading the latest expanded message, and then the two things
+it can do with it.
+
+**Reading it and answering it are two sections, not two buttons.** They are
+different jobs — one takes a click and nothing else, the other takes a line of
+instruction and the voice it is written in — so each is a section of its own,
+under a rule, with its own name, its own action, its own status line and its own
+editable result with a Copy. Neither overwrites the other: a summary stays put
+while a reply is drafted under it.
+
+**Summary** is the first section: its name, and *Summarize* at the end of the
+same line. Nothing to type.
 
 **What the reply should say.** A rough line — *say yes, ask him to send the
 form, mention I can speak to Blockthrough* — is the whole input. It is not a
@@ -18,15 +28,18 @@ form to fill in; it is the goal, and the draft resolves it. Left empty, the
 reply answers the message as it stands. The line is cleared when a different
 message is opened, because it belonged to that message.
 
-**Generate reply** is the primary action and **Summarize** sits beside it. Both
-run through the Worker on the saved OpenAI connection: `email.reply` and
-`email.summary` in [the task policy](../tools-api/MODEL_ROUTING.md), both on the
-model Eric chose for his mail. There is no on-device model any more; Chrome's
-built-in `LanguageModel` was removed with `email-ai.js` when the reply moved to
-the same place the summary already was.
+**Generate reply** is the one primary action on the screen, at the foot of the
+*Reply* section with *Writing voice* under it, because the voice is the only
+thing on this screen that changes what it writes. Both actions run through the
+Worker on the saved OpenAI connection: `email.reply` and `email.summary` in
+[the task policy](../tools-api/MODEL_ROUTING.md), both on the model Eric chose
+for his mail. The screen never names the model or the provider. There is no
+on-device model any more; Chrome's built-in `LanguageModel` was removed with
+`email-ai.js` when the reply moved to the same place the summary already was.
 
-Output lands in an editable text area with a Copy button. Nothing is ever sent
-and nothing in Gmail is modified. The draft uses `[bracketed placeholders]`
+Each output lands in its own editable text area, with the Copy for it appearing
+in that section's title row. Nothing is ever sent and nothing in Gmail is
+modified. The draft uses `[bracketed placeholders]`
 wherever a fact, date, figure or decision is Eric's to supply, and is told never
 to invent a commitment, an availability or work as already done.
 
@@ -81,8 +94,19 @@ thing to renew. Nothing here writes to, sends or deletes mail, and the panel
 never receives a Google credential.
 
 The scope was added after that connection already existed, so it needs
-approving once. Until then the section offers **Connect Google** and nothing
-else; the study is refused before Gmail is touched, saying what is missing.
+approving once. Until then the section offers one action and nothing else:
+**Connect Google** when there is no connection at all, and **Approve reading
+mail** when there is one Google will not let read mail. The study is refused
+before Gmail is touched, saying what is missing.
+
+**Google refuses in two different ways, and they need different repairs.** A
+project that never switched the Gmail API on is fixed in the Google console and
+no amount of consenting again will touch it, so that refusal says so and passes
+on Google's own sentence, which carries the project and the link. Any other
+refusal is the grant itself: the Worker writes that down against the connection,
+so the next thing the panel asks reports a connection that cannot read mail and
+offers the consent again instead of a *Resume* that would fail the same way.
+Reconnecting replaces that record, which is what clears it.
 
 ### One-time setup (owner)
 

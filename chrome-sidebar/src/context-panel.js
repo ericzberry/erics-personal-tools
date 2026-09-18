@@ -18,6 +18,20 @@ function goTo(capability){
 }
 const strip=extension?mountPageStrip($('page-offers'),{select:goTo}):null;
 let email = null, identity = '', generation = 0, controller, activeTab, polling = false, working = false;
+// The two things this screen does, each owning its own status, result and Copy.
+const JOBS = {
+  reply: {button:'reply-email', status:'reply-status', result:'reply-result', output:'reply-output', copy:'copy-reply'},
+  summary: {button:'summarize-email', status:'summary-status', result:'summary-result', output:'summary-output', copy:'copy-summary'}
+};
+function clearOutput(job) {
+  const nodes = JOBS[job];
+  $(nodes.result).hidden = true; $(nodes.output).value = ''; $(nodes.copy).hidden = true; $(nodes.status).textContent = '';
+}
+function showOutput(job, text) {
+  const nodes = JOBS[job];
+  $(nodes.output).value = text; $(nodes.result).hidden = false; $(nodes.copy).hidden = false;
+  $(nodes.output).dispatchEvent(new Event('output-updated'));
+}
 function clearEmail(next = null) {
   const nextIdentity = next ? JSON.stringify(next) : '';
   if (identity === nextIdentity) return;
@@ -26,12 +40,12 @@ function clearEmail(next = null) {
   // message is a new errand, and carrying the old instruction into it would be
   // worse than asking for it again.
   $('reply-intent').value = '';
-  $('email-result').hidden = true; $('email-output').value = ''; $('email-action-status').textContent = '';
+  for (const job of Object.keys(JOBS)) clearOutput(job);
 }
 function renderEmail() {
   $('email-subject').textContent = email?.subject || 'Open an email in Gmail';
   $('email-from').textContent = email ? `${email.name || email.from} · ${email.from}` : '';
-  for (const id of ['summarize-email','reply-email']) $(id).disabled = !email || working;
+  for (const job of Object.values(JOBS)) $(job.button).disabled = !email || working;
 }
 // An account page the owner is already signed in to is the one thing that
 // opens Finance on its own, because reading it is only possible from beside
@@ -65,38 +79,36 @@ async function refresh() {
     if (current?.id !== tab.id || current?.url !== tab.url) {clearEmail();return;}
     const data = response?.email;
     clearEmail(data?.text ? data : null);
-    $('email-read-status').textContent = response?.error || data?.error || (email ? 'Latest expanded message · Summaries via OpenAI' : 'Open a message, then expand it.');
+    $('email-read-status').textContent = response?.error || data?.error || (email ? 'Latest expanded message' : 'Open a message, then expand it.');
     renderEmail();
   } catch {
     clearEmail(); renderEmail(); $('email-read-status').textContent = 'Could not connect to Gmail. Check extension site access, then click Refresh.';
   } finally {polling = false;}
 }
-for (const [id, action] of [['reply-email','reply'],['summarize-email','summary']]) $(id).addEventListener('click', async () => {
+for (const [job, nodes] of Object.entries(JOBS)) $(nodes.button).addEventListener('click', async () => {
   if (!email || working) return;
   const token = ++generation, source = email;
   controller?.abort(); controller = new AbortController(); working = true; renderEmail();
-  $('email-result').hidden = true; $('email-action-status').textContent = 'Working…';
+  clearOutput(job); $(nodes.status).textContent = 'Working…';
   try {
     // Re-read at click time so an email navigation cannot use stale sidebar content.
     const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
     const fresh = tab && await readCurrentEmail(tab.id);
     if (token !== generation || JSON.stringify(fresh?.email) !== JSON.stringify(source)) {clearEmail();await refresh();return;}
-    const options={email:source,signal:controller.signal,onProgress:message=>{if(token===generation)$('email-action-status').textContent=message;}};
-    const text = await (action==='reply'?draftReply({...options,instruction:$('reply-intent').value}):summarizeEmail(options));
+    const options={email:source,signal:controller.signal,onProgress:message=>{if(token===generation)$(nodes.status).textContent=message;}};
+    const text = await (job==='reply'?draftReply({...options,instruction:$('reply-intent').value}):summarizeEmail(options));
     const [afterTab] = await chrome.tabs.query({active:true,currentWindow:true});
     const after = afterTab?.id === tab.id && await readCurrentEmail(tab.id);
     if (JSON.stringify(after?.email) !== JSON.stringify(source)) {clearEmail();await refresh();return;}
     if (token !== generation) return;
-    $('email-result-title').textContent = action === 'reply' ? 'Reply draft' : 'Summary';
-    $('email-output').value = text; $('email-result').hidden = false;
-    $('email-output').dispatchEvent(new Event('output-updated'));
-    $('email-action-status').textContent = action === 'reply' ? 'Review and edit before using.' : '';
-  } catch (error) {if(token===generation)$('email-action-status').textContent=error.message;}
+    showOutput(job, text);
+    $(nodes.status).textContent = job === 'reply' ? 'Review and edit before using.' : '';
+  } catch (error) {if(token===generation)$(nodes.status).textContent=error.message;}
   finally {if(token===generation){working=false;renderEmail();}}
 });
-$('copy-email-output').addEventListener('click',async()=>{
-  try {await navigator.clipboard.writeText($('email-output').value);$('email-action-status').textContent='Copied.';}
-  catch {$('email-action-status').textContent='Select the text and copy it manually.';}
+for (const nodes of Object.values(JOBS)) $(nodes.copy).addEventListener('click',async()=>{
+  try {await navigator.clipboard.writeText($(nodes.output).value);$(nodes.status).textContent='Copied.';}
+  catch {$(nodes.status).textContent='Select the text and copy it manually.';}
 });
 $('refresh-email').addEventListener('click',refresh);
 

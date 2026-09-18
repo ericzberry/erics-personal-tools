@@ -11,7 +11,7 @@ All extension UI is built here. `ui.js` owns native DOM construction and reusabl
 | Disclosure, DataTable, List | Expandable and structured information |
 | PickRow, RecommendationCard | Reusable draft data presentation |
 | UploadField + attachFileDrop | Drop/browse upload with inline feedback |
-| EditableResult | Editable generated output and copy action |
+| ResultSection | One generated thing: its name, the action that makes it, its status, and the editable result with a copy action |
 
 Components accept data and return native elements. Mount them once where possible; feature controllers can update content, disabled/hidden/loading state, and attach business callbacks. Dynamic lists use the same shared row/card components. Render external data as text, never HTML.
 

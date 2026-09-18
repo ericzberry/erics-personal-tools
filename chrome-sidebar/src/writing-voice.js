@@ -41,11 +41,14 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
     if(state.scan)return `Stopped at ${count(state.scan.sampled)}`;
     return state.profile?learned(state.profile):'';
   }
-  // Only the actions that apply, and never more than two: connecting Google,
-  // or studying; then saving an edit, or forgetting the voice.
+  // Only the actions that apply, and never more than two: connecting Google or
+  // letting it read mail, or studying; then saving an edit, or forgetting the
+  // voice. A connection that exists but cannot read mail needs the second half
+  // of the consent, not a first connection, and says so.
   function render(){
     const rows=[];
-    if(!state.google.connected||!state.google.sentMail)rows.push(action('Connect Google',connect));
+    if(!state.google.connected)rows.push(action('Connect Google',connect));
+    else if(!state.google.sentMail)rows.push(action('Approve reading mail',connect));
     else if(scanning)rows.push(action('Stop',()=>{stopping=true;say('Stopping…');}));
     else rows.push(action(state.scan?'Resume':state.profile?'Study again':'Study my sent mail',()=>study(!state.scan)));
     if(state.profile&&!scanning)rows.push(dirty?action('Save',save,'primary'):action('Forget',forget,'danger'));
@@ -133,6 +136,10 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
     // Whatever the study said while it ran — how far it had got, that it was
     // stopping — is spent. What is left is the reason it ended, or the voice.
     finally{clearInterval(heartbeat);scanning=false;stopping=false;message=failed;render();}
+    // A refusal can be the connection losing its permission to read mail, and
+    // then resuming is not the thing to offer. Ask what the state is now, so
+    // the action in front of the reason is the one that clears it.
+    if(failed){try{adopt(await request('voice'));}catch{/* The reason above is the news; a second failure is not. */}render();}
   }
 
   async function save(){

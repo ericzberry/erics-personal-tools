@@ -38,7 +38,7 @@ The catalogue below describes existing exports, not a promise that each componen
 | Feedback and facts | `Notice`, `Badge`, `StatusCard`, `SourceNote` | Use truthful text; `Notice` provides status semantics, not an entire error workflow |
 | Data comparison | `DataTable`, `List` | Keep headers meaningful; choose records over a table when columns add no value |
 | Research results | `ResultBlock`, `EvidenceList`, `OutputText` | Separate evidence, generated conclusions, and operation status |
-| Editable generated output | `EditableResult` | Keep editing and copying available; preserve edits across async work |
+| One generated thing, end to end | `ResultSection` | One section per function — its name, its action, its status and its editable result; keep editing and copying available and preserve edits across async work |
 | Upload | `UploadField` with `attachFileDrop` | Shared browse/drop handling, validation, and inline feedback |
 | Values sealed on the device | `ProtectedField`, `MaskedValue` | Masked by default; the editor's empty input means keep, never erase |
 | Specialized domain presentation | Existing modules such as `travel.js`, `restaurant-views.js`, and draft components | Reuse the relevant view rather than duplicating its rows in another host |

@@ -15,7 +15,11 @@ test('all screens mount through components with unique, accessible controller ho
   }
   for(const label of doc.querySelectorAll('label'))assert.ok(doc.getElementById(label.getAttribute('for')));
   assert.equal(doc.getElementById('rankings-drop'),null);
-  assert.equal(doc.getElementById('email-result').hidden,true);
+  // The email screen's two jobs are two sections, each with its own result and
+  // Copy, and neither shows anything until it has been run.
+  for(const id of ['summary-result','reply-result'])assert.equal(doc.getElementById(id).hidden,true);
+  for(const id of ['copy-summary','copy-reply'])assert.equal(doc.getElementById(id).hidden,true);
+  assert.equal(doc.getElementById('email-result'),null);
   assert.equal(doc.querySelectorAll('header').length,1);
 });
 test('every Tools entry carries an icon and the sidebar menu renders one per row',()=>{

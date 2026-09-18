@@ -1,7 +1,7 @@
 import {CapabilityPicker} from './capabilities.js';
 import * as UI from './ui.js';
 import {AI_PROVIDERS} from '../ai-providers.js';
-const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Strong,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
+const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Strong,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField}=UI;
 export function DraftView() {
   const draft=Section([
     Notice('',{id:'advice-status',className:'notice notice-subtle'}),
@@ -34,14 +34,22 @@ export function DraftSettings() {
 }
 // The message itself is not shown: it is open in the tab beside this panel,
 // and a second copy of it here only pushes the reply further down. What the
-// panel adds is the line where Eric says what the reply should do, which is
-// the whole of what he has to type.
+// panel adds are the two things it can do with that message — and they are two
+// different things, so they are two sections rather than two buttons under one
+// box. Reading it takes nothing but a click; answering it takes the line where
+// Eric says what the reply should do, which is the whole of what he has to type.
 export function GmailView() {
   return Section([UI.PageHeader({title:'Open an email in Gmail',titleId:'email-subject',action:Button('Refresh',{id:'refresh-email',variant:'secondary',size:'compact'})}),Main([Note('',{id:'email-from',className:'footnote content-meta'}),Note('',{id:'email-read-status',role:'status'}),
-    UI.FormField({id:'reply-intent',label:'What the reply should say',kind:'textarea',rows:3,className:'form-field--compact'}),
-    ActionGroup([Button('Generate reply',{id:'reply-email',variant:'primary',disabled:true}),Button('Summarize',{id:'summarize-email',variant:'secondary',disabled:true})]),Note('',{id:'email-action-status',role:'status'}),
-    EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),
-    VoiceView()
+    UI.ResultSection({id:'email-summary',title:'Summary',
+      action:Button('Summarize',{id:'summarize-email',variant:'secondary',size:'compact',disabled:true}),
+      statusId:'summary-status',resultId:'summary-result',copyId:'copy-summary',fieldId:'summary-output',label:'Summary — editable'}),
+    UI.ResultSection({id:'email-reply',title:'Reply',
+      fields:[UI.FormField({id:'reply-intent',label:'What the reply should say',kind:'textarea',rows:3,className:'form-field--compact'}),
+        ActionGroup([Button('Generate reply',{id:'reply-email',variant:'primary',disabled:true})])],
+      statusId:'reply-status',resultId:'reply-result',copyId:'copy-reply',fieldId:'reply-output',label:'Reply draft — editable',
+      // The voice belongs to the reply and to nothing else on this screen, so
+      // it is kept inside that section rather than under the whole page.
+      footer:VoiceView()})
   ])],{id:'gmail-tool',className:'tool-page',hidden:true});
 }
 // Where the voice replies are written in is kept and corrected. It sits under

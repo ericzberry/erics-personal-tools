@@ -9,7 +9,7 @@ const learned={prompt:'Open with "Hey".',voices:[{name:'Warm professional',audie
 
 // The panel as the side panel builds it, with the Worker replaced by a script
 // of replies and a record of what it was asked.
-function panel({google={connected:true,sentMail:true},profile=null,pages=3,fails=null,gate=null,grant=false}={}){
+function panel({google={connected:true,sentMail:true},profile=null,pages=3,fails=null,gate=null,grant=false,revokes=false}={}){
   const {document}=parseHTML('<html><body><div id="app"></div></body></html>');
   globalThis.document=document;
   mountApp(document.getElementById('app'));
@@ -20,7 +20,7 @@ function panel({google={connected:true,sentMail:true},profile=null,pages=3,fails
   let page=0;
   const request=async(action,data={})=>{
     asked.push({action,...data});
-    if(fails&&action===fails.action)throw Error(fails.message);
+    if(fails&&action===fails.action){if(revokes)google={connected:true,sentMail:false};throw Error(fails.message);}
     if(action==='status')return {connected:true};
     if(action==='list')return {connections:[connection]};
     if(action==='google-connect'){consented=true;return {url:'https://accounts.google.com/o/oauth2/v2/auth?x=1'};}
@@ -50,10 +50,12 @@ function panel({google={connected:true,sentMail:true},profile=null,pages=3,fails
 const settle=async()=>{for(let turn=0;turn<40;turn++)await Promise.resolve();};
 
 test('a Google account that cannot read sent mail is offered the one action that applies',async()=>{
-  for(const google of [{connected:false,sentMail:false},{connected:true,sentMail:false}]){
+  // No connection at all and a connection Google will not let read mail are
+  // different repairs, and the button says which one this is.
+  for(const [google,label] of [[{connected:false,sentMail:false},'Connect Google'],[{connected:true,sentMail:false},'Approve reading mail']]){
     const {voice,labels,variants,asked,opened,$}=panel({google});
     await voice.load();
-    assert.deepEqual(labels(),['Connect Google']);
+    assert.deepEqual(labels(),[label]);
     assert.deepEqual(variants(),['button-secondary']);
     assert.equal($('voice-editor').hidden,true);
     await voice.load();
@@ -146,4 +148,16 @@ test('a refused study says why and leaves the section usable',async()=>{
   await voice.study(true);
   assert.equal($('voice-status').textContent,'Google would not allow reading your sent mail.');
   assert.deepEqual(labels(),['Study my sent mail']);
+});
+
+test('a refusal that is the connection losing mail access replaces Resume with the repair',async()=>{
+  const {voice,$,labels,asked}=panel({
+    fails:{action:'voice-scan',message:'Google would not allow reading your sent mail. Connect Google again and approve reading mail.'},revokes:true});
+  await voice.load();
+  await voice.study(true);
+  assert.match($('voice-status').textContent,/Connect Google again/);
+  // The reason stays in front of the one action that can clear it; resuming a
+  // study Google will refuse again is not offered.
+  assert.deepEqual(labels(),['Approve reading mail']);
+  assert.equal(asked.filter(call=>call.action==='voice').length,2,'the state is asked for again once the study fails');
 });

@@ -857,3 +857,26 @@ Validation: 349 extension and 33 mobile tests pass, including a browser that
 answers a discoverable check with the passkey it refuses by name. The native
 Touch ID sheet and Chrome's own dialog were not directly tested. Archive:
 `release/erics-sidebar-0.6.111.zip`.
+
+## The email screen stops treating a summary and a reply as one thing (0.6.112 / mobile 0.1.69)
+
+Summarizing a message and answering it sat under one box as two buttons, which
+said they were two settings of one action. They are not: one takes a click and
+nothing else, the other takes a line of instruction and the voice it is written
+in. Each is now its own section — its name, its action, its status and its own
+editable result with a Copy — so a summary stays put while a reply is drafted
+under it, and *Writing voice* sits inside the reply, which is the only thing it
+changes. The screen no longer names the model or the provider that wrote either.
+
+Studying sent mail also stopped offering the wrong repair. Google refuses in two
+ways: a Gmail API that was never switched on in the Cloud project, which says so
+and passes on Google's own sentence with the project in it, and a grant that will
+not read mail, which the Worker now records against the connection so the panel
+offers **Approve reading mail** instead of a *Resume* that would fail the same
+way.
+
+Validation: 349 extension, 33 mobile and 87 API tests pass, including both
+refusals told apart at the Worker and the repair replacing Resume in the panel.
+The synthetic states — a summary, a draft, both at once, and a refused study —
+were driven at 380px and 280px with no horizontal overflow. Archive:
+`release/erics-sidebar-0.6.112.zip`.

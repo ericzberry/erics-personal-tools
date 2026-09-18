@@ -159,14 +159,21 @@ export function RecommendationCard(p,{primary=false,compact=false}={}) {
   children.push(Disclosure('Reasoning',[element('ul',{},p.reasons.map(text=>element('li',{text})))]));
   return element('article',{className:`recommendation${primary?' recommendation--primary':''}`},children);
 }
-export function EditableResult({id,titleId,copyId,fieldId,title='Summary',label='Generated text — editable'}) {
-  const fields=Field({id:fieldId,label,kind:'textarea',hiddenLabel:true});
-  const output=fields[1];output.classList.add('editable-output--fit');
-  const resize=()=>{if(!output.getClientRects().length)return;output.style.height='auto';output.style.height=`${output.scrollHeight+2}px`;};
-  output.addEventListener('input',resize);
-  if(globalThis.ResizeObserver){let width=-1;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;resize();}}).observe(output);}
-  output.addEventListener('output-updated',resize);
-  return Section([SectionTitle(title,Button('Copy',{id:copyId,variant:'secondary'}),{titleId}),...fields],{id,hidden:true});
+// One generated thing, with everything that belongs to it: its name, the
+// action that makes it, whatever has to be typed first, how it is going, and
+// the result, editable, with a Copy. Two of these is how a screen says that
+// two functions are two functions.
+export function ResultSection({id,title,action,fields=[],statusId,resultId,copyId,fieldId,label='Generated text — editable',footer}) {
+  const copy=Button('Copy',{id:copyId,variant:'secondary',size:'compact',hidden:true});
+  const controls=ActionGroup([action,copy].filter(Boolean),{compact:true});
+  const output=Field({id:fieldId,label,kind:'textarea',hiddenLabel:true});
+  const field=output[1];field.classList.add('editable-output--fit');
+  const resize=()=>{if(!field.getClientRects().length)return;field.style.height='auto';field.style.height=`${field.scrollHeight+2}px`;};
+  field.addEventListener('input',resize);
+  if(globalThis.ResizeObserver){let width=-1;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;resize();}}).observe(field);}
+  field.addEventListener('output-updated',resize);
+  return Section([SectionTitle(title,controls),...fields,Note('',{id:statusId,role:'status'}),
+    Stack(output,{id:resultId,className:'result-output',hidden:true}),footer].filter(Boolean),{id,className:'result-section'});
 }
 export function downloadFile({url,filename}) {const link=Link('',url,{download:filename});link.removeAttribute('target');link.click();}
 

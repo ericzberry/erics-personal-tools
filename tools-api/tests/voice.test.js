@@ -40,7 +40,7 @@ const message=(index)=>({
 
 // Google and OpenAI, both answering only what these routes actually ask for,
 // and both recording what they were asked.
-function fakeCloud({total=60,scopes=[GMAIL_SCOPE,'https://www.googleapis.com/auth/drive'],profile}={}){
+function fakeCloud({total=60,scopes=[GMAIL_SCOPE,'https://www.googleapis.com/auth/drive'],profile,gmailRefusal}={}){
   const calls=[],prompts=[];
   const idToken=`x.${Buffer.from(JSON.stringify({email:'owner@example.com'})).toString('base64url')}.y`;
   const fetcher=async(input,init={})=>{
@@ -49,6 +49,7 @@ function fakeCloud({total=60,scopes=[GMAIL_SCOPE,'https://www.googleapis.com/aut
     if(url.origin==='https://oauth2.googleapis.com')
       return Response.json({access_token:'synthetic-access',expires_in:3600,refresh_token:'synthetic-refresh-token',id_token:idToken,scope:scopes.join(' ')});
     if(url.origin==='https://gmail.googleapis.com'){
+      if(gmailRefusal)return Response.json({error:{code:403,message:gmailRefusal.message,errors:[{reason:gmailRefusal.reason}],status:'PERMISSION_DENIED'}},{status:403});
       if(init.headers?.Authorization!=='Bearer synthetic-access')return Response.json({error:{message:'bad token'}},{status:401});
       if(url.pathname.endsWith('/messages')){
         const from=Number(url.searchParams.get('pageToken')||'0');
@@ -227,4 +228,46 @@ test('a study without a chosen AI connection is refused before Gmail is touched'
     assert.equal(fake.calls.some(entry=>entry.includes('gmail.googleapis.com')),false);
     assert.equal((await call(env,'/v1/voice/unknown','POST',{})).status,404);
   });
+});
+
+test('Google refusing mail is told apart: a switched-off API is a console fix, a refused scope is a reconnection',async()=>{
+  // The Gmail API was never enabled in the project. Consenting again cannot
+  // touch that, so the reason says where the fix is and the connection is left
+  // alone — the panel still offers the study, which is what will work once it
+  // is on.
+  {
+    const {env}=environment();
+    await withCloud(fakeCloud({gmailRefusal:{reason:'accessNotConfigured',
+      message:'Gmail API has not been used in project 1234567890 before or it is disabled.'}}),async()=>{
+      await connect(env);
+      await saveConnection(env);
+      const response=await call(env,'/v1/voice/scan','POST',{connectionId:CONNECTION});
+      const refused=await response.json();
+      assert.equal(response.status,409);
+      assert.match(refused.error,/Gmail API is switched off in your Google Cloud project/);
+      assert.match(refused.error,/has not been used in project 1234567890/);
+      const state=await (await call(env,'/v1/voice')).json();
+      assert.deepEqual([state.google.connected,state.google.sentMail],[true,true]);
+    });
+  }
+  // The grant itself will not read mail. That is written down, so the next
+  // thing the panel asks reports a connection that cannot read mail and offers
+  // the consent again rather than a study that would fail the same way.
+  {
+    const {env}=environment();
+    await withCloud(fakeCloud({gmailRefusal:{reason:'insufficientPermissions',message:'Request had insufficient authentication scopes.'}}),async()=>{
+      await connect(env);
+      await saveConnection(env);
+      const response=await call(env,'/v1/voice/scan','POST',{connectionId:CONNECTION});
+      const refused=await response.json();
+      assert.equal(response.status,409);
+      assert.match(refused.error,/Connect Google again and approve reading mail/);
+      assert.match(refused.error,/insufficient authentication scopes/);
+      const state=await (await call(env,'/v1/voice')).json();
+      assert.deepEqual([state.google.connected,state.google.sentMail],[true,false]);
+      // Drive filing is a different permission and is not disturbed by it.
+      const drive=await (await call(env,'/v1/drive/status')).json();
+      assert.equal(drive.connected,true);
+    });
+  }
 });
