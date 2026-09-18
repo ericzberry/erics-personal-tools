@@ -41,7 +41,7 @@ const message=(index)=>({
 // Google and OpenAI, both answering only what these routes actually ask for,
 // and both recording what they were asked.
 function fakeCloud({total=60,scopes=[GMAIL_SCOPE,'https://www.googleapis.com/auth/drive'],profile,gmailRefusal}={}){
-  const calls=[],prompts=[];
+  const calls=[],prompts=[];let refused=0;
   const idToken=`x.${Buffer.from(JSON.stringify({email:'owner@example.com'})).toString('base64url')}.y`;
   const fetcher=async(input,init={})=>{
     const url=new URL(typeof input==='string'?input:input.url);
@@ -49,7 +49,10 @@ function fakeCloud({total=60,scopes=[GMAIL_SCOPE,'https://www.googleapis.com/aut
     if(url.origin==='https://oauth2.googleapis.com')
       return Response.json({access_token:'synthetic-access',expires_in:3600,refresh_token:'synthetic-refresh-token',id_token:idToken,scope:scopes.join(' ')});
     if(url.origin==='https://gmail.googleapis.com'){
-      if(gmailRefusal)return Response.json({error:{code:403,message:gmailRefusal.message,errors:[{reason:gmailRefusal.reason}],status:'PERMISSION_DENIED'}},{status:403});
+      if(gmailRefusal&&!(gmailRefusal.once&&refused++)){
+        const status=gmailRefusal.status||403;
+        return Response.json({error:{code:status,message:gmailRefusal.message,errors:[{reason:gmailRefusal.reason}]}},{status});
+      }
       if(init.headers?.Authorization!=='Bearer synthetic-access')return Response.json({error:{message:'bad token'}},{status:401});
       if(url.pathname.endsWith('/messages')){
         const from=Number(url.searchParams.get('pageToken')||'0');
@@ -268,6 +271,39 @@ test('Google refusing mail is told apart: a switched-off API is a console fix, a
       // Drive filing is a different permission and is not disturbed by it.
       const drive=await (await call(env,'/v1/drive/status')).json();
       assert.equal(drive.connected,true);
+    });
+  }
+});
+
+test('reading too fast is said to be that, and a token that goes stale early is simply replaced',async()=>{
+  // Google's rate limit wears the same 403 as a withdrawn permission. Nothing
+  // is wrong with the connection, and the study keeps its place, so it is not
+  // recorded against the connection and the panel is not sent back to consent.
+  {
+    const {env}=environment();
+    await withCloud(fakeCloud({gmailRefusal:{reason:'rateLimitExceeded',message:'User-rate limit exceeded.'}}),async()=>{
+      await connect(env);
+      await saveConnection(env);
+      const response=await call(env,'/v1/voice/scan','POST',{connectionId:CONNECTION});
+      assert.equal(response.status,429);
+      assert.match((await response.json()).error,/limiting how fast|Resume in a minute/);
+      const state=await (await call(env,'/v1/voice')).json();
+      assert.deepEqual([state.google.connected,state.google.sentMail],[true,true]);
+    });
+  }
+  // One 401 is worth one fresh token before it is read as the connection
+  // itself, so a study that meets a stale one finishes rather than stopping.
+  {
+    const {env}=environment();
+    const fake=fakeCloud({total:25,gmailRefusal:{status:401,reason:'authError',message:'Invalid Credentials',once:true}});
+    await withCloud(fake,async()=>{
+      await connect(env);
+      await saveConnection(env);
+      const pages=await study(env);
+      assert.equal(pages.at(-1).status,200);
+      assert.equal(pages.at(-1).done,true);
+      const state=await (await call(env,'/v1/voice')).json();
+      assert.equal(state.google.sentMail,true);
     });
   }
 });

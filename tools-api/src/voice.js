@@ -13,7 +13,7 @@
 // once it has been read: the stored state holds the pending samples and the
 // accounts, and the samples are dropped as soon as they are folded into one.
 import {generate} from './providers.js';
-import {accessToken,storedAccount,noteMailRefused,GMAIL_SCOPE} from './drive.js';
+import {accessToken,storedAccount,noteMailRefused,forgetAccessToken,GMAIL_SCOPE} from './drive.js';
 import {encryptSettings,decryptSettings,savedConnection} from './ai-settings.js';
 import {voiceSample,voiceChunk,normalizeVoiceProfile,VOICE_SAMPLE_TARGET,MAX_VOICE_CHUNKS,MAX_VOICE_PROMPT}
   from '../../chrome-sidebar/src/voice-data.js';
@@ -45,7 +45,7 @@ async function storeVoice(env,value){
 }
 
 // --- Gmail, read-only.
-async function gmailFetch(env,request,fetcher,path){
+async function gmailFetch(env,request,fetcher,path,retried=false){
   const account=await storedAccount(env);
   if(!account?.refreshToken)fail(409,'Connect Google first, then study your sent mail.');
   if(!(account.scopes||[]).includes(GMAIL_SCOPE))fail(409,'This Google connection cannot read your sent mail yet. Connect Google again and approve reading mail.');
@@ -54,17 +54,30 @@ async function gmailFetch(env,request,fetcher,path){
   try{
     response=await fetcher(`${GMAIL}${path}`,{headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(20000)});
   }catch{fail(504,'Gmail did not answer in time. Try again.');}
-  if(response.status===401||response.status===403){
-    // Two different refusals wear the same status code, and they need
-    // different things done about them: a project that has never switched the
-    // Gmail API on is fixed in the Google console, and no amount of consenting
-    // again will touch it. Google's own sentence says which this is, so it is
-    // passed on rather than replaced with a guess.
+  // A held token can go stale early, and that is worth one fresh one before it
+  // is read as the connection losing its permission — which is written down.
+  if(response.status===401&&!retried){
+    await response.body?.cancel();
+    forgetAccessToken();
+    return gmailFetch(env,request,fetcher,path,true);
+  }
+  if(response.status===429||response.status===401||response.status===403){
+    // Three different refusals wear these codes, and they need three different
+    // things done about them. Google's own sentence says which this is, so it
+    // is passed on rather than replaced with a guess.
     const detail=await response.json().catch(()=>({}));
     const reason=detail?.error?.errors?.[0]?.reason||'';
     const said=String(detail?.error?.message||'').slice(0,300);
+    // Read too fast. Nothing is wrong with the connection and nothing is lost:
+    // the study holds its place, so the only thing to do is carry on shortly.
+    if(response.status===429||['rateLimitExceeded','userRateLimitExceeded','quotaExceeded','dailyLimitExceeded'].includes(reason))
+      fail(429,'Google is limiting how fast its mail can be read. Resume in a minute — the study keeps its place.');
+    // A project that never switched the Gmail API on is fixed in the Google
+    // console, and no amount of consenting again will touch it.
     if(reason==='accessNotConfigured'||/has not been used in project|is disabled/i.test(said))
       fail(409,`The Gmail API is switched off in your Google Cloud project. Turn it on there, then study again. Google said: ${said}`);
+    // What is left is the grant itself, which is worth recording: the panel's
+    // next question is what this connection can do, and that has just changed.
     await noteMailRefused(env);
     fail(409,`Google would not allow reading your sent mail. Connect Google again and approve reading mail.${said?` Google said: ${said}`:''}`);
   }
@@ -77,7 +90,10 @@ async function sentMessage(env,request,fetcher,id){
   try{
     return await gmailFetch(env,request,fetcher,`/messages/${encodeURIComponent(id)}?format=full&fields=id,internalDate,payload`);
   }catch(error){
-    if(error?.status===409)throw error;
+    // A refusal about the connection, or about reading too fast, is the whole
+    // study's news and not this message's: skipping it would throw away the
+    // page it belongs to and call the loss a mailbox with nothing in it.
+    if(error?.status===409||error?.status===429)throw error;
     return null;
   }
 }

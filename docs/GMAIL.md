@@ -99,14 +99,22 @@ approving once. Until then the section offers one action and nothing else:
 mail** when there is one Google will not let read mail. The study is refused
 before Gmail is touched, saying what is missing.
 
-**Google refuses in two different ways, and they need different repairs.** A
-project that never switched the Gmail API on is fixed in the Google console and
-no amount of consenting again will touch it, so that refusal says so and passes
-on Google's own sentence, which carries the project and the link. Any other
-refusal is the grant itself: the Worker writes that down against the connection,
-so the next thing the panel asks reports a connection that cannot read mail and
-offers the consent again instead of a *Resume* that would fail the same way.
-Reconnecting replaces that record, which is what clears it.
+**Google refuses in three different ways, and they need different repairs.**
+Reading too fast is the commonest and the least serious: the study holds its
+place, so it says to resume in a minute and nothing is recorded. A project that
+never switched the Gmail API on is fixed in the Google console and no amount of
+consenting again will touch it, so that refusal says so and passes on Google's
+own sentence, which carries the project and the link. What is left is the grant
+itself: the Worker writes that down against the connection, so the next thing
+the panel asks reports a connection that cannot read mail and offers the consent
+again instead of a *Resume* that would fail the same way. Reconnecting replaces
+that record, which is what clears it.
+
+A single 401 is none of the three. A held access token can go stale early, so
+one is worth one fresh token and one retry before it is read as the connection,
+and a message that will not load is skipped — but a refusal about the connection
+or about reading too fast ends the page rather than being skipped, because that
+would throw away the samples it belongs to.
 
 ### One-time setup (owner)
 

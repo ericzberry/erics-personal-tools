@@ -58,6 +58,9 @@ export async function storedAccount(env){
   const row=await env.DB.prepare('SELECT value FROM drive_accounts WHERE id = ?').bind(ACCOUNT_ID).first();
   return row?decryptSettings(row.value,ACCOUNT_ID,env):null;
 }
+// The held access token, dropped: a 401 is worth one fresh token before it is
+// treated as the connection itself.
+export function forgetAccessToken(){cached=null;}
 // A refusal from Google that is about permission rather than about one
 // request is written down, because the panel's next question is what the
 // connection can do — and the answer has just changed. Re-connecting replaces
