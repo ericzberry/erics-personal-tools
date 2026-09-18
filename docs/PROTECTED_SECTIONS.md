@@ -94,9 +94,20 @@ enrollment fills it with entries under the same name. The credential ID of a
 successful check is kept in `chrome.storage.local` (ordinary local storage on
 mobile) and named on every check after it, so the routine unlock is a plain
 biometric prompt. The ID identifies a passkey and cannot use one, so it is not
-the kind of thing the session area guards. A named passkey that this device no
-longer holds is forgotten rather than becoming a dead end: the failed check
-drops the ID, and the next attempt asks the way the first one did.
+the kind of thing the session area guards.
+
+**A named check that fails is not a dead end, and not a dead end twice.** A
+passkey refused by name looks exactly like a dismissed prompt — both are
+`NotAllowedError` — so the ID is marked as the suspect rather than dropped, and
+the next check names nothing. What answers that check says which of the two
+happened. A different passkey means the remembered one is gone, and it is
+replaced. The very same passkey means it was here all along and this browser
+cannot find it by ID: Chrome does that with a passkey held in Apple Passwords,
+answering a check that names no credential and reporting *No passkeys available*
+for one that names it. Naming then stops for good on that device, so the first
+protected section opened in a session no longer fails while the next one
+succeeds. A prompt dismissed and then answered looks the same and costs the
+same — the browser's own chooser comes back.
 
 **Two passkeys for this site derive two different keys**, and an assertion
 succeeds under either, so naming the wrong one could otherwise stick. Opening a

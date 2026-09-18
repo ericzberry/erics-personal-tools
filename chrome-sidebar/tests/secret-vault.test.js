@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {secretVault,vaultSessionStore,vaultCredentialStore,sealSecret,openSecret,isSealed,recoveryCode,recoveryBytes,encode,CREDENTIAL_KEY,VAULT_RP_ID} from '../src/secret-vault.js';
+import {secretVault,vaultSessionStore,vaultCredentialStore,sealSecret,openSecret,isSealed,recoveryCode,recoveryBytes,encode,CREDENTIAL_KEY,SUSPECT,UNNAMED,VAULT_RP_ID} from '../src/secret-vault.js';
 import {IDLE_MS} from '../src/idle-session.js';
 
 const ORIGIN='chrome-extension://synthetic-extension-id';
@@ -8,7 +8,7 @@ const ORIGIN='chrome-extension://synthetic-extension-id';
 // turn back into bytes to name one.
 const PASSKEY_A=encode(new TextEncoder().encode('passkey-one'));
 const PASSKEY_B=encode(new TextEncoder().encode('passkey-two'));
-function fixture({seed=new Uint8Array(32).fill(9),flags=5,prf=true,origin=ORIGIN,rpId=VAULT_RP_ID,store,credentialStore,clock,id=PASSKEY_A,known=[]}={}){
+function fixture({seed=new Uint8Array(32).fill(9),flags=5,prf=true,origin=ORIGIN,rpId=VAULT_RP_ID,store,credentialStore,clock,id=PASSKEY_A,known=[],finds=true}={}){
   let prompts=0,cancel=false;const asked=[];
   const credentials={async get({publicKey}){
     prompts++;
@@ -16,8 +16,11 @@ function fixture({seed=new Uint8Array(32).fill(9),flags=5,prf=true,origin=ORIGIN
     if(cancel)throw Object.assign(new Error('Canceled'),{name:'NotAllowedError'});
     // A named credential this authenticator does not hold is refused the same
     // way a dismissed prompt is: NotAllowedError, with nothing to tell them apart.
+    // `finds:false` is the browser that holds the passkey but cannot match one
+    // by ID — Chrome with a passkey in Apple Passwords — so every named check
+    // is refused and only a discoverable one is answered.
     const named=publicKey.allowCredentials?.map(entry=>encode(entry.id));
-    if(named&&!named.some(value=>value===id||known.includes(value)))throw Object.assign(new Error('No such credential'),{name:'NotAllowedError'});
+    if(named&&(!finds||!named.some(value=>value===id||known.includes(value))))throw Object.assign(new Error('No such credential'),{name:'NotAllowedError'});
     const auth=new Uint8Array(37);
     auth.set(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(rpId))));
     auth[32]=flags;
@@ -179,11 +182,36 @@ test('the passkey that answered is named on the next check, so the browser stops
   // out: it is forgotten, and the next attempt asks the way the first one did.
   const replaced=fixture({credentialStore:vaultCredentialStore(local.area),id:PASSKEY_B});
   await assert.rejects(()=>replaced.vault.key(),/No such credential/);
-  assert.equal(local.values.get(CREDENTIAL_KEY),undefined);
+  assert.equal(local.values.get(CREDENTIAL_KEY),SUSPECT+PASSKEY_A,'the passkey that could not answer is left as the suspect, not named again');
   const again=fixture({credentialStore:vaultCredentialStore(local.area),id:PASSKEY_B});
   await again.vault.key();
   assert.deepEqual(again.asked(),[null]);
   assert.equal(local.values.get(CREDENTIAL_KEY),PASSKEY_B);
+});
+
+test('a browser that cannot find the passkey by ID stops naming it, so only one check dead-ends',async()=>{
+  const local=localArea();
+  const store=()=>vaultCredentialStore(local.area);
+  // Chrome answers a discoverable check with a passkey held in Apple Passwords
+  // and reports "No passkeys available" for the same passkey named by ID, so
+  // the first section opened in a session failed and the next one worked.
+  const first=fixture({credentialStore:store(),id:PASSKEY_A,finds:false});
+  await first.vault.key();
+  assert.equal(local.values.get(CREDENTIAL_KEY),PASSKEY_A);
+
+  const refused=fixture({credentialStore:store(),id:PASSKEY_A,finds:false});
+  await assert.rejects(()=>refused.vault.key(),/No such credential/);
+  assert.equal(local.values.get(CREDENTIAL_KEY),SUSPECT+PASSKEY_A);
+
+  const answered=fixture({credentialStore:store(),id:PASSKEY_A,finds:false});
+  await answered.vault.key();
+  assert.deepEqual(answered.asked(),[null],'the suspect leaves the check discoverable');
+  assert.equal(local.values.get(CREDENTIAL_KEY),UNNAMED,'the passkey that answered is the one just refused by name, so naming stops');
+
+  const later=fixture({credentialStore:store(),id:PASSKEY_A,finds:false});
+  await later.vault.key();
+  assert.deepEqual(later.asked(),[null],'and no check after it is named');
+  assert.equal(local.values.get(CREDENTIAL_KEY),UNNAMED);
 });
 
 test('a host with nowhere to remember a credential still unlocks',async()=>{

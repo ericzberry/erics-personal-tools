@@ -120,7 +120,20 @@ export function vaultSessionStore(area=globalThis.chrome?.storage?.session,chang
 // that worked turns the routine unlock back into a plain biometric prompt. The
 // ID identifies a passkey; it cannot use one, so it is kept in ordinary local
 // storage rather than the session area that holds the key.
+//
+// A named check that fails is indistinguishable from a dismissed prompt — both
+// are NotAllowedError — so the ID is marked rather than dropped. The next check
+// names nothing, and what answers it says which happened: a different passkey
+// means the remembered one is gone, and the very same passkey means it was here
+// all along and this browser cannot find it by ID. Chrome does that with a
+// passkey held in Apple Passwords: it answers a check that names no credential
+// and reports "No passkeys available" for one that names it. Naming then stops
+// for good rather than dead-ending the first unlock of every session. A prompt
+// dismissed and then answered looks the same and costs the same — the browser's
+// own chooser comes back.
 export const CREDENTIAL_KEY='vault-credential';
+export const SUSPECT='?';
+export const UNNAMED='-';
 export function vaultCredentialStore(area=globalThis.chrome?.storage?.local,fallback=globalThis.localStorage){
   if(area?.get)return{
     async read(){try{return (await area.get(CREDENTIAL_KEY))[CREDENTIAL_KEY]||null;}catch{return null;}},
@@ -160,13 +173,12 @@ export function secretVault({
   // remembered the request stays discoverable: the passkey is synced, so any
   // device holding a copy can answer without its ID being known here.
   function allowList(remembered) {
-    if (!remembered) return null;
+    if (!remembered || remembered === UNNAMED || remembered.startsWith(SUSPECT)) return null;
     try { return [{type: 'public-key', id: decode(remembered), transports: ['internal']}]; }
     catch { return null; }
   }
-  async function assertPasskey(remembered) {
+  async function assertPasskey(allowCredentials) {
     const challenge = random(32);
-    const allowCredentials = allowList(remembered);
     const assertion = await credentials.get({publicKey: {
       challenge, rpId, userVerification: 'required', timeout: 60000,
       ...(allowCredentials ? {allowCredentials} : {}),
@@ -182,19 +194,29 @@ export function secretVault({
     if (auth.length < 37 || (auth[32] & 5) !== 5 || !rpHash.every((value, index) => value === auth[index])) throw Error('Passkey verification failed. Try again.');
     const seed = assertion.getClientExtensionResults()?.prf?.results?.first;
     if (!seed || seed.byteLength !== 32) throw Error('This browser or passkey provider cannot derive encryption keys (PRF). Unlock with your recovery code, or use Apple Passwords on iOS 18 / macOS 15 or later.');
-    if (typeof assertion.id === 'string' && assertion.id) await credentialStore?.write(assertion.id);
-    try { return await stretch(seed); } finally { new Uint8Array(seed).fill(0); }
+    const id = typeof assertion.id === 'string' ? assertion.id : '';
+    try { return {key: await stretch(seed), id}; } finally { new Uint8Array(seed).fill(0); }
   }
   async function fromPasskey() {
-    const remembered = await credentialStore?.read();
-    try { return await assertPasskey(remembered); }
+    const remembered = await credentialStore?.read() || null;
+    const allowCredentials = allowList(remembered);
+    let answer;
+    try { answer = await assertPasskey(allowCredentials); }
     catch (error) {
-      // A remembered passkey that cannot answer here — deleted, or never on
-      // this device — must not become a dead end. Forgetting it puts the choice
-      // back in front of the reader on the next attempt.
-      if (remembered) await credentialStore?.clear();
+      // A remembered passkey that cannot answer here — deleted, replaced, or
+      // never findable by ID in this browser — must not become a dead end. The
+      // next attempt asks the way the first one did, and the ID is kept only as
+      // the suspect that attempt's answer identifies (see CREDENTIAL_KEY).
+      if (allowCredentials) await credentialStore?.write(SUSPECT + remembered);
       throw error;
     }
+    if (answer.id && remembered !== UNNAMED) {
+      // The passkey just refused by name answering a check that named nothing
+      // is this browser failing to match it, not a passkey that has gone.
+      const blind = !allowCredentials && remembered === SUSPECT + answer.id;
+      await credentialStore?.write(blind ? UNNAMED : answer.id);
+    }
+    return answer.key;
   }
   // The other page's session reaches this one through the store, usually by
   // the subscription below before the delegate even settles; reading it back

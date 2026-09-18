@@ -836,3 +836,24 @@ section's actions stay quiet except Save and Forget, and that a consent granting
 Drive alone does not claim to read mail. The synthetic states were driven at
 380px and 280px with no horizontal overflow. Archive:
 `release/erics-sidebar-0.6.110.zip`.
+
+## The first protected section of a session stops dead-ending (0.6.111 / mobile 0.1.68)
+
+Opening **Needs attention** showed Chrome's *No passkeys available* while
+opening **Finance** right after it went straight to Touch ID. Both sections
+share one vault and one passkey, so what differed was only which came first:
+the check names the credential that answered last, Chrome cannot match that ID
+against a passkey held in Apple Passwords, and the failed check dropped the ID
+so that the next section asked the way the very first one had.
+
+A refused name now marks the ID as a suspect instead of dropping it, because a
+passkey refused by name and a prompt dismissed by hand are the same
+`NotAllowedError`. The next check names nothing, and its answer says which
+happened: a different passkey means the remembered one is gone and is replaced,
+and the very same passkey means this browser cannot find it by ID at all, so
+naming stops there for good.
+
+Validation: 349 extension and 33 mobile tests pass, including a browser that
+answers a discoverable check with the passkey it refuses by name. The native
+Touch ID sheet and Chrome's own dialog were not directly tested. Archive:
+`release/erics-sidebar-0.6.111.zip`.
