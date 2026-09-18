@@ -18,7 +18,13 @@ const FOLDER_TYPE='application/vnd.google-apps.folder';
 // The tax folder already exists and was made by hand, so per-file access
 // cannot reach it. Nothing here deletes: the only writes are creating a year
 // folder, adding a file, and replacing one the owner asked to replace.
-export const DRIVE_SCOPES=['https://www.googleapis.com/auth/drive','openid','email'];
+export const DRIVE_SCOPE='https://www.googleapis.com/auth/drive';
+// Reading the owner's own sent mail is what the writing voice is learned from,
+// and it is the same Google account, so it is the same connection: a second one
+// would be a second thing to renew, revoke and explain. The scope is read-only
+// and nothing here ever writes to, sends or deletes mail.
+export const GMAIL_SCOPE='https://www.googleapis.com/auth/gmail.readonly';
+export const GOOGLE_SCOPES=[DRIVE_SCOPE,GMAIL_SCOPE,'openid','email'];
 const ACCOUNT_ID='google-drive';
 const TICKET_MINUTES=15;
 const now=()=>new Date().toISOString();
@@ -48,7 +54,7 @@ async function takeTicket(env,kind,id){
 }
 
 // --- The stored account. One row, because one person files into one folder.
-async function storedAccount(env){
+export async function storedAccount(env){
   const row=await env.DB.prepare('SELECT value FROM drive_accounts WHERE id = ?').bind(ACCOUNT_ID).first();
   return row?decryptSettings(row.value,ACCOUNT_ID,env):null;
 }
@@ -61,7 +67,7 @@ async function storeAccount(env,value){
 // time, so one is kept in memory. It is never written down: a restarted
 // isolate simply asks for another.
 let cached=null;
-async function accessToken(env,request,fetcher){
+export async function accessToken(env,request,fetcher){
   const account=await storedAccount(env);
   // Keyed on the refresh token, so a disconnect or a reconnect as someone else
   // can never be served by the token the previous connection minted.
@@ -149,6 +155,7 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
   if(path==='/v1/drive/status'&&method==='GET'){
     const account=await storedAccount(env);
     return json({connected:!!account?.refreshToken,account:account?.email||'',connectedAt:account?.connectedAt||'',
+      scopes:Array.isArray(account?.scopes)?account.scopes:[],
       configured:!!(env.GOOGLE_CLIENT_ID&&env.GOOGLE_CLIENT_SECRET),folderId:TAX_ROOT_FOLDER_ID});
   }
 
@@ -159,7 +166,7 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
     // renew itself is worse than none.
     const state=await keepTicket(env,'auth',{redirectUri});
     return json({url:`${AUTH_URL}?${new URLSearchParams({client_id:clientId,redirect_uri:redirectUri,response_type:'code',
-      scope:DRIVE_SCOPES.join(' '),access_type:'offline',prompt:'consent',include_granted_scopes:'true',state})}`});
+      scope:GOOGLE_SCOPES.join(' '),access_type:'offline',prompt:'consent',include_granted_scopes:'true',state})}`});
   }
 
   if(path==='/v1/drive/disconnect'&&method==='POST'){
@@ -253,7 +260,10 @@ export async function driveCallback(request,env,fetcher=fetch){
     let email='';
     try{email=JSON.parse(atob(String(result.id_token).split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email||'';}catch{}
     cached=result.access_token?{token:result.access_token,expires:Date.now()+(Number(result.expires_in)||3600)*1000,account:result.refresh_token}:null;
-    await storeAccount(env,{refreshToken:result.refresh_token,email,connectedAt:now()});
+    // What Google actually granted, not what was asked for: a consent that
+    // left a scope out must be visible to the feature that needs it.
+    await storeAccount(env,{refreshToken:result.refresh_token,email,connectedAt:now(),
+      scopes:String(result.scope||'').split(/\s+/).filter(Boolean)});
     return page('Google Drive connected',`${email?`${email} can `:'This Worker can now '}file documents into your tax folder. You can close this tab.`);
   }catch{
     return page('Drive was not connected','That link expired or was already used. Start again from Taxes.');

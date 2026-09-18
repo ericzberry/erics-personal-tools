@@ -23,6 +23,14 @@ export const TASK_POLICIES = {
   'finance.intake':{label:'Finance reading',level:2,outputTokens:2500,web:false,maxCost:0.03},
   'capture.note':{label:'Quick note reading',level:1,outputTokens:500,web:false,maxCost:0.01},
   'email.summary':{label:'Email summary',model:'gpt-5.6-terra',level:3,outputTokens:700,web:false,maxCost:0.04},
+  // A reply goes out over Eric's name in Eric's voice, so it uses the model he
+  // chose for his mail rather than the cheapest one that would answer.
+  'email.reply':{label:'Email reply',model:'gpt-5.6-terra',level:3,outputTokens:1500,web:false,maxCost:0.09},
+  // Reading one batch of sent mail happens twenty-odd times per study, so it
+  // is deliberately mid-tier; the profile that combines those readings happens
+  // once and is the thing every reply is then written from.
+  'voice.samples':{label:'Sent mail reading',level:2,outputTokens:600,web:false,maxCost:0.03},
+  'voice.profile':{label:'Writing voice profile',model:'gpt-5.6-terra',level:3,outputTokens:2500,web:false,maxCost:0.12},
   'restaurant.availability':{label:'Reservation page interpretation',level:2,outputTokens:2000,web:false,maxCost:0.05},
   'restaurant.research':{label:'Restaurant research',level:2,outputTokens:7000,web:true,maxCost:0.15}
 };

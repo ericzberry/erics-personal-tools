@@ -68,7 +68,10 @@ offline.
 ## Google Drive access
 
 The tax folder already exists and was made by hand, so per-file access cannot
-reach it: the connection uses the `drive` scope. The Worker holds the refresh
+reach it: the connection uses the `drive` scope. The same connection also
+carries read-only Gmail, which is how the writing voice is learned — see
+[GMAIL.md](GMAIL.md). One Google account, one refresh token, one thing to
+renew; `GOOGLE_SCOPES` in `src/drive.js` is the whole list. The Worker holds the refresh
 token, encrypted at rest with `SETTINGS_ENCRYPTION_KEY` in `drive_accounts`;
 no page ever receives a Drive credential, and the only writes the code can make
 are creating a year folder, adding a file, and replacing one you asked to

@@ -1,7 +1,7 @@
 import {CapabilityPicker} from './capabilities.js';
 import * as UI from './ui.js';
 import {AI_PROVIDERS} from '../ai-providers.js';
-const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
+const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Strong,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField,EditableResult}=UI;
 export function DraftView() {
   const draft=Section([
     Notice('',{id:'advice-status',className:'notice notice-subtle'}),
@@ -32,12 +32,32 @@ export function DraftSettings() {
     Button('Refresh ESPN player list',{id:'sync-espn-players'}),Note('',{id:'espn-sync-status',role:'status'})
   ],{id:'draft-settings',className:'settings-panel'});
 }
+// The message itself is not shown: it is open in the tab beside this panel,
+// and a second copy of it here only pushes the reply further down. What the
+// panel adds is the line where Eric says what the reply should do, which is
+// the whole of what he has to type.
 export function GmailView() {
   return Section([UI.PageHeader({title:'Open an email in Gmail',titleId:'email-subject',action:Button('Refresh',{id:'refresh-email',variant:'secondary',size:'compact'})}),Main([Note('',{id:'email-from',className:'footnote content-meta'}),Note('',{id:'email-read-status',role:'status'}),
-    ActionGroup([Button('Summarize',{id:'summarize-email',variant:'primary',disabled:true}),Button('Generate reply',{id:'reply-email',variant:'secondary',disabled:true})]),Note('',{id:'email-action-status',role:'status'}),
-    EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),Disclosure('Email text',[Text('',{id:'email-preview',className:'source-preview'})],{id:'email-source',hidden:true})
+    UI.FormField({id:'reply-intent',label:'What the reply should say',kind:'textarea',rows:3,className:'form-field--compact'}),
+    ActionGroup([Button('Generate reply',{id:'reply-email',variant:'primary',disabled:true}),Button('Summarize',{id:'summarize-email',variant:'secondary',disabled:true})]),Note('',{id:'email-action-status',role:'status'}),
+    EditableResult({id:'email-result',titleId:'email-result-title',copyId:'copy-email-output',fieldId:'email-output'}),
+    VoiceView()
   ])],{id:'gmail-tool',className:'tool-page',hidden:true});
 }
+// Where the voice replies are written in is kept and corrected. It sits under
+// the reply because that is the only thing it changes, and it is closed
+// because it is read once and then left alone for months.
+export function VoiceView() {
+  return Disclosure('Writing voice',[
+    Note('',{id:'voice-status',role:'status'}),
+    ActionGroup([],{id:'voice-actions',compact:true}),
+    Stack([],{id:'voice-list',className:'voice-list'}),
+    Stack([UI.FormField({id:'voice-prompt',label:'How you write — editable',kind:'textarea',rows:8,className:'form-field--compact'})],{id:'voice-editor',hidden:true})
+  ],{id:'email-voice',className:'settings-panel'});
+}
+export const VoiceLines=(voices=[])=>voices.map(voice=>Stack([
+  Strong(voice.name),Note([voice.audience,...voice.markers].filter(Boolean).join(' · '))
+],{className:'voice-line'}));
 export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open a tool or a relevant website to get started.')])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[

@@ -138,7 +138,11 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `capture.js`, `taxes.js`, `data-library.js`,
   `restaurant-search.js`, `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
-  `email-ai.js` (on-device), `email-cloud.js` (via Worker).
+  `email-cloud.js` (the email summary and the reply, both through the Worker).
+- **Writing voice** — `voice-data.js` (what Eric wrote, taken out of what he
+  sent; the profile's limits and validation; the guidance a reply is given) and
+  `writing-voice.js` (the panel that studies, corrects and forgets it).
+  `voice-data.js` is imported by the Worker, which does the reading.
 - **Settings** — `settings.js` (the sidebar Settings screen: open, close, and
   build the wallet whose connection panel is the screen's one cloud connection),
   `settings-bridge.js`, `credential-migration.js` (legacy local keys → D1, run by
@@ -149,7 +153,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `player-identity.js`, `recommendations.js`, `session-selection.js`,
   `page-advice.js`, `ranking-import.js`, `sidepanel.js`.
 - **Gmail** — `gmail-connection.js`, `gmail-reader.js`, `gmail-content.js`,
-  `context-panel.js`.
+  `context-panel.js`. The email screen shows no copy of the message: it is open
+  in the tab beside the panel. See [GMAIL.md](GMAIL.md).
 
 ### Other
 
@@ -190,7 +195,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`,
-  `/v1/push/…`, `/v1/drive/…`. `/v1/push/key` is public like the release route,
+  `/v1/push/…`, `/v1/drive/…`, `/v1/voice[/scan]`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
   body over 64 KB because a statement or document image travels inline;
@@ -213,6 +218,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   is stored on every write), `src/releases.js`, `src/ai-settings.js`. `src/drive.js` is not a record store: it holds the
   owner's Google Drive connection and files tax documents through it, and
   `src/taxes.js` is the reading that names one.
+  `src/voice.js` is the other thing that Google connection is for: it reads a
+  page of sent mail at a time, keeps the study's place between calls, and turns
+  what Eric wrote into the profile his replies are written from.
 - `src/providers.js` (provider adapters, including the text/image content parts
   every format renders in its own shape) and `src/model-policy.js` (the central
   task → model policy and priced catalogue, where `vision` marks a model that may
@@ -223,6 +231,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
+  `voice-schema.sql` (`voice_profiles`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of

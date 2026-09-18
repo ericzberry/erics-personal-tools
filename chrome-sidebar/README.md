@@ -778,3 +778,38 @@ unconnected tool still offers **Connect Google Drive** and says where to save an
 AI connection. The synthetic states were driven at 400px with the panel's own
 stylesheet loaded: the empty notices collapse, the action group gaps, and the
 filed list rules. Archive: `release/erics-sidebar-0.6.108.zip`.
+
+## The email screen asks what to say, and the reply comes back in Eric's voice (0.6.109 / mobile 0.1.67)
+
+The panel no longer repeats the email back at you. The message is open in the
+tab beside it, so **Email text** is gone and what stands in its place is the one
+thing you have to type: **What the reply should say** — *say yes, ask him to
+send the form, mention I can speak to Blockthrough*. **Generate reply** is the
+primary action now, with **Summarize** beside it, and both run on the model
+Eric chose for his mail: Chrome's on-device `LanguageModel` and `email-ai.js`
+are gone, because a draft in someone's own voice is not a job for it.
+
+**Writing voice**, at the bottom of the screen, is where that voice comes from.
+**Study my sent mail** reads up to a thousand messages Eric sent — a page of
+twenty-five per request, so it can be watched, stopped and resumed — keeps only
+the part he typed, and comes back with the voices it found, each named by who he
+uses it with, and the instructions his replies are written from. Those
+instructions are editable and saved; **Forget** deletes them. Reading sent mail
+is a read-only Gmail scope on the same Google account Taxes files with, so it
+needs approving once, and until then the section offers **Connect Google** and
+nothing else.
+
+Message text never reaches the browser: the Worker reads Gmail itself and the
+panel is told only how far it has got. What the reading sees is what Eric wrote
+— the quoted thread, forward headers and signature are cut before anything
+leaves — and nothing behind the profile is kept once it is built.
+
+Validation: 347 extension, 33 mobile and 86 API tests pass, including new
+coverage that only Eric's own writing survives a reply, a forward, a signature
+and a quote; that a study reads page by page, resumes where it stopped, and
+never returns a quoted thread; that consent asks for Gmail as well as Drive and
+a study without that scope is refused before Gmail is touched; and that a reply
+carries his instruction and his learned voice while the email stays untrusted
+data. The synthetic states in `tests/email-preview.html` were driven at 380px
+and 280px: the field, the one action row, the progress line and the voices fit
+with no horizontal overflow. Archive: `release/erics-sidebar-0.6.109.zip`.

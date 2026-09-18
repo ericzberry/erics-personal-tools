@@ -3,6 +3,7 @@ import {cards,classifyPurchase,researchCard} from './cards.js';
 import {finance,readFinanceUpdates} from './finance.js';
 import {rewardPrograms} from './programs.js';
 import {drive,driveCallback} from './drive.js';
+import {voice} from './voice.js';
 import {readTaxDocument} from './taxes.js';
 import {personal} from './personal.js';
 import {subscriptions,readSubscriptions,researchSubscriptions} from './subscriptions.js';
@@ -136,6 +137,7 @@ export default {
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
       if(path.startsWith('/v1/drive/'))return await drive(request,env,readValue,json);
+      if(path==='/v1/voice'||path.startsWith('/v1/voice/'))return await voice(request,env,readValue,json);
       if(path==='/v1/rewards/programs'||path.startsWith('/v1/rewards/programs/'))return await rewardPrograms(request,env,readValue,json);
       if(path==='/v1/rewards')return await rewardsSettings(request,env,readValue,json);
       if(path==='/v1/finance'||path.startsWith('/v1/finance/'))return await finance(request,env,readValue,json);

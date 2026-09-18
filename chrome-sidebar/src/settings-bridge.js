@@ -33,6 +33,17 @@ export async function settingsAction(message, chromeApi, request = cloudRequest)
   if (message.action === 'migrate') return migrateCredentials(storage,token,request);
   if(message.action==='rewards-list')return request(token,'/v1/rewards');
   if(message.action==='rewards-save')return request(token,'/v1/rewards',{method:'PUT',value:{entries:message.entries,revision:message.revision}});
+  // The writing voice: what was learned, the study that learns it one page of
+  // sent mail at a time, the owner's own corrections, and forgetting it. The
+  // scan is given a long timeout because one call reads a page of Gmail and may
+  // then read that batch with the model.
+  if(message.action==='voice')return request(token,'/v1/voice');
+  if(message.action==='voice-scan')return request(token,'/v1/voice/scan',{method:'POST',value:{connectionId:message.connectionId,restart:!!message.restart},timeoutMs:180000});
+  if(message.action==='voice-save')return request(token,'/v1/voice',{method:'PUT',value:{prompt:message.prompt}});
+  if(message.action==='voice-forget')return request(token,'/v1/voice',{method:'DELETE'});
+  // The same Google account the tax filing uses, consented again so it also
+  // covers reading sent mail.
+  if(message.action==='google-connect')return request(token,'/v1/drive/connect',{method:'POST',value:{}});
   if (message.action === 'list') return request(token, '/v1/ai-connections');
   if (!['save', 'remove','models','test','generate','restaurants'].includes(message.action) || !/^[a-f0-9-]{36}$/.test(message.id || '')) throw Error('Unknown settings action.');
   if(message.action==='restaurants')return request(token,`/v1/ai-connections/${message.id}/restaurants`,{method:'POST',value:{model:message.model,search:message.search},timeoutMs:130000});

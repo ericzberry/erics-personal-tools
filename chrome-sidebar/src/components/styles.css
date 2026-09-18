@@ -170,7 +170,6 @@ th, td { padding: 8px 11px; }
 .button-secondary { background: var(--sage); color: var(--forest); border-color: var(--line); }
 .button-primary:disabled, .button-secondary:disabled { opacity: .5; cursor: default; }
 .editable-output { width: 100%; resize: vertical; padding: 11px; font: 12px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); min-height: 150px; }
-.source-preview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; margin: 0; padding: 12px; font-size: 11px; line-height: 1.6; border-top: 1px solid var(--line); }
 @media(max-width:330px) { .tool-heading { align-items: start; flex-direction: column; gap: 5px; } }
 
 /* Draft source */
@@ -302,6 +301,15 @@ summary > .title-text { display: inline; }
 .settings-panel .form-field > label { margin: 0; }
 .form-field > input, .form-field > select { margin: 0; width: 100%; min-height: 36px; }
 .settings-panel > summary { padding: var(--page-inset); }
+/* A field sized for a 280px panel: the text size of the prose beside it, not
+   the 16px control font that pages and the phone use to avoid a zoom. A
+   typed row keeps its own height from `rows`; the floor is for the short one. */
+.form-field.form-field--compact > textarea { font: 12px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; min-height: 64px; }
+/* The voices a profile found: a name and, under it, who it is for and what marks it. */
+.voice-list { display: grid; gap: 8px; margin-top: 8px; }
+.voice-list:empty { display: none; }
+.voice-line { display: grid; gap: 2px; }
+.voice-line > strong { font-size: 12px; }
 /* Native keyboard semantics, with a designed control and Chrome picker. */
 .select-control { appearance: none; cursor: pointer; padding-right: 32px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23526b60' stroke-width='1.5'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");

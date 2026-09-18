@@ -1,17 +1,131 @@
 # Gmail in Eric’s Personal Tools
 
-Version 0.4.0 follows the active Gmail tab. It reads the latest expanded message’s subject, sender and rendered text, then offers Summarize and Generate reply. Earlier collapsed messages and attachments are not included. The sidebar names the scope explicitly.
+The panel follows the active Gmail tab. It reads the latest expanded message’s
+subject, sender and rendered text, then offers two things: a reply written the
+way Eric writes, and a summary. Earlier collapsed messages and attachments are
+not included.
 
-The user clicks an action to invoke Chrome’s built-in LanguageModel API. Chrome 138+ extensions on supported hardware can use this API; the model may download on first use. The feature detects unsupported or unavailable models and shows a clear error. There is no cloud fallback, API key or subscription requirement. The current prompt configuration uses English input/output.
+## The screen
 
-Generated summaries and replies appear in an editable text area with a Copy button. There is no automatic sending or Gmail mutation. Reply prompts use placeholders for unknown facts and instruct the model not to invent commitments. Email is treated as untrusted data, separate from the generation instructions.
+**The message is not shown here.** It is open in the tab beside the panel, and
+a second copy of it only pushed the reply further down. The panel shows who it
+is from, that it is reading the latest expanded message, and then the one thing
+Eric has to type.
 
-Email text and outputs remain in sidebar memory. Nothing is saved to extension storage or sent to a server. Navigating to a different message clears output and cancels in-flight generation. Source identity is checked at action time and again before presenting a result. The draft tracker’s existing local storage is independent.
+**What the reply should say.** A rough line — *say yes, ask him to send the
+form, mention I can speak to Blockthrough* — is the whole input. It is not a
+form to fill in; it is the goal, and the draft resolves it. Left empty, the
+reply answers the message as it stands. The line is cleared when a different
+message is opened, because it belonged to that message.
 
-Reload Gmail after installing or updating the extension so its content script can answer the sidebar. DOM selectors are based on observed Gmail markup and can require updates if Gmail changes. A missing or collapsed message clears the current email. Messages exceeding 20,000 characters are explicitly rejected rather than silently truncated.
+**Generate reply** is the primary action and **Summarize** sits beside it. Both
+run through the Worker on the saved OpenAI connection: `email.reply` and
+`email.summary` in [the task policy](../tools-api/MODEL_ROUTING.md), both on the
+model Eric chose for his mail. There is no on-device model any more; Chrome's
+built-in `LanguageModel` was removed with `email-ai.js` when the reply moved to
+the same place the summary already was.
 
-Validation: parser and model-lifecycle unit tests, plus a browser harness using synthetic email and a mock model for summary, editable reply, navigation clearing, and unavailable-model behavior. Actual on-device generation in the installed extension still needs a supported Chrome environment and model availability; the mock does not verify model quality.
+Output lands in an editable text area with a Copy button. Nothing is ever sent
+and nothing in Gmail is modified. The draft uses `[bracketed placeholders]`
+wherever a fact, date, figure or decision is Eric's to supply, and is told never
+to invent a commitment, an availability or work as already done.
 
-The synthetic harness lives in chrome-sidebar/tests/ui-harness.html and is excluded from the release package. The separate gmail-sender project is not integrated or modified.
+Eric's instruction is trusted; the message being answered is not. They travel
+as separate fields (`goal` and `email`) with the prompt saying which is which,
+so nothing inside an email can pose as the thing being asked for.
 
-Reference: https://developer.chrome.com/docs/ai/prompt-api
+## Writing voice
+
+The reply is only as good as its impression of how Eric writes, so that
+impression is learned from the record of it: his own sent mail.
+
+**Study my sent mail**, under *Writing voice* at the bottom of the screen, reads
+up to a thousand sent messages and produces two things — the distinct voices it
+found, each named by who Eric uses it with, and the instructions a model is
+given to write in them. The instructions are editable and saved: the study is a
+first draft of the voice, not the last word on it.
+
+**How the reading works.** One call to `POST /v1/voice/scan` takes one page of
+twenty-five sent messages, so the Worker stays well inside its request budget
+and the panel can show progress and stop. Each message is reduced to the part
+Eric typed — `writtenPortion` in `voice-data.js` cuts at the quote, the forward
+header, the `From:`/`Sent:` block and the signature delimiter, and drops `>`
+lines — and a message with nothing of his own left in it is skipped. Samples
+accumulate until they fill one prompt, then that batch is read into a short
+account of how he writes and the samples are dropped. When Gmail runs out, a
+thousand samples are in, or twenty batches have been read, those accounts are
+combined into the profile.
+
+**It can be stopped and resumed.** The Worker holds the page it reached, the
+accounts already read and the samples not yet folded into one, so closing the
+panel mid-study loses only the asking. The button says *Resume*, and *Study
+again* starts over. **Forget** deletes the row.
+
+**What travels where.** Message text never reaches the browser: the Worker reads
+Gmail itself and the panel is told only how far it has got. What reaches OpenAI
+is the part Eric wrote, with the recipient and subject line of each message —
+not the quoted thread, and nothing the profile is built from is kept afterwards.
+The profile itself is stored in D1 in the same AES-GCM envelope as the AI
+connections, and the whole row goes when the voice is forgotten.
+
+**Where it is used.** `voiceGuidance` turns the stored profile into the section
+of the reply's system prompt that describes the voices and who each is for, so
+one call picks the right one for the recipient. A voice that has not been
+learned, or cannot be read, makes for a plainer reply rather than a failed one.
+
+## Google access
+
+Reading sent mail uses `https://www.googleapis.com/auth/gmail.readonly` on the
+same Google account the tax filing uses — one connection, one refresh token, one
+thing to renew. Nothing here writes to, sends or deletes mail, and the panel
+never receives a Google credential.
+
+The scope was added after that connection already existed, so it needs
+approving once. Until then the section offers **Connect Google** and nothing
+else; the study is refused before Gmail is touched, saying what is missing.
+
+### One-time setup (owner)
+
+1. In the same [Google Cloud](https://console.cloud.google.com/) project as the
+   Drive access, enable the **Gmail API**.
+2. If the consent screen lists scopes explicitly, add
+   `.../auth/gmail.readonly` to it.
+3. From `tools-api/`:
+
+```sh
+cd tools-api && npx wrangler d1 execute erics-personal-tools --remote --file voice-schema.sql
+```
+
+4. Open the email screen in Gmail, expand *Writing voice*, press **Connect
+   Google** and approve reading mail. Then **Study my sent mail**. A thousand
+   messages take a few minutes, one page at a time, with the count running.
+
+## Limits
+
+An email over 20,000 characters is rejected rather than truncated. A reply's
+prompt is capped at 30,000 characters, and the voice is kept whole while a very
+long thread loses its tail. One instruction is 1,200 characters. A study reads
+at most a thousand samples in at most twenty batches.
+
+Email text and outputs stay in panel memory; nothing is written to extension
+storage. Navigating to another message clears the output and cancels in-flight
+generation, and the source is checked at click time and again before a result is
+shown. Reload Gmail after installing or updating the extension so its content
+script can answer the panel. The DOM selectors follow observed Gmail markup and
+can need updating if Gmail changes.
+
+## Where the code is
+
+| Piece | File |
+| --- | --- |
+| Reading the open message | `chrome-sidebar/src/gmail-reader.js`, `src/gmail-content.js`, `src/gmail-connection.js` |
+| The screen and its wiring | `chrome-sidebar/src/components/views.js` (`GmailView`, `VoiceView`), `src/context-panel.js` |
+| Summary and reply | `chrome-sidebar/src/email-cloud.js` |
+| The voice panel | `chrome-sidebar/src/writing-voice.js` |
+| Extraction, limits and validation | `chrome-sidebar/src/voice-data.js` |
+| Reading sent mail and building the profile | `tools-api/src/voice.js`, `tools-api/voice-schema.sql` |
+| The Google connection both features use | `tools-api/src/drive.js` (`GOOGLE_SCOPES`) |
+| Synthetic states to look at | `chrome-sidebar/tests/email-preview.html` |
+| What the behavior must hold to | `chrome-sidebar/tests/{voice-data,writing-voice,email-cloud,gmail}.test.js`, `tools-api/tests/voice.test.js` |
+
+Reference: https://developers.google.com/gmail/api/reference/rest/v1/users.messages/list
