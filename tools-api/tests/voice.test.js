@@ -77,8 +77,8 @@ async function withCloud(fake,run){
 async function connect(env){
   const started=await (await call(env,'/v1/drive/connect','POST',{})).json();
   const state=new URL(started.url).searchParams.get('state');
-  await worker.fetch(new Request(`https://example.com/v1/drive/callback?code=synthetic-code&state=${state}`),env);
-  return started;
+  const answered=await worker.fetch(new Request(`https://example.com/v1/drive/callback?code=synthetic-code&state=${state}`),env);
+  return {...started,page:await answered.text()};
 }
 async function saveConnection(env){
   await call(env,`/v1/ai-connections/${CONNECTION}`,'PUT',{name:'OpenAI',provider:'openai',apiKey:'synthetic-key'});
@@ -110,6 +110,10 @@ test('consent asks for read-only Gmail as well as Drive, and studying without it
     const scope=new URL(started.url).searchParams.get('scope');
     assert.match(scope,/auth\/gmail\.readonly/);
     assert.match(scope,/auth\/drive/);
+    // The page the consent lands on names what was granted, so a consent that
+    // left the mail scope out does not claim it.
+    assert.match(started.page,/file tax documents/);
+    assert.equal(/sent mail/.test(started.page),false);
     await saveConnection(env);
     // Google granted Drive only, so the study says what is missing instead of
     // failing somewhere inside Gmail.
@@ -125,7 +129,9 @@ test('a study reads sent mail page by page and ends with a profile built from ev
   const {sql,env}=environment();
   const fake=fakeCloud({total:60});
   await withCloud(fake,async()=>{
-    await connect(env);await saveConnection(env);
+    const {page}=await connect(env);
+    assert.match(page,/file tax documents into your Drive folder and read your sent mail/);
+    await saveConnection(env);
     const turns=await study(env);
     assert.equal(turns.at(-1).done,true);
     assert.ok(turns.length>1,'a thousand messages cannot arrive in one request');

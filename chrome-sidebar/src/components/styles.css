@@ -305,8 +305,17 @@ summary > .title-text { display: inline; }
    the 16px control font that pages and the phone use to avoid a zoom. A
    typed row keeps its own height from `rows`; the floor is for the short one. */
 .form-field.form-field--compact > textarea { font: 12px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; min-height: 64px; }
+/* A section whose state and action share one line: the state reads on the left,
+   the action sits at the end of the same line, and a state with nothing to say
+   leaves the action a line of its own rather than an empty paragraph above it. */
+.voice-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.voice-head > .footnote { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.voice-head > .footnote:empty { display: none; }
+.voice-head > .action-group { margin: 0; }
+.voice-panel > summary { padding-bottom: 10px; }
+.voice-panel > :not(summary):last-child { margin-bottom: var(--page-inset); }
 /* The voices a profile found: a name and, under it, who it is for and what marks it. */
-.voice-list { display: grid; gap: 8px; margin-top: 8px; }
+.voice-list { display: grid; gap: 8px; margin-top: 10px; }
 .voice-list:empty { display: none; }
 .voice-line { display: grid; gap: 2px; }
 .voice-line > strong { font-size: 12px; }

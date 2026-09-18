@@ -49,11 +49,11 @@ export function GmailView() {
 // because it is read once and then left alone for months.
 export function VoiceView() {
   return Disclosure('Writing voice',[
-    Note('',{id:'voice-status',role:'status'}),
-    ActionGroup([],{id:'voice-actions',compact:true}),
+    // One line: what the voice currently is, and the action that applies to it.
+    Stack([Note('',{id:'voice-status',role:'status'}),ActionGroup([],{id:'voice-actions',compact:true})],{className:'voice-head'}),
     Stack([],{id:'voice-list',className:'voice-list'}),
     Stack([UI.FormField({id:'voice-prompt',label:'How you write — editable',kind:'textarea',rows:8,className:'form-field--compact'})],{id:'voice-editor',hidden:true})
-  ],{id:'email-voice',className:'settings-panel'});
+  ],{id:'email-voice',className:'settings-panel voice-panel'});
 }
 export const VoiceLines=(voices=[])=>voices.map(voice=>Stack([
   Strong(voice.name),Note([voice.audience,...voice.markers].filter(Boolean).join(' · '))

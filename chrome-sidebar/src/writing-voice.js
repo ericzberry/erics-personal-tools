@@ -26,6 +26,10 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
   let message='';
 
   const say=text=>{message=text||'';status.textContent=message||describe();};
+  // The section is where the voice is kept, not the screen's main act: its
+  // actions stay quiet so the one dark button on an email screen is the one
+  // that writes the reply. Saving an edit is the exception, and forgetting is
+  // marked as what it is.
   const action=(label,handler,variant='secondary')=>{
     const button=Button(label,{variant,size:'compact',disabled:busy});
     button.addEventListener('click',handler);
@@ -41,10 +45,10 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
   // or studying; then saving an edit, or forgetting the voice.
   function render(){
     const rows=[];
-    if(!state.google.connected||!state.google.sentMail)rows.push(action('Connect Google',connect,'primary'));
+    if(!state.google.connected||!state.google.sentMail)rows.push(action('Connect Google',connect));
     else if(scanning)rows.push(action('Stop',()=>{stopping=true;say('Stopping…');}));
-    else rows.push(action(state.scan?'Resume':state.profile?'Study again':'Study my sent mail',()=>study(!state.scan),'primary'));
-    if(state.profile&&!scanning)rows.push(dirty?action('Save',save):action('Forget',forget));
+    else rows.push(action(state.scan?'Resume':state.profile?'Study again':'Study my sent mail',()=>study(!state.scan)));
+    if(state.profile&&!scanning)rows.push(dirty?action('Save',save,'primary'):action('Forget',forget,'danger'));
     actions.replaceChildren(...rows);
     list.replaceChildren(...VoiceLines(state.profile?.voices||[]));
     editor.hidden=!state.profile;

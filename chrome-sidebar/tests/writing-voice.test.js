@@ -43,16 +43,18 @@ function panel({google={connected:true,sentMail:true},profile=null,pages=3,fails
     request,openExternal:url=>{opened.push(url);return true;},pollMs:1,pollLimit:3
   });
   const labels=()=>[...$('voice-actions').querySelectorAll('button')].map(button=>button.textContent);
+  const variants=()=>[...$('voice-actions').querySelectorAll('button')].map(button=>button.className.split(' ')[0]);
   const press=label=>$('voice-actions').querySelectorAll('button')[labels().indexOf(label)].click();
-  return {voice,$,asked,opened,labels,press,state};
+  return {voice,$,asked,opened,labels,variants,press,state};
 }
 const settle=async()=>{for(let turn=0;turn<40;turn++)await Promise.resolve();};
 
 test('a Google account that cannot read sent mail is offered the one action that applies',async()=>{
   for(const google of [{connected:false,sentMail:false},{connected:true,sentMail:false}]){
-    const {voice,labels,asked,opened,$}=panel({google});
+    const {voice,labels,variants,asked,opened,$}=panel({google});
     await voice.load();
     assert.deepEqual(labels(),['Connect Google']);
+    assert.deepEqual(variants(),['button-secondary']);
     assert.equal($('voice-editor').hidden,true);
     await voice.load();
     assert.equal(asked.filter(call=>call.action==='voice').length,1,'the section is read once, not on every render');
@@ -115,12 +117,17 @@ test('a stopped study keeps its place, and resuming does not start over',async()
 });
 
 test('an edited voice offers Save instead of Forget, and forgetting empties the panel',async()=>{
-  const {voice,$,press,labels,asked,state}=panel({profile:learned});
+  const {voice,$,press,labels,variants,asked,state}=panel({profile:learned});
   await voice.load();
   assert.deepEqual(labels(),['Study again','Forget']);
+  // The section keeps the voice; it is not the screen's main act. Studying is
+  // quiet, forgetting is marked as destructive, and the one dark button
+  // appears only when there is an edit to keep.
+  assert.deepEqual(variants(),['button-secondary','button-danger']);
   $('voice-prompt').value='Open with "Hi".';
   $('voice-prompt').dispatchEvent(new globalThis.document.defaultView.Event('input'));
   assert.deepEqual(labels(),['Study again','Save']);
+  assert.deepEqual(variants(),['button-secondary','button-primary']);
   press('Save');
   await settle();
   assert.equal(asked.at(-1).prompt,'Open with "Hi".');

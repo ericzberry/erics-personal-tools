@@ -813,3 +813,26 @@ carries his instruction and his learned voice while the email stays untrusted
 data. The synthetic states in `tests/email-preview.html` were driven at 380px
 and 280px: the field, the one action row, the progress line and the voices fit
 with no horizontal overflow. Archive: `release/erics-sidebar-0.6.109.zip`.
+
+## Writing voice reads as a section, not a button in a box (0.6.110)
+
+The section's state and its actions share one line — *1,000 sent messages ·
+Sep 18, 2026* with **Study again** and **Forget** at the end of it — and a
+state with nothing to say leaves the action a line of its own instead of an
+empty paragraph above it. The card keeps its bottom edge off the last thing in
+it.
+
+Its actions are quiet now. Studying, resuming, stopping and connecting are
+secondary, so the one dark button on an email screen is the one that writes the
+reply; **Save** turns primary only when there is an edit to keep, and **Forget**
+is marked as destructive.
+
+The page Google's consent lands on says what it actually granted — *can file
+tax documents into your Drive folder and read your sent mail* — rather than
+naming only the half it was opened from.
+
+Validation: 347 extension, 33 mobile and 86 API tests pass, including that the
+section's actions stay quiet except Save and Forget, and that a consent granting
+Drive alone does not claim to read mail. The synthetic states were driven at
+380px and 280px with no horizontal overflow. Archive:
+`release/erics-sidebar-0.6.110.zip`.

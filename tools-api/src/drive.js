@@ -259,12 +259,14 @@ export async function driveCallback(request,env,fetcher=fetch){
     // email is read for display and nothing is decided by it.
     let email='';
     try{email=JSON.parse(atob(String(result.id_token).split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).email||'';}catch{}
+    // One consent covers both things this account is for, so the page names
+    // what was actually granted rather than only the half it was opened from.
+    const scopes=String(result.scope||'').split(/\s+/).filter(Boolean);
     cached=result.access_token?{token:result.access_token,expires:Date.now()+(Number(result.expires_in)||3600)*1000,account:result.refresh_token}:null;
     // What Google actually granted, not what was asked for: a consent that
     // left a scope out must be visible to the feature that needs it.
-    await storeAccount(env,{refreshToken:result.refresh_token,email,connectedAt:now(),
-      scopes:String(result.scope||'').split(/\s+/).filter(Boolean)});
-    return page('Google Drive connected',`${email?`${email} can `:'This Worker can now '}file documents into your tax folder. You can close this tab.`);
+    await storeAccount(env,{refreshToken:result.refresh_token,email,connectedAt:now(),scopes});
+    return page('Google connected',`${email?`${email} can `:'This Worker can now '}file tax documents into your Drive folder${scopes.includes(GMAIL_SCOPE)?' and read your sent mail':''}. You can close this tab.`);
   }catch{
     return page('Drive was not connected','That link expired or was already used. Start again from Taxes.');
   }
