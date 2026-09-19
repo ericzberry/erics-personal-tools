@@ -4,18 +4,32 @@
 // waiting for the sheet, a dismissed sheet, and the open section — can be
 // inspected at sidebar widths without a passkey provider.
 import {mountFinance} from '../src/finance.js';
-import {normalizeFinance} from '../src/finance-data.js';
+import {normalizeFinance,markRef,portfolioRef} from '../src/finance-data.js';
 import {ACCOUNT_SITES} from '../src/account-sites.js';
+// A ledger at the level of detail it actually keeps: a few portfolios, a figure
+// per asset class, and a long name to see wrap at 280px.
+const portfolio=(number,name,kind)=>({...normalizeFinance({row:'portfolio',number,name,kind,currency:'USD'}),id:portfolioRef(number),revision:'first'});
+const figure=(portfolioNumber,cls,asOf,amount)=>{
+  const value=normalizeFinance({row:'mark',portfolio:portfolioNumber,class:cls,asOf,amount});
+  return {...value,id:markRef(value),revision:String(Math.round(amount*100))};
+};
 const records=[
-  {kind:'brokerage',name:'Synthetic brokerage',institution:'Synthetic Securities',owner:'Test owner',value:1284000,asOf:'2026-08-31'},
-  {kind:'mortgage',name:'Synthetic mortgage on a long property name',institution:'Synthetic Bank',owner:'Test owner',value:412500,asOf:'2026-08-31'}
-].map((record,index)=>({...normalizeFinance(record),id:`0000000${index}-0000-4000-8000-00000000000${index}`,revision:'first'}));
+  portfolio(1,'Synthetic and Longer-Named Berry Estate',1),
+  portfolio(2,'Synthetic Berry',2),
+  figure(1,1,'2026-08-31',1284000),
+  figure(1,2,'2026-08-31',412500.25),
+  figure(1,3,'2026-08-31',18400.12),
+  figure(1,1,'2026-05-31',1150000),
+  figure(1,21,'2026-08-31',412500),
+  figure(2,9,'2026-08-31',622450)
+];
 const offline={request:async()=>({records}),resolve:async()=>({records})};
-// What a signed-in account page reads back as, so the snapshot prompt and the
-// figures it produces can be inspected without an account or a model call.
-const reading={updates:[
-  {name:'Synthetic brokerage',institution:'Synthetic Securities',owner:'',kind:'brokerage',currency:'USD',value:1286400.25,asOf:'2026-08-31',confidence:'high',reason:'Net account value.'},
-  {name:'Synthetic rollover IRA with a long account name',institution:'Synthetic Securities',owner:'',kind:'retirement',currency:'USD',value:412000,asOf:'2026-08-31',confidence:'medium',reason:'Total value.'}
+// What a signed-in account page reads back as, so the reading prompt and the
+// figures it folds into can be inspected without an account or a model call.
+const reading={readings:[
+  {account:'Synthetic brokerage',label:'Net Account Value',class:'unclassified',registration:'',scope:'account',value:1286400.25,asOf:'2026-08-31',confidence:'high',reason:'Net account value.'},
+  {account:'Synthetic rollover IRA with a long account name',label:'Total value',class:'unclassified',registration:'ira',scope:'account',value:412000,asOf:'2026-08-31',confidence:'medium',reason:'Total value.'},
+  {account:'',label:'Total Assets',class:'unclassified',registration:'',scope:'all',value:1698400.25,asOf:'2026-08-31',confidence:'high',reason:'Across accounts.'}
 ],unread:''};
 const credentials={get:async()=>'synthetic-preview-token-at-least-32-characters'};
 // Each state is one vault, so the three can sit side by side on one page.

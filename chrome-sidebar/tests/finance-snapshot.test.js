@@ -27,13 +27,16 @@ function selectValues(window){
   return ()=>Object.defineProperty(window.HTMLSelectElement.prototype,'value',descriptor);
 }
 const ETRADE={id:'etrade',label:'E*TRADE',institution:'E*TRADE',kind:'brokerage'};
-const READING={updates:[
-  {name:'Individual Brokerage',institution:'E*TRADE',owner:'',kind:'brokerage',currency:'USD',value:124500.5,asOf:'2026-09-11',confidence:'high',reason:'Net account value on the accounts page.'},
-  {name:'Rollover IRA',institution:'E*TRADE',owner:'',kind:'retirement',currency:'USD',value:88000,asOf:'2026-09-11',confidence:'high',reason:'Net account value on the accounts page.'}
+const ESTATE='Eric and Ariana Berry Estate';
+const estate={id:'p1',row:'portfolio',revision:'r1',number:1,name:ESTATE,kind:1,currency:'USD'};
+const dated={registration:'',scope:'account',asOf:'2026-09-11',confidence:'high',reason:'Net account value on the accounts page.'};
+const READING={readings:[
+  {...dated,account:'Individual Brokerage',label:'Net Account Value',class:'unclassified',value:124500.5},
+  {...dated,account:'Rollover IRA',label:'Net Account Value',class:'unclassified',registration:'ira',value:88000}
 ],unread:''};
 
 // One tool, wired the way the sidebar wires it: a page beside the panel, a
-// saved AI connection, and one record already in the ledger to match against.
+// saved AI connection, and a portfolio already in the ledger to fold into.
 function financeHost(document,{saved=[],reading=READING,readPage,onIntake,connections=[{id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:true}]}={}){
   const writes=[];
   let records=[...saved];
@@ -62,7 +65,7 @@ function setup(){
 }
 // The tool is ready once the ledger has loaded; which saved connection reads
 // a page is settled behind the screen, not by a control on it.
-const ready=document=>settle(()=>document.getElementById('finance-list').textContent.includes('No records')||document.getElementById('finance-list').querySelector('.record-row'));
+const ready=document=>settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet')||document.getElementById('finance-list').querySelector('.record-group,.record-row'));
 
 test('a signed-in account page offers one action, and nothing before that',async()=>{
   const {document,restore}=setup();
@@ -75,8 +78,6 @@ test('a signed-in account page offers one action, and nothing before that',async
   assert.match(panel.textContent,/E\*TRADE/);
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Read my E*TRADE accounts']);
   assert.match(panel.textContent,/Nothing is saved until you have checked the figures/,'the action says what it will do before it does it');
-  // A bare action on a rule with nothing under it is what this replaced: the
-  // reading is a group of its own, and the rule belongs to a record.
   assert.equal(document.getElementById('finance-snapshot').className.includes('settings-group'),true);
   assert.equal(panel.querySelector('.record-row'),null);
   assert.equal(document.getElementById('finance-page').hidden,true,'the site’s own panel is the one place the page is read from');
@@ -90,7 +91,7 @@ test('a signed-in account page offers one action, and nothing before that',async
 // ways of getting new ones into the ledger are ready straight away.
 test('a quiet arrival shows what can be put in, and none of what is already there',async()=>{
   const {document,restore}=setup();
-  const {tool}=financeHost(document,{saved:[{id:'existing',revision:'r1',kind:'brokerage',name:'Individual Brokerage',institution:'E*TRADE',currency:'USD',value:100000,asOf:'2026-06-01',ownership:100,liquidity:'Liquid',history:'[]'}]});
+  const {tool}=financeHost(document,{saved:[estate,{id:'1-1-20260601',row:'mark',revision:'10000000',portfolio:1,class:1,asOf:'2026-06-01',amount:100000}]});
   await ready(document);
   assert.match(document.getElementById('finance-totals').textContent,/\$100,000/,'chosen by hand, the ledger is the ledger');
 
@@ -106,9 +107,10 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
   // Everything that puts a figure into the ledger is ready without asking.
   assert.equal(document.getElementById('finance-snapshot').hidden,false);
   assert.deepEqual([...document.querySelectorAll('#finance-snapshot-body button')].map(node=>node.textContent),['Read my E*TRADE accounts']);
+  assert.equal(document.getElementById('finance-page').hidden,true,'one way to read the page');
   assert.ok(document.getElementById('finance-drop'),'drop a statement');
   assert.equal(document.getElementById('finance-read').disabled,false);
-  assert.equal(document.getElementById('finance-editor').hidden,false,'and a record typed by hand');
+  assert.equal(document.getElementById('finance-editor').hidden,false,'and a figure typed by hand');
   assert.equal(document.getElementById('finance-editor').hasAttribute('open'),false,'offered, not opened');
   assert.equal(document.getElementById('finance-actions').textContent,'Show position','one action, and it is the one that applies');
 
@@ -125,17 +127,14 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
   tool.stop();restore();
 });
 
-test('storing snapshots reads one total per account and saves nothing until Save',async()=>{
+test('reading a page folds it into figures, and saves nothing until Save',async()=>{
   const {document,restore}=setup();
   let sent=null;
-  const {tool,writes}=financeHost(document,{
-    saved:[{id:'existing',revision:'r1',kind:'brokerage',name:'Individual Brokerage',institution:'E*TRADE',currency:'USD',value:100000,asOf:'2026-06-01',ownership:100,liquidity:'Liquid',history:'[]'}],
-    onIntake:value=>{sent=value;}
-  });
+  const {tool,writes}=financeHost(document,{saved:[estate],onIntake:value=>{sent=value;}});
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
 
   // The page text is sent as a live reading, so today's balances are not dropped
   // for want of a date printed on the page.
@@ -144,63 +143,68 @@ test('storing snapshots reads one total per account and saves nothing until Save
   assert.match(sent.text,/Individual Brokerage/);
 
   const panel=document.getElementById('finance-snapshot-body');
-  assert.match(panel.textContent,/\$124,501|\$124,500\.50/,'each account shows the total read for it');
-  assert.match(panel.textContent,/Updates Individual Brokerage/,'a known account names the record it lands on');
-  assert.match(panel.textContent,/New record/,'an unknown account says it would create one');
-  assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save these values','Edit','Discard']);
-  assert.match(panel.textContent,/2 accounts · as of 2026-09-11/,'one shared date is stated once, not on every row');
-  assert.equal(panel.textContent.includes('New record · as of'),false);
+  assert.match(panel.textContent,/\$124,501|\$124,500\.50/,'each figure shows what was read for it');
+  assert.match(panel.textContent,new RegExp(ESTATE),'a taxable account joins the portfolio it is titled to');
+  assert.match(panel.textContent,/new portfolio/,'and the IRA says it would make one');
+  assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save these figures','Edit','Discard']);
+  assert.match(panel.textContent,/2 figures · as of 2026-09-11/,'one shared date is stated once, not on every row');
   assert.equal(writes.length,0,'reading saves nothing');
-  assert.match(document.getElementById('finance-snapshot-status').textContent,/2 accounts read\. Nothing is saved yet\./);
+  assert.match(document.getElementById('finance-snapshot-status').textContent,/folded into 2\. Nothing is saved yet\./);
 
   panel.querySelector('button').click();
-  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 snapshots.'));
-  assert.deepEqual(writes.map(record=>[record.name,record.value,record.asOf]),[['Individual Brokerage',124500.5,'2026-09-11'],['Rollover IRA',88000,'2026-09-11']]);
-  assert.equal(writes[0].id,'existing','a matched account updates its record instead of duplicating it');
-  assert.equal(writes[0].revision,'r1');
-  assert.equal(writes[1].revision,null);
-  assert.equal(writes[1].kind,'retirement');
-  assert.match(writes[0].history,/E\*TRADE page/,'the snapshot says where the figure came from');
-  assert.equal(document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'),false,'saved snapshots leave the panel');
+  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 figures.'));
+  // The portfolio the IRA needed is made first, because a figure cannot be
+  // filed into one that does not exist.
+  assert.deepEqual(writes.map(write=>write.row),['mark','portfolio','mark']);
+  assert.deepEqual(writes.filter(write=>write.row==='mark').map(write=>[write.portfolio,write.class,write.amount,write.asOf]),
+    [[1,9,124500.5,'2026-09-11'],[2,9,88000,'2026-09-11']]);
+  assert.equal(writes[0].id,'1-9-20260911','a figure is identified by where, what and when — nothing else');
+  assert.equal(writes[0].revision,null,'a date with no figure yet is an append');
+  // E*TRADE settles no titling of its own, so the IRA is named after the
+  // account rather than guessed at — but it is registered as an IRA, which is
+  // what keeps it out of the joint estate. A second IRA reading joins it.
+  assert.deepEqual([writes[1].name,writes[1].kind],['Rollover IRA',2]);
+  assert.equal(writes[1].number,2,'and it is numbered around the portfolio already there');
+  assert.equal(document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'),false,'saved figures leave the panel');
   tool.stop();restore();
 });
 
-test('accounts read with different dates each state their own',async()=>{
+test('figures read with different dates each state their own',async()=>{
   const {document,restore}=setup();
-  const {tool}=financeHost(document,{reading:{updates:[
-    {...READING.updates[0],asOf:'2026-09-11'},
-    {...READING.updates[1],asOf:'2026-08-31'}
+  const {tool}=financeHost(document,{saved:[estate],reading:{readings:[
+    {...READING.readings[0],asOf:'2026-09-11'},
+    {...READING.readings[1],asOf:'2026-08-31'}
   ],unread:''}});
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
   const panel=document.getElementById('finance-snapshot-body');
-  assert.equal(panel.textContent.includes('accounts · as of'),false,'no single date can stand for both');
+  assert.equal(panel.textContent.includes('figures · as of'),false,'no single date can stand for both');
   assert.match(panel.textContent,/as of 2026-09-11/);
   assert.match(panel.textContent,/as of 2026-08-31/);
   tool.stop();restore();
 });
 
-test('Edit puts the extracted amounts in fields, and Save writes what the owner left there',async()=>{
+test('Edit puts the folded amounts in fields, and Save writes what the owner left there',async()=>{
   const {document,restore}=setup();
-  const {tool,writes}=financeHost(document);
+  const {tool,writes}=financeHost(document,{saved:[estate]});
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
 
   const buttons=()=>[...document.querySelectorAll('#finance-snapshot-body button')];
   buttons().find(node=>node.textContent==='Edit').click();
-  const first=document.getElementById('finance-snapshot-value-0');
+  const first=document.getElementById('finance-fold-value-0');
   assert.equal(first.value,'124500.5','an amount is offered as read, not as a blank field');
-  assert.equal(document.querySelector('label[for=finance-snapshot-value-0]').textContent,'Individual Brokerage');
-  assert.deepEqual(buttons().map(node=>node.textContent),['Save these values','Discard']);
+  assert.equal(document.querySelector('label[for=finance-fold-value-0]').textContent,'Unclassified');
+  assert.deepEqual(buttons().map(node=>node.textContent),['Save these figures','Discard']);
   first.value='124600';
   first.dispatchEvent(new document.defaultView.Event('input'));
   buttons()[0].click();
-  await settle(()=>writes.length===2);
-  assert.equal(writes[0].value,124600,'the corrected amount is what gets saved');
+  await settle(()=>writes.filter(write=>write.row==='mark').length===2);
+  assert.equal(writes[0].amount,124600,'the corrected amount is what gets saved');
   tool.stop();restore();
 });
 
@@ -208,7 +212,7 @@ test('a reading needs a saved connection, and a bad amount is reported without l
   const {document,restore}=setup();
   // No usable connection: the tool says where one is saved rather than
   // offering a choice the owner has not made yet.
-  const {tool:none}=financeHost(document,{connections:[{id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:false}]});
+  const {tool:none}=financeHost(document,{saved:[estate],connections:[{id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:false}]});
   await ready(document);
   none.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
@@ -218,36 +222,39 @@ test('a reading needs a saved connection, and a bad amount is reported without l
   document.querySelector('main').replaceChildren();
   // Two saved connections, and still no question: connections are managed in
   // Settings, and the reading uses whichever one can answer.
-  const {tool,writes}=financeHost(document,{connections:[
+  const {tool,writes}=financeHost(document,{saved:[estate],connections:[
     {id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:true},
     {id:'connection-2',name:'Second',provider:'anthropic',hasApiKey:true}
   ]});
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
   [...document.querySelectorAll('#finance-snapshot-body button')].find(node=>node.textContent==='Edit').click();
-  const first=document.getElementById('finance-snapshot-value-0');
+  const first=document.getElementById('finance-fold-value-0');
   first.value='not a number';
   first.dispatchEvent(new document.defaultView.Event('input'));
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('valid value'));
+  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('valid amount'));
   assert.equal(writes.length,0,'nothing is saved past the row that could not be read');
-  assert.match(document.getElementById('finance-snapshot-body').textContent,/Individual Brokerage/,'the rows stay put to be corrected');
+  assert.match(document.getElementById('finance-snapshot-body').textContent,/Unclassified/,'the rows stay put to be corrected');
   tool.stop();restore();
 });
 
-// Nothing about the snapshot flow is one broker's: a second site brings its own
-// label, its own institution, and its own default for an account the reading
-// could not place.
+// Nothing about the reading flow is one broker's: a second site brings its own
+// label, its own institution, and its own answer for what an account total is
+// made of when the page never says. Chase brings something else as well — one
+// sign-on over a joint account, several trusts, an LLC and the children's
+// accounts — so the page's own headings decide where its figures land.
 const CHASE={id:'chase',label:'Chase',institution:'Chase',kind:'bank'};
-test('a second account site reads under its own name and its own default kind',async()=>{
+test('a second account site reads under its own name, its own default class and its own titles',async()=>{
   const {document,restore}=setup();
   let sent=null;
   const {tool,writes}=financeHost(document,{
-    reading:{updates:[
-      {name:'Total Checking',institution:'',owner:'',kind:'other-asset',currency:'USD',value:8420.11,asOf:'2026-09-11',confidence:'high',reason:'Available balance.'},
-      {name:'JPM Self-Directed',institution:'J.P. Morgan',owner:'',kind:'brokerage',currency:'USD',value:51200,asOf:'2026-09-11',confidence:'high',reason:'Account value.'}
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'Eric and Ariana Berry Joint Account · Total Checking',label:'Available balance',class:'unclassified',value:8420.11,asOf:'2026-09-11'},
+      {...dated,account:'Berry AE 21 Irrevocable Trust · Self-Directed',label:'Account value',class:'stocks',value:51200,asOf:'2026-09-11'}
     ],unread:''},
     readPage:async()=>({text:'Total Checking  |  $8,420.11',host:'secure.chase.com',title:'Chase Online',trimmed:0,tables:1}),
     onIntake:value=>{sent=value;}
@@ -257,17 +264,51 @@ test('a second account site reads under its own name and its own default kind',a
   const panel=()=>document.getElementById('finance-snapshot-body');
   assert.match(panel().textContent,/Chase/);
   panel().querySelector('button').click();
-  await settle(()=>panel().textContent.includes('Total Checking'));
+  await settle(()=>panel().textContent.includes('Cash'));
   assert.equal(sent.institution,'Chase','the site names the institution the page belongs to');
   assert.equal(sent.live,true);
+  assert.match(panel().textContent,/Berry AE 21 Irrevocable Trust · new portfolio/,'the trust is named before anything is saved');
 
   panel().querySelector('button').click();
-  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 snapshots.'));
-  const [checking,brokerage]=writes;
-  assert.equal(checking.kind,'bank','an account the reading could not place takes the site’s own kind');
-  assert.equal(checking.institution,'Chase','a page that names no institution is filed under the site’s');
-  assert.match(checking.history,/Chase page/,'the snapshot says which site the figure came from');
-  assert.equal(brokerage.kind,'brokerage','a kind the reading did state is kept');
-  assert.equal(brokerage.institution,'J.P. Morgan','and so is an institution the page names for itself');
+  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 figures.'));
+  const checking=writes.find(write=>write.class===3),brokerage=writes.find(write=>write.class===1);
+  assert.ok(checking,'a figure the reading could not place takes the site’s own class');
+  assert.ok(brokerage,'a class the reading did state is kept');
+  assert.deepEqual([checking.amount,brokerage.amount],[8420.11,51200]);
+  // The joint account is the estate's and joins the portfolio already holding
+  // it; the trust is not, and gets its own rather than adding a trust's money
+  // to a joint title nobody would see afterwards.
+  assert.deepEqual([checking.portfolio,brokerage.portfolio],[1,2]);
+  const made=writes.find(write=>write.row==='portfolio');
+  assert.deepEqual([made.name,made.kind],['Berry AE 21 Irrevocable Trust',5]);
+  tool.stop();restore();
+});
+
+// A page states an account's own total and the holdings inside it, and those
+// must never be added together. Reading E*TRADE shows three brokered CDs beside
+// a $1.6M account value; the account does not hold $300.
+test('a partial list of holdings does not replace the account total it sits under',async()=>{
+  const {document,restore}=setup();
+  const holding={registration:'',scope:'holding',asOf:'2026-09-11',confidence:'high',reason:''};
+  const {tool,writes}=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'Brokerage',label:'Net Account Value',class:'unclassified',value:1668403},
+      {...holding,account:'Brokerage',label:'WSTRN ALLIANCE PHOENIX AZ CD 4.05% 10/30/2026',class:'bonds',value:99.97},
+      {...holding,account:'Brokerage',label:'MS BANK NA SALT LAKE CITY UT CD 3.95%',class:'bonds',value:99.96},
+      {...dated,account:'',label:'Total Assets',class:'unclassified',scope:'all',value:1791069.16}
+    ],unread:''}
+  });
+  await ready(document);
+  tool.site(ETRADE);
+  document.querySelector('#finance-snapshot-body button').click();
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
+  const panel=document.getElementById('finance-snapshot-body');
+  assert.match(panel.textContent,/1 figure · as of 2026-09-11/,'four lines read, one figure kept');
+  assert.match(panel.textContent,/do not add up to the account total/);
+  assert.match(panel.textContent,/total across accounts was left out/);
+  panel.querySelector('button').click();
+  await settle(()=>writes.length===1);
+  assert.deepEqual([writes[0].class,writes[0].amount],[9,1668403]);
   tool.stop();restore();
 });

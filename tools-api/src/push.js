@@ -4,6 +4,7 @@ import {sendPush, fromBase64url, base64url} from './web-push.js';
 import {reminderDue, duePhrase, isDueSoon} from '../../chrome-sidebar/src/reminder-data.js';
 import {attentionItems,ATTENTION_SOURCES} from '../../chrome-sidebar/src/attention-data.js';
 import {REWARDS_WALLET_ID} from './rewards.js';
+import {financeRecords} from './finance.js';
 const fail = message => { throw {status:400, message}; };
 
 // One device, one subscription row: where to reach it, the keys that encrypt to
@@ -88,11 +89,14 @@ export function attentionDigest(data,today){
     body:[...counts].map(([tool,count])=>`${ATTENTION_SOURCES[tool]}: ${count}`).join(' · '),count:items.length};
 }
 async function attentionRecords(env){
-  const sources=['reminders','travel','personal','finance','subscriptions'];
-  const tables=['reminder_records','travel_records','personal_records','finance_records','subscription_records'];
+  const sources=['reminders','travel','personal','subscriptions'];
+  const tables=['reminder_records','travel_records','personal_records','subscription_records'];
   const records=await Promise.all(sources.map(async(resource,i)=>[resource,(await rows(env,tables[i],resource)).map(row=>({...row.value,id:row.id}))]));
   const wallet=await env.DB.prepare('SELECT value FROM rewards_wallet WHERE id = ?').bind(REWARDS_WALLET_ID).first();
-  return {...Object.fromEntries(records),rewards:wallet?await decryptSettings(wallet.value,REWARDS_WALLET_ID,env):[]};
+  // The ledger is two tables of its own rather than the generic record store,
+  // so it is read through its own reader instead of by table name.
+  return {...Object.fromEntries(records),finance:await financeRecords(env),
+    rewards:wallet?await decryptSettings(wallet.value,REWARDS_WALLET_ID,env):[]};
 }
 
 // Runs every hour; sends to a device only in the hour it asked for, and at most

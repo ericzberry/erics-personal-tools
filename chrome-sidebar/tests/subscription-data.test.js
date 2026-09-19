@@ -27,8 +27,12 @@ test('attention excludes canceled, conflicted and deleted subscriptions; overdue
   const records=[{...base(),id:'review'},{...base(),id:'active',state:'Active'}, {...base(),id:'cancel',state:'Canceled'},{...base(),id:'conflict',conflict:true},{...base(),id:'delete',deleting:true}];
   assert.deepEqual(subscriptionAttention(records,'2026-09-14').map(r=>r.id),['review','active']);
   assert.match(subscriptionAttention(records,'2026-09-14')[1].reason,/Estimated/);
-  const items=attentionItems({subscriptions:records,finance:[{id:'f',name:'Old balance',asOf:'2026-01-01'}],personal:[{id:'p',label:'Passport',expires:'2026-09-20',secret:'must never appear'}]},{today:'2026-09-14'});
-  assert.ok(items.some(i=>i.id==='finance:f'));assert.ok(items.some(i=>i.reason==='Resolve conflicting edits'));assert.ok(!JSON.stringify(items).includes('must never appear'));
+  // Finance is a portfolio and its dated figures, and attention names the
+  // portfolio rather than every class inside it.
+  const finance=[{id:'p1',row:'portfolio',number:1,name:'Old balance',kind:1,currency:'USD'},
+    {id:'1-3-20260101',row:'mark',portfolio:1,class:3,asOf:'2026-01-01',amount:5}];
+  const items=attentionItems({subscriptions:records,finance,personal:[{id:'p',label:'Passport',expires:'2026-09-20',secret:'must never appear'}]},{today:'2026-09-14'});
+  assert.ok(items.some(i=>i.id==='finance:p1'));assert.ok(items.some(i=>i.reason==='Resolve conflicting edits'));assert.ok(!JSON.stringify(items).includes('must never appear'));
 });
 test('saved charges and alternatives survive cold offline edits, conflict resolution and disconnect',async()=>{
   let state=null,online=true,calls=0;

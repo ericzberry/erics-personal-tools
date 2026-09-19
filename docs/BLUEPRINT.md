@@ -114,7 +114,13 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   wallet opens with — shared with mobile and the Worker),
   `program-data.js`/`program-offline.js` (the offer
   catalogues reward programs publish, read-only on every host),
-  `finance-data.js`/`finance-offline.js`,
+  `finance-data.js`/`finance-offline.js` (the ledger: the asset-class and
+  registration code registries, the portfolio and figure validators, the totals
+  and the series, `foldReadings` — which turns what a page states into the few
+  figures the ledger keeps — `legacyLedger` for the retrofit, and
+  `ACCOUNT_TITLES`, the portfolio an institution settles by itself — one title,
+  overridden by registration where law requires it, or a `holders` roster where
+  one sign-on covers several titles and the account names which),
   `personal-data.js`/`personal-offline.js`,
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored),
@@ -220,9 +226,12 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/v1/drive/callback` is the one route outside the bearer check — Google's
   redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
-  `src/finance.js`, `src/personal.js`, `src/reminders.js`, `src/gifts.js` and `src/sizes.js`
-  reuse it for `card_records`, `finance_records`, `personal_records`,
+  `src/personal.js`, `src/reminders.js`, `src/gifts.js` and `src/sizes.js`
+  reuse it for `card_records`, `personal_records`,
   `reminder_records`, `gift_records` and `size_records`.
+  `src/finance.js` does not: the ledger is two relational tables, so it has its
+  own handler, its own `p3` / `3-1-20260919` addressing, and the
+  `/v1/finance/backfill` route that retrofits the record-per-account table.
   `src/capture.js` is not a store: it reads one typed note into a record one of
   them already accepts. `src/push.js` and `src/web-push.js` are the
   notification side: subscriptions, the morning digest, and Web Push itself
@@ -244,7 +253,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   be sent an image — never copy model IDs into features).
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
-  (`finance_records`), `personal-schema.sql` (`personal_records`),
+  (`finance_portfolios`, `finance_marks`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
@@ -267,10 +276,13 @@ an app release: no version, nothing published to D1. `cd site && npm run deploy`
 
 Not an app: a small operator directory Claude uses to file statements into the
 Finance ledger over `/v1/finance`, so figures reach the app without being typed
-in. `ledger.mjs` is dependency-free Node that lists records and appends dated
-snapshots — it cannot delete, and previews every write until `--confirm`.
-`RUNBOOK.md` is the procedure a run follows; `README.md` covers setup and the
-snapshot file format. The bearer token comes from `TOOLS_API_TOKEN`, then the
+in. `ledger.mjs` is dependency-free Node that lists portfolios with their
+figures and appends dated ones — it cannot delete, and previews every write
+until `--confirm`. `backfill.mjs` drives the one-time retrofit of the
+record-per-account ledger through `/v1/finance/backfill`, previewing until
+`--confirm`. `api.mjs` is the bearer token and the request wrapper both scripts
+share. `RUNBOOK.md` is the procedure a run follows; `README.md` covers setup and
+the figure file format. The bearer token comes from `TOOLS_API_TOKEN`, then the
 login keychain (`erics-tools-api` / `API_TOKEN`), then a gitignored
 `credentials/api-token`. It cannot be stored in D1: it is the credential that
 gates every route, so nothing there is reachable without presenting it first. Changing the ledger's record shape means re-reading

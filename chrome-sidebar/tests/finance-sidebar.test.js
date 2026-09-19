@@ -55,15 +55,18 @@ test('the finance screen leads with its title, status and one action, and has no
   doc.getElementById('app').replaceChildren(FinanceView());
   const headings=[...doc.querySelectorAll('.settings-group-title')].map(node=>node.textContent);
   assert.equal(headings.includes('Cloud sync'),false,'connection maintenance no longer trails the page');
-  assert.equal(headings.includes('Ledger'),false,'the saved records are named for what they hold');
-  assert.ok(headings.includes('Accounts & assets'));
+  assert.equal(headings.includes('Ledger'),false,'the saved figures are named for what they hold');
+  assert.ok(headings.includes('Holdings'));
   const title=doc.querySelector('.tool-title-block');
   assert.equal(title.querySelector('h1').textContent,'Finance');
   assert.ok(title.contains(doc.getElementById('finance-actions')));
   assert.ok(title.contains(doc.getElementById('finance-status')));
   // Labels and live status only: no intro paragraph above the upload zone.
   assert.equal(doc.getElementById('finance-drop').previousElementSibling,null);
-  assert.match(doc.querySelector('label[for=finance-intake]').textContent,/^Notes$/);
+  // Figures arrive from a statement or the page itself; there is no box to type
+  // them into, so there is no field standing there without a purpose.
+  assert.equal(doc.querySelector('label[for=finance-intake]'),null);
+  assert.equal(doc.getElementById('finance-intake'),null);
   const ids=[...doc.querySelectorAll('[id]')].map(node=>node.id);
   assert.equal(new Set(ids).size,ids.length);
 });
@@ -87,7 +90,7 @@ test('reading the open page is offered only where there is a page beside the too
   globalThis.document=document;globalThis.window=window;
   const restore=selectValues(window);
   const plain=financeHost(document);
-  await settle(()=>document.getElementById('finance-list').textContent.includes('No records yet'));
+  await settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet'));
   assert.equal(document.getElementById('finance-page').hidden,true,'a full tab has no page to read');
   assert.equal(document.getElementById('finance-actions').textContent,'Refresh');
   plain.stop();
@@ -99,22 +102,22 @@ test('reading the open page is offered only where there is a page beside the too
     remote:async(token,path,options)=>{
       if(path==='/v1/ai-connections')return {connections:[{id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:true}]};
       sent={path,value:options.value};
-      return {updates:[{name:'Cash',institution:'',owner:'',kind:'bank',currency:'USD',value:1200,asOf:'2026-09-19',confidence:'high',reason:'Balance on the page.'}],unread:''};
+      return {readings:[{account:'Checking',label:'Cash',class:'cash',registration:'',scope:'account',value:1200,asOf:'2026-09-19',confidence:'high',reason:'Balance on the page.'}],unread:''};
     }
   });
-  await settle(()=>document.getElementById('finance-list').textContent.includes('No records yet'));
+  await settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet'));
   assert.equal(document.getElementById('finance-page').hidden,false);
   document.getElementById('finance-page').click();
   await settle(()=>document.getElementById('finance-drafts').textContent.includes('Cash'));
   assert.equal(asked,1,'the page is read once, and only when asked');
-  // One press, one errand: nothing is pasted into the box to be read again,
-  // and no connection had to be chosen first.
-  assert.equal(document.getElementById('finance-intake').value,'');
+  // One press, one errand: there is no box for the page to be pasted into on
+  // the way through, and no connection had to be chosen first.
+  assert.equal(document.getElementById('finance-intake'),null);
   assert.equal(document.getElementById('finance-connection'),null,'the connection is not a question put to the owner');
   assert.equal(sent.path,'/v1/ai-connections/connection-1/finance-intake');
   assert.equal(sent.value.live,true,'an open page is read as today’s balances');
   assert.match(sent.value.text,/Cash 1,200\.00/);
-  assert.match(document.getElementById('finance-intake-status').textContent,/1 account read from example\.invalid/);
+  assert.match(document.getElementById('finance-intake-status').textContent,/1 figure read from example\.invalid, folded into 1/);
   sidebar.stop();restore();
 });
 

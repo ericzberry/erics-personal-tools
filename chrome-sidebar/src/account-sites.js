@@ -55,7 +55,7 @@ export const FINANCE_SITES=[
     // Self-directed accounts at E*TRADE from Morgan Stanley sign in separately
     // and are already their own entry above.
     read:{hosts:['morganstanleyclientserv.com'],app:/^\/cs\/(?!free)/i}},
-  {id:'schwab',label:'Schwab',institution:'Charles Schwab',kind:'brokerage',
+  {id:'schwab',label:'Schwab',institution:'Schwab',kind:'brokerage',
     hosts:['schwab.com','schwaballiance.com'],
     // The balances are on client.schwab.com and nowhere else: www.schwab.com is
     // the marketing site, and schwaballiance.com now redirects there too. So

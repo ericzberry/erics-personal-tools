@@ -145,14 +145,14 @@ test('the hourly run reaches each device once, drops the ones that are gone, and
   assert.equal((await deliverDueReminders(env,{now:nextMorning,fetcher})).sent,1);
   const combined=JSON.parse(await openRecord(new Uint8Array(sent.at(-1).options.body),phone.keyPair,phone.auth));
   assert.equal(combined.count,1);assert.match(combined.body,/Subscriptions & renewals: 1/);assert.ok(!JSON.stringify(combined).includes('PRIVATE'));
-  sql.exec('DROP TABLE finance_records');
+  sql.exec('DROP TABLE finance_portfolios');
   await assert.rejects(deliverDueReminders(env,{now:new Date('2026-09-13T12:00:00Z'),fetcher}));
   assert.equal(sent.length,3,'a failed source read never produces an incomplete digest');
 
 });
 
 test('combined morning digest includes subscription anomalies without leaking private details',()=>{
-  const data={subscriptions:[{id:'s',name:'PRIVATE SERVICE',account:'PRIVATE ACCOUNT',state:'Canceled',canceledOn:'2026-09-01',charges:[{on:'2026-09-10',amount:123,description:'PRIVATE CHARGE'}]}],personal:[{id:'p',label:'PRIVATE PASSPORT',expires:'2026-09-20',number:'PRIVATE NUMBER'}],finance:[{id:'f',name:'PRIVATE BANK',asOf:'2026-01-01',balance:123456}]};
+  const data={subscriptions:[{id:'s',name:'PRIVATE SERVICE',account:'PRIVATE ACCOUNT',state:'Canceled',canceledOn:'2026-09-01',charges:[{on:'2026-09-10',amount:123,description:'PRIVATE CHARGE'}]}],personal:[{id:'p',label:'PRIVATE PASSPORT',expires:'2026-09-20',number:'PRIVATE NUMBER'}],finance:[{id:'p1',row:'portfolio',number:1,name:'PRIVATE BANK',kind:1,currency:'USD'},{id:'1-3-20260101',row:'mark',portfolio:1,class:3,asOf:'2026-01-01',amount:123456}]};
   const digest=attentionDigest(data,'2026-09-14');
   assert.equal(digest.count,3);assert.match(digest.body,/Subscriptions & renewals: 1/);
   assert.ok(!JSON.stringify(digest).includes('PRIVATE'));assert.ok(!JSON.stringify(digest).includes('123'));

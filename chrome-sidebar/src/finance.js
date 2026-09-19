@@ -1,20 +1,16 @@
-import {FinanceView,FinanceGroup,BreakdownList,TrendTable,DraftRow,SnapshotPanel,Figure,money,AttachmentCard} from './components/finance.js';
-import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue,setStatus} from './components/ui.js';
+import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,SnapshotPanel,Figure,money,AttachmentCard} from './components/finance.js';
+import {RecordRow,Button,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,valueHistory,parseFinanceUpdates,matchFinanceUpdates,kindLabel,FINANCE_KINDS,effectiveValue} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,LEGACY_CLASSES,REGISTRATIONS} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
-import {sealSecret} from './secret-vault.js';
-const core=['kind','name','institution','owner','value','asOf'];
-const extra=['currency','ownership','liquidity','rate','commitment','unfunded','tags','notes'];
-const REVEAL_MS=60000;
 const today=()=>new Date().toISOString().slice(0,10);
 
 // `readPage` is the host's ability to read the tab the owner is looking at.
 // The sidebar sits beside that tab and supplies it; a full tab and the phone
 // have no such page, so they pass nothing and the action never appears.
-export function mountFinance(root,{credentials,offline,remote,readPage=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false,clipboard=globalThis.navigator?.clipboard}){
+export function mountFinance(root,{credentials,offline,remote,readPage=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false}){
   const gate=mountVaultGate(root,{
     id:'finance-vault',title:'Finance',
     // A tool built because the tab beside the panel is a finance page raises no
@@ -26,11 +22,13 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   });
   gate.content.replaceChildren(FinanceView());
   const $=id=>gate.content.querySelector(`#finance-${id}`);
-  let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',drafts=[],revealTimer=null,clearSecret=false,connection='';
-  // The account site the owner is already signed in to beside the panel, and
-  // what was read off it. A snapshot is a proposal until it is saved, exactly
-  // like a draft: the amounts stay editable and nothing is written by reading.
-  let site=null,snapshot=null,snapshotEditing=false;
+  let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',connection='';
+  // What was read, before any of it is saved. A reading is a proposal: the
+  // amounts stay editable, and nothing is written by reading. The site panel
+  // and a dropped statement produce the same thing — figures already folded
+  // into one amount per portfolio and asset class — so they are reviewed the
+  // same way and saved by the same path.
+  let site=null,snapshot=null,snapshotEditing=false,fold=null,foldEditing=false;
   // Arriving because the tab is a finance page is not the owner asking to see
   // what they are worth. Such an arrival is quiet: the intake is ready for what
   // the page in front of them can put into the ledger, and the ledger's own
@@ -39,11 +37,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // locks, so the answer is not given again on every bank page.
   let quiet=hushed,engaged=false;
   // A picture has no text to show, so it is held here and described instead.
-  // Text out of a dropped file goes straight into the box, where it can be
-  // read, corrected, or thrown away before anything is sent. An open page is
-  // not copied there: it is already in front of the owner.
+  // Text out of a dropped file is carried on the attachment and described by
+  // its card. An open page is not copied anywhere: it is already in front of
+  // the owner.
   let attachment=null;
-  const revealed=new Map();
   const status=(text,target='status',tone='')=>setStatus($(target),text,tone);
   const action=(label,handler,variant='secondary')=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||!loaded});
@@ -55,64 +52,47 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     button.addEventListener('click',handler);
     return button;
   };
-  function forget(){revealed.clear();clearTimeout(revealTimer);revealTimer=null;}
-  function hold(){clearTimeout(revealTimer);revealTimer=setTimeout(()=>{forget();render();},REVEAL_MS);}
+  const portfolios=()=>portfoliosOf(records);
+  const portfolioOf=number=>portfolios().find(entry=>entry.number===number)||null;
+  const nextPortfolio=()=>Math.max(0,...portfolios().map(entry=>entry.number))+1;
 
+  // The form does two jobs, because they are the same job at two sizes: name a
+  // portfolio, or file a figure into one. Which fields are shown says which.
+  // The portfolio list is the ledger's own, so the choices are rebuilt from it
+  // rather than written out anywhere. The shared formatted select watches its
+  // native select for exactly this and re-renders itself.
+  function fillPortfolioChoices(selected=''){
+    const options=[...portfolios().map(entry=>({text:`${entry.name} · ${registrationLabel(entry.kind)}`,value:portfolioRef(entry.number)})),{text:'Add a portfolio…',value:'new'}];
+    $('portfolio').replaceChildren(...options.map(option=>Option(option.text,option.value)));
+    $('portfolio').value=options.some(option=>option.value===selected)?selected:options[0].value;
+    syncForm();
+  }
+  function syncForm(){
+    const fresh=$('portfolio').value==='new';
+    $('portfolio-fields').hidden=!fresh&&editing?.row!=='portfolio';
+    $('figure-fields').hidden=editing?.row==='portfolio';
+  }
   function clearForm(){
-    editing=null;clearSecret=false;
-    $('kind').value='bank';$('liquidity').value='Liquid';
-    for(const key of ['name','institution','owner','value','rate','commitment','unfunded','tags','notes'])$(key).value='';
-    $('currency').value=currency;$('ownership').value='100';$('asOf').value=today();
-    $('secret-number').value='';$('secret-expiry').value='';
-    $('editor-title').textContent='New record';
-    renderSecret();status('','form-status');
+    editing=null;
+    fillPortfolioChoices();
+    $('name').value='';$('kind').value=String(REGISTRATIONS[0].code);$('currency').value=currency;
+    $('class').value=String(classById('cash').code);$('amount').value='';$('asOf').value=today();
+    $('editor-title').textContent='New figure';
+    syncForm();status('','form-status');
   }
-  function fill(record){
-    editing={id:record.id,revision:record.revision,secret:record.secret||'',secretHint:record.secretHint||''};
-    clearSecret=false;
-    for(const key of [...core,...extra])$(key).value=record[key]===null||record[key]===undefined?'':String(record[key]);
-    $('secret-number').value='';$('secret-expiry').value='';
-    $('editor-title').textContent=`Editing ${record.name}`;
-    renderSecret();
-    $('editor').open=true;$('name').focus();
+  function fillFigure(mark){
+    editing={row:'mark',id:mark.id,revision:mark.revision};
+    fillPortfolioChoices(portfolioRef(mark.portfolio));
+    $('class').value=String(mark.class);$('amount').value=String(mark.amount);$('asOf').value=mark.asOf;
+    $('editor-title').textContent=`Editing ${portfolioOf(mark.portfolio)?.name||''} · ${classLabel(mark.class)}`;
+    syncForm();$('editor').open=true;$('amount').focus();
   }
-  // An empty account-details input means "keep what is stored". Removing saved
-  // details has to be its own explicit action.
-  function renderSecret(){
-    const saved=!!editing?.secret&&!clearSecret,shown=editing&&revealed.get(editing.id);
-    $('secret-state').hidden=!saved&&!clearSecret;
-    $('secret-state').textContent=clearSecret?'The saved account details will be removed when you save this record.'
-      :shown?`Saved · ${shown}`
-      :saved?`Saved · ${editing.secretHint}. Leave the fields blank to keep them.`:'';
-    $('secret-actions').replaceChildren(...(saved?[
-      shown?action('Hide details',()=>{revealed.delete(editing.id);renderSecret();render();})
-        :action('Show details',()=>reveal({id:editing.id,secret:editing.secret})),
-      action('Remove saved details',()=>{clearSecret=true;renderSecret();},'danger-subtle')
-    ]:clearSecret?[action('Keep saved details',()=>{clearSecret=false;renderSecret();})]:[]));
-  }
-  async function protectedValues(id){
-    const number=$('secret-number').value.trim(),hint=$('secret-expiry').value.trim();
-    if(!number){
-      if(hint&&!editing?.secret)throw Error('Enter the account details as well, or clear the hint.');
-      return clearSecret?{secret:'',secretHint:''}:{secret:editing?.secret||'',secretHint:editing?.secretHint||''};
-    }
-    if(!hint)throw Error('Add a short, non-identifying hint so this record can be recognized without unlocking it.');
-    return {secret:await sealSecret(await gate.key(),id,{number}),secretHint:hint};
-  }
-  async function reveal(record){
-    await run(async()=>{
-      const payload=await gate.open(record.id,record.secret);
-      revealed.set(record.id,payload.number);
-      hold();
-    });
-  }
-  async function copy(record){
-    if(!clipboard?.write||typeof ClipboardItem==='undefined'){status('Copy is unavailable in this browser. Use Show details instead.','status','alert');return;}
-    await run(async()=>{
-      const value=gate.open(record.id,record.secret).then(payload=>new Blob([payload.number],{type:'text/plain'}));
-      await clipboard.write([new ClipboardItem({'text/plain':value})]);
-      status('Account details copied to the clipboard.','status','success');
-    });
+  function fillPortfolio(portfolio){
+    editing={row:'portfolio',id:portfolio.id,revision:portfolio.revision,number:portfolio.number};
+    fillPortfolioChoices(portfolio.id);
+    $('name').value=portfolio.name;$('kind').value=String(portfolio.kind);$('currency').value=portfolio.currency;
+    $('editor-title').textContent=`Renaming ${portfolio.name}`;
+    syncForm();$('editor').open=true;$('name').focus();
   }
 
   function renderPosition(){
@@ -128,15 +108,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('totals').replaceChildren(
       Figure({label:'Net',value:money(summary.net,currency),tone:summary.net<0?'negative':''}),
       Figure({label:'Assets',value:money(summary.assets,currency)}),
-      Figure({label:'Liabilities',value:money(summary.liabilities,currency)}),
-      ...(summary.unfunded?[Figure({label:'Unfunded',value:money(summary.unfunded,currency)})]:[])
+      ...(summary.liabilities?[Figure({label:'Liabilities',value:money(summary.liabilities,currency)})]:[])
     );
     $('stale').hidden=!summary.stale.length;
-    $('stale').textContent=summary.stale.length?`${summary.stale.length} record${summary.stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${summary.stale[0].name}${summary.stale[0].asOf?` from ${summary.stale[0].asOf}`:''}. Totals still include ${summary.stale.length===1?'it':'them'} at ${summary.stale.length===1?'its':'their'} last known value.`:'';
+    $('stale').textContent=summary.stale.length?`${summary.stale.length} portfolio${summary.stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${summary.stale[0].name}${summary.stale[0].asOf?` from ${summary.stale[0].asOf}`:''}. Totals still count ${summary.stale.length===1?'it':'them'} at ${summary.stale.length===1?'its':'their'} last known figure.`:'';
     $('breakdown').replaceChildren(
-      BreakdownList('By type',summary.byKind,currency),
-      BreakdownList('By owner',summary.byOwner,currency),
-      BreakdownList('Assets by liquidity',summary.byLiquidity,currency)
+      BreakdownList('By asset class',summary.byClass,currency),
+      BreakdownList('By portfolio',summary.byPortfolio,currency),
+      BreakdownList('By registration',summary.byRegistration,currency)
     );
     $('trend').replaceChildren(TrendTable(netWorthSeries(records,{currency}),currency));
     // Currencies are never added together, so say what a total covers.
@@ -150,9 +129,6 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       tone:attachment.tone,onRemove:()=>{attachment=null;renderAttachment();render();}
     })]:[]));
   }
-  // Text and pictures take different routes on purpose. Extracted text is put
-  // in front of the owner verbatim, because a bad extraction is obvious there
-  // and invisible anywhere else. A picture can only be described.
   async function receive(file){
     const result=await readStatement(file);
     if(result.kind==='image'){
@@ -160,167 +136,181 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         detail:`Image · ${result.image.width}×${result.image.height} · ${Math.round(result.image.bytes/1000)} KB after downscaling on this device`,
         note:'',tone:''};
       renderAttachment();render();
-      return 'Ready to read. Add a note below if the picture needs context.';
+      return 'Ready to read.';
     }
     if(!result.text.trim()){
       attachment=null;renderAttachment();render();
       throw Error(result.note||'Nothing readable came out of that file.');
     }
     const {text,trimmed}=trimForReading(result.text);
-    $('intake').value=text;
-    attachment={kind:'text',label:file.name,
+    attachment={kind:'text',text,label:file.name,
       detail:`Text pulled out on this device · ${text.length.toLocaleString('en-US')} characters${result.pages?` · ${result.pages} section${result.pages===1?'':'s'}`:''}`,
-      note:[result.note,trimmed?`${trimmed.toLocaleString('en-US')} characters past the ${MAX_SEND.toLocaleString('en-US')}-character limit were left out. Trim the box to what matters.`:''].filter(Boolean).join(' '),
+      note:[result.note,trimmed?`${trimmed.toLocaleString('en-US')} characters past the ${MAX_SEND.toLocaleString('en-US')}-character limit were left out.`:''].filter(Boolean).join(' '),
       tone:result.confidence==='good'?'':'warning'};
     renderAttachment();render();
-    return result.confidence==='good'?'Check the text below, then read it.':'Check the text below carefully before reading it.';
+    return result.confidence==='good'?'Ready to read.':'The text came out unevenly — check the figures carefully before saving them.';
   }
-  // One press does the whole errand. The page is not copied into the box on
-  // the way through: it is open beside the panel, where the owner can see it
-  // better than any transcript of it, and what comes back — one draft per
-  // account, saved only when applied — is the readout worth looking at.
+
+  // Reading is one errand wherever it starts: send what was read, fold what
+  // comes back into figures this ledger can hold, and show them. The fold is
+  // the device's own arithmetic — AI labels a figure and never adds two
+  // together — and it is what keeps a page's dozens of lines from becoming
+  // dozens of stored rows.
+  async function readInto(token,input,{institution='',siteKind=''}={}){
+    const id=await connectionId(token);
+    const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{today:today(),...input},timeoutMs:130000});
+    const parsed=parseFinanceUpdates(result);
+    const folded=foldReadings(parsed.readings,portfolios(),{institution,
+      defaultClass:classById(LEGACY_CLASSES[siteKind]||'')?.code??null});
+    return {...folded,unread:parsed.unread,read:parsed.readings.length};
+  }
+  function renderFold(){
+    $('drafts').replaceChildren(...(fold?.rows.length?[FoldReview({
+      rows:fold.rows,notes:fold.notes,editing:foldEditing,disabled:busy||!loaded,
+      onSave:()=>saveReview('fold'),
+      onEdit:()=>{foldEditing=true;renderFold();},
+      onDiscard:()=>{fold=null;foldEditing=false;renderFold();status('','intake-status');},
+      onAmount:(index,value)=>{fold.rows[index].amount=value;}
+    })]:[]));
+  }
+  async function read(){
+    const text=attachment?.kind==='text'?attachment.text.trim():'';
+    const images=attachment?.kind==='image'?[attachment.image.dataUrl]:[];
+    if(!text&&!images.length){status('Drop a statement or read the open page first.','intake-status','alert');return;}
+    await run(async token=>{
+      status(images.length?'Reading the image…':'Reading…','intake-status','progress');
+      const result=await readInto(token,{text,...(images.length?{images}:{})});
+      fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
+      status([result.marks.length?`${result.read} figure${result.read===1?'':'s'} read, folded into ${result.marks.length}. Nothing is saved yet.`:'No figures were found.',result.unread].filter(Boolean).join(' '),'intake-status',result.marks.length?'success':'alert');
+    },'intake-status');
+  }
+  // One press does the whole errand. The page is not copied into a box on the
+  // way through: it is open beside the panel, where the owner can see it better
+  // than any transcript of it, and what comes back is the readout worth looking
+  // at — one figure per portfolio and class, saved only when applied.
   async function intakeFromPage(){
     await run(async token=>{
-      const id=await connectionId(token);
       status('Reading the accounts on the open page…','intake-status','progress');
       const page=await readPage();
-      const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text:page.text,today:today(),live:true},timeoutMs:130000});
-      const parsed=parseFinanceUpdates(result);
-      drafts=matchFinanceUpdates(parsed.updates,records);
-      renderDrafts();
-      status([drafts.length?`${drafts.length} account${drafts.length===1?'':'s'} read from ${page.host}. Nothing is saved until you apply one.`:`No account values were found on ${page.host}.`,
+      const result=await readInto(token,{text:page.text,live:true});
+      fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
+      status([result.marks.length?`${result.read} figure${result.read===1?'':'s'} read from ${page.host}, folded into ${result.marks.length}. Nothing is saved until you save them.`:`No account figures were found on ${page.host}.`,
         page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
-        parsed.unread].filter(Boolean).join(' '),'intake-status',drafts.length?'success':'alert');
+        result.unread].filter(Boolean).join(' '),'intake-status',result.marks.length?'success':'alert');
     },'intake-status');
   }
 
-  // Rebuilt only when the snapshot itself changes, so editing an amount is not
-  // interrupted by an unrelated render. `syncSnapshot` keeps the controls in
+  // Rebuilt only when the reading itself changes, so editing an amount is not
+  // interrupted by an unrelated render. `syncReadings` keeps the controls in
   // step with a busy or disconnected tool without replacing them.
   function renderSnapshot(){
     $('snapshot').hidden=!site;
     if(!site){$('snapshot-body').replaceChildren();return;}
     $('snapshot-body').replaceChildren(SnapshotPanel({
-      site,rows:snapshot||[],editing:snapshotEditing,disabled:busy||!loaded,
-      onStore:storeSnapshots,onSave:saveSnapshots,
+      site,rows:snapshot?.rows||[],notes:snapshot?.notes||[],editing:snapshotEditing,disabled:busy||!loaded,
+      onStore:storeSnapshots,onSave:()=>saveReview('snapshot'),
       onEdit:()=>{snapshotEditing=true;renderSnapshot();},
       onDiscard:()=>{snapshot=null;snapshotEditing=false;renderSnapshot();status('','snapshot-status');},
-      onAmount:(index,value)=>{snapshot[index].value=value;}
+      onAmount:(index,value)=>{snapshot.rows[index].amount=value;}
     }));
   }
-  function syncSnapshot(){
-    for(const node of $('snapshot').querySelectorAll('button,input'))node.disabled=busy||!loaded;
+  function syncReadings(){
+    for(const node of [...$('snapshot').querySelectorAll('button,input'),...$('drafts').querySelectorAll('button,input')])node.disabled=busy||!loaded;
   }
-  // One press does the whole errand: read the page beside the panel, turn it
-  // into one figure per account, and show them. Nothing is saved yet.
   async function storeSnapshots(){
     if(!site||!readPage)return;
     await run(async token=>{
-      const id=await connectionId(token);
       status(`Reading your ${site.label} accounts…`,'snapshot-status','progress');
       const page=await readPage();
-      const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text:page.text,today:today(),live:true,institution:site.institution},timeoutMs:130000});
-      const parsed=parseFinanceUpdates(result);
-      snapshot=matchFinanceUpdates(parsed.updates,records).map(row=>({
-        ...row,
-        kind:row.kind==='other-asset'?site.kind:row.kind,
-        institution:row.institution||site.institution,
-        source:`${site.label} page · ${row.confidence} confidence`
-      }));
-      snapshotEditing=false;renderSnapshot();
-      status([snapshot.length?`${snapshot.length} account${snapshot.length===1?'':'s'} read. Nothing is saved yet.`:'No account totals were found on that page.',parsed.unread].filter(Boolean).join(' '),'snapshot-status',snapshot.length?'success':'alert');
+      // What the site itself settles is settled before folding: the institution
+      // decides which portfolio a figure is titled to, and what an account
+      // total is made of when the page never says.
+      const result=await readInto(token,{text:page.text,live:true,institution:institutionName(site.institution)},
+        {institution:institutionName(site.institution),siteKind:site.kind});
+      snapshot={rows:result.marks,notes:result.notes};snapshotEditing=false;renderSnapshot();
+      status([result.marks.length?`${result.read} figure${result.read===1?'':'s'} read, folded into ${result.marks.length}. Nothing is saved yet.`:'No account totals were found on that page.',result.unread].filter(Boolean).join(' '),'snapshot-status',result.marks.length?'success':'alert');
     },'snapshot-status');
   }
-  // Saved one at a time through the same validator and queue as a typed edit.
-  // A row that fails leaves itself and the rest in place to be corrected.
-  async function saveSnapshots(){
-    if(!snapshot?.length)return;
+
+  // Saved one row at a time through the same validator and queue as a figure
+  // typed by hand: nothing about an AI reading bypasses a check. A portfolio
+  // the reading invented is made first, because a figure cannot be filed into
+  // one that does not exist. A row that fails leaves itself and the rest in
+  // place to be corrected.
+  async function saveReview(which){
+    const review=which==='snapshot'?snapshot:fold,target=which==='snapshot'?'snapshot-status':'intake-status';
+    if(!review?.rows.length)return;
+    const made=new Map();
     let saved=0;
-    while(snapshot.length){
-      if(!await saveDraft(snapshot[0],'snapshot-status')){renderSnapshot();return;}
-      snapshot=snapshot.slice(1);saved++;
+    while(review.rows.length){
+      const row=review.rows[0];
+      if(row.isNew&&!made.has(row.portfolio)){
+        const number=made.size?nextPortfolio():row.portfolio;
+        if(!await savePortfolio({number,name:row.name,kind:row.kind??1,currency:row.currency||currency},target))break;
+        made.set(row.portfolio,number);
+      }
+      const portfolio=made.get(row.portfolio)??row.portfolio;
+      if(!await saveMark({...row,portfolio},target))break;
+      review.rows.shift();saved++;
     }
-    snapshot=null;snapshotEditing=false;renderSnapshot();onChanged();
-    status(`Saved ${saved} snapshot${saved===1?'':'s'}.`,'snapshot-status','success');
+    if(which==='snapshot'){snapshot=review.rows.length?review:null;renderSnapshot();}
+    else{fold=review.rows.length?review:null;renderFold();}
+    if(!review.rows.length){
+      onChanged();
+      status(`Saved ${saved} figure${saved===1?'':'s'}.`,target,'success');
+    }
+  }
+  function savePortfolio(portfolio,target='form-status'){
+    const id=portfolioRef(portfolio.number),existing=records.find(record=>record.id===id);
+    return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',
+      value:normalizeAndStamp({row:'portfolio',number:portfolio.number,name:portfolio.name,kind:portfolio.kind,currency:portfolio.currency},id,existing)}),target);
+  }
+  function saveMark(mark,target='form-status'){
+    const value={row:'mark',portfolio:mark.portfolio,class:mark.class,asOf:mark.asOf,amount:mark.amount};
+    const id=markRef(value),existing=records.find(record=>record.id===id);
+    return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
+  }
+  const normalizeAndStamp=(value,id,existing)=>({...normalizeFinance(value,existing||{}),id,revision:existing?.revision??null});
+  function remove(record,target='status'){
+    return run(token=>offline.request(token,`/v1/finance/${record.id}`,{method:'DELETE',value:record}),target);
   }
 
-  function renderDrafts(){
-    $('drafts').replaceChildren(...drafts.map((draft,index)=>DraftRow(draft,{
-      onApply:()=>apply(index),
-      onEdit:()=>{applyToForm(draft);drafts.splice(index,1);renderDrafts();},
-      onDiscard:()=>{drafts.splice(index,1);renderDrafts();status(drafts.length?'':'Drafts discarded. Nothing was saved.','intake-status','alert');}
-    })));
-  }
-  // Applying a draft is an ordinary save through the same validator and queue as
-  // a typed edit: nothing about an AI reading bypasses a check.
-  function applyToForm(draft){
-    const match=draft.match;
-    if(match)fill(match);else clearForm();
-    $('kind').value=match?.kind||draft.kind;
-    $('name').value=match?.name||draft.name;
-    if(!match){
-      $('institution').value=draft.institution;
-      $('owner').value=draft.owner;
-      $('currency').value=draft.currency;
-    }
-    $('value').value=String(draft.value);
-    $('asOf').value=draft.asOf;
-    $('editor').open=true;
-    $('value').focus();
-    status('Review this draft, then save it.','form-status','alert');
-  }
-  function saveDraft(draft,target='status'){
-    const match=draft.ambiguous?null:draft.match;
-    const id=match?.id||crypto.randomUUID();
-    return run(async token=>{
-      const value=normalizeFinance({
-        ...(match?{}:{kind:draft.kind,name:draft.name,institution:draft.institution,owner:draft.owner,currency:draft.currency}),
-        value:draft.value,asOf:draft.asOf,source:draft.source||`AI reading · ${draft.confidence} confidence`
-      },match||{});
-      return offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:{...value,id,revision:match?.revision??null}});
-    },target);
-  }
-  async function apply(index){
-    const draft=drafts[index];
-    if(await saveDraft(draft)){
-      drafts.splice(index,1);renderDrafts();onChanged();
-      status(`Saved ${draft.name}.`,'intake-status','success');
-    }
-  }
-
-  // The totals and the records, built only when they have been asked for.
+  // The totals and the ledger, built only when they have been asked for.
   function renderLedger(){
-    const query=$('search').value.trim().toLowerCase();
-    const visible=records.filter(record=>[record.name,record.institution,record.owner,record.tags,kindLabel(record.kind)].join(' ').toLowerCase().includes(query));
-    const row=record=>{
-      const shown=revealed.get(record.id);
-      const remove=action('Delete',()=>{confirmation.hidden=false;yes.focus();},'danger-subtle');
-      const yes=action('Delete from all devices',()=>save(record,'DELETE'),'danger');
-      const no=action('Keep record',()=>{confirmation.hidden=true;remove.focus();});
-      const confirmation=Stack([Note(`Permanently delete “${record.name}” and its value history from all devices?`),ActionGroup([yes,no],{compact:true})],{hidden:true});
-      const history=valueHistory(record.history??'[]');
-      const past=Stack(history.slice(0,8).map(entry=>Note(`${entry.asOf} · ${money(entry.value,record.currency)}${entry.source?` · ${entry.source}`:''}`)),{hidden:true});
+    const groups=groupFinanceRecords(records).filter(group=>(group.portfolio.currency||'USD')===currency);
+    const figure=(portfolio,row)=>{
+      const mark=row.current;
+      const confirm=Stack([Note(`Delete the ${row.label} figure for ${portfolio.name} as of ${mark.asOf}?`),ActionGroup([
+        action('Delete from all devices',async()=>{if(await remove(mark))onChanged();},'danger'),
+        action('Keep it',()=>{confirm.hidden=true;})
+      ],{compact:true})],{hidden:true});
+      const past=Stack(row.history.slice(0,8).map(entry=>Note(`${entry.asOf} · ${money(signed(entry),portfolio.currency)}`)),{hidden:true});
       const actions=[
-        action('Edit',()=>fill(record),'subtle'),
-        ...(history.length>1?[action('History',()=>{past.hidden=!past.hidden;},'subtle')]:[]),
-        ...(record.secret?[shown?action('Hide details',()=>{revealed.delete(record.id);render();}):action('Show details',()=>reveal(record)),action('Copy details',()=>copy(record),'subtle')]:[]),
-        remove
+        action('Edit',()=>fillFigure(mark),'subtle'),
+        ...(row.history.length>1?[action('History',()=>{past.hidden=!past.hidden;},'subtle')]:[]),
+        action('Delete',()=>{confirm.hidden=false;},'danger-subtle')
       ];
-      if(record.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))));
-      const share=Number(record.ownership??100);
-      const detail=[
-        money(record.value,record.currency),
-        share===100?'':`${share}% share · ${money(effectiveValue(record),record.currency)}`,
-        record.asOf?`as of ${record.asOf}`:'',
-        record.institution,record.owner,record.secretHint,
-        record.unfunded?`${money(record.unfunded,record.currency)} unfunded`:'',
-        record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):''
-      ].filter(Boolean).join(' · ');
-      return Stack([RecordRow({title:record.name,detail,notes:record.notes,actions}),shown?MaskedValue(shown):null,past,confirmation]);
+      if(mark.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(mark.id,choice))));
+      // A liability is shown as what it does to the total. Without the sign a
+      // mortgage reads like another asset, and only the portfolio's own figure
+      // further down would say otherwise.
+      const detail=[money(signed(mark),portfolio.currency),row.side==='liability'?'liability':'',`as of ${mark.asOf}`,
+        mark.pending?(mark.conflict?'Conflict':mark.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
+      return Stack([RecordRow({title:row.label,detail,actions}),past,confirm]);
     };
-    $('list').replaceChildren(...(visible.length
-      ?groupFinanceRecords(visible).map(group=>FinanceGroup(group.label,group.side,group.records.map(row)))
-      :[Note(!loaded?'Connect in Settings to load your records.':records.length?'No matching records.':'No records yet.')]));
+    $('list').replaceChildren(...(groups.length?groups.map(group=>{
+      const portfolio=group.portfolio;
+      const confirm=Stack([Note(`Permanently delete “${portfolio.name}” and every figure in it, from all devices?`),ActionGroup([
+        action('Delete portfolio',async()=>{if(await remove(portfolio))onChanged();},'danger'),
+        action('Keep it',()=>{confirm.hidden=true;})
+      ],{compact:true})],{hidden:true});
+      return Stack([PortfolioGroup({
+        name:portfolio.name,currency:portfolio.currency,total:group.total,
+        meta:[registrationLabel(portfolio.kind),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
+        rows:[...group.rows.map(row=>figure(portfolio,row)),
+          ActionGroup([action('Rename',()=>fillPortfolio(portfolio),'subtle'),action('Delete portfolio',()=>{confirm.hidden=false;},'danger-subtle')],{compact:true})]
+      }),confirm]);
+    }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one below.')]));
     renderPosition();
   }
   // Not hidden figures: figures that were never put on the page.
@@ -329,16 +319,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('currency-switch').hidden=true;$('stale').hidden=true;
   }
   function render(){
-    // What the ledger holds — the totals and the saved records — waits to be
-    // asked for. Putting a figure in does not: the snapshot, the statement, the
-    // page reading and a record typed by hand are all ready.
+    // What the ledger holds — the totals and the saved figures — waits to be
+    // asked for. Putting a figure in does not: the site reading, the statement,
+    // the page reading and a figure typed by hand are all ready.
     $('position').hidden=quiet;$('records').hidden=quiet;
     if(quiet)sealLedger();else renderLedger();
-    for(const key of [...core,...extra])$(key).disabled=busy||!loaded;
-    for(const key of ['number','expiry'])$(`secret-${key}`).disabled=busy||!loaded;
+    for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
     $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
-    $('intake').disabled=busy||!loaded;
     $('drop').disabled=busy||!loaded;
     $('page').disabled=busy||!loaded;
     // A recognized account site reads through its own panel above, which says
@@ -350,7 +338,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // needs the connection rather than a dead Refresh.
     $('actions').replaceChildren(quiet?toolAction('Show position',showPosition)
       :loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
-    syncSnapshot();
+    syncReadings();
   }
 
   async function run(operation,target='status'){
@@ -371,21 +359,23 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       return false;
     }finally{busy=false;render();}
   }
-  async function save(record,method='PUT'){
-    const success=await run(token=>offline.request(token,`/v1/finance/${record.id}`,{method,value:record}),'form-status');
-    if(success)onChanged();
-    return success;
-  }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh(){
     if(!gate.unlocked())return;
-    status('Loading your records…','status','progress');
-    if(await run(token=>offline.request(token,'/v1/finance')))connectionNote();
+    status('Loading your ledger…','status','progress');
+    // The choices are rebuilt from the ledger that just arrived. A selection
+    // the owner made while the editor is open is kept; a closed editor goes
+    // back to the default, because the placeholder the form starts on — before
+    // there are any portfolios to offer — must not become the standing answer
+    // once there are.
+    if(await run(token=>offline.request(token,'/v1/finance'))){fillPortfolioChoices($('editor').open?$('portfolio').value:'');connectionNote();}
   }
   function clear(){
-    generation++;records=[];loaded=false;activeToken='';connection='';drafts=[];attachment=null;snapshot=null;snapshotEditing=false;engaged=false;forget();clearForm();renderDrafts();renderAttachment();renderSnapshot();
+    generation++;records=[];loaded=false;activeToken='';connection='';attachment=null;
+    fold=null;foldEditing=false;snapshot=null;snapshotEditing=false;engaged=false;
+    clearForm();renderFold();renderAttachment();renderSnapshot();
     status('','snapshot-status');
-    status('Unlock this section with your passkey.');
+    status('Unlock this section with your passkey.','status','alert');
     render();
   }
 
@@ -400,48 +390,39 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     return connection=usable[0].id;
   }
   async function connectionNote(){
-    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · Add and edit records by hand; reading a statement or a page needs the internet.','ai-status');return;}
+    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · Add and edit figures by hand; reading a statement or a page needs the internet.','ai-status','alert');return;}
     try{
       const usable=await usableConnections(activeToken);
       connection=usable.find(entry=>entry.id===connection)?.id||usable[0]?.id||'';
-      status(usable.length?'':'Save an AI connection in Settings to read a statement or an account page.','ai-status');
+      status(usable.length?'':'Save an AI connection in Settings to read a statement or an account page.','ai-status','alert');
     }catch(error){status(error.message,'ai-status','error');}
   }
-  async function read(){
-    const text=$('intake').value.trim();
-    const images=attachment?.kind==='image'?[attachment.image.dataUrl]:[];
-    if(!text&&!images.length){status('Drop a statement, read the open page, or paste the figures first.','intake-status','alert');return;}
-    await run(async token=>{
-      const id=await connectionId(token);
-      status(images.length?'Reading the image…':'Reading…','intake-status','progress');
-      const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text,...(images.length?{images}:{}),today:today()},timeoutMs:130000});
-      const parsed=parseFinanceUpdates(result);
-      drafts=matchFinanceUpdates(parsed.updates,records);
-      renderDrafts();
-      status([`${drafts.length} draft${drafts.length===1?'':'s'} ready to review. Nothing is saved until you apply one.`,parsed.unread].filter(Boolean).join(' '),'intake-status',drafts.length?'success':'alert');
-    },'intake-status');
-  }
 
-  $('search').addEventListener('input',render);
   $('read').addEventListener('click',read);
-  $('intake-clear').addEventListener('click',()=>{$('intake').value='';drafts=[];attachment=null;renderAttachment();renderDrafts();render();status('','intake-status');status('','file-status');});
+  $('intake-clear').addEventListener('click',()=>{fold=null;foldEditing=false;attachment=null;renderAttachment();renderFold();render();status('','intake-status');status('','file-status');});
   $('page').addEventListener('click',intakeFromPage);
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_BYTES});
   $('cancel').addEventListener('click',()=>{clearForm();$('editor').open=false;});
-  $('kind').addEventListener('change',()=>{
-    // The kind's usual liquidity is a starting point, not a lock: it applies
-    // only while the record is new and untouched.
-    if(!editing)$('liquidity').value=FINANCE_KINDS.find(kind=>kind.id===$('kind').value)?.liquidity||'Liquid';
-  });
+  $('portfolio').addEventListener('change',syncForm);
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();
     if(busy||!loaded)return;
     try{
-      const id=editing?.id||crypto.randomUUID();
-      const input=Object.fromEntries([...core,...extra].map(key=>[key,$(key).value]));
-      for(const key of ['rate','commitment','unfunded'])if(input[key]==='')input[key]=null;
-      const value=normalizeFinance({...input,source:'Entered by hand',...await protectedValues(id)},editing?records.find(record=>record.id===id)||{}:{});
-      if(await save({...value,id,revision:editing?.revision??null})){clearForm();$('editor').open=false;}
+      // Renaming a portfolio is the form's other job and saves nothing else.
+      if(editing?.row==='portfolio'){
+        if(await savePortfolio({number:editing.number,name:$('name').value,kind:Number($('kind').value),currency:$('currency').value})){clearForm();$('editor').open=false;onChanged();}
+        return;
+      }
+      const fresh=$('portfolio').value==='new';
+      const number=fresh?nextPortfolio():Number($('portfolio').value.slice(1));
+      if(fresh&&!await savePortfolio({number,name:$('name').value,kind:Number($('kind').value),currency:$('currency').value}))return;
+      const mark={portfolio:number,class:Number($('class').value),asOf:$('asOf').value,amount:$('amount').value};
+      if(!await saveMark(mark))return;
+      // A figure moved to another portfolio, class or date is a different row.
+      // The one it came from is removed, so an edit cannot leave two.
+      const moved=editing&&editing.id!==markRef(normalizeFinance({row:'mark',...mark}));
+      if(moved)await remove(records.find(record=>record.id===editing.id)||{id:editing.id,revision:editing.revision});
+      clearForm();$('editor').open=false;onChanged();
     }catch(error){status(vaultReason(error),'form-status','error');}
   });
   clearForm();clear();
@@ -474,5 +455,5 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     site=next||null;snapshot=null;snapshotEditing=false;
     status('','snapshot-status');renderSnapshot();render();
   }
-  return {refresh,clear,site:detected,quiet:arrival,stop(){gate.stop();clearTimeout(revealTimer);}};
+  return {refresh,clear,site:detected,quiet:arrival,stop(){gate.stop();}};
 }

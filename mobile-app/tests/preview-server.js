@@ -175,9 +175,14 @@ createServer(async (req, res) => {
     if(url.pathname===`/v1/ai-connections/${id}/finance-intake`){
       let text='';for await(const data of req)text+=data;const {text:input}=JSON.parse(text);
       if(String(input).includes('failure')){res.statusCode=502;res.end('{"error":"Synthetic reading failure"}');return;}
-      res.end(JSON.stringify({updates:[
-        {name:'Synthetic brokerage',institution:'Synthetic Broker',owner:'',kind:'brokerage',currency:'USD',value:412350,asOf:'2026-09-05',confidence:'high',reason:'The text states a balance and a date.'},
-        {name:'Synthetic private fund II',institution:'',owner:'Family trust',kind:'private',currency:'USD',value:250000,asOf:'2026-08-31',confidence:'low',reason:'The sponsor and the valuation date should be confirmed.'}
+      // Labelled readings, which the device folds into figures. The two
+      // holdings do not add up to the account total above them, which is the
+      // case worth being able to see: the total is kept whole rather than
+      // replaced by a partial list of what is inside it.
+      res.end(JSON.stringify({readings:[
+        {account:'Synthetic brokerage',label:'Net Account Value',class:'unclassified',registration:'',scope:'account',value:412350,asOf:'2026-09-05',confidence:'high',reason:'The text states a balance and a date.'},
+        {account:'Synthetic brokerage',label:'SYNTHETIC BANK CD 4.05% 10/30/2026',class:'bonds',registration:'',scope:'holding',value:99.97,asOf:'2026-09-05',confidence:'high',reason:'One holding inside the account.'},
+        {account:'Synthetic retirement account',label:'Total value',class:'unclassified',registration:'ira',scope:'account',value:250000,asOf:'2026-08-31',confidence:'low',reason:'The valuation date should be confirmed.'}
       ],unread:'One line mentioned a wire with no amount, so it was left out.'}));return;
     }
     if (url.pathname === '/v1/push/subscriptions') {res.end(JSON.stringify({records:pushSubscriptions.map(({id,revision,timeZone,hour})=>({id,revision,timeZone,hour,host:'preview'}))}));return;}
