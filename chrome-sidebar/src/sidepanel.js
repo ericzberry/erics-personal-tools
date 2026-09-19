@@ -35,7 +35,7 @@ function renderAdvice(session) {
   const advice = recommend({rankings, config, session});
   const countdown=pickCountdown(session,advice.turn,{blocked:!!advice.blocked});
   $('advice-context').textContent = session ? `${session.manualMode?'Manual board':`Through #${advice.throughPick}`}${advice.turn.nextPick ? ` · Next #${advice.turn.nextPick}` : ' · Your turn unknown'}${countdown?` · ${countdown}`:''}${advice.turn.followingPick ? ` · Then #${advice.turn.followingPick}` : ''}` : '';
-  setStatus($('advice-status'), !session ? 'Connect a draft to see your next pick.' : advice.blocked || '', 'alert');
+  setStatus($('advice-status'), !session ? 'Connect a draft to see your next pick.' : advice.blocked || '', session ? 'alert' : '');
   $('advice-status').hidden = !$('advice-status').textContent;
   const candidates=session?advice.candidates:[];
   recommendedKeys=candidates.map(playerKey);

@@ -54,7 +54,7 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
       const connections=result.connections.filter(c=>c.provider==='openai'&&c.hasApiKey);
       $('connection').replaceChildren(Option('Choose AI connection',''),...connections.map(c=>Option(c.name,c.id)));
       if(connections.length===1)$('connection').value=connections[0].id;
-      if(!connections.length)status('Add an OpenAI connection in Settings to read statements or research prices.','intake-status','alert');
+      if(!connections.length)status('Add an OpenAI connection in Settings to read statements or research prices.','intake-status');
     },'intake-status');
   }
   async function save(r,method='PUT',target='status'){

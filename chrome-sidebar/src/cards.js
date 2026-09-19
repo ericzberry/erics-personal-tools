@@ -73,8 +73,8 @@ export function mountCards(root,{credentials,offline,remote}){
   }
   async function request(path,options){const current=generation;const result=await offline.request(token,path,options);if(current!==generation)throw Error('Connection changed.');return result;}
   async function connectionList(){
-    if(!token||globalThis.navigator?.onLine===false){status('Offline · Select a category to compare saved cards.','ai-status','alert');return;}
-    try{const result=await remote(token,'/v1/ai-connections');const previous=$('connection').value;$('connection').replaceChildren(Option('Choose a connection',''),...result.connections.filter(c=>c.hasApiKey).map(c=>Option(`${c.name} · ${c.provider}`,c.id)));if(result.connections.some(c=>c.id===previous))$('connection').value=previous;else if(result.connections.filter(c=>c.hasApiKey).length===1)$('connection').value=result.connections.find(c=>c.hasApiKey).id;status(result.connections.some(c=>c.hasApiKey)?'':'Save an AI connection in Settings to enable category suggestions.','ai-status','alert');}
+    if(!token||globalThis.navigator?.onLine===false){status('Offline · Select a category to compare saved cards.','ai-status');return;}
+    try{const result=await remote(token,'/v1/ai-connections');const previous=$('connection').value;$('connection').replaceChildren(Option('Choose a connection',''),...result.connections.filter(c=>c.hasApiKey).map(c=>Option(`${c.name} · ${c.provider}`,c.id)));if(result.connections.some(c=>c.id===previous))$('connection').value=previous;else if(result.connections.filter(c=>c.hasApiKey).length===1)$('connection').value=result.connections.find(c=>c.hasApiKey).id;status(result.connections.some(c=>c.hasApiKey)?'':'Save an AI connection in Settings to enable category suggestions.','ai-status');}
     catch(error){status(error.message,'ai-status','error');}
   }
   // Both AI calls fall back to something the owner can do by hand, so an
@@ -143,13 +143,13 @@ export function mountCards(root,{credentials,offline,remote}){
   },'form-status');});
   async function refresh(){
     const next=await credentials.get();if(next!==token){generation++;token=next;records=[];edit();clearReading();clearResults();render();}
-    if(!token){status('Connect in Settings to download your cards.','status','alert');return;}
+    if(!token){status('Connect in Settings to download your cards.');return;}
     const result=await request('/v1/cards');records=result.records;clearResults();render();status(result.syncMessage,'status','alert');await connectionList();
   }
   $('refresh').addEventListener('click',()=>run(refresh));
   $('connections').addEventListener('click',()=>run(connectionList,'ai-status'));
   const reload=()=>{if(!busy)return run(refresh);};
-  window.addEventListener('online',reload);window.addEventListener('offline',()=>{controls();status('Offline · Saved cards and manual comparisons are available.','status','alert');});
+  window.addEventListener('online',reload);window.addEventListener('offline',()=>{controls();status('Offline · Saved cards and manual comparisons are available.');});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
   credentials.subscribe?.(()=>{generation++;token='';records=[];edit();clearReading();clearResults();render();reload();});

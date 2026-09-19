@@ -105,6 +105,6 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
     if(token&&!busy)run(async()=>status(await refresh(),'alert'));else if(!token)status('This device was disconnected in another window.','alert','connection-status');
   });
   render();
-  const ready=run(async()=>{token=await credentials.get();$('cloud').open=!token;status(token?await refresh():'Connect in Settings to download your records.','alert');});
+  const ready=run(async()=>{token=await credentials.get();$('cloud').open=!token;status(token?await refresh():'Connect in Settings to download your records.',token?'alert':'');});
   return {ready,isDirty:()=>dirty,refresh:reload};
 }

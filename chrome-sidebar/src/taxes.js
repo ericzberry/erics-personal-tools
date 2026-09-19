@@ -53,7 +53,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   async function refreshStatus({quiet=false}={}){
     return run(async token=>{
       drive=await remote(token,'/v1/drive/status');
-      if(!quiet)status(drive.configured?'':'Google Drive is not configured on the Worker yet.','status','alert');
+      if(!quiet)status(drive.configured?'':'Google Drive is not configured on the Worker yet.');
       if(drive.connected)await loadFiled(token);
       else filed={year:'',files:[]};
       return drive;
@@ -244,12 +244,12 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   }
 
   async function connectionList(){
-    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · filing a document needs the internet.','ai-status','alert');return;}
+    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · filing a document needs the internet.','ai-status');return;}
     try{
       const result=await remote(activeToken,'/v1/ai-connections');
       const usable=result.connections.filter(connection=>connection.hasApiKey);
       if(!usable.some(connection=>connection.id===connectionId))connectionId=usable[0]?.id||'';
-      status(usable.length?'':'Save an AI connection in Settings to have a dropped document named for you.','ai-status','alert');
+      status(usable.length?'':'Save an AI connection in Settings to have a dropped document named for you.','ai-status');
     }catch(error){status(error.message,'ai-status','error');}
   }
 

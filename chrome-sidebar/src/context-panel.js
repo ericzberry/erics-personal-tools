@@ -94,7 +94,7 @@ async function refresh() {
     const data = response?.email;
     clearEmail(data?.text ? data : null);
     const trouble = response?.error || data?.error;
-    setStatus($('email-read-status'), trouble || (email ? 'Latest expanded message' : 'Open a message, then expand it.'), trouble ? 'error' : email ? '' : 'alert');
+    setStatus($('email-read-status'), trouble || (email ? 'Latest expanded message' : 'Open a message, then expand it.'), trouble ? 'error' : '');
     renderEmail();
   } catch {
     clearEmail(); renderEmail(); setStatus($('email-read-status'),'Could not connect to Gmail. Check extension site access, then click Refresh.','error');
@@ -142,4 +142,4 @@ const voice=mountWritingVoice({
 if(extension)$('email-voice').addEventListener('toggle',()=>{if($('email-voice').open)voice.load();});
 
 if (extension) {refresh();setInterval(refresh,1500);chrome.tabs.onActivated.addListener(refresh);chrome.tabs.onUpdated.addListener(refresh);}
-else {const previewTool=new URL(location.href).searchParams.get('tool');showTool(['gmail','home'].includes(previewTool)?previewTool:'football');setStatus($('email-read-status'),'Preview · open the extension on Gmail to read a message.','alert');renderEmail();}
+else {const previewTool=new URL(location.href).searchParams.get('tool');showTool(['gmail','home'].includes(previewTool)?previewTool:'football');setStatus($('email-read-status'),'Preview · open the extension on Gmail to read a message.');renderEmail();}

@@ -27,7 +27,10 @@ vocabulary. A controller says what kind of thing happened —
 turns for as long as the work does. An unknown tone throws, clearing the text
 clears the tone, and a new tone replaces the last rather than stacking on it.
 Never write `status.textContent` or colour a status line from a feature
-stylesheet: both are a second vocabulary, which is what this one replaces.
+stylesheet: both are a second vocabulary, which is what this one replaces. Pass
+no tone for a standing condition — locked, disconnected, offline, or simply
+what is listed — because a tone reports an event, and only an error is drawn
+with a surface of its own.
 `Spinner` and `ProgressBar` are for an indicator beside the thing being worked
 on; `ProgressBar` runs indeterminate until `setProgress` gives it a fraction.
 The meanings are defined in [DESIGN.md](../../../docs/DESIGN.md#status-tones)

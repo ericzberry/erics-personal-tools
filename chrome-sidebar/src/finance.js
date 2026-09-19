@@ -385,7 +385,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   function clear(){
     generation++;records=[];loaded=false;activeToken='';connection='';drafts=[];attachment=null;snapshot=null;snapshotEditing=false;engaged=false;forget();clearForm();renderDrafts();renderAttachment();renderSnapshot();
     status('','snapshot-status');
-    status('Unlock this section with your passkey.','status','alert');
+    status('Unlock this section with your passkey.');
     render();
   }
 
@@ -400,11 +400,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     return connection=usable[0].id;
   }
   async function connectionNote(){
-    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · Add and edit records by hand; reading a statement or a page needs the internet.','ai-status','alert');return;}
+    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · Add and edit records by hand; reading a statement or a page needs the internet.','ai-status');return;}
     try{
       const usable=await usableConnections(activeToken);
       connection=usable.find(entry=>entry.id===connection)?.id||usable[0]?.id||'';
-      status(usable.length?'':'Save an AI connection in Settings to read a statement or an account page.','ai-status','alert');
+      status(usable.length?'':'Save an AI connection in Settings to read a statement or an account page.','ai-status');
     }catch(error){status(error.message,'ai-status','error');}
   }
   async function read(){

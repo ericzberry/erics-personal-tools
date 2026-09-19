@@ -56,6 +56,15 @@ test('progress indicators are constant and say how far along they are when they 
   setProgress(bar,null);assert.ok(bar.classList.contains('progress-bar--indeterminate'));
 });
 
+// Weight follows meaning: only an error is drawn with a surface, so a screen
+// full of ordinary statuses is not a wall of colour blocks.
+test('only an error takes a filled surface; the rest are a mark and a sentence',()=>{
+  const css=readFileSync(new URL('../src/components/status.css',import.meta.url),'utf8');
+  for(const tone of ['alert','progress','success'])
+    assert.equal(new RegExp(`\\.notice--${tone}\\.notice--${tone} \\{[^}]*background:[^}]*(surface|#)`).test(css),false,`${tone} should not fill a surface`);
+  assert.match(css,/\.notice--error\.notice--error \{[^}]*background: var\(--error-surface\)/);
+});
+
 // Every tone differs by more than its colour, and only progress moves.
 test('each tone carries its own mark and the spinner is the only animation',()=>{
   const css=readFileSync(new URL('../src/components/status.css',import.meta.url),'utf8');

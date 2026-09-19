@@ -47,14 +47,24 @@ supplies the look.
 
 | Tone | Means | Look |
 | --- | --- | --- |
-| Alert | Something to decide or act on: changes waiting to sync, a connection to make, a reading to check | Amber `#7b5a1b` on `#f6eeda`, amber rule, `!` in a rounded square |
+| Alert | Something to decide or act on: changes waiting to sync, a reading to check, an update ready | Amber `#7b5a1b` text, `!` in a rounded square |
 | Error | What was asked for did not happen | Red `#8c2f26` on `#f8eae7`, red rule, `×` in a circle |
-| Progress | Work is running right now | Muted forest `#3e564d` on `#eef1ed`, a turning spinner — the only tone that moves |
-| Success | It worked | Green `#245138` on `#e6efe4`, green rule, `✓` in a circle |
+| Progress | Work is running right now | Muted forest `#3e564d` text, a turning spinner — the only tone that moves |
+| Success | It worked | Green `#245138` text, `✓` in a circle |
 
-A status line with no tone is plainly informational — what is listed, what was
-read — and keeps the quiet surface and muted text of an ordinary note. Amber
-means alert, so nothing else may wear it.
+Weight follows meaning. A page of filled colour blocks says everything is
+urgent and therefore nothing is, so the mark and the words carry the tone and
+the line sits on the page's own background. Only an error takes a surface and
+a rule of its own, because only an error has to stop the reading.
+
+A tone reports what just happened or what is happening now. A standing
+condition the screen is already showing takes no tone at all: a locked section
+under its own Unlock button, a disconnected tool asking to be connected, an
+offline note saying what still works, or a capability that needs a connection
+saved first. Those read as quietly as a caption, in muted ink — as does a
+status line that is simply stating what is listed. Amber means alert, so
+nothing else may wear it, and a tone is never spent on a state the reader can
+already see.
 
 Progress is constant: the spinner turns, or the bar advances, for exactly as
 long as the operation lasts. Never announce work with a sentence that appears

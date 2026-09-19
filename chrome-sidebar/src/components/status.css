@@ -7,7 +7,15 @@
                       for exactly as long as the work lasts
      success  green   it worked
 
-   A tone never borrows another tone's colour, and no tone is carried by
+   A tone reports what just happened or what is happening now. A standing
+   condition the screen is already showing — a locked section under its own
+   Unlock button, an empty tool asking to be connected — is not news, and takes
+   no tone at all.
+
+   Weight follows meaning too, because a page of filled blocks says everything
+   is urgent and therefore nothing is. The mark and the words carry the tone;
+   only an error, which interrupts, takes a filled surface and a rule of its
+   own. A tone never borrows another tone's colour, and no tone is carried by
    colour alone: each one has its own mark, and progress is the only one that
    moves. The tones are additive, so an untoned `.notice` keeps its quiet
    informational look. */
@@ -17,18 +25,25 @@
   --progress: #3e564d; --progress-surface: #eef1ed; --progress-line: #a9b9ae;
   --success: #245138;  --success-surface: #e6efe4;  --success-line: #8fae8b;
 }
-.notice--alert, .notice--error, .notice--progress, .notice--success {
+/* The quiet form: a mark, then the sentence, on the page's own background.
+   Doubled, like the colours below, so a status line keeps this shape wherever
+   it is placed. */
+.notice--alert.notice--alert, .notice--error.notice--error,
+.notice--progress.notice--progress, .notice--success.notice--success {
   display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px;
-  border-left: 3px solid; border-radius: 0 8px 8px 0;
-  padding: 11px 13px; font-size: 12px; line-height: 1.5;
+  border: 0; border-radius: 0; background: none;
+  padding: 2px 0; font-size: 12px; line-height: 1.5;
 }
+/* Only an error is given a surface of its own, because only an error has to
+   stop the reading. */
+.notice--error.notice--error { border-left: 3px solid; border-radius: 0 8px 8px 0; padding: 11px 13px; }
 /* Written twice on purpose: a tone outranks whatever colour a feature's own
    stylesheet gives its status line, so the meaning is never overridden by the
    place it happens to appear. */
-.notice--alert.notice--alert { background: var(--alert-surface); border-left-color: var(--alert-line); color: var(--alert); }
+.notice--alert.notice--alert { color: var(--alert); }
 .notice--error.notice--error { background: var(--error-surface); border-left-color: var(--error-line); color: var(--error); }
-.notice--progress.notice--progress { background: var(--progress-surface); border-left-color: var(--progress-line); color: var(--progress); }
-.notice--success.notice--success { background: var(--success-surface); border-left-color: var(--success-line); color: var(--success); }
+.notice--progress.notice--progress { color: var(--progress); }
+.notice--success.notice--success { color: var(--success); }
 /* The mark: shape and glyph differ tone to tone, so the meaning survives a
    monochrome screen and colour-blind reading. */
 .notice--alert::before, .notice--error::before, .notice--success::before {

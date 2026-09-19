@@ -131,7 +131,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
   }
   function clear(){
     generation++;records=[];loaded=false;activeToken='';forget();clearForm();
-    status('Unlock this section with your passkey to load your records.','alert');
+    status('Unlock this section with your passkey to load your records.');
     render();
   }
   $('search').addEventListener('input',render);

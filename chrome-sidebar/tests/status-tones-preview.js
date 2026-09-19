@@ -14,7 +14,10 @@ root.append(Title('Status tones',1));
 for(const tone of STATUS_TONES){
   root.append(Stack([Label(tone,{className:'group-title'}),Notice(examples[tone],{tone})],{className:'settings-group'}));
 }
-root.append(Stack([Label('untoned',{className:'group-title'}),Notice('4 offers · read 2026-09-18')],{className:'settings-group'}));
+// The standing conditions a tone must not be spent on: what the screen is
+// already showing, and what is simply listed.
+root.append(Stack([Label('no tone',{className:'group-title'}),
+  Notice('Locked'),Notice('Connect in Settings to download your records.'),Notice('4 offers · read 2026-09-18')],{className:'settings-group'}));
 const bar=ProgressBar({label:'Saving benefits'});
 root.append(Stack([Label('in place',{className:'group-title'}),
   Stack([Spinner(),Text('Looking up this card…')],{className:'action-group'}),bar],{className:'settings-group'}));

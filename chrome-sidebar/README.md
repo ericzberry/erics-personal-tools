@@ -1123,3 +1123,31 @@ directly. Reviewed in the browser at 380px and 280px through
 `tests/status-tones-preview.html` and the passkey-gate and points-and-miles
 harnesses, where a reading in flight now spins and its outcome lands green or
 amber on the same line.
+
+## A tone is for what just happened, not for what the screen already shows (0.6.120 / mobile 0.1.75)
+
+The first cut of the tones made two mistakes at once, and the locked Finance
+panel showed both: a filled amber block announcing **Locked**, above its own
+**Unlock** button and the sentence explaining what sealed means. Locked is not
+an alert — it is the state the reader is plainly looking at — and a filled
+colour block is far too much weight for a status line, so a screen with a few
+of them reads as though everything is urgent.
+
+So the rule gained two halves it should have had from the start. **A tone
+reports what just happened or what is happening now**; a standing condition —
+locked, disconnected, offline, a capability waiting for a saved connection —
+takes no tone at all and reads as quietly as a caption. And **weight follows
+meaning**: the mark and the words carry the tone, on the page's own
+background. Only an error keeps a surface and a rule of its own, because only
+an error has to stop the reading. An untoned status line is now a line of
+muted text rather than a bordered card.
+
+Twelve standing conditions across the panel lost their amber, starting with
+the passkey gate and the wallet's sealed numbers; a failed attempt and the
+wait for the sheet still speak up, in red and with a spinner.
+
+Validation: the extension suite passes apart from the finance data work in
+flight beside this change, and the tones were re-reviewed at 380px through
+`tests/status-tones-preview.html`, which grew a *no tone* group, and in the
+wallet, where a reading spins and lands as a green check with no block behind
+it.

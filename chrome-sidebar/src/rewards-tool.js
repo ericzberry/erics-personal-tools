@@ -90,10 +90,11 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     root.querySelector('.rewards-wallet').classList.toggle('vault-locked',!open);
     // Open is the quiet state: no banner announcing it, just readable numbers
     // and the controls that still apply. Only a failed attempt speaks up.
-    // A failed attempt is an error; simply being locked is something to act on.
+    // A failed attempt is an error. Being locked is the state the section is
+    // plainly in, so it is said quietly and wears no tone.
     setStatus($('vault-status'),vaultMessage||(open?''
       :available?'Locked · Your passkey is required to show a card number.'
-      :'Locked · This browser cannot use passkeys. Unlock with your recovery code.'),vaultMessage?'error':'alert');
+      :'Locked · This browser cannot use passkeys. Unlock with your recovery code.'),vaultMessage?'error':'');
     $('vault-detail').textContent=open?''
       :'Numbers are sealed with a key only your passkey can derive, so the cloud stores unreadable text. Keep your recovery code safe: without the passkey or that code, a saved number cannot be recovered.';
     $('vault-actions').replaceChildren(...(open
@@ -329,7 +330,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…','progress');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
-  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;balanceConnection='';forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.','alert');render();renderVault();renderPrograms();renderBalances();}
+  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;balanceConnection='';forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
   // The connection list is the only thing this tool reads outside the wallet, so
   // it is fetched once per connection rather than on every automatic sync.
   async function connectionList(){
@@ -342,7 +343,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       $('reward-card-connection').replaceChildren(Option('Choose a connection',''),...usable.map(connection=>Option(`${connection.name} · ${connection.provider}`,connection.id)));
       $('reward-card-connection').value=usable.some(connection=>connection.id===chosen)?chosen:usable.length===1?usable[0].id:'';
       connectionsFor=token;
-      if(!usable.length)cardStatus('Save an AI connection in Settings to look up a card.','alert');
+      if(!usable.length)cardStatus('Save an AI connection in Settings to look up a card.');
     }catch(error){cardStatus(error.message,'error');}
   }
   async function researchCard(name){

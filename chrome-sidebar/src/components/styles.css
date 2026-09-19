@@ -89,10 +89,11 @@ input::placeholder { color: #72786f; }
 .quiet:disabled { color: #7b8077; cursor: default; }
 .footnote { color: var(--muted); font-size: 11px; line-height: 1.6; margin: 13px 0; }
 .footnote:empty { display: none; }
-/* Untoned: plainly informational. Amber now means alert, red error, green
-   success and neutral-in-motion progress, so a status line with no tone must
-   not wear any of their colours. */
-.notice { border-left: 2px solid var(--line); border-radius: 0 8px 8px 0; background: var(--surface); padding: 11px 13px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+/* Untoned: plainly informational, and no more than a line of text. A status
+   line earns a surface only when it is an error; everything else — what is
+   listed, and the state the screen is already in — reads as quietly as a
+   caption. */
+.notice { border: 0; border-radius: 0; background: none; padding: 2px 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .recommendation { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 17px; margin-top: 9px; }
 .recommendation--primary { border-top: 3px solid var(--forest); box-shadow: 0 5px 16px #173e3707; }
 .recommendation .eyebrow { color: #68794f; font-size: 9px; margin: 0 0 10px; }

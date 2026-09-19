@@ -60,7 +60,10 @@ export function mountVaultGate(root,{
       :busy?'Waiting for your passkey…'
       :available?'Locked'
       :'Locked · This browser cannot use passkeys. Use your recovery code.'),
-      message?'error':unlocked?'':busy?'progress':'alert');
+      // Locked is the state the panel is already in, under its own Unlock
+      // button: not news, so no tone. Only a failed attempt and the wait for
+      // the sheet have something to report.
+      message?'error':busy?'progress':'');
     $('detail').hidden=unlocked;
     $('content').hidden=!unlocked;
     // The actions stay put while the passkey sheet is up — disabled, not

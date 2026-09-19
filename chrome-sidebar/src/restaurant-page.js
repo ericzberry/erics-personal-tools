@@ -179,4 +179,4 @@ $('restaurant-stop').addEventListener('click',()=>{
 for(const id of ['mode','city','flexible','flex-dates'])$('restaurant-'+id).addEventListener('input',visibility);
 fill();
 if(api){try{const saved=await api.storage.local.get('restaurantSearchPreferences');fill(saved.restaurantSearchPreferences);}catch{status('Could not load saved preferences. Using defaults.','alert');}await loadConnections();}
-else{$('restaurant-connection').replaceChildren(Option('Extension required',''));connectionStatus('Preview only. Open the installed extension for live search.');status('Interface preview · Live searches require the Chrome extension.','alert');}
+else{$('restaurant-connection').replaceChildren(Option('Extension required',''));connectionStatus('Preview only. Open the installed extension for live search.');status('Interface preview · Live searches require the Chrome extension.');}
