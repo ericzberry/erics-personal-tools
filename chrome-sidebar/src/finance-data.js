@@ -622,28 +622,33 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
   const portfolios=portfoliosOf(records),holdings=holdingsOf(records),filed=capitalOf(records);
   const madePortfolios=[],madeHoldings=[],notes=[],rows=[];
   const nextNumber=(existing,made)=>Math.max(0,...existing.map(entry=>entry.number),...made.map(entry=>entry.number))+1;
-  // Two names match when either contains the other, the way a person reading
-  // "Berry Family Trust" on a statement recognizes the portfolio they called
-  // "The Berry Family Trust u/a 2019".
-  const alike=(left,right)=>{
-    const a=matchKey(left),b=matchKey(right);
-    return !!a&&!!b&&(a.includes(b)||b.includes(a));
-  };
-  // A two-way substring match is a coin flip once several names share a stem.
-  // "Berry" is inside the Berry Family Trust, the Berry 2020 Descendants'
-  // Irrevocable Trust, Eric Berry and the Eric and Ariana Berry Estate, and
-  // nothing about the four says which one a statement addressed to "Berry"
-  // belongs to. So the name has to answer exactly, or be the only thing it
-  // could be; anything else names nobody and falls through to proposing.
-  // A capital account filed into the wrong trust is invisible from then on. A
-  // duplicate sitting in the review, waiting to be pointed at the right one,
-  // is not.
+  // What a statement names has to answer exactly, or be the only thing it could
+  // be — and containment only ever runs one way: the name on the statement may
+  // be a shorter form of what the ledger calls the same thing, never a longer
+  // one.
+  //
+  // Both halves of that are load-bearing. "Berry" sits inside the Berry Family
+  // Trust, the Berry 2020 Descendants' Irrevocable Trust, Eric Berry and the
+  // Eric and Ariana Berry Estate, and nothing about the four says which a
+  // statement addressed to "Berry" belongs to. And a holder carrying more
+  // identity than the portfolio name — "Maisie Synthetic Berry 2021 Irrevocable
+  // Trust" against a portfolio called "Synthetic Berry" — is a different party
+  // altogether, however much of the name they share; her capital account in his
+  // IRA is a mistake nobody would ever see. The same asymmetry does the same
+  // work for the fund: a statement for "Acme Fund III" must not land on the
+  // holding called "Acme Fund", while a statement for "Acme Fund" may land on
+  // "Acme Fund III, L.P." only if that is the one candidate.
+  //
+  // Anything short of that names nobody and falls through to proposing. A
+  // capital account filed into the wrong trust is invisible from then on; a
+  // duplicate sitting in the review, waiting to be pointed at the right one, is
+  // not.
   const bestMatch=(name,candidates)=>{
     const key=matchKey(name);
     if(!key)return null;
     const exact=candidates.find(entry=>matchKey(entry.name)===key);
     if(exact)return exact;
-    const near=candidates.filter(entry=>alike(name,entry.name));
+    const near=candidates.filter(entry=>matchKey(entry.name).includes(key));
     return near.length===1?near[0]:null;
   };
   // Whose it is. A capital account statement is addressed to its partner by
@@ -703,7 +708,9 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
     const running=(stated,period,before,what)=>{
       if(stated!==null)return stated;
       if(period===null)return before;
-      notes.push(`${statement.name}: the statement showed ${what} for the period only, so it was added to ${previous?`the ${previous.asOf} figure`:'nothing filed before it'}.`);
+      notes.push(previous
+        ? `${statement.name}: the statement showed ${what} for the period only, so it was added to the ${previous.asOf} figure.`
+        : `${statement.name}: the statement showed ${what} for the period only, and nothing is filed before it, so that is the whole amount to date.`);
       return Math.round((before+period)*100)/100;
     };
     const contributed=running(statement.contributed,statement.periodContributed,previous?.contributed||0,'contributions');

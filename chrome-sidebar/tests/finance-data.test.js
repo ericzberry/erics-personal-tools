@@ -430,6 +430,19 @@ test('a statement nobody can place proposes rather than guessing, and names the 
   const fresh=foldCapital(statement('Brand New SPV','The Celsie Holdings LLC'),records,{today:'2026-10-01'});
   assert.equal(registrationLabel(fresh.portfolios[0].kind),'Entity');
 
+  // A holder carrying more identity than the portfolio name is a different
+  // party, however much of the name they share. Maisie's trust must not land
+  // in Eric's IRA — a capital account filed there is invisible from then on.
+  const child=foldCapital(statement('Brand New SPV','Maisie Berry 2021 Irrevocable Trust'),
+    [...ledger({...trust,id:'p3'})],{today:'2026-10-01'});
+  assert.equal(child.rows[0].portfolioIsNew,true,'“Eric Berry” sits inside her name and is not her');
+  assert.equal(child.portfolios[0].name,'Maisie Berry 2021 Irrevocable Trust');
+  assert.equal(registrationLabel(child.portfolios[0].kind),'Trust');
+  // The shorter form of the same title still matches, which is the direction
+  // that is safe: the ledger holds the fuller legal name.
+  const fuller=[...ledger(),{row:'portfolio',number:5,name:'The Berry Family Trust u/a 2019',kind:5,currency:'USD',id:'p5'}];
+  assert.equal(foldCapital(statement('Brand New SPV','Berry Family Trust'),fuller,{today:'2026-10-01'}).rows[0].portfolio,5);
+
   // The same rule for the investment: a statement for "Acme" fits both funds
   // and so belongs to neither until somebody says which.
   const ambiguous=foldCapital(statement('Acme','Berry Family Trust'),records,{today:'2026-10-01'});

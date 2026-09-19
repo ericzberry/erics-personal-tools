@@ -1309,3 +1309,25 @@ services, and what a dropped file leaves behind: read, half read, and not read
 at all. The phone's own shell was not driven for this; the view is the shared
 component reviewed in the sidebar harness, and the mobile suite covers the
 capability. Archive: `release/erics-sidebar-0.6.126.zip`.
+
+## A statement carrying more of a name than the portfolio is somebody else (0.6.127 / mobile 0.1.81)
+
+Reviewing the ledger at sidebar width caught a capital account statement
+addressed to *Maisie Synthetic Berry 2021 Irrevocable Trust* matching a
+portfolio called *Synthetic Berry* — a child's trust filed into an IRA, and the
+one mistake in this feature nobody would ever see afterwards. The names shared a
+stem and "Synthetic Berry" was the only portfolio that fitted, so the
+only-candidate rule accepted it.
+
+Containment now runs one way. A name on a statement may be a **shorter** form of
+what the ledger calls the same thing — "Berry Family Trust" against "The Berry
+Family Trust u/a 2019" — and never a longer one, because a holder carrying more
+identity than the portfolio name is a different party however much of the name
+they share. The same asymmetry does the same work for the fund: a statement for
+"Acme Fund III" no longer lands on a holding called "Acme Fund", while a
+statement for "Acme Fund" may land on "Acme Fund III, L.P." if that is the one
+candidate. Anything short of that proposes instead and says so on the row.
+
+A first statement showing only the period's contributions now says nothing was
+filed before it rather than reporting that the figure was added to nothing.
+Archive: `release/erics-sidebar-0.6.127.zip`.
