@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,
   parseFinanceUpdates,foldReadings,financeAttention,legacyLedger,titledOwner,titledHolder,holdsManyTitles,
   institutionName,registrationLabel,
-  markRef,portfolioRef,parseRef,dateNumber,dateText,classById,heldOn,MAX_PORTFOLIOS} from '../src/finance-data.js';
+  markRef,portfolioRef,parseRef,dateNumber,dateText,classById,heldOn,MAX_PORTFOLIOS,
+  holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel} from '../src/finance-data.js';
 
 const ESTATE='Eric and Ariana Berry Estate';
 const estate={row:'portfolio',number:1,name:ESTATE,kind:1,currency:'USD'};
@@ -281,4 +282,166 @@ test('a record with no owner is titled by its institution on the way across',()=
     {name:'Rollover IRA',institution:'Charles Schwab',kind:'retirement',owner:'',currency:'USD',value:1,asOf:'2026-09-19',history:'[]'}
   ]);
   assert.deepEqual(portfolios.map(entry=>entry.name),[ESTATE,'Eric Berry']);
+});
+
+// ── Direct investments ────────────────────────────────────────────────────
+const TRUST='Berry Family Trust';
+const trust={row:'portfolio',number:3,name:TRUST,kind:5,currency:'USD'};
+const holding=(number,name,vehicle,portfolio,extra={})=>({
+  ...normalizeFinance({row:'holding',number,portfolio,name,vehicle,class:classById('pe').code,...extra}),id:holdingRef(number)});
+const capital=(entry)=>({...normalizeFinance({row:'capital',...entry}),id:capitalRef(entry)});
+
+test('an investment and its capital account are their own rows, addressed apart from every other',()=>{
+  const fund=normalizeFinance({row:'holding',number:1,portfolio:3,name:'Acme Ventures Fund III, L.P.',vehicle:1,class:4,stated:3});
+  assert.deepEqual(Object.keys(fund),['row','number','portfolio','name','vehicle','class','stated']);
+  const statement=normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:'1100000.004',contributed:800000,distributed:250000,commitment:1000000});
+  assert.deepEqual(statement,{row:'capital',holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000});
+  // A commitment signed with nothing called against it yet is a whole record.
+  assert.equal(normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:0,commitment:1000000}).contributed,0);
+
+  assert.equal(holdingRef(7),'h7');
+  assert.equal(capitalRef({holding:7,asOf:'2026-06-30'}),'h7-20260630');
+  assert.deepEqual(parseRef('h7'),{row:'holding',number:7});
+  assert.deepEqual(parseRef('h7-20260630'),{row:'capital',holding:7,asOf:'2026-06-30'});
+  // Only a figure begins with a digit, so no prefix can be mistaken for another.
+  assert.deepEqual(parseRef('3-4-20260630'),{row:'mark',portfolio:3,class:4,asOf:'2026-06-30'});
+  for(const bad of ['h0','h7-2026','h7-20260630-x','hh7'])assert.equal(parseRef(bad),null,bad);
+
+  for(const change of [{vehicle:99},{vehicle:'fund'},{class:23},{name:'  '},{portfolio:0}])
+    assert.throws(()=>normalizeFinance({row:'holding',number:1,portfolio:3,name:'A fund',vehicle:1,class:4,...change}),undefined,JSON.stringify(change));
+  for(const change of [{value:-1},{asOf:''},{holding:0},{contributed:'abc'}])
+    assert.throws(()=>normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:1,...change}),undefined,JSON.stringify(change));
+});
+
+test('a position states what it cost as well as what it is worth, and counts as its class',()=>{
+  const records=ledger(
+    {...trust,id:'p3'},
+    holding(1,'Acme Ventures Fund III, L.P.',1,3),
+    capital({holding:1,asOf:'2026-03-31',value:900000,contributed:750000,distributed:100000,commitment:1000000}),
+    capital({holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000})
+  );
+  const [position]=positionsOn(records);
+  // The newest statement on or before the date answers, and nothing is
+  // interpolated between two of them.
+  assert.equal(position.value,1100000);
+  assert.equal(position.unfunded,200000);
+  assert.equal(position.multiple,1.69,'(1,100,000 + 250,000) / 800,000');
+  assert.equal(positionsOn(records,'2026-04-01')[0].value,900000);
+  // An investment with no statement yet is still a position, worth nothing.
+  const unstated=positionsOn(ledger({...trust,id:'p3'},holding(2,'Signed last week',2,3)))[0];
+  assert.equal(unstated.value,0);
+  assert.equal(unstated.multiple,null,'a multiple of nothing is a question nobody has asked, not infinity');
+
+  const summary=financeSummary(records,{currency:'USD',today:'2026-07-01'});
+  assert.equal(summary.net,1100000,'a position is an asset in its portfolio like any other figure');
+  assert.deepEqual(summary.byClass.map(row=>[row.label,row.total]),[['Private equity',1100000]]);
+  assert.deepEqual(summary.byPortfolio.map(row=>[row.label,row.total]),[[TRUST,1100000]]);
+  assert.deepEqual(summary.byRegistration.map(row=>row.label),['Trust']);
+  assert.deepEqual(summary.positions,{count:1,committed:1000000,contributed:800000,distributed:250000,value:1100000,unfunded:200000});
+  // The day a statement was struck is a day the series has a point on.
+  assert.deepEqual(netWorthSeries(records,{currency:'USD'}).map(point=>[point.asOf,point.net]),
+    [['2026-03-31',900000],['2026-06-30',1100000]]);
+  const group=groupFinanceRecords(records).find(entry=>entry.portfolio.number===3);
+  assert.equal(group.positions.length,1);
+  assert.equal(group.total,1100000);
+});
+
+test('what the paperwork calls itself is kept beside what the ledger files it as',()=>{
+  const records=ledger({...trust,id:'p3'},
+    // Sold as a fund, filed as the single-company SPV it actually is.
+    holding(1,'Acme Opportunity Fund I',3,3,{stated:1}),
+    capital({holding:1,asOf:'2026-06-30',value:500000,contributed:500000,distributed:0,commitment:500000}));
+  const [position]=positionsOn(records);
+  assert.equal(position.disputed,true);
+  assert.equal(vehicleLabel(position.holding.vehicle),'SPV Investment');
+  assert.equal(vehicleLabel(position.holding.stated),'Direct Fund Investment');
+  // Agreement, or nothing stated at all, is not a dispute.
+  assert.equal(positionsOn(ledger({...trust,id:'p3'},holding(2,'Plain',1,3,{stated:1})))[0].disputed,false);
+  assert.equal(positionsOn(ledger({...trust,id:'p3'},holding(2,'Plain',1,3)))[0].disputed,false);
+});
+
+test('a capital account statement is read, never totalled, and an unreadable one is dropped',()=>{
+  const {capital,readings}=parseFinanceUpdates({readings:[],unread:'',capital:[
+    {fund:'Acme Ventures Fund III, L.P.',vehicle:'fund',holder:'Berry Family Trust',asOf:'2026-09-30',
+      value:1200000,commitment:1000000,distributed:250000,periodContributed:50000,confidence:'high',reason:'Q3 statement.'},
+    // No date, so no statement: the same rule every other reading follows.
+    {fund:'Undated Partners',asOf:'',value:5},
+    // One bad entry cannot discard the rest.
+    {fund:'',asOf:'2026-09-30',value:5},
+    'nonsense'
+  ]});
+  assert.equal(readings.length,0);
+  assert.equal(capital.length,1);
+  // An absent figure and a figure of zero are different answers.
+  assert.equal(capital[0].contributed,null,'no cumulative contributions were stated');
+  assert.equal(capital[0].periodContributed,50000);
+  assert.equal(capital[0].periodDistributed,null);
+  assert.equal(capital[0].stated,'fund');
+  assert.equal(capital[0].holder,'Berry Family Trust');
+  // Nothing at all still refuses, rather than reporting an empty reading.
+  assert.throws(()=>parseFinanceUpdates({readings:[],capital:[],unread:''}));
+});
+
+test('a statement ties to the investment it names, and its period movement is added on the device',()=>{
+  const records=ledger({...trust,id:'p3'},
+    holding(1,'Acme Ventures Fund III, L.P.',1,3),
+    capital({holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000}));
+  const {capital:read}=parseFinanceUpdates({readings:[],unread:'',capital:[{
+    fund:'Acme Ventures Fund III',vehicle:'fund',holder:'Berry Family Trust',asOf:'2026-09-30',
+    value:1200000,commitment:1000000,distributed:250000,periodContributed:50000,confidence:'high',reason:'Q3.'}]});
+  const {rows,portfolios,holdings,notes}=foldCapital(read,records,{today:'2026-10-01'});
+  assert.equal(portfolios.length,0,'the trust already exists and is matched by the holder line');
+  assert.equal(holdings.length,0,'so does the fund, matched by its own name');
+  const [row]=rows;
+  assert.equal(row.holding,1);
+  assert.equal(row.portfolio,3);
+  assert.equal(row.value,1200000);
+  // 800,000 already called, plus the 50,000 this period. AI reported the
+  // period; the device did the addition.
+  assert.equal(row.contributed,850000);
+  assert.equal(row.distributed,250000);
+  assert.match(notes.join(' '),/period only, so it was added to the 2026-06-30 figure/);
+  // Filing the same quarter twice reaches the same row and the same numbers.
+  assert.deepEqual(foldCapital(read,records,{today:'2026-10-01'}).rows[0],row);
+});
+
+test('a statement nobody can place proposes rather than guessing, and names the trust it is addressed to',()=>{
+  const sibling={row:'portfolio',number:4,name:'Berry 2020 Descendants Irrevocable Trust',kind:5,currency:'USD',id:'p4'};
+  const records=[...ledger({...trust,id:'p3'},sibling),
+    holding(1,'Acme Fund',1,3),
+    holding(2,'Acme Fund III',1,3)];
+  const statement=(fund,holder)=>parseFinanceUpdates({readings:[],unread:'',capital:[
+    {fund,holder,asOf:'2026-09-30',value:100,contributed:100,distributed:0,commitment:100,vehicle:'spv'}]}).capital;
+
+  // "Berry" alone fits three portfolios. A misfiled capital account is
+  // invisible afterwards, so nothing is picked: a new one is proposed, said
+  // plainly, and corrected on the row.
+  const vague=foldCapital(statement('Brand New SPV','Berry'),records,{today:'2026-10-01'});
+  assert.equal(vague.portfolios.length,1);
+  assert.match(vague.notes.join(' '),/no portfolio matched “Berry” closely enough/);
+  assert.equal(vague.rows[0].portfolioIsNew,true);
+
+  // A name that does fit one fits it exactly.
+  const placed=foldCapital(statement('Brand New SPV','Berry 2020 Descendants Irrevocable Trust'),records,{today:'2026-10-01'});
+  assert.equal(placed.portfolios.length,0);
+  assert.equal(placed.rows[0].portfolio,4);
+  // A trust that does not exist yet is proposed as a trust, because its name
+  // says so — the same registration reading the account titles use.
+  const fresh=foldCapital(statement('Brand New SPV','The Celsie Holdings LLC'),records,{today:'2026-10-01'});
+  assert.equal(registrationLabel(fresh.portfolios[0].kind),'Entity');
+
+  // The same rule for the investment: a statement for "Acme" fits both funds
+  // and so belongs to neither until somebody says which.
+  const ambiguous=foldCapital(statement('Acme','Berry Family Trust'),records,{today:'2026-10-01'});
+  assert.equal(ambiguous.rows[0].isNew,true,'two candidates fit equally, so neither is chosen');
+  // A name that answers exactly answers, even though the longer one also fits.
+  assert.equal(foldCapital(statement('Acme Fund','Berry Family Trust'),records,{today:'2026-10-01'}).rows[0].holding,1);
+  const exact=foldCapital(statement('Acme Fund III','Berry Family Trust'),records,{today:'2026-10-01'});
+  assert.equal(exact.rows[0].holding,2);
+  assert.equal(exact.rows[0].isNew,false);
+  // The fund says it is an SPV and the ledger has it as a fund. Saving the
+  // statement does not quietly reclassify it; the disagreement is reported.
+  assert.equal(exact.rows[0].stated,3);
+  assert.equal(exact.rows[0].vehicle,1);
+  assert.match(exact.notes.join(' '),/calls this spv investment and it is filed as direct fund investment/);
 });

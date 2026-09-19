@@ -485,11 +485,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       const detail=[money(position.value,portfolio.currency),
         current?`as of ${current.asOf}`:'no statement yet',
         holding.pending?'Waiting to sync':''].filter(Boolean).join(' · ');
+      // The row's own title already says how it is filed, so the claim gets a
+      // line of its own saying only the part the title cannot: what the
+      // paperwork calls it. Run into the figures it reads as one of them.
       const notes=[positionDetail(position,portfolio.currency),
-        // The row's own title already says how it is filed, so the note says
-        // only the part the title cannot: what its paperwork claims it is.
-        position.disputed?`The statement calls this a ${vehicleLabel(holding.stated)}.`:''
-      ].filter(Boolean).join(' — ');
+        position.disputed?`The statement calls this a ${vehicleLabel(holding.stated)}.`:''];
       return Stack([RecordRow({title:`${holding.name} · ${vehicleShort(holding.vehicle)}`,detail,notes,actions}),past,confirm]);
     };
     $('list').replaceChildren(...(groups.length?groups.map(group=>{

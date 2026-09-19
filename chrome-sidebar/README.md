@@ -1202,3 +1202,67 @@ ownership share, rate, commitments, tags, notes, and the account number sealed
 with the passkey, since there is no account entity left to hang one on. Finance
 is still passkey-gated. Reviewed at 380px and 280px in the passkey-gate harness,
 where a liability now states its own sign.
+
+## A fund is not a line in the private equity total (0.6.125 / mobile 0.1.79)
+
+Four numbers per figure is right for a brokerage account and wrong for one kind
+of holding. A direct investment in a fund, a company or an SPV is a named thing
+with a history of its own: what was committed, how much of that has been called,
+how much has come back, and what the last capital account statement says it is
+worth. Those four travel together or they say nothing — a value with no called
+capital beside it cannot tell you whether it is a win — and none of them
+survives being folded into a private equity total. Commitments were one of the
+things the previous release gave up; they come back here as a position's own
+rows rather than as fields on every account that never had one.
+
+**A position is two rows.** `finance_holdings` is the investment: the portfolio
+that holds it, its name, the kind of vehicle it is, the kind its paperwork
+claims it is, and the asset class its value counts under. `VEHICLES` names the
+three kinds — **Direct Fund Investment**, **Direct Equity Investment**, **SPV
+Investment**. `finance_capital` is one statement: the ending capital account
+value, contributions to date, distributions to date, the commitment, and the
+date they were struck — four integers in cents, keyed by investment and date,
+so re-filing a quarter replaces its own row exactly as a figure does. Its
+revision is its own content, so no revision column is stored.
+
+**What a document calls itself is kept apart from what the ledger files it as**,
+because the two disagree. A vehicle sold as a fund is frequently a
+single-company SPV in a fund's paperwork, so `vehicle` is the settled answer and
+`stated` is the claim. A position whose two differ says so on its own line, and
+saving a statement never reclassifies the investment: which one is true is the
+owner's call.
+
+**Reading a capital account statement is the same errand as reading anything
+else.** Drop the file without saying what it is; the reading fills `capital`
+instead of `readings` and `foldCapital` does the arithmetic on the device. The
+model is told to report each figure under the heading the statement prints it
+under and never to add a period figure to a cumulative one, derive unfunded
+commitment, or compute a multiple. Cumulative figures are what is stored, so the
+newest row answers on its own; a statement showing only the period's movement is
+added to the last filed figure here, and the review row says that it was.
+
+**A statement is tied to its investment by the name it prints, and to its
+portfolio by the partner it is addressed to** — exact name first, then only if
+it is the single candidate that fits. "Berry" is inside the Berry Family Trust,
+the Berry 2020 Descendants' Irrevocable Trust, Eric Berry and the Eric and
+Ariana Berry Estate; anything short of a unique answer proposes instead and says
+so on the row, because a capital account filed into the wrong trust is invisible
+from then on while a duplicate in the review is not.
+
+Positions count in their portfolio and asset class on the same step function as
+every other figure, so the totals, breakdowns, value over time and stale check
+needed no second set of any of it. **Unfunded** sits beside the totals when
+there is any — it is not a liability, nobody can demand all of it today — and
+Committed, Funded, Returned, Unfunded and Value sit under **Private
+investments** in the breakdown. Only the parts that have happened are shown: a
+direct purchase has no commitment, and an investment signed last week has none
+of it. **Record an investment** is a second form because it is a second job, and
+an investment with no statement behind it is a whole record — that is how a
+commitment signed this morning is registered, counting as nothing until a figure
+says otherwise.
+
+Reviewed at 380px and 280px in the passkey-gate harness, which now carries a
+trust holding a fund, an SPV whose paperwork disagrees with it, and an
+investment with no statement yet. An amount no longer breaks across lines, and a
+record row carries more than one note without the last reading as the next
+record's first. Archive: `release/erics-sidebar-0.6.125.zip`.

@@ -71,6 +71,63 @@ test('the ledger authenticates, keeps only numbers in its figures, and rejects s
   assert.equal((await (await request(env,'/v1/finance')).json()).records.length,0);
 });
 
+test('an investment keeps its own identity, its capital accounts are four integers, and deleting takes both',async()=>{
+  const {sql,env}=environment('finance-schema.sql');
+  await request(env,'/v1/finance/p1','PUT',{row:'portfolio',name:'Berry Family Trust',kind:5,currency:'USD',revision:null});
+  const fund={row:'holding',portfolio:1,name:'Acme Ventures Fund III, L.P.',vehicle:1,class:4,stated:3,revision:null};
+
+  // A capital account cannot be filed into an investment that does not exist,
+  // and an investment cannot be filed into a portfolio that does not.
+  assert.equal((await request(env,'/v1/finance/h1-20260630','PUT',{row:'capital',value:5,revision:null})).status,400);
+  assert.equal((await request(env,'/v1/finance/h1','PUT',{...fund,portfolio:9})).status,400);
+  for(const change of [{vehicle:99},{name:''},{class:23}])
+    assert.equal((await request(env,'/v1/finance/h1','PUT',{...fund,...change})).status,400,JSON.stringify(change));
+
+  const holding=(await (await request(env,'/v1/finance/h1','PUT',fund)).json()).record;
+  assert.deepEqual([holding.id,holding.number,holding.portfolio,holding.vehicle,holding.stated],['h1',1,1,1,3]);
+  // The investment's name is text, so it is encrypted exactly as a portfolio's
+  // is. Its portfolio stays readable because a delete has to find what it held.
+  const stored=sql.prepare('SELECT portfolio, value FROM finance_holdings').get();
+  assert.equal(stored.portfolio,1);
+  assert.equal(stored.value.includes('Acme'),false);
+
+  const statement={row:'capital',value:1100000,contributed:800000,distributed:250000,commitment:1000000,revision:null};
+  const filed=(await (await request(env,'/v1/finance/h1-20260630','PUT',statement)).json()).record;
+  assert.deepEqual([filed.asOf,filed.value,filed.contributed,filed.distributed,filed.commitment],
+    ['2026-06-30',1100000,800000,250000,1000000]);
+  // Four integers in cents and nothing else — no name, no words, no history blob.
+  assert.deepEqual(sql.prepare('SELECT * FROM finance_capital').all().map(row=>({...row})),
+    [{holding:1,as_of:20260630,cents:110000000,contributed:80000000,distributed:25000000,commitment:100000000}]);
+  // Its revision is its own content, so no revision column is stored and the
+  // one thing optimistic concurrency is for is still caught.
+  assert.equal(filed.revision,'110000000:80000000:25000000:100000000');
+  assert.equal((await request(env,'/v1/finance/h1-20260630','PUT',{...statement,value:1})).status,409);
+  const corrected=(await (await request(env,'/v1/finance/h1-20260630','PUT',{...statement,value:1150000,revision:filed.revision})).json()).record;
+  assert.equal(corrected.value,1150000);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_capital').get().n,1,'a replaced date is one row, not two');
+
+  // A second quarter is filed alongside the first rather than replacing it.
+  await request(env,'/v1/finance/h1-20260930','PUT',{...statement,value:1200000,contributed:850000});
+  const records=(await (await request(env,'/v1/finance')).json()).records;
+  assert.equal(records.find(record=>record.row==='holding').name,'Acme Ventures Fund III, L.P.');
+  assert.deepEqual(records.filter(record=>record.row==='capital').map(record=>record.asOf),['2026-09-30','2026-06-30']);
+
+  // Deleting the investment takes its capital accounts; deleting the portfolio
+  // takes the investment too. A row nothing can name is a row nothing can
+  // reach or total.
+  const again=(await (await request(env,'/v1/finance/h1','PUT',{...fund,revision:holding.revision})).json()).record;
+  assert.equal((await request(env,'/v1/finance/h1','DELETE',{revision:'stale'})).status,409);
+  assert.equal((await request(env,'/v1/finance/h1','DELETE',{revision:again.revision})).status,200);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_capital').get().n,0);
+
+  await request(env,'/v1/finance/h2','PUT',{...fund,name:'Second'});
+  await request(env,'/v1/finance/h2-20260630','PUT',statement);
+  const portfolio=(await (await request(env,'/v1/finance')).json()).records.find(record=>record.row==='portfolio');
+  assert.equal((await request(env,'/v1/finance/p1','DELETE',{revision:portfolio.revision})).status,200);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_holdings').get().n,0);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_capital').get().n,0);
+});
+
 test('the record-per-account ledger is migrated by an explicit, re-runnable backfill',async()=>{
   const {sql,env}=environment('finance-schema.sql');
   sql.exec('CREATE TABLE finance_records (id TEXT PRIMARY KEY, value TEXT NOT NULL, revision TEXT NOT NULL, updated_at TEXT NOT NULL)');

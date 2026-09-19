@@ -120,7 +120,11 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   figures the ledger keeps — `legacyLedger` for the retrofit, and
   `ACCOUNT_TITLES`, the portfolio an institution settles by itself — one title,
   overridden by registration where law requires it, or a `holders` roster where
-  one sign-on covers several titles and the account names which),
+  one sign-on covers several titles and the account names which; plus `VEHICLES`
+  and the direct-investment rows — a holding and its dated capital accounts —
+  with `positionsOn` for what a position is worth and what it cost, and
+  `foldCapital`, which ties a capital account statement to the investment it
+  names),
   `personal-data.js`/`personal-offline.js`,
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored),
@@ -253,7 +257,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   be sent an image — never copy model IDs into features).
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
-  (`finance_portfolios`, `finance_marks`), `personal-schema.sql` (`personal_records`),
+  (`finance_portfolios`, `finance_marks`, `finance_holdings`, `finance_capital`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),

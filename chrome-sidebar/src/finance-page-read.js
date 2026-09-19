@@ -71,12 +71,19 @@ export function readAccountPage() {
     for (let step = index - 1; step >= 0 && previous.length < 3; step--) if (lines[step]) previous.push(lines[step]);
     return previous;
   };
+  // The nearest line above a figure is usually the name it belongs to — but a
+  // page that groups accounts by who holds them puts the holder on the line
+  // above that one, and at a bank holding a family's trusts, an LLC and a
+  // child's account, that heading is the only thing saying whose balance this
+  // is. So the nearest two come along, oldest first, and a line already just
+  // kept is not repeated for the next figure under the same heading.
+  const fresh = label => !kept.slice(-4).some(entry => entry.toLowerCase() === label.toLowerCase());
   lines.forEach((line, index) => {
     if (!wanted(line)) return;
     const previous = above(index);
     if (previous.some(entry => MARKET.test(entry))) return;
-    const [label] = previous;
-    if (label && label.length <= 80 && !MONEY.test(label) && !blocked(label)) push(label);
+    const labels = previous.slice(0, 2).filter(entry => entry.length <= 80 && !MONEY.test(entry) && !blocked(entry)).reverse();
+    for (const label of labels) if (fresh(label)) push(label);
     push(line);
   });
 

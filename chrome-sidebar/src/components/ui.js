@@ -359,8 +359,11 @@ export const SettingsItem=(title,children=[])=>Disclosure(title,children,{classN
 export const SettingsLink=(title,href)=>Link(title,href,{className:'settings-link'});
 
 // Flat saved-record pattern shared by personal trackers.
+// `notes` takes one line or several. Several stay inside the row rather than
+// being stacked under it, where the last one reads as the next record's first.
 export function RecordRow({title,detail,notes='',actions=[]}) {
-  return Section([Strong(title),Note(detail),notes?Text(notes):null,ActionGroup(actions,{compact:true})],{className:'record-row'});
+  const lines=(Array.isArray(notes)?notes:[notes]).filter(Boolean);
+  return Section([Strong(title),Note(detail),...lines.map(line=>Text(line)),ActionGroup(actions,{compact:true})],{className:'record-row'});
 }
 
 export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true});
