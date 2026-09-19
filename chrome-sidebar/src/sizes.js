@@ -1,6 +1,6 @@
 import {SizesView,SizeGroup} from './components/sizes.js';
 import {RecordRow,Button,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
-import {normalizeSize,groupSizes} from './size-data.js';
+import {normalizeSize,groupSizes,classifySize,sizeLine,brandNames} from './size-data.js';
 const fields=['brand','item','size','fit'];
 
 export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged=()=>{}}){
@@ -25,7 +25,7 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
     $('editor-title').textContent=`Editing ${record.item}`;
     $('editor').open=true;$('item').focus();
   }
-  function row(record){
+  function row(record,names){
     const remove=action('Delete',()=>{confirmation.hidden=false;yes.focus();},'danger-subtle');
     const yes=action('Delete from all devices',()=>save(record,'DELETE'),'danger');
     const no=action('Keep size',()=>{confirmation.hidden=true;remove.focus();});
@@ -33,13 +33,16 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
     const actions=[action('Edit',()=>edit(record),'subtle'),remove];
     if(record.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))));
     const detail=[record.fit,record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
-    return Stack([RecordRow({title:`${record.item} · ${record.size}`,detail,actions}),confirmation]);
+    return Stack([RecordRow({title:sizeLine(record,names),detail,actions}),confirmation]);
   }
   function render(){
     const query=$('search').value.trim().toLowerCase();
-    const matching=records.filter(record=>[record.brand,record.item,record.size,record.fit].join(' ').toLowerCase().includes(query));
+    const names=brandNames(records);
+    // The garment is searchable although it is never typed: a neck is found by
+    // looking for a shirt, which is how the question usually arrives.
+    const matching=records.filter(record=>[record.brand,record.item,record.size,record.fit,classifySize(record).garment].join(' ').toLowerCase().includes(query));
     $('list').replaceChildren(...(matching.length
-      ?groupSizes(matching).map(group=>SizeGroup(group.brand,group.records.map(row)))
+      ?groupSizes(matching).map(group=>SizeGroup(group.garment,group.records.map(record=>row(record,names))))
       :[Note(!loaded?'':records.length?'No size matches that.':'No sizes yet. Say one above, or add it below.')]));
     for(const key of fields)$(key).disabled=busy||!loaded;
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;

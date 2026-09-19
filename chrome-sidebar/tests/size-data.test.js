@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeSize,groupSizes,sizeBrands,describeSize,GENERAL_BRAND,SIZE_ITEM_MAX,SIZE_VALUE_MAX} from '../src/size-data.js';
+import {normalizeSize,groupSizes,sizeBrands,sizeLine,brandNames,describeSize,OTHER_GARMENT,SIZE_ITEM_MAX,SIZE_VALUE_MAX} from '../src/size-data.js';
 const base={brand:'Lululemon',item:'ABC joggers',size:'M'};
 
 test('a size is a brand, what it is for, the size, and how it fits',()=>{
@@ -13,20 +13,30 @@ test('a size is a brand, what it is for, the size, and how it fits',()=>{
     assert.throws(()=>normalizeSize({...base,...change}),undefined,JSON.stringify(change));
 });
 
-test('measurements come first, then brands, however the brand was typed',()=>{
+test('a garment heads its run, the general size leads it, brands follow',()=>{
   const records=[
     normalizeSize({brand:'Patagonia',item:'Fleece',size:'L'}),
     normalizeSize({brand:'',item:'Waist',size:'33 in'}),
     normalizeSize({brand:'lululemon',item:'Joggers',size:'M'}),
     normalizeSize({brand:'Lululemon',item:'ABC pant',size:'32x32'}),
-    normalizeSize({brand:'',item:'Chest',size:'40 in'})
+    normalizeSize({brand:'',item:'Chest',size:'40 in'}),
+    normalizeSize({brand:'',item:'Shirt',size:'M'}),
+    normalizeSize({brand:'Banana Republic',item:'Shirt',size:'M'}),
+    normalizeSize({brand:'',item:'Pants length',size:'32 in'}),
+    normalizeSize({brand:'',item:'Hammock',size:'Double'})
   ];
   const groups=groupSizes(records);
-  assert.deepEqual(groups.map(group=>group.brand),[GENERAL_BRAND,'lululemon','Patagonia']);
-  // General holds what no brand decided; inside a group, items read alphabetically.
-  assert.deepEqual(groups[0].records.map(record=>record.item),['Chest','Waist']);
-  assert.deepEqual(groups[1].records.map(record=>record.item),['ABC pant','Joggers']);
-  assert.deepEqual(sizeBrands(records),['lululemon','Patagonia'],'General is not a brand');
+  // The garment is read off what the record is for: a chest is a shirt, a waist
+  // is a pair of trousers, and a word the registry does not know waits at the end.
+  assert.deepEqual(groups.map(group=>group.garment),['Shirts','Pants',OTHER_GARMENT]);
+  assert.deepEqual(groups[0].records.map(record=>sizeLine(record)),
+    ['General · M','Chest · 40 in','Banana Republic · M','Patagonia · L']);
+  // "Pants length" is the inseam, "joggers" adds nothing the heading has not said,
+  // and both records of one brand read with the spelling first seen.
+  assert.deepEqual(groups[1].records.map(record=>sizeLine(record,brandNames(records))),
+    ['Waist · 33 in','Inseam · 32 in','lululemon · ABC pant · 32x32','lululemon · M']);
+  assert.deepEqual(groups[2].records.map(record=>sizeLine(record)),['Hammock · Double']);
+  assert.deepEqual(sizeBrands(records),['Banana Republic','lululemon','Patagonia'],'General is not a brand');
 });
 
 test('a size reads as one line, with the brand only when one decided it',()=>{

@@ -5,14 +5,19 @@ import {mountSizes} from '../src/sizes.js';
 import {mountCapture} from '../src/capture.js';
 import {normalizeSize} from '../src/size-data.js';
 const records=[
+  {brand:'',item:'Shirt',size:'M'},
+  {brand:'',item:'Neck',size:'15.5 in'},
+  {brand:'',item:'Sleeve',size:'34 in'},
   {brand:'',item:'Chest',size:'40 in'},
   {brand:'',item:'Waist',size:'33 in',fit:'Measured in March, after the marathon'},
   {brand:'',item:'Inseam',size:'32 in'},
+  {brand:'',item:'Shoe',size:'US 10.5'},
+  {brand:'Banana Republic',item:'Shirt',size:'M'},
+  {brand:'Brooks Brothers',item:'Dress shirt',size:'15.5 / 34',fit:'Regent fit'},
   {brand:'Lululemon',item:'ABC joggers',size:'M',fit:'Runs slim through the thigh — the large in the warpstreme fabric'},
   {brand:'lululemon',item:'Metal Vent tech shirt',size:'M'},
-  {brand:'Brooks Brothers',item:'Dress shirt',size:'15.5 / 34',fit:'Regent fit'},
   {brand:'Allbirds',item:'Wool Runners',size:'10.5'}
-].map((record,index)=>({...normalizeSize(record),id:`4000000${index}-0000-4000-8000-00000000000${index}`,revision:'first'}));
+].map((record,index)=>({...normalizeSize(record),id:`40000000-0000-4000-8000-${String(index).padStart(12,'0')}`,revision:'first'}));
 const store=list=>{
   let saved=[...list];
   return {

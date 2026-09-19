@@ -23,6 +23,8 @@ export function SizesView(){
     ],{id:'sizes-editor'})
   ],{className:'travel-wallet size-list'});
 }
-export function SizeGroup(brand,rows){
-  return Section([GroupTitle(brand,{className:'record-group-title'}),...rows],{className:'record-group'});
+// One garment's run: the heading names the garment, and the rows under it go
+// from the general size and its measurements to what each brand calls it.
+export function SizeGroup(garment,rows){
+  return Section([GroupTitle(garment,{className:'record-group-title'}),...rows],{className:'record-group'});
 }
