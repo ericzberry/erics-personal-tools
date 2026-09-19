@@ -13,7 +13,7 @@ import {sizes} from './sizes.js';
 import {readCapture} from './capture.js';
 import {pushSubscriptions, sendTestPush, deliverDueReminders} from './push.js';
 import {latestRelease} from './releases.js';
-import {rewardsSettings,researchCardBenefits} from './rewards.js';
+import {rewardsSettings,researchCardBenefits,readLoyaltyBalances} from './rewards.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
 import {discoverRestaurants} from './restaurants.js';
@@ -119,7 +119,7 @@ export default {
         await env.DB.prepare('SELECT id FROM ai_connections LIMIT 1').all();
         return json({ok: true, service: 'erics-tools-api', version: 2});
       }
-      const operation=/^\/v1\/ai-connections\/([a-f0-9-]{36})\/(models|test|generate|restaurants|card-category|card-research|card-benefits|finance-intake|tax-intake|capture|subscription-intake|subscription-research)$/.exec(path);
+      const operation=/^\/v1\/ai-connections\/([a-f0-9-]{36})\/(models|test|generate|restaurants|card-category|card-research|card-benefits|balance-intake|finance-intake|tax-intake|capture|subscription-intake|subscription-research)$/.exec(path);
       if(operation){
         const [,id,action]=operation;
         if(request.method!==(action==='models'?'GET':'POST'))return json({error:'Method not allowed.'},405);
@@ -129,6 +129,7 @@ export default {
         if(action==='card-category')return json(await classifyPurchase(connection,input));
         if(action==='card-research')return json(await researchCard(connection,input));
         if(action==='card-benefits')return json(await researchCardBenefits(connection,input));
+        if(action==='balance-intake')return json(await readLoyaltyBalances(connection,input));
         if(action==='subscription-intake')return json(await readSubscriptions(connection,input));
         if(action==='subscription-research')return json(await researchSubscriptions(connection,input));
         if(action==='finance-intake')return json(await readFinanceUpdates(connection,input));

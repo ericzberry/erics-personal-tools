@@ -1,9 +1,10 @@
-import {RewardsView,RewardGroup,CardBenefits} from './components/rewards.js';
+import {RewardsView,RewardGroup,CardBenefits,BalancePanel,BalanceTotals} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
 import {RecordRow,Button,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField} from './components/ui.js';
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogCategories,offerUrl} from './program-data.js';
+import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord} from './balance-data.js';
 const fields=['kind','name','source','card','value','due','cadence','state','url','notes'];
 // A revealed number returns to its masked form on its own, so an unattended
 // sidebar does not keep a card number on screen.
@@ -20,11 +21,18 @@ const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
 // `programs` is the read-only store of catalogues a reward program publishes,
 // filled by whichever browser last visited the program's own site. A host
 // without one — a preview, a harness — simply has no offers section.
-export function mountRewards(root,{credentials,offline,remote=null,programs=null,onSettings=()=>{},onChanged=()=>{},vault=sharedVault()}){
+// `readPage` is the host's ability to read the tab the owner is looking at. The
+// sidebar sits beside that tab and supplies it; a full tab and the phone have
+// no such page, so they pass nothing and the balance panel never appears.
+export function mountRewards(root,{credentials,offline,remote=null,programs=null,readPage=null,onSettings=()=>{},onChanged=()=>{},vault=sharedVault()}){
   root.replaceChildren(RewardsView());
   const $=id=>root.querySelector(`#${id}`);
   let entries=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;
   let catalogs=[],programCategory='',categorySignature='';
+  // The loyalty program whose site is open beside the panel, and what was read
+  // off it. A reading is a proposal until it is saved: the figures are shown as
+  // they will be stored, and nothing is written by reading.
+  let site=null,balances=null,balanceConnection='';
   let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null,syncFailed=false;
   let found=null,connectionsFor='';
   const revealed=new Map();
@@ -187,6 +195,64 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       })
     ].filter(Boolean)):[Note('No matching offers. Clear the search to see all of them.')]));
   }
+  // Offered only where all three hold: a program's own page beside the panel, a
+  // host that can read it, and a connection that can be asked to. Anywhere else
+  // the panel is not there to be pressed.
+  function renderBalances(){
+    const show=!!site&&!!readPage&&!!remote;
+    $('balance-panel').hidden=!show;
+    if(!show){$('balance-body').replaceChildren();$('balance-status').textContent='';return;}
+    $('balance-body').replaceChildren(BalancePanel({
+      site,rows:balances||[],disabled:busy||!loaded,
+      onRead:readBalances,onSave:saveBalances,
+      onDiscard:()=>{balances=null;renderBalances();status('','balance-status');}
+    }));
+  }
+  const balanceStatus=text=>{$('balance-status').textContent=text||'';};
+  // Which saved connection does the reading is not a decision worth putting in
+  // front of the owner: connections are managed in Settings, and this tool
+  // needs one rather than a particular one. The same rule the ledger follows.
+  async function balanceConnectionId(token){
+    if(balanceConnection)return balanceConnection;
+    const usable=(await remote(token,'/v1/ai-connections')).connections.filter(entry=>entry.hasApiKey);
+    if(!usable.length)throw Error('Save an AI connection in Settings to read a balance off a page.');
+    return balanceConnection=usable[0].id;
+  }
+  // One press does the whole errand: read the page beside the panel, turn it
+  // into one figure per program, and show them. Nothing is saved yet.
+  async function readBalances(){
+    if(!site||!readPage||!remote||busy)return;
+    busy=true;render();balanceStatus(`Reading your ${site.label} balance…`);
+    try{
+      const token=await credentials.get();
+      if(!token)throw Error('Open Settings to connect this device.');
+      const connection=await balanceConnectionId(token);
+      const page=await readPage();
+      const result=await remote(token,`/v1/ai-connections/${connection}/balance-intake`,
+        {method:'POST',value:{text:page.text,program:site.label,source:site.source,unit:site.unit},timeoutMs:130000});
+      // Checked here too: the wallet accepts nothing the API has not proved.
+      const rows=matchBalances(parseBalanceReading(result,site),entries);
+      balances=rows.length?rows:null;
+      balanceStatus(rows.length
+        ?`${rows.length} balance${rows.length===1?'':'s'} read. Nothing is saved yet.`
+        :[`No balance was found on that page. Open your account page and read again.`,result.unread||''].filter(Boolean).join(' '));
+    }catch(error){balanceStatus(reason(error));}
+    finally{busy=false;render();renderBalances();}
+  }
+  // Saved one at a time through the same validator and queue as a typed edit.
+  // A balance that fails leaves itself and the rest in place to be corrected.
+  async function saveBalances(){
+    if(!balances?.length)return;
+    let saved=0;
+    while(balances.length){
+      const [row]=balances,match=row.ambiguous?null:row.match;
+      const entry=balanceRecord(row,match);
+      if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent);return;}
+      balances=balances.slice(1);saved++;
+    }
+    balances=null;renderBalances();
+    balanceStatus(`Saved ${saved} balance${saved===1?'':'s'}.`);
+  }
   function startCard(){$('reward-card-intake').open=true;$('reward-card-name').focus();}
   const detailOf=e=>[e.source,e.value,e.kind==='card'?'':STATES[e.state],CADENCE_LABELS[e.cadence]||'',
     e.secretHint?`•••• ${e.secretHint}`:'',e.due?`Due ${e.due}`:'',e.pending?'Waiting to sync':'',
@@ -233,6 +299,11 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const next=nextActions(entries.filter(e=>!e.deleting&&!e.conflict));
     $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,detail:`${e.name} · ${e.source} · ${e.value}`,actions:[action('Review',()=>edit(e))]})));
     $('rewards-actions').closest('section').hidden=!next.length;
+    // What the owner came to the wallet to know: how many miles and how many
+    // points they hold, counted separately and never added together.
+    const totals=balanceTotals(entries.filter(e=>!e.deleting));
+    $('rewards-totals').hidden=!totals.totals.length;
+    $('rewards-totals').replaceChildren(...BalanceTotals(totals));
     for(const key of fields)$(`reward-${key}`).disabled=busy||!loaded;
     for(const key of ['number','expiry'])$(`reward-secret-${key}`).disabled=busy||!loaded||vaultBusy;
     $('reward-save').disabled=busy||!loaded;$('reward-cancel').disabled=busy;
@@ -245,6 +316,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     // The wallet syncs on its own, so the title carries no Refresh. A wallet
     // that never loaded is the one case with something to press.
     $('rewards-connection').replaceChildren(...(loaded?[]:[connectAction()]));
+    for(const node of $('balance-panel').querySelectorAll('button'))node.disabled=busy||!loaded;
   }
   async function run(operation){if(busy)return false;busy=true;const current=++generation;render();try{const token=await credentials.get();if(!token)throw Error('Open Settings to connect this device.');if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. This wallet is reloading for the new connection.');}activeToken=token;const result=await operation(token);if(current!==generation)return false;entries=result.records;loaded=true;syncFailed=false;status(result.syncMessage||'');return true;}catch(error){if(current!==generation)return false;syncFailed=true;status(error.message);$('reward-form-status').textContent=error.message;return false;}finally{busy=false;render();renderVault();}}
   async function save(entry,method='PUT'){
@@ -254,7 +326,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
-  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();}
+  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;balanceConnection='';forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
   // The connection list is the only thing this tool reads outside the wallet, so
   // it is fetched once per connection rather than on every automatic sync.
   async function connectionList(){
@@ -339,7 +411,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const entry=validateReward({...base,...await protectedValues(base.id)},base.updatedAt);
     if(await save({...entry,revision:editing?.revision??null})){clearForm();$('reward-editor').open=false;}
   }catch(error){$('reward-form-status').textContent=reason(error);}});
-  clearForm();render();renderVault();renderPrograms();
+  clearForm();render();renderVault();renderPrograms();renderBalances();
   const reconnect=()=>{if(!$('reward-editor').open)refresh({quiet:true});};
   window.addEventListener('online',reconnect);
   // Losing the network takes Find card benefits with it, so the control says so
@@ -359,5 +431,14 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   const watch=setInterval(()=>{if(vault.unlocked()!==vaultOpen){forget();renderVault();render();renderSecret();}},1000);
   // Keeping the lock state honest must not keep a host process alive.
   watch?.unref?.();
-  return {refresh,clear,stop(){clearInterval(watch);clearInterval(retry);clearTimeout(revealTimer);}};
+  return {refresh,clear,
+    // The tab beside the panel, as the host already knows it. Leaving a
+    // program's page takes the reading with it: a figure read off one program's
+    // site has nothing to say beside another's.
+    site(program=null){
+      if((program?.id||'')===(site?.id||''))return;
+      site=program||null;balances=null;
+      renderBalances();
+    },
+    stop(){clearInterval(watch);clearInterval(retry);clearTimeout(revealTimer);}};
 }

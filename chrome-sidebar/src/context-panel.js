@@ -2,6 +2,8 @@ import {gmailConnection} from './gmail-connection.js';
 import {summarizeEmail,draftReply} from './email-cloud.js';
 import {showTool,selectCapability} from './navigation.js';
 import {accountSiteWatcher} from './account-sites.js';
+import {loyaltySite} from './loyalty-sites.js';
+import {rewardsTool} from './rewards.js';
 import {openFinanceTool,mountedFinanceTool,openPanelTool} from './capability-links.js';
 import {mountPageStrip} from './page-strip.js';
 import {mountWritingVoice} from './writing-voice.js';
@@ -66,6 +68,10 @@ async function refresh() {
     const gmail = url.hostname === 'mail.google.com';
     const site = gmail ? null : await detectAccountSite(tab);
     await announceAccountSite(site);
+    // The wallet is told which program's site is in front, and nothing more: it
+    // is already mounted, it reads no page until the owner presses for it, and
+    // a tab that is not a program's takes the offer away again.
+    rewardsTool.site(gmail ? null : loyaltySite(tab?.url));
     strip?.update({url:tab?.url||'',site});
     // The draft board follows the draft room, not the whole of ESPN fantasy:
     // outside a draft it is a tool for something that is not happening.

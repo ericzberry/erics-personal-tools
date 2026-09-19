@@ -107,7 +107,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   adopt the session it stores.
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
-  `rewards-sync.js`, `program-data.js`/`program-offline.js` (the offer
+  `rewards-sync.js`, `balance-data.js` (points and miles: what a page reading
+  may become, which saved balance it updates, and the per-unit totals the
+  wallet opens with — shared with mobile and the Worker),
+  `program-data.js`/`program-offline.js` (the offer
   catalogues reward programs publish, read-only on every host),
   `finance-data.js`/`finance-offline.js`,
   `personal-data.js`/`personal-offline.js`,
@@ -134,6 +137,11 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   whether the owner is already signed in to one. `context-panel.js` drives it
   from the tab it already watches, and a signed-in site opens Finance with its
   snapshot prompt.
+  `loyalty-sites.js` is the same registry for reward programs that keep a
+  balance (United, Marriott, Membership Rewards): one URL comparison says
+  whether the tab beside the panel is a program's own site, which is what makes
+  Rewards offer to read the balance off it. Like `account-sites.js` it is the
+  sidebar's alone; the reading itself is `finance-page-read.js`, unchanged.
   `reward-programs.js` is the counterpart for reward programs (MS Reserved): the
   in-page reader that lifts the published offer catalogue off the program's own
   pages, and the watcher `background.js` registers, so a visit updates the
@@ -196,7 +204,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 ## tools-api/
 
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
-  `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,capture}`,
+  `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/voice[/scan]`. `/v1/push/key` is public like the release route,
@@ -216,8 +224,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   notification side: subscriptions, the morning digest, and Web Push itself
   (RFC 8291 and 8292) written against WebCrypto with no dependency. The
   `scheduled` export in `src/index.js` is the hourly trigger they run on. `src/rewards.js` (the
-  wallet, plus the issuer research that turns one card name into the card and the
-  benefits it carries),
+  wallet, the issuer research that turns one card name into the card and the
+  benefits it carries, and the reading that turns a loyalty page into a points
+  balance),
   `src/programs.js` (one catalogue document per reward program, folded into what
   is stored on every write), `src/releases.js`, `src/ai-settings.js`. `src/drive.js` is not a record store: it holds the
   owner's Google Drive connection and files tax documents through it, and

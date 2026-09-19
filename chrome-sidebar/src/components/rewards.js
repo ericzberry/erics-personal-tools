@@ -1,12 +1,14 @@
 import * as UI from './ui.js';
 import {CADENCE_LABELS} from '../rewards-data.js';
-const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link}=UI;
+const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label}=UI;
 const CADENCE_OPTIONS=[{text:'Does not reset',value:''},...Object.entries(CADENCE_LABELS).map(([value,text])=>({text,value}))];
 export function RewardsView(){
   const field=(key,label,kind='text',options,placeholder)=>UI.FormField({id:`reward-${key}`,label,kind,options,placeholder});
   return Stack([ToolTitle('Rewards & benefits',{actionsId:'rewards-connection',statusId:'rewards-status'}),
+    Stack([Stack([],{id:'balance-body'}),Notice('',{id:'balance-status'})],{id:'balance-panel',className:'balance-panel',hidden:true}),
     UI.SettingsGroup({title:'Next actions',level:2,children:[Stack([],{id:'rewards-actions'})]}),
     UI.SettingsGroup({title:'Your wallet',level:2,children:[
+      Stack([],{id:'rewards-totals',className:'reward-totals',hidden:true}),
       UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
       Stack([],{id:'rewards-list'})]}),
     UI.SettingsGroup({title:'Program offers',level:2,children:[
@@ -91,4 +93,48 @@ export function CardBenefits(result,{onSave,onDiscard}){
     ...(card.url?[Link('Issuer page used',card.url)]:[]),
     ActionGroup([save,discard],{compact:true})
   ],{className:'reward-ingest'})];
+}
+
+// What the whole wallet comes to, one line per unit: miles and points are
+// different things and are never added together. A balance whose value states
+// no figure is counted in neither, and says so rather than being read as zero.
+export function BalanceTotals({totals=[],stale=0,unread=0}={}){
+  if(!totals.length)return [];
+  return [Stack(totals.map(total=>Stack([
+    Strong(total.amount.toLocaleString('en-US'),{className:'balance-total-value'}),
+    Label(`${total.unit} · ${total.programs} program${total.programs===1?'':'s'}`,{className:'balance-total-unit'})
+  ],{className:'balance-total'})),{className:'balance-total-row'}),
+    ...(stale||unread?[Note([stale?`${stale} balance${stale===1?'':'s'} not updated in a month`:'',
+      unread?`${unread} without a figure to count`:''].filter(Boolean).join(' · '))]:[])];
+}
+
+// Offered when the tab beside the panel is a loyalty program's own site.
+// Before anything is read it is one action; afterwards it is what came off the
+// page, because a figure is the owner's to check before it is saved.
+export function BalancePanel({site,rows=[],disabled=false,onRead,onSave,onDiscard}){
+  const action=(label,variant,handler)=>{
+    const node=Button(label,{variant,size:'compact',disabled});
+    node.addEventListener('click',handler);
+    return node;
+  };
+  const heading=Stack([
+    Strong(`${site.source} ${site.label}`),
+    rows.length?Label(`${rows.length} balance${rows.length===1?'':'s'} read · nothing saved yet`,{className:'snapshot-meta'}):null
+  ],{className:'snapshot-heading'});
+  if(!rows.length)return Section([heading,ActionGroup([action('Read my balance','primary',onRead)],{compact:true})],{className:'record-row'});
+  return Section([heading,...rows.map(BalanceRow),ActionGroup([
+    action(`Save ${rows.length===1?'this balance':`these ${rows.length} balances`}`,'primary',onSave),
+    action('Discard','subtle',onDiscard)
+  ],{compact:true})],{className:'record-row'});
+}
+// A read balance names the entry it would land on, and nothing more is implied
+// until it is saved.
+function BalanceRow(row){
+  const target=[row.match?`Updates ${row.match.name}`:row.ambiguous?'Several balances match — saves as a new entry':'New balance',
+    row.confidence==='high'?'':`${row.confidence} confidence`].filter(Boolean).join(' · ');
+  return Stack([
+    Stack([Label(`${row.source} ${row.name}`),Strong(row.value)],{className:'snapshot-figure'}),
+    Note(target),
+    ...(row.notes?[Note(row.notes)]:[])
+  ],{className:'snapshot-row'});
 }

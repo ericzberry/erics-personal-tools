@@ -153,3 +153,22 @@
 /* Row links are actions beside Edit and Delete, not body links; a researched
    card and most of its benefits carry one, so they read as the wallet's own. */
 .rewards-wallet a{color:var(--wallet-forest);overflow-wrap:anywhere;}
+
+/* Points and miles. The totals sit at the head of the wallet, because "how
+   many miles do I have" is the question the wallet is opened with; the panel
+   above them is the reading offered beside a program's own page. */
+.rewards-wallet .reward-totals{display:grid;gap:2px;padding-bottom:8px;}
+.rewards-wallet .balance-total-row{display:flex;flex-wrap:wrap;gap:4px 16px;}
+.rewards-wallet .balance-total{display:grid;gap:1px;}
+.rewards-wallet .balance-total-value{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;}
+.rewards-wallet .balance-total-unit{color:var(--wallet-muted);font-size:11px;}
+.rewards-wallet .reward-totals .footnote{margin:0;}
+.rewards-wallet .balance-panel{display:flex;flex-direction:column;gap:4px;}
+.rewards-wallet .balance-panel .snapshot-heading{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px;}
+.rewards-wallet .balance-panel .snapshot-meta{color:var(--wallet-muted);font-size:11px;}
+.rewards-wallet .balance-panel .snapshot-row{display:grid;gap:2px;padding-top:6px;border-top:1px solid var(--wallet-line);}
+.rewards-wallet .balance-panel .snapshot-figure{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
+.rewards-wallet .balance-panel .snapshot-figure span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;}
+.rewards-wallet .balance-panel .snapshot-figure strong{font-weight:600;white-space:nowrap;}
+.rewards-wallet .balance-panel .snapshot-row .footnote{margin:0;}
+.rewards-wallet #balance-status:empty{display:none;}

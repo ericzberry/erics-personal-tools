@@ -22,6 +22,7 @@
 // pressing those, and it is navigation the sidebar already had.
 import {capabilities} from './capabilities.js';
 import {rewardProgram} from './program-data.js';
+import {loyaltySite} from './loyalty-sites.js';
 import {isBought} from './gift-data.js';
 import {samePage} from './public-url.js';
 
@@ -52,6 +53,13 @@ export const OFFER_SOURCES=[
   {id:'reward-program',capability:'rewards',match:({page})=>{
     const program=rewardProgram(page.href);
     return program?`${program.label} offers`:null;
+  }},
+  // A program's own site is where its balance is stated, and the panel beside
+  // it is the only place that can read it. One URL comparison answers this;
+  // whether the page actually shows a balance is the reading's to find out.
+  {id:'loyalty-balance',capability:'rewards',match:({page})=>{
+    const program=loyaltySite(page.href);
+    return program?`Read your ${program.label} balance`:null;
   }},
   {id:'gmail',capability:'gmail',viaTab:true,icon:MAIL_GLYPH,match:({page})=>page.hostname==='mail.google.com'?'Summarize or reply':null},
   // Only inside a draft room. Advice on a draft is worth nothing between one

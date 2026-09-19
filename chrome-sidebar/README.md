@@ -993,3 +993,86 @@ general action appears — through the reading, Edit and Save. A build in a
 checkout without `vendor/`, which is not in Git, failed outright in both apps
 despite the comment saying it would carry on; both builds now do what that
 comment promised. Not verified against a live signed-in Schwab session.
+
+## The wallet counts your miles and reads them off the page (0.6.118 / mobile 0.1.72)
+
+A points balance was a line you typed and then forgot to retype. Two things
+change that. The wallet now opens with what its balances come to — one figure
+per unit, miles and points counted separately because they are not the same
+thing — and beside a program's own page it offers to read the balance instead
+of asking you to copy it.
+
+**Totals, from the entries already there.** `balance-data.js` reads the figure
+and the unit back out of an entry's own value, so "82,431 miles" is miles and
+"82,431" under MileagePlus is miles too, and every balance saved before today
+counts without being touched. No field was added and no stored record changed
+shape. A balance whose value states no number — "Globalist status" — is counted
+in neither line rather than read as zero, and the note under the totals says how
+many balances have gone a month without an update, because a total is only as
+current as its oldest figure.
+
+**One press beside the program's page.** `loyalty-sites.js` recognizes the
+airlines, hotel groups and issuer currencies — MileagePlus, Bonvoy, Membership
+Rewards, twenty-five in all — by one URL comparison and nothing else. On one of
+their pages Rewards shows the program's name and a single action: it takes one
+text snapshot of the page you are already looking at, sends it to
+`/v1/ai-connections/:id/balance-intake`, and lists what came back. Nothing is
+saved by reading. A balance for a program already in the wallet says so —
+*Updates MileagePlus* — and saving it keeps everything else about that entry.
+The reading never signs in, never navigates, never opens a tab, and nothing of
+the wallet is sent with the page. Elite-qualifying points are not a balance and
+are left in the note beside one. Which saved connection does the work is not a
+question the owner is asked.
+
+Validation: 373 extension tests, 33 mobile tests and 93 API tests pass. The panel was driven at
+380px and at 280px in each of its states through
+`tests/balances-preview.html` — beside a program page before a reading and
+after one, on a page whose balance could not be found, and on an ordinary page
+and a full tab, where no panel appears at all. Archive:
+`release/erics-sidebar-0.6.118.zip`.
+
+## Finance follows you to the bank, and says nothing until you ask (0.6.118 / mobile 0.1.72)
+
+The sidebar knew four account sites, and only while you were signed in to one.
+`FINANCE_SITES` in `account-sites.js` now recognizes about thirty institutions by
+host — those four plus UBS, Fidelity, Vanguard, Merrill, the big banks, the card
+issuers, the retirement and private-holding sites a figure actually comes from —
+and recognizing one costs a single URL comparison, so every tab can be asked.
+Land on any of them and the panel is already Finance, beside the page the
+figures would come off. `ACCOUNT_SITES` is now derived from that registry: the
+four whose signed-in pages have been checked against their log-on and public
+pages, which is the only work that separates the two groups.
+
+**Arriving that way answers no question.** Being on a bank's website is not the
+same as asking what you are worth, and a net worth that appears because of which
+tab is open is a net worth on whatever screen you happen to be sharing. So an
+arrival the sidebar made on its own is **quiet**: the totals, the breakdown, the
+value over time and the record list are not hidden but unbuilt — no balance is
+anywhere in the page — and no passkey sheet is raised either, because visiting a
+bank is not a request to open a protected section. `vault-gate.js` grew
+`automatic(on)` for exactly that, and the lock screen's own **Unlock** is
+untouched for anyone who does want in.
+
+**What is ready is everything that puts a figure in.** The site's own reading
+where the page can be read, the statement drop zone, **Read the accounts on the
+open page**, and a record typed by hand. One action sits beside the title —
+**Show position** — and one press makes it the ledger it always was. That press
+is remembered for the sitting and forgotten when the section locks, so the next
+institution's page does not cover everything up and ask again. Choosing Finance
+from Tools is itself the asking and opens it whole; the row under the header now
+offers any institution's page, **Store Schwab figures** where the page cannot be
+read and **Read my Schwab accounts** where it can, and pressing it hands the
+panel back to the tab, which is the quiet arrival.
+
+Validation: 373 extension, 33 mobile and 89 API tests pass, and both apps build.
+New coverage: the registry recognizing a marketing page, a log-on page and an
+institution with no reader while refusing look-alike and unencrypted hosts, one
+entry per institution and per host, the readable four still derived from it; the
+quiet surface built with no figure anywhere in the page and every intake path
+live, **Show position** revealing the ledger, and a second arrival not covering
+it up again; and the gate raising no sheet for a section the sidebar opened on
+its own, then asking once when the owner does. Reviewed at 380px and 280px in
+the passkey-gate harness, which gained a quiet state with a readable site and
+one without, and the reveal was driven in the browser at 280px with no
+horizontal overflow. Mobile shares `finance.js` and the gate but has no tab
+beside it, so the arrival there is the deliberate one it always was.

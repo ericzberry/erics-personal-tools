@@ -40,6 +40,45 @@ research is lost and saving again finishes the job.
 
 Benefits entered by hand work the same way; pick the card in the editor.
 
+## Points and miles
+
+The wallet opens with what your balances come to: one figure per unit, because
+miles and points are different things and are never added together. Each line
+says how many programs it covers, and the note under them says how many
+balances have not been updated in a month — a total is only as current as its
+oldest figure. A balance whose value states no number is counted in neither
+line rather than read as zero.
+
+Nothing about the record shape changed to do this. A balance is the same entry
+it always was, and the unit is read back out of it: "82,431 miles" is miles,
+and so is "82,431" under a program called MileagePlus.
+
+### Reading a balance off the program's page
+
+Open a program's own site with the sidebar beside it — united.com, marriott.com,
+americanexpress.com — and Rewards offers to read your balance. One press takes
+one text snapshot of the page you are already looking at, turns it into a
+figure per program, and shows it. Nothing is saved by reading: each balance
+names the entry it would land on, and a press of yours saves it.
+
+The rule is the one Finance already follows for an account page. The extension
+never signs in, never navigates, and never opens a tab of its own; no session,
+cookie or credential leaves the browser, and none of your wallet is sent for
+the reading. A balance read for a program you already hold updates that entry
+instead of adding a second one beside it, and keeps everything else about it —
+its expiration, its notes, the card it is filed under.
+
+It reports the balance you can spend. Elite-qualifying miles, segments, nights
+and status credits are not balances and are left in the note beside one. A page
+that shows no balance is told so rather than guessed at, and the phone cannot
+do this at all: the reading needs the browser that is on the program's site.
+
+The programs recognized are in
+[`chrome-sidebar/src/loyalty-sites.js`](../chrome-sidebar/src/loyalty-sites.js)
+— the airlines, hotel groups and card issuers, each with the unit its balance
+is counted in. Adding one is a single entry: its `id`, `label`, `source`,
+`unit`, and the hosts it is recognized by.
+
 ## Resets and Next actions
 
 Most card credits are not one-time offers — they come back, and the unused part
@@ -89,6 +128,9 @@ its model through the central task policy
 
 - `GET /v1/rewards`, `PUT /v1/rewards` — the whole wallet, revisioned. See
   [tools-api/README.md](../tools-api/README.md).
+- `POST /v1/ai-connections/:uuid/balance-intake` — `{text, program, source, unit}`
+  in; `{balances, unread}` out. The page text and nothing else: matching and
+  every total stay on the device.
 - `POST /v1/ai-connections/:uuid/card-benefits` — `{name}` in; `{card, benefits}`
   or `{matches:[{name,note}]}` out. Requires an OpenAI connection and web-search
   evidence including the issuer page it cites.

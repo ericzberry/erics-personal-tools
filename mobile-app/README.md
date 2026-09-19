@@ -55,6 +55,12 @@ Mobile 0.1.47 carries the shared Finance modules behind the extension's new
 sidebar's alone — the phone has no such page and shows no snapshot prompt — so
 nothing changes here beyond keeping the shared ledger code in step.
 
+Mobile 0.1.72 counts the points and miles in the wallet the same way the
+extension does: one total per unit, read back out of the balances already
+saved. Reading a balance off a program's own page is the sidebar's alone — the
+phone has no page to read — so the phone shows the totals and the entries, and
+no reading prompt.
+
 Mobile 0.1.71 carries the shared Finance modules behind the extension's rewritten
 page reading: the account page snapshot is narrowed to the lines that carry a
 figure or name one, and no feature picks an AI connection any more. Reading the
