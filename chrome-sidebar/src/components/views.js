@@ -90,7 +90,7 @@ export function SettingsView() {
 // controller for it fills the section in on first use.
 const PanelTool=id=>Section([],{id:`${id}-tool`,className:'tool-page',hidden:true});
 export function mountApp(root) {root.replaceChildren(AppHeader({}),UI.PageOfferBar(),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),
-  ...['finance','taxes','attention','subscriptions','gifts','reminders','cards','personal'].map(PanelTool),SettingsView());}
+  ...['finance','taxes','attention','subscriptions','gifts','sizes','reminders','cards','personal'].map(PanelTool),SettingsView());}
 
 export function AISettingsView() {
   const field=UI.FormField;

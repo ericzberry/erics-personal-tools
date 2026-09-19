@@ -79,12 +79,13 @@ const panelTool=(id,load)=>{
   return open;
 };
 export const openGiftsTool=panelTool('gifts',(root,options)=>import('./gifts-page.js').then(({mountExtensionGifts})=>mountExtensionGifts(root,options)));
+export const openSizesTool=panelTool('sizes',(root,options)=>import('./sizes-page.js').then(({mountExtensionSizes})=>mountExtensionSizes(root,options)));
 export const openRemindersTool=panelTool('reminders',(root,options)=>import('./reminders-page.js').then(({mountExtensionReminders})=>mountExtensionReminders(root,options)));
 export const openCardsTool=panelTool('cards',(root,options)=>import('./cards-page.js').then(({mountExtensionCards})=>mountExtensionCards(root,options)));
 export const openPersonalTool=panelTool('personal',(root,options)=>import('./personal-page.js').then(({mountExtensionPersonal})=>mountExtensionPersonal(root,options)));
 
 const PANEL_TOOLS={attention:openAttentionTool,subscriptions:openSubscriptionsTool,travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,
-  gifts:openGiftsTool,reminders:openRemindersTool,cards:openCardsTool,personal:openPersonalTool};
+  gifts:openGiftsTool,sizes:openSizesTool,reminders:openRemindersTool,cards:openCardsTool,personal:openPersonalTool};
 export const openPanelTool=id=>PANEL_TOOLS[id]?.()??null;
 
 // Standalone settings/data pages use the same data registry in the shared formatted picker.

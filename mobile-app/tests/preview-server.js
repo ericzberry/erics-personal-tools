@@ -32,6 +32,13 @@ let gifts=[
   {id:'41111111-1111-4111-8111-111111111111',person:'Ariana',idea:'Cast iron skillet, the 12 inch one',status:'Idea',link:'https://example.com/skillet',revision:'first',updatedAt:new Date().toISOString()},
   {id:'41111111-1111-4111-8111-111111111112',person:'Celeste',idea:'Roller skates, size 3',status:'Bought',link:'',revision:'first',updatedAt:new Date().toISOString()}
 ];
+// Sizes as the phone receives them: measurements with no brand, then brands.
+let sizes=[
+  {id:'51111111-1111-4111-8111-111111111111',brand:'',item:'Waist',size:'33 in',fit:'Measured in March',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'51111111-1111-4111-8111-111111111112',brand:'',item:'Inseam',size:'32 in',fit:'',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'51111111-1111-4111-8111-111111111113',brand:'Lululemon',item:'ABC joggers',size:'M',fit:'Runs slim through the thigh',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'51111111-1111-4111-8111-111111111114',brand:'Brooks Brothers',item:'Dress shirt',size:'15.5 / 34',fit:'Regent fit',revision:'first',updatedAt:new Date().toISOString()}
+];
 let apiCalls = 0;
 // A throwaway application-server identity, so the preview can subscribe to the
 // real push service and receive a real, really-encrypted notification. The
@@ -135,7 +142,7 @@ createServer(async (req, res) => {
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
       cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
     }
-    for(const [name,list,set] of [['subscriptions',()=>subscriptions,value=>{subscriptions=value;}],['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}]]){
+    for(const [name,list,set] of [['subscriptions',()=>subscriptions,value=>{subscriptions=value;}],['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}],['sizes',()=>sizes,value=>{sizes=value;}]]){
       if(url.pathname===`/v1/${name}/snapshot`){res.end(JSON.stringify({records:list()}));return;}
       if(url.pathname.startsWith(`/v1/${name}/`)){
         const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
@@ -155,6 +162,11 @@ createServer(async (req, res) => {
         res.end(JSON.stringify({capability:'gifts',path:'/v1/gifts',
           record:{person:'Celeste',idea:'Butterfly net',link:'',status:'Idea'},
           summary:'Butterfly net · for Celeste'}));return;
+      }
+      if(/size|medium|large|small|inseam|waist|chest|wear/i.test(String(note))){
+        res.end(JSON.stringify({capability:'sizes',path:'/v1/sizes',
+          record:{brand:'Patagonia',item:'Better Sweater',size:'M',fit:''},
+          summary:'Better Sweater · M · Patagonia'}));return;
       }
       res.end(JSON.stringify({capability:'reminders',path:'/v1/reminders',
         record:{kind:'Birthday',title:'Derek’s birthday',subject:'',date:today,every:12,since:'',notice:14,completed:'',notes:''},

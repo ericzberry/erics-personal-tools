@@ -28,6 +28,17 @@ test('a note about something to give lands in gifts, with only what it said',asy
   assert.equal(reading.summary,'Telescope with a tripod · for Maisie');
 });
 
+test('a note about what the owner wears lands in clothing sizes, brand and all',async()=>{
+  const reading=await readCapture(connection,{note:'Lululemon ABC joggers are a medium, they run slim',today:'2026-09-19'},
+    reply({capability:'sizes',record:{brand:'Lululemon',item:'ABC joggers',size:'M',fit:'Runs slim'}}));
+  assert.equal(reading.path,'/v1/sizes');
+  assert.equal(reading.summary,'ABC joggers · M · Lululemon');
+  // A measurement is the same record with no brand to file it under.
+  const measured=await readCapture(connection,{note:'my waist is 33 inches',today:'2026-09-19'},
+    reply({capability:'sizes',record:{brand:'',item:'Waist',size:'33 in',fit:''}}));
+  assert.equal(measured.summary,'Waist · 33 in');
+});
+
 test('a note that names no date comes back as the owner’s problem, not a server error',async()=>{
   await assert.rejects(readCapture(connection,{note:'buy milk'},reply({error:'That does not name a date to remember.'})),
     error=>error.status===422&&/does not name a date/.test(error.message));
@@ -40,6 +51,7 @@ test('a note that names no date comes back as the owner’s problem, not a serve
 test('reminders store and validate through the shared record route',async()=>{
   const sql=new DatabaseSync(':memory:');sql.exec(readFileSync(new URL('../reminders-schema.sql',import.meta.url),'utf8'));
   sql.exec(readFileSync(new URL('../gifts-schema.sql',import.meta.url),'utf8'));
+  sql.exec(readFileSync(new URL('../sizes-schema.sql',import.meta.url),'utf8'));
   const token='synthetic-token-at-least-32-characters';
   const env={API_TOKEN:token,SETTINGS_ENCRYPTION_KEY:'12'.repeat(32),DB:{
     prepare(query){
@@ -69,4 +81,12 @@ test('reminders store and validate through the shared record route',async()=>{
   assert.equal(gift.idea,'Cast iron pan');
   assert.equal(sql.prepare('SELECT value FROM gift_records').get().value.includes('Ariana'),false);
   assert.equal((await call(giftPath,'DELETE',{revision:gift.revision})).status,200);
+
+  // Clothing sizes are that store once more, over their own table.
+  const sizePath='/v1/sizes/44444444-4444-4444-8444-444444444444';
+  assert.equal((await call(sizePath,'PUT',{brand:'Lululemon',item:'',size:'M'})).status,400);
+  const size=(await (await call(sizePath,'PUT',{brand:'Lululemon',item:'ABC joggers',size:'M',fit:''})).json()).record;
+  assert.equal(size.item,'ABC joggers');
+  assert.equal(sql.prepare('SELECT value FROM size_records').get().value.includes('Lululemon'),false);
+  assert.equal((await call(sizePath,'DELETE',{revision:size.revision})).status,200);
 });

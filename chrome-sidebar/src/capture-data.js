@@ -1,5 +1,6 @@
 import {normalizeReminder,describeReminder,reminderDue,duePhrase,REMINDER_KINDS,REMINDER_EVENT_KINDS,DEFAULT_NOTICE_DAYS} from './reminder-data.js';
 import {normalizeGift,isBought,GIFT_STATUSES} from './gift-data.js';
+import {normalizeSize,describeSize} from './size-data.js';
 // What a typed note can become. Each target names the capability that owns the
 // record, the path its store writes to, the validator the tool itself uses —
 // so a captured record is indistinguishable from a typed one and cannot arrive
@@ -37,6 +38,16 @@ export const CAPTURE_TARGETS=[
 - status: one of ${GIFT_STATUSES.join(', ')}. Use ${GIFT_STATUSES[1]} only when the note says it has already been bought.
 There is nowhere to put an occasion, a price or a comment: anything worth keeping goes in idea, and anything else is left out.`,
     summary:record=>[record.idea,`for ${record.person}`,isBought(record)?'Bought':''].filter(Boolean).join(' · ')
+  },
+  {
+    capability:'sizes',label:'clothing sizes',path:'/v1/sizes',normalize:normalizeSize,
+    when:'the note is about what size the owner wears, or a measurement of their own body',
+    fields:()=>`- brand: the brand or shop the size belongs to, as the note names it. "" when the note gives a body measurement, or a size no brand decided.
+- item: what the size is for — a garment or shoe ("Dress shirt", "Jeans", "Running shoes"), or the measurement itself ("Chest", "Waist", "Inseam", "Neck", "Sleeve", "Shoe"). Required.
+- size: what the label says or what the tape said, with its unit when it has one — "M", "32x34", "15.5/34", "10.5 wide", "33 in". Required.
+- fit: how it runs, or when it was measured, in the owner's own words — "runs small, size up", "measured in March". "" when the note says nothing about it.
+A size and a measurement are the same record: the difference is only whether a brand decided it.`,
+    summary:record=>describeSize(record)
   }
 ];
 export const captureTarget=capability=>CAPTURE_TARGETS.find(target=>target.capability===capability)||null;

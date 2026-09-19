@@ -42,6 +42,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
 | `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
+| `sizes.html` | `src/sizes-page.js` | Clothing sizes: what the label says, brand by brand, and the measurements behind it |
 | `attention.html` | `src/attention-page.js` | Needs attention across saved records |
 | `subscriptions.html` | `src/subscriptions-page.js` | Recurring charges, renewal decisions and alternatives |
 | `unlock.html` | `src/unlock-page.js` | The small window the side panel opens to ask for the passkey, which the panel cannot raise itself |
@@ -70,7 +71,7 @@ them) · `tokens.css` (design tokens) · `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
-`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `capture.*`
+`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js`,
 `workspace.css`, `sidebar-launcher.js`.
@@ -113,6 +114,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored),
   `gift-data.js`/`gifts-offline.js` (gift ideas, grouped by who they are for),
+  `size-data.js`/`sizes-offline.js` (clothing sizes and body measurements in one
+  record shape, grouped by brand with General first),
   `capture-data.js`/`capture-stores.js` (what a typed note may become: the
   capability that owns the record, the path its store writes to, the validator
   that decides it, and the stores a host offers quick add),
@@ -135,7 +138,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   pages, and the watcher `background.js` registers, so a visit updates the
   catalogue whether or not the panel is open.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
-  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `capture.js`, `taxes.js`, `data-library.js`,
+  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `sizes.js`, `capture.js`, `taxes.js`, `data-library.js`,
   `restaurant-search.js`, `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
   `email-cloud.js` (the email summary and the reply, both through the Worker).
@@ -194,7 +197,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
   `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
-  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`,
+  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/voice[/scan]`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
@@ -204,9 +207,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/v1/drive/callback` is the one route outside the bearer check — Google's
   redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
-  `src/finance.js`, `src/personal.js`, `src/reminders.js` and `src/gifts.js`
+  `src/finance.js`, `src/personal.js`, `src/reminders.js`, `src/gifts.js` and `src/sizes.js`
   reuse it for `card_records`, `finance_records`, `personal_records`,
-  `reminder_records` and `gift_records`.
+  `reminder_records`, `gift_records` and `size_records`.
   `src/capture.js` is not a store: it reads one typed note into a record one of
   them already accepts. `src/push.js` and `src/web-push.js` are the
   notification side: subscriptions, the morning digest, and Web Push itself
@@ -228,7 +231,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_records`), `personal-schema.sql` (`personal_records`),
-  `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`),
+  `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `voice-schema.sql` (`voice_profiles`),

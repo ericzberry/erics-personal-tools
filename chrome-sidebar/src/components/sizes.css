@@ -1,0 +1,9 @@
+@import url('./travel.css');
+@import url('./capture.css');
+/* One brand's sizes read as a short run of lines under its name. */
+.size-list .record-row{padding:6px 0;gap:2px}
+.size-list .record-row p{margin:0}
+.size-list .footnote:empty,.size-list .notice:empty{display:none}
+.size-list .travel-list{gap:12px}
+/* The size itself is the answer, so it carries the weight of the line. */
+.size-list .record-row strong{font-variant-numeric:tabular-nums}

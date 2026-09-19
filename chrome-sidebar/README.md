@@ -886,3 +886,38 @@ refusals told apart at the Worker, the retry after a stale token, and the repair
 replacing Resume in the panel. The synthetic states — a summary, a draft, both
 at once, and a refused study — were driven at 380px and 280px with no horizontal
 overflow. Archive: `release/erics-sidebar-0.6.113.zip`.
+
+## Clothing sizes, said rather than filled in (0.6.115 / mobile 0.1.70)
+
+A new tool answers one question: what size am I here. `{brand, item, size, fit}`
+is the whole record, and it holds both halves of the question, because they are
+the same fact at different removes — "Lululemon · ABC joggers · M" and "Waist ·
+33 in" differ only in whether a brand decided the number. An empty brand is
+meaningful rather than missing: that record is a measurement, and it is filed
+under **General**, which is shown first because it is the answer that holds
+wherever the owner is standing. Brands follow alphabetically, matched by which
+brand they are rather than by how the name was typed, so a note captured as
+"lululemon" joins Lululemon instead of starting a second list beside it.
+
+`fit` is the one optional field and it earns its place: a bare `M` is unusable a
+year later without "runs slim through the thigh". Nothing else is a field — no
+date, no category, no size system — and nothing converts between size systems or
+compares one brand to another. A saved size is what the label said.
+
+Quick add reads a size out of a typed line, which is the way in that matches the
+subject: a size is usually said — *"Lululemon joggers are a medium"* — and the
+form below the list is what that falls back to. The note goes where it belongs,
+so the same field still files a gift idea or a reminder.
+
+The tool is in the panel and on the phone like the rest, offline through the
+same store, and its records are encrypted in D1 by the generic record route over
+the new `size_records` table.
+
+Validation: 355 extension, 33 mobile and 89 API tests pass, including the
+grouping, the delete confirmation, an edit saving over the record it came from,
+and a said size landing in sizes rather than in whichever tool was open. The
+synthetic states — populated, whole-feature empty, filtered empty, disconnected —
+were driven at 380px and 280px with no horizontal overflow, the panel mounted the
+tool from the Tools menu, and the phone at 390×844 showed the same list and
+accepted a said size from the home screen. Archive:
+`release/erics-sidebar-0.6.115.zip`.
