@@ -921,3 +921,19 @@ were driven at 380px and 280px with no horizontal overflow, the panel mounted th
 tool from the Tools menu, and the phone at 390×844 showed the same list and
 accepted a said size from the home screen. Archive:
 `release/erics-sidebar-0.6.115.zip`.
+
+## A control never sits against the edge of the panel it is in (0.6.116)
+
+*Resume* in **Writing voice** touched the bottom border of its panel, which
+reads as clipped. The floor under it had been given to whichever child came
+last, and in a panel whose voice editor is hidden that is nothing visible at
+all. The space now belongs to the open panel itself, so every disclosure in the
+extension keeps a floor — except the ones whose last child already carries its
+own, a form stack and a list of rows, and the ones that are not boxes at all,
+the Tools menu's branch and a draft card's reasoning.
+
+Validation: 355 extension tests pass. The email screen's voice panel was driven
+at 380px in its refused, stopped and learned states with the same 15px under the
+last visible thing in it; the draft tiers, the Tools menu and the gift forms
+were checked for the spacing they already had. Archive:
+`release/erics-sidebar-0.6.116.zip`.

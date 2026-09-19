@@ -301,6 +301,15 @@ summary > .title-text { display: inline; }
 .settings-panel .form-field > label { margin: 0; }
 .form-field > input, .form-field > select { margin: 0; width: 100%; min-height: 36px; }
 .settings-panel > summary { padding: var(--page-inset); }
+/* Nothing in an open panel sits against its border: the last thing in one is
+   often a control, and a control that reaches the edge reads as clipped. The
+   floor belongs to the panel rather than to whichever child happens to be last
+   — in a panel whose editor is hidden, that is nothing visible at all — except
+   where the last child already carries its own, as a form stack and a list of
+   rows do. The details that are not boxes, the Tools menu's branch and a draft
+   card's own reasoning, have no border for anything to touch. */
+details[open]:where(:not(.capability-submenu, .recommendation details, .recommendation-compact details)):where(:not(:has(> :last-child:is(ol, ul, details, .form-stack, .travel-list, .capability-list)))) { padding-bottom: var(--page-inset); }
+details[open]:where(:not(.capability-submenu, .recommendation details, .recommendation-compact details)):where(:not(:has(> :last-child:is(ol, ul, details, .form-stack, .travel-list, .capability-list)))) > :not(summary):last-child { margin-bottom: 0; }
 /* A field sized for a 280px panel: the text size of the prose beside it, not
    the 16px control font that pages and the phone use to avoid a zoom. A
    typed row keeps its own height from `rows`; the floor is for the short one. */
@@ -328,7 +337,6 @@ summary > .title-text { display: inline; }
 .voice-head > .footnote:empty { display: none; }
 .voice-head > .action-group { margin: 0; }
 .voice-panel > summary { padding-bottom: 10px; }
-.voice-panel > :not(summary):last-child { margin-bottom: var(--page-inset); }
 /* The voices a profile found: a name and, under it, who it is for and what marks it. */
 .voice-list { display: grid; gap: 8px; margin-top: 10px; }
 .voice-list:empty { display: none; }
