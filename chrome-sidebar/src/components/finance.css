@@ -10,7 +10,13 @@
 .trend-table{display:flex;flex-direction:column;gap:2px}
 .trend-row .footnote{margin:0;min-width:88px;text-align:end}
 .finance-ledger .record-row{gap:2px}
-.snapshot-panel{display:flex;flex-direction:column;gap:4px}
+/* The reading beside a signed-in account page is a group of its own: what was
+   read, and the action that reads or saves it, inside one boundary. Nothing
+   sits on a rule with nothing under it. */
+.snapshot-panel{gap:6px}
+.snapshot-panel[hidden]{display:none}
+.snapshot-reading{display:flex;flex-direction:column;gap:6px}
+.snapshot-reading .footnote{margin:0}
 .snapshot-heading{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px}
 .snapshot-meta{color:var(--muted);font-size:.8rem}
 .snapshot-row{display:flex;flex-direction:column;gap:2px}

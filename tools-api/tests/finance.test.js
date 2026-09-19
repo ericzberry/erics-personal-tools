@@ -122,6 +122,12 @@ test('a live account page dates its own balances, and is read one account at a t
   assert.match(prompt,/signed in to right now/);
   assert.match(prompt,/one update per account/);
   assert.match(prompt,/never a figure summed across accounts/);
+  // A dashboard's own furniture is not the owner's: the whole-portfolio total
+  // at the top of it, the day's change, the index quotes beside it, and the
+  // figures in whatever the site is promoting that week.
+  assert.match(prompt,/portfolio-wide or grand total/);
+  assert.match(prompt,/market or index quote/);
+  assert.match(prompt,/news, education or promotional panels/);
   assert.match(prompt,/asOf 2026-09-11/,'an undated balance on a live page is today, not a dropped update');
   assert.match(prompt,/institution is E\*TRADE/);
   // The refusals that make the reading safe are unchanged by being live.

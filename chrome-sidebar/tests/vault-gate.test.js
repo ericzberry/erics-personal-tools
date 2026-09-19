@@ -108,7 +108,6 @@ test('finance totals and drafts stay behind the gate, and an applied draft is sa
 
   // A reading produces drafts and saves nothing on its own.
   h.document.getElementById('finance-intake').value='Synthetic brokerage was at 1300 on April 1.';
-  h.document.getElementById('finance-connection').value='c1';
   h.document.getElementById('finance-read').click();
   await settle(()=>h.document.getElementById('finance-drafts').textContent.includes('Updates Synthetic brokerage'));
   assert.equal(saved.length,0,'reading text must not save anything');

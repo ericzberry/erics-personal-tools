@@ -53,7 +53,7 @@ test('the gift offer goes to Gift ideas in the panel, with its own icon',()=>{
 
 test('a signed-in account site offers the snapshot, and hands the panel back to the tab',()=>{
   const [offer]=pageOffers({url:'https://client.schwab.com/app/accounts/summary/',site:schwab});
-  assert.equal(offer.label,'Store Schwab snapshots');
+  assert.equal(offer.label,'Read Schwab accounts');
   assert.equal(offer.capability,'finance');
   assert.equal(offer.viaTab,true,'Finance beside the tab is what Automatic mode shows');
   assert.equal(offer.href,'','a tool that lives in the panel is not a link');
@@ -122,7 +122,7 @@ test('the strip shows the tab’s offers, hides itself when there are none, and 
   assert.equal(root.hidden,true,'an empty strip is not a strip');
   strip.update({url:'https://shop.example.com/thing/42',site:schwab});
   assert.equal(root.hidden,false);
-  assert.deepEqual([...root.children].map(node=>node.textContent.trim()),['Saved for Maisie','Store Schwab snapshots']);
+  assert.deepEqual([...root.children].map(node=>node.textContent.trim()),['Saved for Maisie','Read Schwab accounts']);
   root.children[1].dispatchEvent(new document.defaultView.Event('click'));
   assert.deepEqual(tabs,['auto'],'a tool of the tab’s own hands the panel back to the tab');
   assert.deepEqual(selected,[]);

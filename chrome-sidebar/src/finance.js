@@ -1,5 +1,5 @@
 import {FinanceView,FinanceGroup,BreakdownList,TrendTable,DraftRow,SnapshotPanel,Figure,money,AttachmentCard} from './components/finance.js';
-import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue,Option} from './components/ui.js';
+import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
@@ -22,14 +22,15 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   });
   gate.content.replaceChildren(FinanceView());
   const $=id=>gate.content.querySelector(`#finance-${id}`);
-  let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',drafts=[],revealTimer=null,clearSecret=false;
+  let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',drafts=[],revealTimer=null,clearSecret=false,connection='';
   // The account site the owner is already signed in to beside the panel, and
   // what was read off it. A snapshot is a proposal until it is saved, exactly
   // like a draft: the amounts stay editable and nothing is written by reading.
   let site=null,snapshot=null,snapshotEditing=false;
   // A picture has no text to show, so it is held here and described instead.
-  // Text from a file or a page goes straight into the box, where it can be
-  // read, corrected, or thrown away before anything is sent.
+  // Text out of a dropped file goes straight into the box, where it can be
+  // read, corrected, or thrown away before anything is sent. An open page is
+  // not copied there: it is already in front of the owner.
   let attachment=null;
   const revealed=new Map();
   const status=(text,target='status')=>{$(target).textContent=text||'';};
@@ -163,17 +164,22 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     renderAttachment();render();
     return result.confidence==='good'?'Check the text below, then read it.':'Check the text below carefully before reading it.';
   }
+  // One press does the whole errand. The page is not copied into the box on
+  // the way through: it is open beside the panel, where the owner can see it
+  // better than any transcript of it, and what comes back — one draft per
+  // account, saved only when applied — is the readout worth looking at.
   async function intakeFromPage(){
-    await run(async()=>{
-      status('Reading the open page…','intake-status');
+    await run(async token=>{
+      const id=await connectionId(token);
+      status('Reading the accounts on the open page…','intake-status');
       const page=await readPage();
-      $('intake').value=page.text;
-      attachment={kind:'text',label:`${page.host}`,
-        detail:`Visible text from the open page · ${page.text.length.toLocaleString('en-US')} characters${page.tables?` · ${page.tables} table${page.tables===1?'':'s'}`:''}`,
-        note:page.trimmed?`${page.trimmed.toLocaleString('en-US')} characters were left out at the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit. Trim the box to the accounts you want.`:'',
-        tone:page.trimmed?'warning':''};
-      renderAttachment();
-      status('Read from the page below. Check it, then press Read this.','intake-status');
+      const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text:page.text,today:today(),live:true},timeoutMs:130000});
+      const parsed=parseFinanceUpdates(result);
+      drafts=matchFinanceUpdates(parsed.updates,records);
+      renderDrafts();
+      status([drafts.length?`${drafts.length} account${drafts.length===1?'':'s'} read from ${page.host}. Nothing is saved until you apply one.`:`No account values were found on ${page.host}.`,
+        page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
+        parsed.unread].filter(Boolean).join(' '),'intake-status');
     },'intake-status');
   }
 
@@ -198,9 +204,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // into one figure per account, and show them. Nothing is saved yet.
   async function storeSnapshots(){
     if(!site||!readPage)return;
-    const id=$('connection').value;
-    if(!id){status('Choose a saved AI connection below, or add the record by hand.','snapshot-status');return;}
     await run(async token=>{
+      const id=await connectionId(token);
       status(`Reading your ${site.label} accounts…`,'snapshot-status');
       const page=await readPage();
       const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text:page.text,today:today(),live:true,institution:site.institution},timeoutMs:130000});
@@ -312,7 +317,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('intake').disabled=busy||!loaded;
     $('drop').disabled=busy||!loaded;
     $('page').disabled=busy||!loaded;
-    $('page').hidden=!readPage;
+    // A recognized account site reads through its own panel above, which says
+    // whose accounts it is about to read. Two buttons for one errand is the
+    // confusion, not the second reading.
+    $('page').hidden=!readPage||!!site;
     // Beside the title, only what applies: a loaded ledger can be refreshed, and
     // one that never loaded needs the connection rather than a dead Refresh.
     $('actions').replaceChildren(loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
@@ -346,34 +354,39 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   async function refresh(){
     if(!gate.unlocked())return;
     status('Loading your records…');
-    if(await run(token=>offline.request(token,'/v1/finance')))connectionList();
+    if(await run(token=>offline.request(token,'/v1/finance')))connectionNote();
   }
   function clear(){
-    generation++;records=[];loaded=false;activeToken='';drafts=[];attachment=null;snapshot=null;snapshotEditing=false;forget();clearForm();renderDrafts();renderAttachment();renderSnapshot();
+    generation++;records=[];loaded=false;activeToken='';connection='';drafts=[];attachment=null;snapshot=null;snapshotEditing=false;forget();clearForm();renderDrafts();renderAttachment();renderSnapshot();
     status('','snapshot-status');
     status('Unlock this section with your passkey.');
     render();
   }
 
-  async function connectionList(){
-    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · Add and edit records by hand; reading text needs the internet.','ai-status');return;}
+  // Which saved connection does the reading is not a decision worth putting in
+  // front of the owner: connections are managed in Settings, and this tool
+  // uses whichever one can answer. The note says only when there is none.
+  const usableConnections=async token=>(await remote(token,'/v1/ai-connections')).connections.filter(entry=>entry.hasApiKey);
+  async function connectionId(token){
+    if(connection)return connection;
+    const usable=await usableConnections(token);
+    if(!usable.length)throw Error('Save an AI connection in Settings to read a statement or an account page.');
+    return connection=usable[0].id;
+  }
+  async function connectionNote(){
+    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · Add and edit records by hand; reading a statement or a page needs the internet.','ai-status');return;}
     try{
-      const result=await remote(activeToken,'/v1/ai-connections');
-      const usable=result.connections.filter(connection=>connection.hasApiKey);
-      const previous=$('connection').value;
-      $('connection').replaceChildren(Option('Choose a connection',''),...usable.map(connection=>Option(`${connection.name} · ${connection.provider}`,connection.id)));
-      if(usable.some(connection=>connection.id===previous))$('connection').value=previous;
-      else if(usable.length===1)$('connection').value=usable[0].id;
-      status(usable.length?'':'Save an AI connection in Settings to read pasted text into drafts.','ai-status');
+      const usable=await usableConnections(activeToken);
+      connection=usable.find(entry=>entry.id===connection)?.id||usable[0]?.id||'';
+      status(usable.length?'':'Save an AI connection in Settings to read a statement or an account page.','ai-status');
     }catch(error){status(error.message,'ai-status');}
   }
   async function read(){
     const text=$('intake').value.trim();
     const images=attachment?.kind==='image'?[attachment.image.dataUrl]:[];
     if(!text&&!images.length){status('Drop a statement, read the open page, or paste the figures first.','intake-status');return;}
-    const id=$('connection').value;
-    if(!id){status('Choose a saved AI connection, or add the record by hand below.','intake-status');return;}
     await run(async token=>{
+      const id=await connectionId(token);
       status(images.length?'Reading the image…':'Reading…','intake-status');
       const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text,...(images.length?{images}:{}),today:today()},timeoutMs:130000});
       const parsed=parseFinanceUpdates(result);
@@ -416,7 +429,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   function detected(next){
     if(!readPage||next?.id===site?.id)return;
     site=next||null;snapshot=null;snapshotEditing=false;
-    status('','snapshot-status');renderSnapshot();
+    status('','snapshot-status');renderSnapshot();render();
   }
   return {refresh,clear,site:detected,stop(){gate.stop();clearTimeout(revealTimer);}};
 }

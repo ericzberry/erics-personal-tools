@@ -125,7 +125,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 - **Statement intake** — `statement-text.js` (turns a dropped file into text or
   a downscaled image, entirely on the device), `pdf-text.js` (the PDF text-layer
   extractor, with its own confidence reporting), `finance-page-read.js` (one
-  text snapshot of the tab the owner is looking at). All three ship to mobile
+  text snapshot of the tab the owner is looking at, narrowed to the lines that
+  carry a figure and the lines that name one). All three ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
   `account-sites.js` is the sidebar's alone: the registry of account sites worth

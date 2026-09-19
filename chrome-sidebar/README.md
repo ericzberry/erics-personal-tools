@@ -937,3 +937,59 @@ at 380px in its refused, stopped and learned states with the same 15px under the
 last visible thing in it; the draft tiers, the Tools menu and the gift forms
 were checked for the spacing they already had. Archive:
 `release/erics-sidebar-0.6.116.zip`.
+
+## Reading an account page gives back the accounts (0.6.117 / mobile 0.1.71)
+
+Finance read the page in front of the owner by copying all of it into the intake
+box and then asking, in a second press, for that copy to be read. On a Schwab
+summary that copy was four thousand characters of index quotes, a
+generative-AI explainer, nine article links and three screens of disclosure
+around three balances — and the owner's own accounts were the part hardest to
+find in it. Now one press does the whole errand, and what comes back is the
+accounts.
+
+**The snapshot is narrowed before it is sent.** `finance-page-read.js` keeps the
+lines that state a figure, the short line above one that names it, and the lines
+that say which account or which date a figure belongs to. Legal furniture, chart
+axis labels and market data are left behind — a bare index quote is recognized
+by the index named in the lines above it — and the Schwab summary above comes
+down from 4,388 characters to 442, every one of them an account, a number or a
+date. A page whose balances this filter cannot see is sent whole rather than
+sent gutted.
+
+**One press, one errand.** Reading the open page no longer fills the intake box
+with a transcript to be read again: the page is open beside the panel, where the
+owner can see it better than any copy of it, and the drafts are the readout
+worth looking at. Every page read is sent as a live reading now, and the
+instructions were tightened to match what was asked for: one update per account
+the page names, and not the portfolio-wide total at the top of it, the day's
+change, a market quote, or a figure out of whatever the site is promoting.
+
+**The action beside a signed-in site says what it will do.** *Store account
+snapshots* sat as a bare button on a rule with nothing under it. It is now a
+group of its own — the site's name, one sentence saying the accounts on the page
+will be read and that nothing is saved until the figures have been checked, and
+one action named for the site: **Read my Schwab accounts**. What it gives back
+is the confirmation it always should have been tied to, one row per account,
+with **Edit** before **Save these values**. While a recognized site is beside
+the panel it is the one place the page is read from; the general action steps
+aside, because two buttons for one errand is the confusion. The row under the
+header offers it by the same name.
+
+**The AI connection picker is gone.** Connections are managed in Settings, and
+Finance now uses whichever saved connection can answer — the same rule quick add
+has always followed. The screen says something only when there is no connection
+at all.
+
+Validation: 350 of 351 extension, 33 mobile and 88 API tests pass; the one
+failure is `cupsfilter`, a macOS-only tool absent from this Linux container, and
+is unrelated to this change. New coverage: a dashboard narrowed to its accounts
+with the index quotes, marketing and axis labels dropped, a page whose figures
+the filter cannot see sent whole, the open page going straight to drafts as a
+live reading with no connection chosen first, and the new refusals in the live
+prompt. The panel was reviewed at 380px and 280px in the passkey-gate harness —
+which now also shows the panel beside an ordinary page, the state where the
+general action appears — through the reading, Edit and Save. A build in a
+checkout without `vendor/`, which is not in Git, failed outright in both apps
+despite the comment saying it would carry on; both builds now do what that
+comment promised. Not verified against a live signed-in Schwab session.

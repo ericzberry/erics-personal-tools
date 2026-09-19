@@ -10,9 +10,11 @@ export function money(value,currency='USD'){
 export const Figure=({label,value,id,tone=''})=>Stack([Label(label,{className:'figure-label'}),Strong(value,{id,className:`figure-value${tone?` figure-value--${tone}`:''}`})],{className:'figure'});
 
 // Offered when the owner is already signed in to an account site beside the
-// panel. Before anything is read it is one action; afterwards it is what came
-// off the page, with every amount editable, because the owner is the only one
-// who can see whether a figure is right.
+// panel. Before anything is read it is one action and a plain sentence saying
+// what that action will do; afterwards it is what came off the page, with
+// every amount editable, because the owner is the only one who can see whether
+// a figure is right. Nothing is written by reading, and nothing is saved until
+// the figures below have been looked at.
 export function SnapshotPanel({site,rows=[],editing=false,disabled=false,onStore,onSave,onEdit,onDiscard,onAmount}){
   const action=(label,variant,handler)=>{
     const node=Button(label,{variant,size:'compact',disabled});
@@ -26,12 +28,16 @@ export function SnapshotPanel({site,rows=[],editing=false,disabled=false,onStore
     Strong(site.label),
     rows.length?Label([`${rows.length} account${rows.length===1?'':'s'}`,shared?`as of ${shared}`:''].filter(Boolean).join(' · '),{className:'snapshot-meta'}):null
   ],{className:'snapshot-heading'});
-  if(!rows.length)return Section([heading,ActionGroup([action('Store account snapshots','primary',onStore)],{compact:true})],{className:'record-row'});
-  return Section([heading,...rows.map((row,index)=>SnapshotRow(row,{index,editing,dated:!shared,onAmount})),ActionGroup([
-    action('Save','primary',onSave),
+  if(!rows.length)return Stack([
+    heading,
+    Note('Reads the accounts on the page in front of you and shows what it found. Nothing is saved until you have checked the figures.'),
+    ActionGroup([action(`Read my ${site.label} accounts`,'primary',onStore)],{compact:true})
+  ],{className:'snapshot-reading'});
+  return Stack([heading,...rows.map((row,index)=>SnapshotRow(row,{index,editing,dated:!shared,onAmount})),ActionGroup([
+    action('Save these values','primary',onSave),
     ...(editing?[]:[action('Edit','secondary',onEdit)]),
     action('Discard','subtle',onDiscard)
-  ],{compact:true})],{className:'record-row'});
+  ],{compact:true})],{className:'snapshot-reading'});
 }
 // A read figure names the record it would land on and nothing else is implied:
 // until it is saved it is a proposal, the same as a draft.
@@ -55,7 +61,7 @@ export function FinanceView(){
   const kinds=FINANCE_KINDS.map(kind=>({text:`${kind.label}${kind.side==='liability'?' (liability)':''}`,value:kind.id}));
   return Stack([
     ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
-    Stack([Stack([],{id:'finance-snapshot-body'}),Notice('',{id:'finance-snapshot-status'})],{id:'finance-snapshot',className:'snapshot-panel',hidden:true}),
+    Section([Stack([],{id:'finance-snapshot-body'}),Notice('',{id:'finance-snapshot-status'})],{id:'finance-snapshot',className:'settings-group snapshot-panel',hidden:true}),
     SettingsGroup({title:'Position',level:2,children:[
       Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
       Stack([],{id:'finance-totals',className:'finance-totals'}),
@@ -67,10 +73,11 @@ export function FinanceView(){
       UI.UploadField({id:'finance-drop',inputId:'finance-file',statusId:'finance-file-status',
         label:'Drop a statement',formats:'PDF, CSV, XLSX or image',accept:ACCEPTED.join(','),
         status:'',resetId:'finance-file-clear',resetLabel:'Remove file'}),
-      ActionGroup([Button('Read the open page',{id:'finance-page',variant:'secondary',size:'compact'})],{compact:true}),
+      // One press, one errand: the page beside the panel is read into drafts
+      // here, not pasted into the box below to be read again.
+      ActionGroup([Button('Read the accounts on the open page',{id:'finance-page',variant:'secondary',size:'compact'})],{compact:true}),
       Stack([],{id:'finance-attachment',hidden:true}),
       FormField({id:'finance-intake',label:'Notes',kind:'textarea',rows:3}),
-      FormField({id:'finance-connection',label:'AI connection',kind:'select',options:[{text:'Choose a connection',value:''}]}),
       Note('',{id:'finance-ai-status',role:'status'}),
       ActionGroup([Button('Read this',{id:'finance-read',variant:'primary',size:'compact'}),Button('Clear',{id:'finance-intake-clear',variant:'secondary',size:'compact'})],{compact:true}),
       Notice('',{id:'finance-intake-status',role:'status'}),

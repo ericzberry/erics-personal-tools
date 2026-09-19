@@ -82,7 +82,7 @@ test('the open page is read from beside the sidebar, never from the tool’s own
   await assert.rejects(()=>activeAccountTab({tabs:{query:none}}),/No ordinary web page/);
 });
 
-test('reading the open page is offered only where there is a page beside the tool',async()=>{
+test('reading the open page is offered only where there is a page beside the tool, and goes straight to drafts',async()=>{
   const {document,window}=parseHTML('<html><body><main></main></body></html>');
   globalThis.document=document;globalThis.window=window;
   const restore=selectValues(window);
@@ -93,14 +93,28 @@ test('reading the open page is offered only where there is a page beside the too
   plain.stop();
 
   document.querySelector('main').replaceChildren();
-  let asked=0;
-  const sidebar=financeHost(document,{readPage:async()=>{asked++;return {text:'Cash 1,200.00',host:'example.invalid',title:'',trimmed:0,tables:1};}});
+  let asked=0,sent=null;
+  const sidebar=financeHost(document,{
+    readPage:async()=>{asked++;return {text:'Cash 1,200.00',host:'example.invalid',title:'',trimmed:0,tables:1,filtered:true};},
+    remote:async(token,path,options)=>{
+      if(path==='/v1/ai-connections')return {connections:[{id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:true}]};
+      sent={path,value:options.value};
+      return {updates:[{name:'Cash',institution:'',owner:'',kind:'bank',currency:'USD',value:1200,asOf:'2026-09-19',confidence:'high',reason:'Balance on the page.'}],unread:''};
+    }
+  });
   await settle(()=>document.getElementById('finance-list').textContent.includes('No records yet'));
   assert.equal(document.getElementById('finance-page').hidden,false);
   document.getElementById('finance-page').click();
-  await settle(()=>document.getElementById('finance-intake').value.includes('Cash 1,200.00'));
+  await settle(()=>document.getElementById('finance-drafts').textContent.includes('Cash'));
   assert.equal(asked,1,'the page is read once, and only when asked');
-  assert.match(document.getElementById('finance-attachment').textContent,/example.invalid/);
+  // One press, one errand: nothing is pasted into the box to be read again,
+  // and no connection had to be chosen first.
+  assert.equal(document.getElementById('finance-intake').value,'');
+  assert.equal(document.getElementById('finance-connection'),null,'the connection is not a question put to the owner');
+  assert.equal(sent.path,'/v1/ai-connections/connection-1/finance-intake');
+  assert.equal(sent.value.live,true,'an open page is read as today’s balances');
+  assert.match(sent.value.text,/Cash 1,200\.00/);
+  assert.match(document.getElementById('finance-intake-status').textContent,/1 account read from example\.invalid/);
   sidebar.stop();restore();
 });
 

@@ -55,6 +55,12 @@ Mobile 0.1.47 carries the shared Finance modules behind the extension's new
 sidebar's alone — the phone has no such page and shows no snapshot prompt — so
 nothing changes here beyond keeping the shared ledger code in step.
 
+Mobile 0.1.71 carries the shared Finance modules behind the extension's rewritten
+page reading: the account page snapshot is narrowed to the lines that carry a
+figure or name one, and no feature picks an AI connection any more. Reading the
+tab beside the panel is still the sidebar's alone — the phone has no such page —
+so nothing changes here beyond keeping the shared ledger code in step.
+
 Mobile 0.1.49 carries the same **Add a card you hold** intake as the extension:
 name a card, review the benefits research brings back, and save them into the
 wallet, where the card holds its own benefits. Recurring credits state how often

@@ -69,24 +69,77 @@ test('images are routed by extension, and only formats a provider accepts', () =
   assert.ok(!ACCEPTED.includes('.heic'));
 });
 
-test('the page reader takes visible text and table rows, and nothing else', () => {
-  // A stand-in for the page: only what readAccountPage actually touches.
-  const cell = text => ({innerText: text});
-  const row = cells => ({cells: cells.map(cell)});
-  const table = {rows: [row(['Account', 'Balance']), row(['Brokerage', '$1,284,300.55'])]};
-  const document = {
-    querySelectorAll: selector => selector === 'table' ? [table] : [],
-    title: '  Positions  ',
-    body: {innerText: 'Brokerage $1,284,300.55\n\n\n\nCash $12.00'}
-  };
-  const location = {href: 'https://broker.example/positions', host: 'broker.example'};
+const inPage = (document, location) =>
   // Injected into the page by Chrome, so it must work from its source text
   // alone with no closure over this module.
-  const page = Function('document', 'location', `return (${readAccountPage.toString()})()`)(document, location);
+  Function('document', 'location', `return (${readAccountPage.toString()})()`)(document, location);
+const pageOf = ({text, tables = []}) => ({
+  querySelectorAll: selector => selector === 'table' ? tables : [],
+  title: '  Positions  ',
+  body: {innerText: text}
+});
+const cells = list => ({cells: list.map(text => ({innerText: text}))});
+const HERE = {href: 'https://broker.example/positions', host: 'broker.example'};
+
+test('the page reader takes the figures and the lines that name them, and nothing else', () => {
+  const table = {rows: [cells(['Account', 'Balance']), cells(['Brokerage', '$1,284,300.55']), cells(['Open an account', 'Learn how'])]};
+  const page = inPage(pageOf({
+    tables: [table],
+    text: 'Brokerage $1,284,300.55\n\n\n\nCash $12.00'
+  }), HERE);
   assert.equal(page.host, 'broker.example');
   assert.equal(page.title, 'Positions');
+  assert.equal(page.filtered, true);
   assert.equal(page.tables.length, 1);
   assert.match(page.tables[0], /Brokerage {2}\| {2}\$1,284,300\.55/);
+  assert.match(page.tables[0], /Account {2}\| {2}Balance/, 'the header says what the columns are');
+  assert.equal(page.tables[0].includes('Open an account'), false, 'a row with no figure in it is furniture');
+  assert.match(page.text, /Cash \$12\.00/);
   assert.ok(!/\n{3,}/.test(page.text), 'runs of blank lines are collapsed');
   assert.ok(MAX_PAGE_TEXT > 0);
+});
+
+// The dashboard a balance sits on is mostly not balances. Schwab's summary
+// wraps three account rows in index quotes, a generative-AI explainer, article
+// links and screens of disclosure, and reading all of that is what buried the
+// accounts the owner asked about.
+test('a dashboard is narrowed to the accounts, their numbers and their dates', () => {
+  const page = inPage(pageOf({text: [
+    'Summary',
+    'Updated: 03:57:45 AM ET, 09/19/2026',
+    'IRA',
+    'Account number ending in 306',
+    'IRA $412,880.17 $0.00 0.00%',
+    'Checking',
+    'Account number ending in 638',
+    'Checking $8,420.11 $0.00 0.00%',
+    'Portfolio Insights is a snapshot of your portfolio’s performance, with market context and news tied to the investments you own—all in one place, so you can quickly understand what has changed and why.',
+    '12 Tax-Smart Charitable Giving Tips for 2025',
+    'DJIA',
+    'Closed',
+    '',
+    '51,682.64',
+    '0.00 (0.00%)',
+    'U.S. indexes are displayed in real time. All other indexes are delayed by at least 15 minutes.',
+    '$0',
+    '$1M',
+    '$2M'
+  ].join('\n')}), HERE);
+  assert.equal(page.filtered, true);
+  assert.match(page.text, /IRA \$412,880\.17/);
+  assert.match(page.text, /Account number ending in 306/);
+  assert.match(page.text, /^IRA$/m, 'the name above a figure comes with it');
+  assert.match(page.text, /Checking \$8,420\.11/);
+  assert.match(page.text, /09\/19\/2026/, 'the date the page states is kept');
+  assert.equal(page.text.includes('51,682.64'), false, 'an index quote is not one of the owner’s accounts');
+  assert.equal(page.text.includes('Portfolio Insights'), false);
+  assert.equal(page.text.includes('Charitable Giving'), false);
+  assert.equal(/^\$1M$/m.test(page.text), false, 'a chart axis is not a balance');
+  assert.ok(page.text.length < 300, `narrowed to ${page.text.length} characters`);
+});
+
+test('a page whose figures this filter cannot see is sent whole rather than gutted', () => {
+  const page = inPage(pageOf({text: 'Balance\nabout a thousand pounds\nSettings'}), HERE);
+  assert.equal(page.filtered, false);
+  assert.match(page.text, /about a thousand pounds/);
 });

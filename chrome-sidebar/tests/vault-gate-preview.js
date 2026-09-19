@@ -38,6 +38,9 @@ const root=document.getElementById('gate-states');
 const states=[
   ['Waiting for the passkey sheet','wait',null],
   ['Sheet dismissed','dismiss',null],
+  // The panel beside an ordinary page: no site to name, so reading the page is
+  // offered by the one action in Read an update rather than a panel of its own.
+  ['Open · beside a page that is not an account site','open',null],
   ...ACCOUNT_SITES.map(site=>[`Open · beside a signed-in ${site.label} page`,'open',site])
 ];
 for(const [label,answer,site] of states){

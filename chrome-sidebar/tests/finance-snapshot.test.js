@@ -60,7 +60,9 @@ function setup(){
   globalThis.document=document;globalThis.window=window;
   return {document,restore:selectValues(window)};
 }
-const ready=document=>settle(()=>document.getElementById('finance-connection').querySelectorAll('option').length>1);
+// The tool is ready once the ledger has loaded; which saved connection reads
+// a page is settled behind the screen, not by a control on it.
+const ready=document=>settle(()=>document.getElementById('finance-list').textContent.includes('No records')||document.getElementById('finance-list').querySelector('.record-row'));
 
 test('a signed-in account page offers one action, and nothing before that',async()=>{
   const {document,restore}=setup();
@@ -71,7 +73,13 @@ test('a signed-in account page offers one action, and nothing before that',async
   assert.equal(document.getElementById('finance-snapshot').hidden,false);
   const panel=document.getElementById('finance-snapshot-body');
   assert.match(panel.textContent,/E\*TRADE/);
-  assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Store account snapshots']);
+  assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Read my E*TRADE accounts']);
+  assert.match(panel.textContent,/Nothing is saved until you have checked the figures/,'the action says what it will do before it does it');
+  // A bare action on a rule with nothing under it is what this replaced: the
+  // reading is a group of its own, and the rule belongs to a record.
+  assert.equal(document.getElementById('finance-snapshot').className.includes('settings-group'),true);
+  assert.equal(panel.querySelector('.record-row'),null);
+  assert.equal(document.getElementById('finance-page').hidden,true,'the site’s own panel is the one place the page is read from');
   tool.site(null);
   assert.equal(document.getElementById('finance-snapshot').hidden,true,'leaving the page withdraws the offer');
   tool.stop();restore();
@@ -86,7 +94,6 @@ test('storing snapshots reads one total per account and saves nothing until Save
   });
   await ready(document);
   tool.site(ETRADE);
-  document.getElementById('finance-connection').value='connection-1';
   document.querySelector('#finance-snapshot-body button').click();
   await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
 
@@ -100,7 +107,7 @@ test('storing snapshots reads one total per account and saves nothing until Save
   assert.match(panel.textContent,/\$124,501|\$124,500\.50/,'each account shows the total read for it');
   assert.match(panel.textContent,/Updates Individual Brokerage/,'a known account names the record it lands on');
   assert.match(panel.textContent,/New record/,'an unknown account says it would create one');
-  assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save','Edit','Discard']);
+  assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save these values','Edit','Discard']);
   assert.match(panel.textContent,/2 accounts · as of 2026-09-11/,'one shared date is stated once, not on every row');
   assert.equal(panel.textContent.includes('New record · as of'),false);
   assert.equal(writes.length,0,'reading saves nothing');
@@ -126,7 +133,6 @@ test('accounts read with different dates each state their own',async()=>{
   ],unread:''}});
   await ready(document);
   tool.site(ETRADE);
-  document.getElementById('finance-connection').value='connection-1';
   document.querySelector('#finance-snapshot-body button').click();
   await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
   const panel=document.getElementById('finance-snapshot-body');
@@ -141,7 +147,6 @@ test('Edit puts the extracted amounts in fields, and Save writes what the owner 
   const {tool,writes}=financeHost(document);
   await ready(document);
   tool.site(ETRADE);
-  document.getElementById('finance-connection').value='connection-1';
   document.querySelector('#finance-snapshot-body button').click();
   await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
 
@@ -150,7 +155,7 @@ test('Edit puts the extracted amounts in fields, and Save writes what the owner 
   const first=document.getElementById('finance-snapshot-value-0');
   assert.equal(first.value,'124500.5','an amount is offered as read, not as a blank field');
   assert.equal(document.querySelector('label[for=finance-snapshot-value-0]').textContent,'Individual Brokerage');
-  assert.deepEqual(buttons().map(node=>node.textContent),['Save','Discard']);
+  assert.deepEqual(buttons().map(node=>node.textContent),['Save these values','Discard']);
   first.value='124600';
   first.dispatchEvent(new document.defaultView.Event('input'));
   buttons()[0].click();
@@ -159,21 +164,26 @@ test('Edit puts the extracted amounts in fields, and Save writes what the owner 
   tool.stop();restore();
 });
 
-test('a reading needs a connection, and a bad amount is reported without losing the rest',async()=>{
+test('a reading needs a saved connection, and a bad amount is reported without losing the rest',async()=>{
   const {document,restore}=setup();
-  // Two saved connections, so none is chosen for the owner and the reading has
-  // to say what it is waiting for.
+  // No usable connection: the tool says where one is saved rather than
+  // offering a choice the owner has not made yet.
+  const {tool:none}=financeHost(document,{connections:[{id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:false}]});
+  await ready(document);
+  none.site(ETRADE);
+  document.querySelector('#finance-snapshot-body button').click();
+  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Save an AI connection in Settings'));
+  none.stop();
+
+  document.querySelector('main').replaceChildren();
+  // Two saved connections, and still no question: connections are managed in
+  // Settings, and the reading uses whichever one can answer.
   const {tool,writes}=financeHost(document,{connections:[
     {id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:true},
     {id:'connection-2',name:'Second',provider:'anthropic',hasApiKey:true}
   ]});
   await ready(document);
   tool.site(ETRADE);
-  document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('AI connection'));
-  assert.equal(writes.length,0);
-
-  document.getElementById('finance-connection').value='connection-1';
   document.querySelector('#finance-snapshot-body button').click();
   await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Rollover IRA'));
   [...document.querySelectorAll('#finance-snapshot-body button')].find(node=>node.textContent==='Edit').click();
@@ -206,7 +216,6 @@ test('a second account site reads under its own name and its own default kind',a
   tool.site(CHASE);
   const panel=()=>document.getElementById('finance-snapshot-body');
   assert.match(panel().textContent,/Chase/);
-  document.getElementById('finance-connection').value='connection-1';
   panel().querySelector('button').click();
   await settle(()=>panel().textContent.includes('Total Checking'));
   assert.equal(sent.institution,'Chase','the site names the institution the page belongs to');

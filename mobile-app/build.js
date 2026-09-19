@@ -1,4 +1,4 @@
-import {readFile, mkdir, cp, rm} from 'node:fs/promises';
+import {readFile, mkdir, cp, rm, stat} from 'node:fs/promises';
 const manifest = JSON.parse(await readFile(new URL('./public/app/manifest.webmanifest', import.meta.url)));
 const {version} = JSON.parse(await readFile(new URL('./package.json', import.meta.url)));
 for (const file of ['app.js','releases.js','styles.css','sw.js','index.html','push.js','push-bridge.js','icon-192.png','icon-512.png']) await readFile(new URL(`./public/app/${file}`, import.meta.url));
@@ -23,6 +23,8 @@ for (const file of shared) {
 // same thing the extension build does with that directory. Reading a
 // spreadsheet is one input among several, and the reader's absence must not
 // hold back a release of everything else.
-await cp(new URL('../chrome-sidebar/vendor/',import.meta.url),new URL('./dist/app/vendor/',import.meta.url),{recursive:true,force:true});
+const vendor=new URL('../chrome-sidebar/vendor/',import.meta.url);
+if(await stat(vendor).catch(()=>null))await cp(vendor,new URL('./dist/app/vendor/',import.meta.url),{recursive:true,force:true});
+else console.warn('No chrome-sidebar/vendor/ in this checkout — the build carries on without it.');
 await mkdir(new URL('./dist/app/data/',import.meta.url),{recursive:true});
 await cp(new URL('../chrome-sidebar/config/rankings-2026.json',import.meta.url),new URL('./dist/app/data/rankings-2026.json',import.meta.url));

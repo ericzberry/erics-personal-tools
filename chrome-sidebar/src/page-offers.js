@@ -48,7 +48,7 @@ export const OFFER_SOURCES=[
     // present being bought twice.
     return `${isBought(record)?'Bought':'Saved'} for ${record.person}`;
   }},
-  {id:'account-site',capability:'finance',viaTab:true,match:({site})=>site?`Store ${site.label} snapshots`:null},
+  {id:'account-site',capability:'finance',viaTab:true,match:({site})=>site?`Read ${site.label} accounts`:null},
   {id:'reward-program',capability:'rewards',match:({page})=>{
     const program=rewardProgram(page.href);
     return program?`${program.label} offers`:null;

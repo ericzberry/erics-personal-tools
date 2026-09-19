@@ -171,17 +171,31 @@ updates the owner reviews before anything is saved.
   silently. `pdf-text.js` reports its own confidence — `good`, `partial`,
   `low`, or `none` — and a scan with no text layer says so and suggests the
   image path instead.
-- **Read the open page.** One text snapshot of the tab the owner is already
-  looking at, for a balance behind a login. It never navigates, never signs in,
-  never opens a tab, and only reads when asked. Table rows are rendered cell by
+- **Read the open page.** One press, one errand: a text snapshot of the tab the
+  owner is already looking at, read into drafts in the same press. It never
+  navigates, never signs in, never opens a tab, and only reads when asked. The
+  page is not copied into the intake box on the way through — it is open beside
+  the panel, where the owner can see it better than any transcript of it, and
+  the drafts are the readout worth looking at. Table rows are rendered cell by
   cell so a label stays beside its figure. Extension and browser-internal pages
   are skipped.
+
+  **The snapshot is narrowed to the figures.** An account dashboard is mostly
+  not accounts: Schwab's summary wraps three balances in index quotes, a
+  generative-AI explainer, article links and screens of disclosure, and sending
+  all of it buries what was asked about. `finance-page-read.js` keeps the lines
+  that state a figure, the short line above one that names it, and the lines
+  that say which account or which date a figure belongs to; it drops legal
+  furniture, chart axis labels, and market data — a bare index quote is
+  recognized by the index named in the lines above it. Narrowing applies only
+  when it actually found figures: a page whose balances this filter cannot see
+  is sent whole rather than sent gutted.
 - **Drop an image.** A screenshot, a photo, or a scanned statement. The picture
   is downscaled to 1400px and re-encoded on the device before it is sent —
   the original file never leaves. Images travel as content parts to a model
   marked `vision` in the catalog; a connection with no such model is refused
   rather than sent something it cannot read.
-- **Store account snapshots.** The sidebar recognizes the account sites in
+- **Read the accounts on a site the sidebar recognizes.** The sidebar knows the account sites in
   `account-sites.js` from the tab beside it, and asks every frame of that page
   four things — its path, whether it has finished loading, whether a password
   field is on screen, and whether a sign-out control is — to tell a signed-in
@@ -196,13 +210,25 @@ updates the owner reviews before anything is saved.
   A site whose accounts live on one subdomain is recognized by that subdomain
   alone — Schwab's client host, not the marketing site around it — so the rest
   of its domain is never asked anything.
-  On a signed-in site the sidebar opens Finance and offers one action. Pressing
-  it takes the same single page snapshot as above and reads it as a live page:
-  one figure per account, using each account's own total, and a balance the page
-  shows without a date of its own is current rather than dropped. What comes
-  back is one row per account, matched to a record on the device, with **Edit**
-  to correct any amount before **Save** writes them.
+  On a signed-in site the sidebar opens Finance and offers one action, named for
+  the site — **Read my Schwab accounts** — in a group of its own that says what
+  pressing it will do and that nothing is saved by reading. Pressing it takes
+  the same single page snapshot as above and reads it as a live page: one figure
+  per account the page names, using each account's own total. A portfolio-wide
+  total, a day change, a market quote and anything in the page's news or
+  promotional panels are left out, and a balance the page shows without a date
+  of its own is current rather than dropped. What comes back is the
+  confirmation: one row per account, matched to a record on the device, with
+  **Edit** to correct any amount before **Save these values** writes them. While
+  a recognized site is beside the panel this is the one place the page is read
+  from; the general **Read the accounts on the open page** action steps aside,
+  because two buttons for one errand is the confusion.
 - **Paste text.** As before.
+
+**Which saved connection does the reading is not a question.** Connections are
+managed in Settings; Finance uses whichever saved connection can answer and says
+so only when there is none. A model picker in a feature would be a second place
+to manage connections and a decision the owner has no reason to make.
 
 What is not sent matters as much. Saved records never leave the device, so the
 model cannot know what is already held, cannot pick the record a figure belongs
