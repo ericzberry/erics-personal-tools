@@ -71,18 +71,20 @@ test('a signed-in account page offers one action, and nothing before that',async
   const {document,restore}=setup();
   const {tool}=financeHost(document);
   await ready(document);
-  assert.equal(document.getElementById('finance-snapshot').hidden,true,'no site, no prompt');
+  // The block is there for any page beside the panel; what changes when a site
+  // is recognized is the name above it and the name on the action.
+  assert.equal(document.getElementById('finance-page-block').hidden,false);
+  assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'This page');
   tool.site(ETRADE);
-  assert.equal(document.getElementById('finance-snapshot').hidden,false);
+  assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'E*TRADE');
   const panel=document.getElementById('finance-snapshot-body');
-  assert.match(panel.textContent,/E\*TRADE/);
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Read my E*TRADE accounts']);
   assert.match(panel.textContent,/Nothing is saved until you have checked the figures/,'the action says what it will do before it does it');
-  assert.equal(document.getElementById('finance-snapshot').className.includes('settings-group'),true);
+  assert.equal(document.getElementById('finance-page-block').className.includes('settings-group'),true);
   assert.equal(panel.querySelector('.record-row'),null);
-  assert.equal(document.getElementById('finance-page').hidden,true,'the site’s own panel is the one place the page is read from');
   tool.site(null);
-  assert.equal(document.getElementById('finance-snapshot').hidden,true,'leaving the page withdraws the offer');
+  assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'This page',
+    'leaving a recognized site leaves an ordinary page, not nothing');
   tool.stop();restore();
 });
 
@@ -97,17 +99,16 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
 
   tool.quiet(true);
   tool.site(ETRADE);
-  assert.equal(document.getElementById('finance-position').hidden,true);
-  assert.equal(document.getElementById('finance-records').hidden,true);
+  assert.equal(document.getElementById('finance-ledger').hidden,true);
   // Not hidden figures — figures that were never built.
   for(const id of ['finance-totals','finance-list','finance-breakdown','finance-trend'])
     assert.equal(document.getElementById(id).textContent,'',id);
   assert.equal(document.body.textContent.includes('100,000'),false,'no balance is anywhere on the page');
 
   // Everything that puts a figure into the ledger is ready without asking.
-  assert.equal(document.getElementById('finance-snapshot').hidden,false);
-  assert.deepEqual([...document.querySelectorAll('#finance-snapshot-body button')].map(node=>node.textContent),['Read my E*TRADE accounts']);
-  assert.equal(document.getElementById('finance-page').hidden,true,'one way to read the page');
+  assert.equal(document.getElementById('finance-page-block').hidden,false);
+  assert.deepEqual([...document.querySelectorAll('#finance-snapshot-body button')].map(node=>node.textContent),['Read my E*TRADE accounts'],
+    'one way to read the page, in the block about the page');
   assert.ok(document.getElementById('finance-drop'),'drop a statement');
   assert.equal(document.getElementById('finance-read').disabled,false);
   assert.equal(document.getElementById('finance-editor').hidden,false,'and a figure typed by hand');
@@ -115,15 +116,15 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
   assert.equal(document.getElementById('finance-actions').textContent,'Show position','one action, and it is the one that applies');
 
   document.querySelector('#finance-actions button').click();
-  await settle(()=>document.getElementById('finance-position').hidden===false);
+  await settle(()=>document.getElementById('finance-ledger').hidden===false);
   assert.match(document.getElementById('finance-totals').textContent,/\$100,000/);
-  assert.equal(document.getElementById('finance-records').hidden,false);
+
   assert.equal(document.getElementById('finance-actions').textContent,'Refresh');
 
   // Asked once, answered for the sitting: the next bank page does not cover it
   // up again and ask a second time.
   tool.quiet(true);
-  assert.equal(document.getElementById('finance-position').hidden,false);
+  assert.equal(document.getElementById('finance-ledger').hidden,false);
   tool.stop();restore();
 });
 

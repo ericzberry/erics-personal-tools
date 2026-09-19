@@ -56,7 +56,12 @@ test('the finance screen leads with its title, status and one action, and has no
   const headings=[...doc.querySelectorAll('.settings-group-title')].map(node=>node.textContent);
   assert.equal(headings.includes('Cloud sync'),false,'connection maintenance no longer trails the page');
   assert.equal(headings.includes('Ledger'),false,'the saved figures are named for what they hold');
-  assert.ok(headings.includes('Holdings'));
+  // One scope per block, and the heading is what says which. These used to
+  // alternate — a site's reading, the whole ledger's totals, the page action
+  // again, the whole ledger's list — so "Position" under "E*TRADE" read as
+  // E*TRADE's position when it was the estate's.
+  assert.deepEqual(headings,['This page','Everything you hold','Add a figure']);
+  assert.equal(headings.includes('Position'),false,'the NET and ASSETS labels already say that');
   const title=doc.querySelector('.tool-title-block');
   assert.equal(title.querySelector('h1').textContent,'Finance');
   assert.ok(title.contains(doc.getElementById('finance-actions')));
@@ -85,13 +90,13 @@ test('the open page is read from beside the sidebar, never from the tool’s own
   await assert.rejects(()=>activeAccountTab({tabs:{query:none}}),/No ordinary web page/);
 });
 
-test('reading the open page is offered only where there is a page beside the tool, and goes straight to drafts',async()=>{
+test('reading the open page is offered only where there is a page beside the tool, and stays in that block',async()=>{
   const {document,window}=parseHTML('<html><body><main></main></body></html>');
   globalThis.document=document;globalThis.window=window;
   const restore=selectValues(window);
   const plain=financeHost(document);
   await settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet'));
-  assert.equal(document.getElementById('finance-page').hidden,true,'a full tab has no page to read');
+  assert.equal(document.getElementById('finance-page-block').hidden,true,'a full tab has no page to read, so there is no block about one');
   assert.equal(document.getElementById('finance-actions').textContent,'Refresh');
   plain.stop();
 
@@ -106,9 +111,13 @@ test('reading the open page is offered only where there is a page beside the too
     }
   });
   await settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet'));
-  assert.equal(document.getElementById('finance-page').hidden,false);
-  document.getElementById('finance-page').click();
-  await settle(()=>document.getElementById('finance-drafts').textContent.includes('Cash'));
+  assert.equal(document.getElementById('finance-page-block').hidden,false);
+  // An unrecognized page names itself, and its reading is offered and reviewed
+  // in its own block rather than down among the ways of adding a figure.
+  assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'This page');
+  document.getElementById('finance-page-read').click();
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Cash'));
+  assert.equal(document.getElementById('finance-drafts').textContent,'','a page reading does not land in the statement block');
   assert.equal(asked,1,'the page is read once, and only when asked');
   // One press, one errand: there is no box for the page to be pasted into on
   // the way through, and no connection had to be chosen first.
@@ -117,7 +126,7 @@ test('reading the open page is offered only where there is a page beside the too
   assert.equal(sent.path,'/v1/ai-connections/connection-1/finance-intake');
   assert.equal(sent.value.live,true,'an open page is read as today’s balances');
   assert.match(sent.value.text,/Cash 1,200\.00/);
-  assert.match(document.getElementById('finance-intake-status').textContent,/1 figure read from example\.invalid, folded into 1/);
+  assert.match(document.getElementById('finance-snapshot-status').textContent,/1 figure read from example\.invalid, folded into 1/);
   sidebar.stop();restore();
 });
 

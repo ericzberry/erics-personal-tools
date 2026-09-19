@@ -1,4 +1,4 @@
-export const VERSION = '0.1.77';
+export const VERSION = '0.1.78';
 const KEY = 'erics-tools-mobile-release-check';
 const HOUR = 60 * 60 * 1000;
 export function newer(candidate, current = VERSION) {

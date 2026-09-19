@@ -1,9 +1,9 @@
-import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,SnapshotPanel,Figure,money,AttachmentCard} from './components/finance.js';
+import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionDetail} from './components/finance.js';
 import {RecordRow,Button,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,LEGACY_CLASSES,REGISTRATIONS} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,LEGACY_CLASSES,REGISTRATIONS,VEHICLES} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 const today=()=>new Date().toISOString().slice(0,10);
 
@@ -29,6 +29,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // into one amount per portfolio and asset class — so they are reviewed the
   // same way and saved by the same path.
   let site=null,snapshot=null,snapshotEditing=false,fold=null,foldEditing=false;
+  // Capital account statements read out of the same file, reviewed on their
+  // own. A statement is not a figure — it carries a commitment, what has been
+  // called against it and what has come back — so it gets a review that shows
+  // all four rather than being squeezed into a one-amount row. `investing` is
+  // the investment currently open in the second form.
+  // A capital account is reviewed in the block the reading came from, so what
+  // is under review is beside the thing it was read out of.
+  let capital=null,capitalEditing=false,capitalSource='file',investing=null;
   // Arriving because the tab is a finance page is not the owner asking to see
   // what they are worth. Such an arrival is quiet: the intake is ready for what
   // the page in front of them can put into the ledger, and the ledger's own
@@ -55,6 +63,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   const portfolios=()=>portfoliosOf(records);
   const portfolioOf=number=>portfolios().find(entry=>entry.number===number)||null;
   const nextPortfolio=()=>Math.max(0,...portfolios().map(entry=>entry.number))+1;
+  const holdings=()=>holdingsOf(records);
+  const holdingOf=number=>holdings().find(entry=>entry.number===number)||null;
+  const nextHolding=()=>Math.max(0,...holdings().map(entry=>entry.number))+1;
+  const portfolioChoices=()=>portfolios().map(entry=>({text:`${entry.name} · ${registrationLabel(entry.kind)}`,value:portfolioRef(entry.number)}));
 
   // The form does two jobs, because they are the same job at two sizes: name a
   // portfolio, or file a figure into one. Which fields are shown says which.
@@ -95,6 +107,39 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     syncForm();$('editor').open=true;$('name').focus();
   }
 
+  // The second form: an investment, and the capital account statement that
+  // says where it stands. Its portfolio choices are the ledger's own, and it
+  // offers no way to invent one — an investment belongs to a portfolio that
+  // already exists, and the reading path is what proposes new ones.
+  function fillInvestmentPortfolios(selected=''){
+    const options=portfolioChoices();
+    $('inv-portfolio').replaceChildren(...options.map(option=>Option(option.text,option.value)));
+    $('inv-portfolio').value=options.some(option=>option.value===selected)?selected:(options[0]?.value||'');
+  }
+  function clearInvestmentForm(){
+    investing=null;
+    fillInvestmentPortfolios();
+    $('inv-name').value='';$('inv-vehicle').value=String(VEHICLES[0].code);$('inv-class').value=String(classById('pe').code);
+    for(const key of ['inv-commitment','inv-value','inv-funded','inv-returned'])$(key).value='';
+    $('inv-asOf').value=today();
+    $('inv-title').textContent='New investment';
+    status('','inv-status');
+  }
+  function fillInvestment(position){
+    const holding=position.holding,current=position.current;
+    investing={number:holding.number,id:holding.id,revision:holding.revision,
+      capitalId:current?.id||'',capitalRevision:current?.revision??null};
+    fillInvestmentPortfolios(portfolioRef(holding.portfolio));
+    $('inv-name').value=holding.name;$('inv-vehicle').value=String(holding.vehicle);$('inv-class').value=String(holding.class);
+    $('inv-commitment').value=current?String(current.commitment):'';
+    $('inv-value').value=current?String(current.value):'';
+    $('inv-funded').value=current?String(current.contributed):'';
+    $('inv-returned').value=current?String(current.distributed):'';
+    $('inv-asOf').value=current?current.asOf:'';
+    $('inv-title').textContent=`Editing ${holding.name}`;
+    $('investment').open=true;$('inv-name').focus();
+  }
+
   function renderPosition(){
     const currencies=financeCurrencies(records);
     if(currencies.length&&!currencies.some(entry=>entry.currency===currency))currency=currencies[0].currency;
@@ -108,14 +153,26 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('totals').replaceChildren(
       Figure({label:'Net',value:money(summary.net,currency),tone:summary.net<0?'negative':''}),
       Figure({label:'Assets',value:money(summary.assets,currency)}),
-      ...(summary.liabilities?[Figure({label:'Liabilities',value:money(summary.liabilities,currency)})]:[])
+      ...(summary.liabilities?[Figure({label:'Liabilities',value:money(summary.liabilities,currency)})]:[]),
+      // What is still owed on a commitment is money already spoken for, and it
+      // appears only when there is some. It is not a liability — nobody can
+      // demand all of it today — so it sits beside the totals rather than in
+      // them.
+      ...(summary.positions.unfunded?[Figure({label:'Unfunded',value:money(summary.positions.unfunded,currency)})]:[])
     );
     $('stale').hidden=!summary.stale.length;
     $('stale').textContent=summary.stale.length?`${summary.stale.length} portfolio${summary.stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${summary.stale[0].name}${summary.stale[0].asOf?` from ${summary.stale[0].asOf}`:''}. Totals still count ${summary.stale.length===1?'it':'them'} at ${summary.stale.length===1?'its':'their'} last known figure.`:'';
     $('breakdown').replaceChildren(
       BreakdownList('By asset class',summary.byClass,currency),
       BreakdownList('By portfolio',summary.byPortfolio,currency),
-      BreakdownList('By registration',summary.byRegistration,currency)
+      BreakdownList('By registration',summary.byRegistration,currency),
+      ...(summary.positions.count?[BreakdownList('Private investments',[
+        {label:'Committed',total:summary.positions.committed},
+        {label:'Funded',total:summary.positions.contributed},
+        {label:'Returned',total:summary.positions.distributed},
+        {label:'Unfunded',total:summary.positions.unfunded},
+        {label:'Value',total:summary.positions.value}
+      ],currency)]:[])
     );
     $('trend').replaceChildren(TrendTable(netWorthSeries(records,{currency}),currency));
     // Currencies are never added together, so say what a total covers.
@@ -162,7 +219,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     const parsed=parseFinanceUpdates(result);
     const folded=foldReadings(parsed.readings,portfolios(),{institution,
       defaultClass:classById(LEGACY_CLASSES[siteKind]||'')?.code??null});
-    return {...folded,unread:parsed.unread,read:parsed.readings.length};
+    // A dropped file is one errand, whatever kind of document it turns out to
+    // be. The owner should not have to say "this one is a capital account
+    // statement" — the reading says which of the two it found, and each is
+    // folded by the part of the device that knows how.
+    return {...folded,capital:foldCapital(parsed.capital||[],records,{today:today()}),
+      unread:parsed.unread,read:parsed.readings.length};
   }
   function renderFold(){
     $('drafts').replaceChildren(...(fold?.rows.length?[FoldReview({
@@ -173,6 +235,56 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       onAmount:(index,value)=>{fold.rows[index].amount=value;}
     })]:[]));
   }
+  function renderCapital(){
+    const proposed=capital?.rows.filter(row=>row.portfolioIsNew)
+      .map(row=>({text:`${row.portfolioName} · new`,value:String(row.portfolio)}))||[];
+    const choices=[...portfolios().map(entry=>({text:`${entry.name} · ${registrationLabel(entry.kind)}`,value:String(entry.number)})),...proposed];
+    const into=capitalSource==='page'?'capital-page':'capital-drafts';
+    $(capitalSource==='page'?'capital-drafts':'capital-page').replaceChildren();
+    $(into).replaceChildren(...(capital?.rows.length?[CapitalReview({
+      rows:capital.rows,notes:capital.notes,portfolios:choices,
+      editing:capitalEditing,disabled:busy||!loaded,
+      onSave:saveCapitalReview,
+      onEdit:()=>{capitalEditing=true;renderCapital();},
+      onDiscard:()=>{const from=capitalSource;capital=null;capitalEditing=false;renderCapital();status('',from==='page'?'snapshot-status':'intake-status');},
+      onField:(index,key,value)=>{
+        const row=capital.rows[index];
+        // Moving a statement to a portfolio that already exists drops the
+        // proposal with it: what was going to be created no longer is.
+        if(key==='portfolio'){
+          const number=Number(value),existing=portfolios().find(entry=>entry.number===number);
+          Object.assign(row,existing
+            ?{portfolio:number,portfolioName:existing.name,portfolioKind:existing.kind,portfolioIsNew:false,currency:existing.currency||'USD'}
+            :{portfolio:number});
+          return;
+        }
+        row[key]=['vehicle','class'].includes(key)?Number(value):value;
+      }
+    })]:[]));
+  }
+  // What a reading found, in one line, whichever kind of document it was. The
+  // two are counted separately because they are not the same thing: a figure
+  // was folded out of several readings, and a capital account is one statement.
+  const readNote=(result,where)=>{
+    const from=where?` from ${where}`:'';
+    return [
+      result.marks.length?`${result.read} figure${result.read===1?'':'s'} read${from}, folded into ${result.marks.length}`:'',
+      result.capital.rows.length?`${result.capital.rows.length} capital account${result.capital.rows.length===1?'':'s'} read${result.marks.length?'':from}`:''
+    ].filter(Boolean).join(' · ');
+  };
+  // Whichever block the reading happened in keeps the review: one statement is
+  // under review at a time, and it belongs beside where it came from.
+  function showCapital(result,source){
+    capital=result.capital.rows.length?{rows:result.capital.rows,notes:result.capital.notes}:null;
+    capitalEditing=false;capitalSource=source;renderCapital();
+  }
+  function showRead(result,target,{none,where='',extra=''}={}){
+    fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
+    showCapital(result,'file');
+    const found=readNote(result,where);
+    status([found?`${found}. Nothing is saved yet.`:none,extra,result.unread].filter(Boolean).join(' '),target,found?'success':'alert');
+    return !!found;
+  }
   async function read(){
     const text=attachment?.kind==='text'?attachment.text.trim():'';
     const images=attachment?.kind==='image'?[attachment.image.dataUrl]:[];
@@ -180,55 +292,58 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     await run(async token=>{
       status(images.length?'Reading the image…':'Reading…','intake-status','progress');
       const result=await readInto(token,{text,...(images.length?{images}:{})});
-      fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
-      status([result.marks.length?`${result.read} figure${result.read===1?'':'s'} read, folded into ${result.marks.length}. Nothing is saved yet.`:'No figures were found.',result.unread].filter(Boolean).join(' '),'intake-status',result.marks.length?'success':'alert');
+      showRead(result,'intake-status',{none:'No figures were found.'});
     },'intake-status');
   }
-  // One press does the whole errand. The page is not copied into a box on the
-  // way through: it is open beside the panel, where the owner can see it better
-  // than any transcript of it, and what comes back is the readout worth looking
-  // at — one figure per portfolio and class, saved only when applied.
-  async function intakeFromPage(){
-    await run(async token=>{
-      status('Reading the accounts on the open page…','intake-status','progress');
-      const page=await readPage();
-      const result=await readInto(token,{text:page.text,live:true});
-      fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
-      status([result.marks.length?`${result.read} figure${result.read===1?'':'s'} read from ${page.host}, folded into ${result.marks.length}. Nothing is saved until you save them.`:`No account figures were found on ${page.host}.`,
-        page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
-        result.unread].filter(Boolean).join(' '),'intake-status',result.marks.length?'success':'alert');
-    },'intake-status');
-  }
-
   // Rebuilt only when the reading itself changes, so editing an amount is not
   // interrupted by an unrelated render. `syncReadings` keeps the controls in
   // step with a busy or disconnected tool without replacing them.
   function renderSnapshot(){
-    $('snapshot').hidden=!site;
-    if(!site){$('snapshot-body').replaceChildren();return;}
-    $('snapshot-body').replaceChildren(SnapshotPanel({
+    // The block exists wherever there is a page beside the panel, recognized or
+    // not, and its heading is the scope: the site when one is known, the page
+    // otherwise. A host with no page beside it — a full tab, the phone — has no
+    // such block at all.
+    $('page-block').hidden=!readPage;
+    if(!readPage){$('snapshot-body').replaceChildren();return;}
+    const label=site?.label||'This page';
+    $('page-block').querySelector('.settings-group-title').textContent=label;
+    $('page-block').setAttribute('aria-label',label);
+    $('snapshot-body').replaceChildren(PagePanel({
       site,rows:snapshot?.rows||[],notes:snapshot?.notes||[],editing:snapshotEditing,disabled:busy||!loaded,
-      onStore:storeSnapshots,onSave:()=>saveReview('snapshot'),
+      onRead:readOpenPage,onSave:()=>saveReview('snapshot'),
       onEdit:()=>{snapshotEditing=true;renderSnapshot();},
       onDiscard:()=>{snapshot=null;snapshotEditing=false;renderSnapshot();status('','snapshot-status');},
       onAmount:(index,value)=>{snapshot.rows[index].amount=value;}
     }));
   }
   function syncReadings(){
-    for(const node of [...$('snapshot').querySelectorAll('button,input'),...$('drafts').querySelectorAll('button,input')])node.disabled=busy||!loaded;
+    for(const node of [...$('page-block').querySelectorAll('button,input,select'),...$('drafts').querySelectorAll('button,input'),
+      ...$('capital-drafts').querySelectorAll('button,input,select'),...$('capital-page').querySelectorAll('button,input,select')])node.disabled=busy||!loaded;
   }
-  async function storeSnapshots(){
-    if(!site||!readPage)return;
+  // One press does the whole errand. The page is not copied into a box on the
+  // way through: it is open beside the panel, where the owner can see it better
+  // than any transcript of it, and what comes back is the readout worth looking
+  // at — one figure per portfolio and class, saved only when applied. A
+  // recognized site adds what it alone settles; an unrecognized page is read
+  // the same way with nothing assumed about it.
+  async function readOpenPage(){
+    if(!readPage)return;
     await run(async token=>{
-      status(`Reading your ${site.label} accounts…`,'snapshot-status','progress');
+      status(site?`Reading your ${site.label} accounts…`:'Reading the accounts on this page…','snapshot-status','progress');
       const page=await readPage();
       // What the site itself settles is settled before folding: the institution
       // decides which portfolio a figure is titled to, and what an account
       // total is made of when the page never says.
-      const result=await readInto(token,{text:page.text,live:true,institution:institutionName(site.institution)},
-        {institution:institutionName(site.institution),siteKind:site.kind});
+      const known=site?{institution:institutionName(site.institution)}:{};
+      const result=await readInto(token,{text:page.text,live:true,...known},{...known,siteKind:site?.kind||''});
       snapshot={rows:result.marks,notes:result.notes};snapshotEditing=false;renderSnapshot();
-      status([result.marks.length?`${result.read} figure${result.read===1?'':'s'} read, folded into ${result.marks.length}. Nothing is saved yet.`:'No account totals were found on that page.',result.unread].filter(Boolean).join(' '),'snapshot-status',result.marks.length?'success':'alert');
+      showCapital(result,'page');
+      // The heading names a recognized site, so the status does not repeat it;
+      // an ordinary page has no name up there, so its host is worth saying.
+      const found=readNote(result,site?'':page.host);
+      status([found?`${found}. Nothing is saved yet.`:`No account figures were found on ${page.host}.`,
+        page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
+        result.unread].filter(Boolean).join(' '),'snapshot-status',found?'success':'alert');
     },'snapshot-status');
   }
 
@@ -259,6 +374,57 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       onChanged();
       status(`Saved ${saved} figure${saved===1?'':'s'}.`,target,'success');
     }
+  }
+  // A capital account statement is saved the same way everything else is:
+  // through the same validator and the same offline queue as a figure typed by
+  // hand. The portfolio comes first, then the investment, then the statement —
+  // a row cannot be filed into something that does not exist yet — and a row
+  // that fails leaves itself and the rest in place to be corrected.
+  async function saveCapitalReview(){
+    if(!capital?.rows.length)return;
+    const target='intake-status',madePortfolios=new Map(),madeHoldings=new Map();
+    let saved=0;
+    while(capital.rows.length){
+      const row=capital.rows[0];
+      let portfolio=row.portfolio;
+      if(row.portfolioIsNew){
+        if(madePortfolios.has(row.portfolio))portfolio=madePortfolios.get(row.portfolio);
+        else{
+          portfolio=nextPortfolio();
+          if(!await savePortfolio({number:portfolio,name:row.portfolioName,kind:row.portfolioKind??1,currency:row.currency||currency},target))break;
+          madePortfolios.set(row.portfolio,portfolio);
+        }
+      }
+      let holding=row.holding;
+      if(row.isNew){
+        if(madeHoldings.has(row.holding))holding=madeHoldings.get(row.holding);
+        else{
+          holding=nextHolding();
+          if(!await saveHolding({number:holding,portfolio,name:row.name,vehicle:row.vehicle,class:row.class,stated:row.stated},target))break;
+          madeHoldings.set(row.holding,holding);
+        }
+      }
+      if(!await saveCapital({holding,asOf:row.asOf,value:row.value,contributed:row.contributed,
+        distributed:row.distributed,commitment:row.commitment},target))break;
+      capital.rows.shift();saved++;
+    }
+    if(!capital.rows.length){
+      capital=null;capitalEditing=false;onChanged();
+      status(`Saved ${saved} capital account${saved===1?'':'s'}.`,target,'success');
+    }
+    renderCapital();
+  }
+  function saveHolding(holding,target='inv-status'){
+    const id=holdingRef(holding.number),existing=records.find(record=>record.id===id);
+    return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',
+      value:normalizeAndStamp({row:'holding',number:holding.number,portfolio:holding.portfolio,name:holding.name,
+        vehicle:holding.vehicle,class:holding.class,stated:holding.stated??0},id,existing)}),target);
+  }
+  function saveCapital(entry,target='inv-status'){
+    const value={row:'capital',holding:entry.holding,asOf:entry.asOf,value:entry.value,
+      contributed:entry.contributed,distributed:entry.distributed,commitment:entry.commitment};
+    const id=capitalRef(value),existing=records.find(record=>record.id===id);
+    return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
   }
   function savePortfolio(portfolio,target='form-status'){
     const id=portfolioRef(portfolio.number),existing=records.find(record=>record.id===id);
@@ -298,6 +464,34 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         mark.pending?(mark.conflict?'Conflict':mark.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
       return Stack([RecordRow({title:row.label,detail,actions}),past,confirm]);
     };
+    // A position reads as what it is: a name, what kind of vehicle it is, what
+    // it is worth, and underneath, the three flows the value alone cannot
+    // explain. Where the paperwork and the ledger disagree about the kind, the
+    // row says so instead of choosing.
+    const investment=(portfolio,position)=>{
+      const holding=position.holding,current=position.current;
+      const confirm=Stack([Note(`Permanently delete “${holding.name}” and every capital account filed for it, from all devices?`),ActionGroup([
+        action('Delete investment',async()=>{if(await remove(holding))onChanged();},'danger'),
+        action('Keep it',()=>{confirm.hidden=true;})
+      ],{compact:true})],{hidden:true});
+      const past=Stack(position.history.slice(0,8).map(entry=>Note(
+        `${entry.asOf} · ${money(entry.value,portfolio.currency)} · funded ${money(entry.contributed,portfolio.currency)} · returned ${money(entry.distributed,portfolio.currency)}`
+      )),{hidden:true});
+      const actions=[
+        action('Edit',()=>fillInvestment(position),'subtle'),
+        ...(position.history.length>1?[action('History',()=>{past.hidden=!past.hidden;},'subtle')]:[]),
+        action('Delete',()=>{confirm.hidden=false;},'danger-subtle')
+      ];
+      const detail=[money(position.value,portfolio.currency),
+        current?`as of ${current.asOf}`:'no statement yet',
+        holding.pending?'Waiting to sync':''].filter(Boolean).join(' · ');
+      const notes=[positionDetail(position,portfolio.currency),
+        // The row's own title already says how it is filed, so the note says
+        // only the part the title cannot: what its paperwork claims it is.
+        position.disputed?`The statement calls this a ${vehicleLabel(holding.stated)}.`:''
+      ].filter(Boolean).join(' — ');
+      return Stack([RecordRow({title:`${holding.name} · ${vehicleShort(holding.vehicle)}`,detail,notes,actions}),past,confirm]);
+    };
     $('list').replaceChildren(...(groups.length?groups.map(group=>{
       const portfolio=group.portfolio;
       const confirm=Stack([Note(`Permanently delete “${portfolio.name}” and every figure in it, from all devices?`),ActionGroup([
@@ -308,6 +502,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         name:portfolio.name,currency:portfolio.currency,total:group.total,
         meta:[registrationLabel(portfolio.kind),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
         rows:[...group.rows.map(row=>figure(portfolio,row)),
+          ...group.positions.map(position=>investment(portfolio,position)),
           ActionGroup([action('Rename',()=>fillPortfolio(portfolio),'subtle'),action('Delete portfolio',()=>{confirm.hidden=false;},'danger-subtle')],{compact:true})]
       }),confirm]);
     }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one below.')]));
@@ -322,17 +517,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // What the ledger holds — the totals and the saved figures — waits to be
     // asked for. Putting a figure in does not: the site reading, the statement,
     // the page reading and a figure typed by hand are all ready.
-    $('position').hidden=quiet;$('records').hidden=quiet;
+    $('ledger').hidden=quiet;
     if(quiet)sealLedger();else renderLedger();
     for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
+    for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-asOf'])$(key).disabled=busy||!loaded;
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
+    $('inv-save').disabled=busy||!loaded;$('inv-cancel').disabled=busy;
     $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     $('drop').disabled=busy||!loaded;
-    $('page').disabled=busy||!loaded;
-    // A recognized account site reads through its own panel above, which says
-    // whose accounts it is about to read. Two buttons for one errand is the
-    // confusion, not the second reading.
-    $('page').hidden=!readPage||!!site;
     // Beside the title, only what applies: a quiet arrival can be asked for the
     // position, a loaded ledger can be refreshed, and one that never loaded
     // needs the connection rather than a dead Refresh.
@@ -368,12 +560,17 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // back to the default, because the placeholder the form starts on — before
     // there are any portfolios to offer — must not become the standing answer
     // once there are.
-    if(await run(token=>offline.request(token,'/v1/finance'))){fillPortfolioChoices($('editor').open?$('portfolio').value:'');connectionNote();}
+    if(await run(token=>offline.request(token,'/v1/finance'))){
+      fillPortfolioChoices($('editor').open?$('portfolio').value:'');
+      fillInvestmentPortfolios($('investment').open?$('inv-portfolio').value:'');
+      connectionNote();
+    }
   }
   function clear(){
     generation++;records=[];loaded=false;activeToken='';connection='';attachment=null;
     fold=null;foldEditing=false;snapshot=null;snapshotEditing=false;engaged=false;
-    clearForm();renderFold();renderAttachment();renderSnapshot();
+    capital=null;capitalEditing=false;capitalSource='file';
+    clearForm();clearInvestmentForm();renderFold();renderCapital();renderAttachment();renderSnapshot();
     status('','snapshot-status');
     status('Unlock this section with your passkey.','status','alert');
     render();
@@ -399,8 +596,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   }
 
   $('read').addEventListener('click',read);
-  $('intake-clear').addEventListener('click',()=>{fold=null;foldEditing=false;attachment=null;renderAttachment();renderFold();render();status('','intake-status');status('','file-status');});
-  $('page').addEventListener('click',intakeFromPage);
+  $('intake-clear').addEventListener('click',()=>{fold=null;foldEditing=false;capital=null;capitalEditing=false;capitalSource='file';attachment=null;renderAttachment();renderFold();renderCapital();render();status('','intake-status');status('','file-status');});
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_BYTES});
   $('cancel').addEventListener('click',()=>{clearForm();$('editor').open=false;});
   $('portfolio').addEventListener('change',syncForm);
@@ -425,9 +621,38 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       clearForm();$('editor').open=false;onChanged();
     }catch(error){status(vaultReason(error),'form-status','error');}
   });
-  clearForm();clear();
+  $('inv-cancel').addEventListener('click',()=>{clearInvestmentForm();$('investment').open=false;});
+  $('inv-form').addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(busy||!loaded)return;
+    try{
+      const chosen=$('inv-portfolio').value;
+      if(!chosen){status('Add a portfolio before recording an investment in it.','inv-status','alert');return;}
+      const portfolio=Number(chosen.slice(1));
+      const number=investing?.number??nextHolding();
+      // A commitment signed this morning has no statement behind it yet, and
+      // that is a whole record: the investment is registered and counts as
+      // nothing until a figure says otherwise. Figures without the date they
+      // are as of are not a record at all — and that is settled before
+      // anything is written, so a refused statement does not leave an
+      // investment saved behind it.
+      const asOf=$('inv-asOf').value.trim();
+      const figures=['inv-value','inv-commitment','inv-funded','inv-returned'].map(key=>$(key).value.trim());
+      if(!asOf&&figures.some(Boolean)){status('Give the date these figures are as of, or clear them.','inv-status','alert');return;}
+      if(!await saveHolding({number,portfolio,name:$('inv-name').value,vehicle:Number($('inv-vehicle').value),
+        class:Number($('inv-class').value),stated:holdingOf(number)?.stated??0}))return;
+      if(asOf&&!await saveCapital({holding:number,asOf,value:$('inv-value').value||0,
+        contributed:$('inv-funded').value||0,distributed:$('inv-returned').value||0,commitment:$('inv-commitment').value||0}))return;
+      // A statement moved to another date is a different row. The one it came
+      // from is removed, so an edit cannot leave two.
+      const moved=investing?.capitalId&&asOf&&investing.capitalId!==capitalRef({holding:number,asOf});
+      if(moved)await remove(records.find(record=>record.id===investing.capitalId)||{id:investing.capitalId,revision:investing.capitalRevision},'inv-status');
+      clearInvestmentForm();$('investment').open=false;onChanged();
+    }catch(error){status(vaultReason(error),'inv-status','error');}
+  });
+  clearForm();clearInvestmentForm();clear();
   if(gate.unlocked())refresh();
-  const reload=()=>{if(gate.unlocked()&&!$('editor').open)refresh();};
+  const reload=()=>{if(gate.unlocked()&&!$('editor').open&&!$('investment').open)refresh();};
   window.addEventListener('online',reload);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   credentials.subscribe?.(()=>{clear();if(gate.unlocked())refresh();});

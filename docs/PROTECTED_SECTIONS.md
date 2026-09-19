@@ -238,13 +238,116 @@ writes only when confirmed, is re-runnable — every write is keyed, so confirmi
 twice reaches the same ledger — and deletes nothing. `finance-intake/backfill.mjs`
 is the way to run it.
 
-**What this shape gave up**, deliberately: the per-account record, its
-institution and free-text name, liquidity, ownership share, rate, total and
-unfunded commitments, tags, notes, and the account number sealed with the
-passkey. There is no account entity left to hang an account number on. Finance
-is still passkey-gated as a section, and Personal information still holds sealed
-values.
+### Direct investments
 
+**One holding does not reduce to four numbers, and is not made to.** A direct
+investment in a fund, a company or an SPV is a named thing with a history of its
+own: what was committed, how much of that has been called, how much has come
+back, and what the last capital account statement says it is worth. Those four
+travel together or they say nothing — a value with no called capital beside it
+cannot tell you whether it is a win — and none of them survives being folded
+into a private equity total. So a position is its own pair of rows.
+
+**An investment** (`finance_holdings`, addressed `h3`) carries the portfolio
+that holds it, its name, the kind of vehicle it is, the kind its paperwork
+claims it is, and the asset class its value counts under. `VEHICLES` in
+`finance-data.js` names the three kinds: **Direct Fund Investment**, **Direct
+Equity Investment** and **SPV Investment**. Its name is encrypted exactly as a
+portfolio's is; the portfolio number stays a readable column, because deleting a
+portfolio has to be able to find what it held.
+
+**What a document calls itself is kept apart from what the ledger files it as**,
+because the two disagree often enough to matter — a vehicle sold as a fund is
+frequently a single-company SPV in a fund's paperwork. `vehicle` is the settled
+answer and `stated` is what the statement claimed. A position whose two differ
+says so on its own line and in the review, and saving a statement never
+reclassifies the investment: which one is true is the owner's call.
+
+**A capital account** (`finance_capital`, addressed `h3-20260630`) is one
+statement: the ending capital account value, contributions to date,
+distributions to date, the commitment, and the date it was struck — four
+integers in cents, keyed by investment and date, so re-filing a quarter replaces
+its own row exactly as a figure does. Contributions and distributions are held
+inception-to-date rather than per period, so the newest row answers on its own
+and a quarter that never arrived cannot corrupt a running total; a period's
+movement is the difference between two rows. **Unfunded commitment** is the
+commitment less what has been called, floored at zero, and the multiple is
+value plus distributions over contributions — undefined until something was
+actually put in.
+
+A position counts in its portfolio and its asset class exactly like any other
+figure, on the same step function, so the totals, the breakdowns, the value over
+time and the stale check needed no second set of any of it. What the class
+breakdown cannot say is shown separately: **Unfunded** sits beside the totals
+when there is any, and Committed, Funded, Returned, Unfunded and Value sit under
+**Private investments** in the breakdown. Unfunded is not counted as a
+liability — nobody can demand all of it today.
+
+**Reading a capital account statement is the same errand as reading any other
+document.** The owner drops the file and does not say what kind it is: the
+reading returns account figures under `readings` and capital accounts under
+`capital`, and the device folds whichever came back. The model reports each
+figure under the heading the statement prints it under and is told explicitly
+not to add a period figure to a cumulative one, derive unfunded commitment, or
+compute a multiple or a return — `foldCapital` does all of that on the device,
+against a ledger the model never sees. A statement stating only the period's
+movement is added to the position's last filed figure here, and the review row
+says that it was.
+
+**A statement is tied to its investment by the name it prints**, and to its
+portfolio by the partner it is addressed to. Both match by exact name first,
+then by being the only candidate that fits: "Berry" is inside the Berry Family
+Trust, the Berry 2020 Descendants' Irrevocable Trust, Eric Berry and the Eric
+and Ariana Berry Estate, and nothing about the four says which one a statement
+addressed to "Berry" belongs to. Anything short of a unique answer proposes a
+new portfolio or a new investment and says so on the row, because a capital
+account filed into the wrong trust is invisible from then on while a duplicate
+sitting in the review is not. A proposed portfolio takes its registration from
+its own name, through the same `registrationFromName` reading the account titles
+use. Nothing is saved until the review is applied, and every part of a row —
+the investment, its kind, its class, its portfolio, all four figures and the
+date — is correctable before it is.
+
+**Recording one by hand** is the second form under the ledger, **Record an
+investment**, because it is a second job: a figure is a class and an amount, an
+investment is a name, a kind and the four figures a statement states. An
+investment with no statement behind it is a whole record — that is how a
+commitment signed this morning is registered, counting as nothing until a figure
+says otherwise — while figures with no as-of date are refused before anything is
+written.
+
+**What this shape gave up**, deliberately: the per-account record, its
+institution and free-text name, liquidity, ownership share, rate, tags, notes,
+and the account number sealed with the passkey. There is no account entity left
+to hang an account number on. Total and unfunded commitments came back as a
+position's own rows, above, rather than as fields on every account that never
+had one. Finance is still passkey-gated as a section, and Personal information
+still holds sealed values.
+
+
+### Three blocks, one scope each
+
+The panel says what each block covers, in its heading, and never mixes two
+scopes in one:
+
+1. **The page in front of you** — headed by the site when one is recognized
+   (**E*TRADE**, **Schwab**) and **This page** when the host can read the tab
+   but the site is not one the sidebar knows. It holds one action, named for
+   what it will read, and afterwards the figures that reading folded into. A
+   host with no page beside it — an extension tab, the phone — has no such
+   block at all.
+2. **Everything you hold** — the totals, the breakdown, the value over time and
+   the holdings list, under one heading that says the scope is the whole ledger.
+3. **Add a figure** — the statement drop zone, what it read, and the two forms:
+   **Enter by hand** and **Record an investment**.
+
+These used to alternate: a site's reading, then the whole ledger's totals under
+a heading that said only *Position*, then the page action again down in *Read an
+update*, then the whole ledger's list. Nothing said which scope a block meant,
+and *Position* rendering directly beneath **E*TRADE** read as E*TRADE's
+position when it was the estate's — a panel showing NET and ASSETS of $0.54,
+the Schwab checking figure, under an E*TRADE heading. The scope is carried by
+the headings, not by a sentence under each one.
 
 ### Arriving beside a finance page
 
@@ -257,11 +360,9 @@ of every tab, and a recognized page shows Finance beside the tab those figures
 would come off.
 
 What it does not do is answer a question nobody asked. An arrival like that is
-**quiet**: the totals, the breakdown, the value over time and the holdings list
-are not hidden but unbuilt — no balance is anywhere in the page — while
-everything that puts a figure *into* the ledger is ready at once: the site's own
-reading where the page can be read, the statement drop zone, **Read the accounts
-on the open page**, and a figure typed by hand. One action sits beside the
+**quiet**: **Everything you hold** is not hidden but unbuilt — no balance is
+anywhere in the page — while the two blocks around it are ready at once: the
+page in front of the owner, and the ways of adding a figure. One action sits beside the
 title, **Show position**, and one press makes it the ledger it always was.
 Visiting a bank should not put a net worth on a shared screen, and it does not
 raise a passkey sheet either.

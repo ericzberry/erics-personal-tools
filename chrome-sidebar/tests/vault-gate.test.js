@@ -108,21 +108,21 @@ test('finance totals and readings stay behind the gate, and a saved figure goes 
   assert.match(h.document.getElementById('finance-totals').textContent,/\$1,000/);
 
   // A reading produces figures to review and saves nothing on its own.
-  h.document.getElementById('finance-page').click();
-  await settle(()=>h.document.getElementById('finance-drafts').textContent.includes('Stocks'));
+  h.document.getElementById('finance-page-read').click();
+  await settle(()=>h.document.getElementById('finance-snapshot-body').textContent.includes('Stocks'));
   assert.equal(saved.length,0,'reading a page must not save anything');
-  assert.match(h.document.getElementById('finance-intake-status').textContent,/1 figure read from accounts\.example/);
+  assert.match(h.document.getElementById('finance-snapshot-status').textContent,/1 figure read(?: from accounts\.example)?, folded into 1/);
 
   // Saving writes through the same validator and queue as a typed edit, and
   // the figure is addressed by where, what and when — nothing else.
-  [...h.document.querySelectorAll('#finance-drafts button')].find(button=>button.textContent==='Save these figures').click();
+  [...h.document.querySelectorAll('#finance-snapshot-body button')].find(button=>button.textContent==='Save these figures').click();
   await settle(()=>saved.length===1);
   assert.equal(saved[0].id,'1-1-20260401');
   assert.equal(saved[0].revision,null,'a date this class has no figure for yet is an append');
   assert.deepEqual([saved[0].portfolio,saved[0].class,saved[0].amount],[1,1,1300]);
   assert.equal(saved[0].row,'mark');
   // January's figure is untouched, because a figure is keyed by its own date.
-  assert.equal(h.document.getElementById('finance-drafts').textContent,'','a saved reading leaves the review list');
+  assert.equal(h.document.getElementById('finance-snapshot-body').textContent.includes('Stocks'),false,'a saved reading leaves the review list');
   tool.stop();h.restore();
 });
 
@@ -149,9 +149,9 @@ test('a section the sidebar opened on its own raises no passkey sheet until it i
   h.document.querySelector('#finance-vault-actions button').click();
   await settle(()=>prompts>0&&h.document.getElementById('finance-vault-content').hidden===false);
   await settle(()=>h.document.getElementById('finance-actions').textContent==='Show position');
-  assert.equal(h.document.getElementById('finance-position').hidden,true);
+  assert.equal(h.document.getElementById('finance-ledger').hidden,true);
   tool.quiet(false);
-  assert.equal(h.document.getElementById('finance-position').hidden,false);
+  assert.equal(h.document.getElementById('finance-ledger').hidden,false);
   assert.equal(prompts,1,'one passkey, given once, for the whole sitting');
   tool.stop();h.restore();
 });

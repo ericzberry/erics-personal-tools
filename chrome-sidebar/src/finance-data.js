@@ -20,6 +20,16 @@
 //    an entry.
 //  - AI reads and labels; the device adds up. No total in this ledger was
 //    computed anywhere but here.
+//
+// One thing does not reduce to four numbers, and it is not made to. A direct
+// investment in a fund, a company or an SPV is a named thing with a history of
+// its own: what was committed, how much of that has been called, how much has
+// come back, and what the last capital account statement says it is worth.
+// Those four travel together or they say nothing — a value with no called
+// capital beside it cannot tell you whether it is a win — so a position is its
+// own pair of rows: a holding, which is the investment, and one dated capital
+// account per statement. Its value still counts in its portfolio and its asset
+// class exactly like any other figure, so nothing downstream has to know.
 const fail=message=>{throw Object.assign(Error(message),{status:400});};
 
 // The categorizations. A code is what is stored; the label is what is shown.
@@ -56,10 +66,26 @@ export const REGISTRATIONS=[
   // code rather than a taxable portfolio with a child's name on it.
   {code:7,id:'custodial',label:'Custodial'}
 ];
+// What a direct investment is. These three are the distinction the owner makes
+// when he decides what he holds, so they are named the way he names them; the
+// code is what is stored.
+//
+// What a document calls itself is kept apart from what the ledger files it as,
+// because the two disagree often enough to matter. A vehicle sold as a fund is
+// frequently a single-company SPV in a fund's paperwork, and the honest way to
+// hold that is to record both: `vehicle` is the settled answer and `stated` is
+// what the statement claimed. A position whose two differ says so on its own
+// line rather than quietly picking one.
+export const VEHICLES=[
+  {code:1,id:'fund',label:'Direct Fund Investment',short:'Fund'},
+  {code:2,id:'equity',label:'Direct Equity Investment',short:'Equity'},
+  {code:3,id:'spv',label:'SPV Investment',short:'SPV'}
+];
 export const STALE_DAYS=90;
 export const MAX_VALUE=1e12;
 export const MAX_DATES=240;
 export const MAX_PORTFOLIOS=200;
+export const MAX_HOLDINGS=400;
 export const assetClass=code=>ASSET_CLASSES.find(entry=>entry.code===Number(code))||null;
 export const classById=id=>ASSET_CLASSES.find(entry=>entry.id===id)||null;
 export const classLabel=code=>assetClass(code)?.label||`Class ${code}`;
@@ -67,6 +93,10 @@ export const classSide=code=>assetClass(code)?.side||'asset';
 export const registration=code=>REGISTRATIONS.find(entry=>entry.code===Number(code))||null;
 export const registrationById=id=>REGISTRATIONS.find(entry=>entry.id===id)||null;
 export const registrationLabel=code=>registration(code)?.label||'';
+export const vehicleOf=code=>VEHICLES.find(entry=>entry.code===Number(code))||null;
+export const vehicleById=id=>VEHICLES.find(entry=>entry.id===id)||null;
+export const vehicleLabel=code=>vehicleOf(code)?.label||'';
+export const vehicleShort=code=>vehicleOf(code)?.short||'';
 
 // Names compared the way a person would compare them: case, punctuation and
 // spacing carry no meaning here, so "Charles Schwab", "Schwab Bank" and a bare
@@ -173,17 +203,31 @@ export const dateText=value=>{const digits=String(value).padStart(8,'0');return 
 export const toCents=value=>Math.round(Number(value)*100);
 export const fromCents=value=>Math.round(Number(value))/100;
 
-// Two kinds of row share one record stream, so the offline queue, the conflict
+// Four kinds of row share one record stream, so the offline queue, the conflict
 // rules and the Worker's routes stay exactly one of each. A portfolio is
-// addressed by `p3`; a figure by the three numbers that identify it.
+// addressed by `p3`; a figure by the three numbers that identify it; an
+// investment by `h3`; and one of its capital accounts by the investment and the
+// date the statement was struck. The prefixes keep them apart with no ambiguity
+// to resolve: only a mark begins with a digit.
 export const PORTFOLIO_ID=/^p([1-9]\d{0,3})$/;
 export const MARK_ID=/^([1-9]\d{0,3})-(\d{1,2})-(\d{8})$/;
+export const HOLDING_ID=/^h([1-9]\d{0,3})$/;
+export const CAPITAL_ID=/^h([1-9]\d{0,3})-(\d{8})$/;
 export const portfolioRef=number=>`p${number}`;
 export const markRef=mark=>`${mark.portfolio}-${mark.class}-${dateNumber(mark.asOf)}`;
-export const recordRef=record=>record.row==='portfolio'?portfolioRef(record.number):markRef(record);
+export const holdingRef=number=>`h${number}`;
+export const capitalRef=entry=>`h${entry.holding}-${dateNumber(entry.asOf)}`;
+export const recordRef=record=>record.row==='portfolio'?portfolioRef(record.number)
+  :record.row==='holding'?holdingRef(record.number)
+  :record.row==='capital'?capitalRef(record)
+  :markRef(record);
 export function parseRef(ref){
   const portfolio=PORTFOLIO_ID.exec(ref||'');
   if(portfolio)return {row:'portfolio',number:Number(portfolio[1])};
+  const holding=HOLDING_ID.exec(ref||'');
+  if(holding)return {row:'holding',number:Number(holding[1])};
+  const capital=CAPITAL_ID.exec(ref||'');
+  if(capital)return {row:'capital',holding:Number(capital[1]),asOf:dateText(capital[2])};
   const mark=MARK_ID.exec(ref||'');
   if(!mark)return null;
   return {row:'mark',portfolio:Number(mark[1]),class:Number(mark[2]),asOf:dateText(mark[3])};
@@ -199,6 +243,33 @@ export function normalizeFinance(input,previous={}){
     if(!/^[A-Z]{3}$/.test(currency))fail('Enter a three-letter currency code, such as USD.');
     return {row:'portfolio',number:counting(get('number'),'a portfolio number',MAX_PORTFOLIOS),name:text(get('name'),80,'a portfolio name',true),kind,currency};
   }
+  // The investment itself: which portfolio holds it, what it is called, what
+  // kind of vehicle it is, and which asset class its value counts under. No
+  // figure lives here — a name that changed should not move a total.
+  if(row==='holding'){
+    const kind=Number(get('vehicle'));
+    if(!vehicleOf(kind))fail('Choose whether this is a fund, an equity or an SPV investment.');
+    const cls=Number(get('class'));
+    if(!assetClass(cls)||classSide(cls)!=='asset')fail('Choose an asset class for this investment.');
+    const claimed=Number(get('stated')??0);
+    return {row:'holding',number:counting(get('number'),'an investment number',MAX_HOLDINGS),
+      portfolio:counting(get('portfolio'),'a portfolio number',MAX_PORTFOLIOS),
+      name:text(get('name'),120,'an investment name',true),vehicle:kind,class:cls,
+      stated:vehicleOf(claimed)?claimed:0};
+  }
+  // One capital account statement. Contributions and distributions are held
+  // inception-to-date rather than per period, because that is what a statement
+  // states and because a quarter that never arrives cannot then corrupt a
+  // running total — the newest row answers on its own, and a period's movement
+  // is the difference between two rows.
+  if(row==='capital'){
+    return {row:'capital',holding:counting(get('holding'),'an investment number',MAX_HOLDINGS),
+      asOf:date(get('asOf'),'as-of date',true),
+      value:amount(get('value'),'capital account value'),
+      contributed:amount(get('contributed')??0,'the amount funded to date'),
+      distributed:amount(get('distributed')??0,'the amount returned to date'),
+      commitment:amount(get('commitment')??0,'the commitment')};
+  }
   if(row!=='mark')fail('Unknown ledger row.');
   const cls=Number(get('class'));
   if(!assetClass(cls))fail('Choose an asset class.');
@@ -211,6 +282,8 @@ export function normalizeFinance(input,previous={}){
 const counted=records=>records.filter(record=>!record.deleting&&!record.conflict);
 export const portfoliosOf=records=>counted(records).filter(record=>record.row==='portfolio').sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
 export const marksOf=records=>counted(records).filter(record=>record.row==='mark');
+export const holdingsOf=records=>counted(records).filter(record=>record.row==='holding').sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
+export const capitalOf=records=>counted(records).filter(record=>record.row==='capital');
 const sum=values=>Math.round(values.reduce((total,value)=>total+value,0)*100)/100;
 const byTotal=(a,b)=>Math.abs(b.total)-Math.abs(a.total)||a.label.localeCompare(b.label);
 
@@ -233,6 +306,43 @@ export function heldOn(marks,when){
 }
 export const signed=mark=>classSide(mark.class)==='liability'?-mark.amount:mark.amount;
 
+// A position is an investment and whichever of its capital accounts is newest
+// on or before a date — the same step function the class figures follow, for
+// the same reason: a statement states a quarter, and nothing happened between
+// two of them that anybody observed.
+//
+// An investment with no statement yet is still a position. Registering one
+// before its first capital account is how a commitment gets recorded on the day
+// it is signed, and it counts as nothing until a figure says otherwise.
+export function positionsOn(records,when){
+  const statements=capitalOf(records);
+  return holdingsOf(records).map(holding=>{
+    const history=statements.filter(entry=>entry.holding===holding.number&&(!when||entry.asOf<=when))
+      .sort((a,b)=>b.asOf.localeCompare(a.asOf));
+    const current=history[0]||null;
+    const commitment=current?.commitment||0,contributed=current?.contributed||0;
+    const distributed=current?.distributed||0,value=current?.value||0;
+    return {holding,current,history,commitment,contributed,distributed,value,
+      // What is still owed on the commitment. A fund that has called more than
+      // it committed is at zero rather than at a negative obligation.
+      unfunded:Math.max(0,Math.round((commitment-contributed)*100)/100),
+      // What a dollar put in is worth now, counting what has already come back.
+      // Undefined until something was actually put in — a multiple of nothing
+      // is not infinity, it is a question nobody has asked yet.
+      multiple:contributed>0?Math.round(((value+distributed)/contributed)*100)/100:null,
+      // Recorded as one kind and sold as another. Kept rather than resolved:
+      // which one is true is the owner's call, not this function's.
+      disputed:!!holding.stated&&holding.stated!==holding.vehicle};
+  });
+}
+// A position counts exactly like a class figure, because that is what it is —
+// a named one. Everything that groups, signs, totals or dates a figure works on
+// it unchanged, which is why positions needed no second set of any of that.
+const positionFigure=position=>({portfolio:position.holding.portfolio,class:position.holding.class,
+  asOf:position.current.asOf,amount:position.value,holding:position.holding.number});
+const livePositions=(records,mine,when)=>positionsOn(records,when)
+  .filter(position=>position.current&&mine.has(position.holding.portfolio));
+
 export function financeCurrencies(records){
   const counts=new Map();
   for(const portfolio of portfoliosOf(records))counts.set(portfolio.currency||'USD',(counts.get(portfolio.currency||'USD')||0)+1);
@@ -245,7 +355,9 @@ export function financeCurrencies(records){
 export function financeSummary(records,{currency='USD',today=new Date().toISOString().slice(0,10)}={}){
   const portfolios=portfoliosOf(records).filter(portfolio=>(portfolio.currency||'USD')===currency);
   const mine=new Map(portfolios.map(portfolio=>[portfolio.number,portfolio]));
-  const live=heldOn(marksOf(records).filter(mark=>mine.has(mark.portfolio)));
+  const held=positionsOn(records).filter(position=>mine.has(position.holding.portfolio));
+  const live=[...heldOn(marksOf(records).filter(mark=>mine.has(mark.portfolio))),
+    ...held.filter(position=>position.current).map(positionFigure)];
   const assets=live.filter(mark=>classSide(mark.class)==='asset');
   const liabilities=live.filter(mark=>classSide(mark.class)==='liability');
   const group=(list,key,label)=>{
@@ -272,6 +384,17 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
     byClass:group(live,mark=>mark.class,classLabel),
     byPortfolio:group(live,mark=>mark.portfolio,id=>mine.get(id)?.name||'—'),
     byRegistration:group(live,mark=>mine.get(mark.portfolio)?.kind,registrationLabel),
+    // What the class breakdown cannot say about a private position: how much of
+    // the commitment has actually been called, how much has come back, and what
+    // is still owed. A value on its own does not answer any of the three.
+    positions:{
+      count:held.length,
+      committed:sum(held.map(position=>position.commitment)),
+      contributed:sum(held.map(position=>position.contributed)),
+      distributed:sum(held.map(position=>position.distributed)),
+      value:sum(held.map(position=>position.value)),
+      unfunded:sum(held.map(position=>position.unfunded))
+    },
     stale
   };
 }
@@ -279,9 +402,13 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
 export function netWorthSeries(records,{currency='USD'}={}){
   const mine=new Set(portfoliosOf(records).filter(portfolio=>(portfolio.currency||'USD')===currency).map(portfolio=>portfolio.number));
   const marks=marksOf(records).filter(mark=>mine.has(mark.portfolio));
-  const dates=[...new Set(marks.map(mark=>mark.asOf))].sort();
+  // A capital account is a dated figure like any other, so the day a statement
+  // was struck is a day the series has a point on.
+  const held=new Set(holdingsOf(records).filter(holding=>mine.has(holding.portfolio)).map(holding=>holding.number));
+  const statements=capitalOf(records).filter(entry=>held.has(entry.holding));
+  const dates=[...new Set([...marks.map(mark=>mark.asOf),...statements.map(entry=>entry.asOf)])].sort();
   return dates.map(asOf=>{
-    const live=heldOn(marks,asOf);
+    const live=[...heldOn(marks,asOf),...livePositions(records,mine,asOf).map(positionFigure)];
     return {
       asOf,figures:live.length,
       assets:sum(live.filter(mark=>classSide(mark.class)==='asset').map(mark=>mark.amount)),
@@ -295,7 +422,7 @@ export function netWorthSeries(records,{currency='USD'}={}){
 // the date that figure was observed. This is what the list shows, and it is
 // where a class's own history is reached from.
 export function groupFinanceRecords(records){
-  const marks=marksOf(records);
+  const marks=marksOf(records),positions=positionsOn(records);
   return portfoliosOf(records).map(portfolio=>{
     const mine=marks.filter(mark=>mark.portfolio===portfolio.number);
     const rows=[...new Set(mine.map(mark=>mark.class))]
@@ -304,7 +431,9 @@ export function groupFinanceRecords(records){
         return {class:cls,label:classLabel(cls),side:classSide(cls),current:history[0],history};
       })
       .sort((a,b)=>ASSET_CLASSES.findIndex(entry=>entry.code===a.class)-ASSET_CLASSES.findIndex(entry=>entry.code===b.class));
-    return {portfolio,rows,total:sum(rows.map(row=>signed(row.current)))};
+    const held=positions.filter(position=>position.holding.portfolio===portfolio.number);
+    return {portfolio,rows,positions:held,
+      total:sum([...rows.map(row=>signed(row.current)),...held.map(position=>position.value)])};
   });
 }
 
@@ -314,6 +443,8 @@ export function financeAttention(records,{today=new Date().toISOString().slice(0
   return financeCurrencies(records).flatMap(({currency})=>financeSummary(records,{currency,today}).stale)
     .map(portfolio=>({id:portfolioRef(portfolio.number),name:portfolio.name,asOf:portfolio.asOf}));
 }
+
+const optional=(value,label)=>value===null||value===undefined||value===''?null:amount(value,label);
 
 // AI reads pasted text into labelled readings and nothing more: it never sees
 // the ledger, never picks the portfolio a figure belongs to, and never adds two
@@ -339,9 +470,35 @@ export function parseFinanceUpdates(value){
       }];
     }catch{return [];}
   });
+  // A capital account statement says four things about one investment, and it
+  // is the only document that says all four in one place. Read as-is: a
+  // statement that gives only the period's movement reports the period, and
+  // what that adds up to is settled on the device, below.
+  const statements=(Array.isArray(value.capital)?value.capital.slice(0,60):[]).flatMap(draft=>{
+    try{
+      if(!draft||typeof draft!=='object')return [];
+      const asOf=isDate(draft.asOf)?draft.asOf:'';
+      if(!asOf)return [];
+      return [{
+        name:text(draft.fund??'',120,'an investment name',true),
+        // What the paperwork calls itself, which is not the same as what it is.
+        stated:vehicleById(draft.vehicle)?.id||'',
+        holder:text(draft.holder??'',120,'a holder'),
+        asOf,value:optional(draft.value,'capital account value')??0,
+        commitment:optional(draft.commitment,'the commitment'),
+        contributed:optional(draft.contributed,'contributions to date'),
+        distributed:optional(draft.distributed,'distributions to date'),
+        periodContributed:optional(draft.periodContributed,'contributions this period'),
+        periodDistributed:optional(draft.periodDistributed,'distributions this period'),
+        currency:/^[A-Za-z]{3}$/.test(draft.currency||'')?String(draft.currency).toUpperCase():'',
+        confidence:['low','medium','high'].includes(draft.confidence)?draft.confidence:'low',
+        reason:text(draft.reason??'',400,'an explanation')
+      }];
+    }catch{return [];}
+  });
   const unread=text(value.unread??'',800,'the unread note');
-  if(!readings.length&&!unread)throw Error('AI did not find any figures in that text. Add more detail, or enter the figure by hand.');
-  return {readings,unread};
+  if(!readings.length&&!statements.length&&!unread)throw Error('AI did not find any figures in that text. Add more detail, or enter the figure by hand.');
+  return {readings,capital:statements,unread};
 }
 
 // Turning what was read into what is kept. This is the whole point of the
@@ -449,6 +606,124 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   }
   const marks=[...figures.values()].sort((a,b)=>a.portfolio-b.portfolio||a.class-b.class);
   return {marks,portfolios:proposed,notes,today};
+}
+
+// Turning a capital account statement into what is kept. This is the device's
+// arithmetic, against a ledger the model never saw: it matched nothing, chose
+// no portfolio and added no two numbers together.
+//
+// Cumulative figures are what is stored. A statement states them, and a running
+// total that is stored cannot be corrupted by a quarter that never arrived —
+// the newest row answers what has been called and what has come back entirely
+// on its own. A statement that shows only the period's movement is added to the
+// position's last filed figure here, and the row it produces says that it was,
+// because a derived cumulative is only as good as the row before it.
+export function foldCapital(statements,records,{today=new Date().toISOString().slice(0,10)}={}){
+  const portfolios=portfoliosOf(records),holdings=holdingsOf(records),filed=capitalOf(records);
+  const madePortfolios=[],madeHoldings=[],notes=[],rows=[];
+  const nextNumber=(existing,made)=>Math.max(0,...existing.map(entry=>entry.number),...made.map(entry=>entry.number))+1;
+  // Two names match when either contains the other, the way a person reading
+  // "Berry Family Trust" on a statement recognizes the portfolio they called
+  // "The Berry Family Trust u/a 2019".
+  const alike=(left,right)=>{
+    const a=matchKey(left),b=matchKey(right);
+    return !!a&&!!b&&(a.includes(b)||b.includes(a));
+  };
+  // A two-way substring match is a coin flip once several names share a stem.
+  // "Berry" is inside the Berry Family Trust, the Berry 2020 Descendants'
+  // Irrevocable Trust, Eric Berry and the Eric and Ariana Berry Estate, and
+  // nothing about the four says which one a statement addressed to "Berry"
+  // belongs to. So the name has to answer exactly, or be the only thing it
+  // could be; anything else names nobody and falls through to proposing.
+  // A capital account filed into the wrong trust is invisible from then on. A
+  // duplicate sitting in the review, waiting to be pointed at the right one,
+  // is not.
+  const bestMatch=(name,candidates)=>{
+    const key=matchKey(name);
+    if(!key)return null;
+    const exact=candidates.find(entry=>matchKey(entry.name)===key);
+    if(exact)return exact;
+    const near=candidates.filter(entry=>alike(name,entry.name));
+    return near.length===1?near[0]:null;
+  };
+  // Whose it is. A capital account statement is addressed to its partner by
+  // name, so unlike a brokerage page it states the title rather than leaving it
+  // to be guessed — and a name that matches no portfolio yet describes one well
+  // enough to propose it, because a trust says it is a trust.
+  const resolvePortfolio=holder=>{
+    const found=holder&&bestMatch(holder,portfolios);
+    if(found)return found;
+    const already=holder&&bestMatch(holder,madePortfolios);
+    if(already)return already;
+    // Nothing on the statement says whose it is. One taxable portfolio can take
+    // it without a guess; more than one, and it goes to the first rather than
+    // inventing a second, with a note saying so and a choice on the row.
+    if(!holder){
+      const taxable=portfolios.filter(portfolio=>portfolio.kind===registrationById('taxable').code);
+      if(taxable.length)return taxable[0];
+      if(portfolios.length)return portfolios[0];
+    }
+    const kind=registrationFromName(holder)||registrationById('taxable');
+    const fresh={row:'portfolio',number:nextNumber(portfolios,madePortfolios),
+      name:String(holder||kind.label).slice(0,80),kind:kind.code,currency:'USD',isNew:true};
+    madePortfolios.push(fresh);
+    return fresh;
+  };
+  // Which investment this statement belongs to. The fund's own name is the tie,
+  // and it is the one thing every capital account statement prints.
+  const resolveHolding=(statement,portfolio)=>{
+    // The same rule, and it matters as much here: "Acme Fund" must not swallow
+    // a statement for "Acme Fund III".
+    const found=bestMatch(statement.name,holdings);
+    if(found)return found;
+    const already=bestMatch(statement.name,madeHoldings);
+    if(already)return already;
+    const said=vehicleById(statement.stated);
+    const fresh={row:'holding',number:nextNumber(holdings,madeHoldings),portfolio:portfolio.number,
+      name:statement.name.slice(0,120),
+      // What it says it is, until the owner says otherwise. Nothing here
+      // second-guesses the paperwork; the disagreement is recorded, not decided.
+      vehicle:(said||vehicleById('fund')).code,stated:said?said.code:0,
+      // Private equity is the class a private position lands in, because
+      // splitting venture from buyout off a fund's name would be a guess. One
+      // edit moves it, and the row is where that edit is offered.
+      class:classById('pe').code,isNew:true};
+    madeHoldings.push(fresh);
+    return fresh;
+  };
+  // The statement before this one, which is what a period's movement is added
+  // to. Strictly before: re-filing a quarter must land on the same numbers it
+  // landed on the first time, or the write stops being idempotent.
+  const preceding=(holding,asOf)=>filed.filter(entry=>entry.holding===holding&&entry.asOf<asOf)
+    .sort((a,b)=>b.asOf.localeCompare(a.asOf))[0]||null;
+  for(const statement of statements){
+    const portfolio=resolvePortfolio(statement.holder);
+    const holding=resolveHolding(statement,portfolio);
+    const previous=holding.isNew?null:preceding(holding.number,statement.asOf);
+    const running=(stated,period,before,what)=>{
+      if(stated!==null)return stated;
+      if(period===null)return before;
+      notes.push(`${statement.name}: the statement showed ${what} for the period only, so it was added to ${previous?`the ${previous.asOf} figure`:'nothing filed before it'}.`);
+      return Math.round((before+period)*100)/100;
+    };
+    const contributed=running(statement.contributed,statement.periodContributed,previous?.contributed||0,'contributions');
+    const distributed=running(statement.distributed,statement.periodDistributed,previous?.distributed||0,'distributions');
+    // A commitment the statement did not restate has not gone away.
+    const commitment=statement.commitment??previous?.commitment??0;
+    if(statement.currency&&statement.currency!==(portfolio.currency||'USD'))
+      notes.push(`${statement.name}: the statement is in ${statement.currency} and ${portfolio.name} is kept in ${portfolio.currency||'USD'}. Nothing was converted.`);
+    if(statement.holder&&portfolio.isNew)
+      notes.push(`${statement.name}: no portfolio matched “${statement.holder}” closely enough to be sure, so a new one is proposed. Change it on the row if it belongs to one you already have.`);
+    if(!holding.isNew&&vehicleById(statement.stated)&&vehicleById(statement.stated).code!==holding.vehicle)
+      notes.push(`${statement.name}: the statement calls this ${vehicleById(statement.stated).label.toLowerCase()} and it is filed as ${vehicleLabel(holding.vehicle).toLowerCase()}. Saving does not change how it is filed.`);
+    rows.push({holding:holding.number,name:holding.name,vehicle:holding.vehicle,class:holding.class,
+      stated:vehicleById(statement.stated)?.code||0,isNew:!!holding.isNew,
+      portfolio:portfolio.number,portfolioName:portfolio.name,portfolioKind:portfolio.kind,
+      portfolioIsNew:!!portfolio.isNew,currency:portfolio.currency||'USD',
+      asOf:statement.asOf,value:statement.value,contributed,distributed,commitment,
+      confidence:statement.confidence,from:statement.reason?[statement.reason]:[]});
+  }
+  return {rows,portfolios:madePortfolios,holdings:madeHoldings,notes,today};
 }
 
 // Retrofitting the ledger that came before. Until now a record was one account,
