@@ -1151,3 +1151,54 @@ flight beside this change, and the tones were re-reviewed at 380px through
 `tests/status-tones-preview.html`, which grew a *no tone* group, and in the
 wallet, where a reading spins and lands as a green check with no block behind
 it.
+
+## Keep the amount in each asset class, not a record per CD (0.6.121 / mobile 0.1.76)
+
+Reading an E*TRADE page produced eight records. Three of them were individual
+brokered CDs, each spelling out `WSTRN ALLIANCE PHOENIX AZ CD 4.05% 10/30/2026`
+to hold a hundred dollars, beside three `Net Account Value` rows and a
+`Potential Benefit Value` that is not a balance at all. Every one of those
+records carried a type, an institution, an owner, a currency, a liquidity, an
+ownership share, a rate, commitments, tags, notes and a JSON array of every
+figure ever filed for it — so the ledger grew in sentences, and D1 is not free.
+
+The question worth answering is how much is in stocks, in bonds and in cash, in
+the Eric and Ariana Berry Estate and in the IRA.
+
+**A stored figure is now four numbers.** `finance_marks` holds portfolio, an
+asset-class code, the date as `20260919`, and the amount in whole cents, keyed
+by the three that identify it and stored `WITHOUT ROWID`. The words live in two
+registries in `finance-data.js` and are written once, not copied onto every
+entry: `ASSET_CLASSES` and `REGISTRATIONS`. The three figures that replaced the
+old ledger occupy about fourteen bytes each; the records they came from were
+527 bytes apiece.
+
+**A portfolio is where value is held**, and there are a handful. Its name is the
+only text in the ledger and is encrypted at rest like every other stored value.
+Eight accounts held in one estate are one portfolio — that consolidation is what
+the shape is for, so a checking account is not its own portfolio and a taxable
+account at an institution with no title of its own joins the one taxable
+portfolio rather than starting a second. `ACCOUNT_TITLES` now overrides a title
+by registration, because law does: an IRA is registered to one person and cannot
+sit inside a joint estate.
+
+**AI labels; the device adds up.** The reading returns one entry per figure the
+page states, saying whether it is an account's own total, a holding inside one,
+or a figure across several accounts — and `foldReadings` turns that into the few
+numbers the ledger keeps. A total across accounts is left out. An account
+stating two totals states one. Holdings replace an account total only when they
+add up to it, so three CDs beside a $1.6M net account value no longer claim the
+account holds $300: the total is kept whole as **Unclassified**, which counts in
+full and whose name asks to be corrected. The panel says which of these it did.
+
+Unclassified is an ordinary class that sums like any other. Letting a split
+supersede it would have quietly dropped a brokerage total out of a portfolio
+that also held a checking balance.
+
+`/v1/finance/backfill` retrofits the old table — every dated figure, not only
+the newest; an ownership share applied once on the way across — and previews
+until `--confirm`. Gone with the account record: institution, liquidity,
+ownership share, rate, commitments, tags, notes, and the account number sealed
+with the passkey, since there is no account entity left to hang one on. Finance
+is still passkey-gated. Reviewed at 380px and 280px in the passkey-gate harness,
+where a liability now states its own sign.
