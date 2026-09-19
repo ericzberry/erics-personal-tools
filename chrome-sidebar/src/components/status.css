@@ -1,0 +1,62 @@
+/* One meaning, one look. Every status in every host comes from this set, so a
+   colour alone tells the owner what happened before the sentence is read:
+
+     alert    amber   something needs a decision or is out of date
+     error    red     the thing that was asked for did not happen
+     progress neutral work is running right now — a spinner or a bar, moving
+                      for exactly as long as the work lasts
+     success  green   it worked
+
+   A tone never borrows another tone's colour, and no tone is carried by
+   colour alone: each one has its own mark, and progress is the only one that
+   moves. The tones are additive, so an untoned `.notice` keeps its quiet
+   informational look. */
+:root {
+  --alert: #7b5a1b;    --alert-surface: #f6eeda;    --alert-line: #c79a45;
+  --error: #8c2f26;    --error-surface: #f8eae7;    --error-line: #bf6a5c;
+  --progress: #3e564d; --progress-surface: #eef1ed; --progress-line: #a9b9ae;
+  --success: #245138;  --success-surface: #e6efe4;  --success-line: #8fae8b;
+}
+.notice--alert, .notice--error, .notice--progress, .notice--success {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px;
+  border-left: 3px solid; border-radius: 0 8px 8px 0;
+  padding: 11px 13px; font-size: 12px; line-height: 1.5;
+}
+/* Written twice on purpose: a tone outranks whatever colour a feature's own
+   stylesheet gives its status line, so the meaning is never overridden by the
+   place it happens to appear. */
+.notice--alert.notice--alert { background: var(--alert-surface); border-left-color: var(--alert-line); color: var(--alert); }
+.notice--error.notice--error { background: var(--error-surface); border-left-color: var(--error-line); color: var(--error); }
+.notice--progress.notice--progress { background: var(--progress-surface); border-left-color: var(--progress-line); color: var(--progress); }
+.notice--success.notice--success { background: var(--success-surface); border-left-color: var(--success-line); color: var(--success); }
+/* The mark: shape and glyph differ tone to tone, so the meaning survives a
+   monochrome screen and colour-blind reading. */
+.notice--alert::before, .notice--error::before, .notice--success::before {
+  display: grid; place-items: center; box-sizing: border-box;
+  width: 15px; height: 15px; margin-top: 1px; flex: none;
+  border: 1.5px solid currentColor; font-weight: 700; line-height: 1;
+}
+.notice--alert::before { content: '!'; border-radius: 4px; font-size: 11px; }
+.notice--error::before { content: '\00d7'; border-radius: 50%; font-size: 13px; }
+.notice--success::before { content: '\2713'; border-radius: 50%; font-size: 10px; }
+.notice--progress::before { content: ''; margin-top: 1px; }
+.notice--progress::before, .spinner {
+  display: block; box-sizing: border-box; width: 15px; height: 15px; flex: none;
+  border: 2px solid var(--progress-line); border-top-color: var(--progress);
+  border-radius: 50%; animation: status-spin .8s linear infinite;
+}
+@keyframes status-spin { to { transform: rotate(360deg); } }
+/* Indeterminate work of unknown length; a known fraction sets `value`. */
+.progress-bar {
+  display: block; width: 100%; height: 4px; border-radius: 999px;
+  background: var(--progress-line); overflow: hidden;
+}
+.progress-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--progress); }
+.progress-bar--indeterminate > span { width: 40%; animation: status-slide 1.2s ease-in-out infinite; }
+@keyframes status-slide { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+/* Reduced motion keeps the indicator constant, but stops it travelling. */
+@media (prefers-reduced-motion: reduce) {
+  .notice--progress::before, .spinner { animation: status-fade 1.4s ease-in-out infinite; }
+  .progress-bar--indeterminate > span { width: 100%; animation: status-fade 1.4s ease-in-out infinite; }
+}
+@keyframes status-fade { 50% { opacity: .35; } }

@@ -1,5 +1,5 @@
 import {TaxesView,DocumentCard,Destination,ConflictPanel,FiledList,ConnectionPanel,fileSize} from './components/taxes.js';
-import {Button} from './components/ui.js';
+import {Button,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED} from './statement-text.js';
 import {taxFileName,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,MAX_DOCUMENT_BYTES,extensionOf} from './tax-data.js';
@@ -25,7 +25,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   // last touched, and it is kept for as long as it still exists.
   let dropped=null,reading=null,plan=null,filed={year:'',files:[]},polling=0,consentUrl='',connectionId='';
 
-  const status=(text,target='status')=>{$(target).textContent=text||'';};
+  const status=(text,target='status',tone='')=>setStatus($(target),text,tone);
   const action=(label,handler,variant='secondary',extra={})=>{
     const button=Button(label,{variant,size:'compact',disabled:busy,...extra});
     button.addEventListener('click',handler);
@@ -44,7 +44,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       return result===undefined?true:result;
     }catch(error){
       if(current!==generation)return false;
-      status(error.message,target);
+      status(error.message,target,'error');
       return false;
     }finally{busy=false;render();}
   }
@@ -53,7 +53,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   async function refreshStatus({quiet=false}={}){
     return run(async token=>{
       drive=await remote(token,'/v1/drive/status');
-      if(!quiet)status(drive.configured?'':'Google Drive is not configured on the Worker yet.');
+      if(!quiet)status(drive.configured?'':'Google Drive is not configured on the Worker yet.','status','alert');
       if(drive.connected)await loadFiled(token);
       else filed={year:'',files:[]};
       return drive;
@@ -65,7 +65,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       // A blocked popup is not a failure: the link is kept beside the button so
       // the owner can open the same consent page themselves.
       consentUrl=openExternal(url)?'':url;
-      status(consentUrl?'Open the consent page, then come back.':'Waiting for Google…','status');
+      status(consentUrl?'Open the consent page, then come back.':'Waiting for Google…','status',consentUrl?'alert':'progress');
       awaitConsent();
     },'status');
   }
@@ -76,7 +76,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     let tries=0;
     const tick=async()=>{
       if(current!==polling)return;
-      if(++tries>CONNECT_POLL_LIMIT){status('Google did not answer. Try connecting again.','status');return;}
+      if(++tries>CONNECT_POLL_LIMIT){status('Google did not answer. Try connecting again.','status','error');return;}
       try{
         const token=await credentials.get();
         const next=await remote(token,'/v1/drive/status');
@@ -137,7 +137,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     const id=connectionId;
     if(!id||!reading||reading.kind==='none')return;
     await run(async token=>{
-      status('Reading the document…','file-form-status');
+      status('Reading the document…','file-form-status','progress');
       const result=await remote(token,`/v1/ai-connections/${id}/tax-intake`,{method:'POST',
         value:{...(reading.text?{text:reading.text}:{}),...(reading.image?{image:reading.image.dataUrl}:{}),today:today()},timeoutMs:130000});
       const proposal=parseTaxReading(result);
@@ -146,8 +146,8 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       if(proposal.year&&taxYears().includes(proposal.year))$('year').value=proposal.year;
       reading={...reading,note:proposal.reason,tone:proposal.confidence==='high'?'':'warning'};
       renderDocument();renderDestination();
-      status(proposal.confidence==='high'?'':'Check the type, name and year before filing.','file-form-status');
-      if(proposal.year&&!taxYears().includes(proposal.year))status(`This looks like a ${proposal.year} document, which is outside the years you can file into. Pick the year yourself.`,'file-form-status');
+      status(proposal.confidence==='high'?'':'Check the type, name and year before filing.','file-form-status','alert');
+      if(proposal.year&&!taxYears().includes(proposal.year))status(`This looks like a ${proposal.year} document, which is outside the years you can file into. Pick the year yourself.`,'file-form-status','alert');
       await loadFiled(token);
     },'file-form-status');
   }
@@ -157,32 +157,32 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     return normalizeTaxFiling({type:$('type').value,issuer:$('issuer').value,year:$('year').value,fileName:dropped?.name||''});
   }
   async function file(){
-    if(!dropped){status('Drop a document first.','file-form-status');return;}
-    if(!drive.connected){status('Connect Google Drive first.','file-form-status');return;}
+    if(!dropped){status('Drop a document first.','file-form-status','alert');return;}
+    if(!drive.connected){status('Connect Google Drive first.','file-form-status','alert');return;}
     let filing;
-    try{filing=currentFiling();}catch(error){status(error.message,'file-form-status');return;}
+    try{filing=currentFiling();}catch(error){status(error.message,'file-form-status','error');return;}
     await run(async token=>{
-      status('Checking the year folder…','file-form-status');
+      status('Checking the year folder…','file-form-status','progress');
       plan=await remote(token,'/v1/drive/plan',{method:'POST',value:{...filing,fileName:dropped.name},timeoutMs:60000});
       if(plan.existing){renderConflict();status('','file-form-status');return;}
       await send(token,'new');
     },'file-form-status');
   }
   async function send(token,mode){
-    status(mode==='replace'?'Replacing…':'Filing…','file-form-status');
+    status(mode==='replace'?'Replacing…':'Filing…','file-form-status','progress');
     const result=await upload(token,`/v1/drive/upload?ticket=${encodeURIComponent(plan.ticket)}&mode=${mode}`,{file:dropped});
     const {name,year}=result.filed;
     clearFiling({keepFields:false});
     $('year').value=year;
     await loadFiled(token);
-    status(`${result.replaced?'Replaced':'Filed'} ${year} / ${name}.`,'file-form-status');
+    status(`${result.replaced?'Replaced':'Filed'} ${year} / ${name}.`,'file-form-status','success');
   }
   const resolveConflict=mode=>run(token=>send(token,mode),'file-form-status');
 
   function clearFiling({keepFields=true}={}){
     dropped=null;reading=null;plan=null;
     if(!keepFields){$('type').value='';$('issuer').value='';}
-    $('file-status').textContent='';
+    setStatus($('file-status'),'');
     renderDocument();renderConflict();renderDestination();
   }
 
@@ -206,7 +206,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       existing:plan.existing,keepBothName:plan.keepBothName,
       onKeepBoth:()=>resolveConflict('keep-both'),
       onReplace:()=>resolveConflict('replace'),
-      onCancel:()=>{plan=null;renderConflict();status('Nothing was filed.','file-form-status');}
+      onCancel:()=>{plan=null;renderConflict();status('Nothing was filed.','file-form-status','alert');}
     })]:[]));
   }
   // Only the actions that apply: a document waiting to be filed has two, a
@@ -244,13 +244,13 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   }
 
   async function connectionList(){
-    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · filing a document needs the internet.','ai-status');return;}
+    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · filing a document needs the internet.','ai-status','alert');return;}
     try{
       const result=await remote(activeToken,'/v1/ai-connections');
       const usable=result.connections.filter(connection=>connection.hasApiKey);
       if(!usable.some(connection=>connection.id===connectionId))connectionId=usable[0]?.id||'';
-      status(usable.length?'':'Save an AI connection in Settings to have a dropped document named for you.','ai-status');
-    }catch(error){status(error.message,'ai-status');}
+      status(usable.length?'':'Save an AI connection in Settings to have a dropped document named for you.','ai-status','alert');
+    }catch(error){status(error.message,'ai-status','error');}
   }
 
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_DOCUMENT_BYTES});

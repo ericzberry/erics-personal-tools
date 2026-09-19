@@ -1,5 +1,5 @@
 import {FinanceView,FinanceGroup,BreakdownList,TrendTable,DraftRow,SnapshotPanel,Figure,money,AttachmentCard} from './components/finance.js';
-import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue} from './components/ui.js';
+import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
@@ -44,7 +44,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // not copied there: it is already in front of the owner.
   let attachment=null;
   const revealed=new Map();
-  const status=(text,target='status')=>{$(target).textContent=text||'';};
+  const status=(text,target='status',tone='')=>setStatus($(target),text,tone);
   const action=(label,handler,variant='secondary')=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||!loaded});
     button.addEventListener('click',handler);
@@ -107,11 +107,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     });
   }
   async function copy(record){
-    if(!clipboard?.write||typeof ClipboardItem==='undefined'){status('Copy is unavailable in this browser. Use Show details instead.');return;}
+    if(!clipboard?.write||typeof ClipboardItem==='undefined'){status('Copy is unavailable in this browser. Use Show details instead.','status','alert');return;}
     await run(async()=>{
       const value=gate.open(record.id,record.secret).then(payload=>new Blob([payload.number],{type:'text/plain'}));
       await clipboard.write([new ClipboardItem({'text/plain':value})]);
-      status('Account details copied to the clipboard.');
+      status('Account details copied to the clipboard.','status','success');
     });
   }
 
@@ -182,7 +182,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   async function intakeFromPage(){
     await run(async token=>{
       const id=await connectionId(token);
-      status('Reading the accounts on the open page…','intake-status');
+      status('Reading the accounts on the open page…','intake-status','progress');
       const page=await readPage();
       const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text:page.text,today:today(),live:true},timeoutMs:130000});
       const parsed=parseFinanceUpdates(result);
@@ -190,7 +190,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       renderDrafts();
       status([drafts.length?`${drafts.length} account${drafts.length===1?'':'s'} read from ${page.host}. Nothing is saved until you apply one.`:`No account values were found on ${page.host}.`,
         page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
-        parsed.unread].filter(Boolean).join(' '),'intake-status');
+        parsed.unread].filter(Boolean).join(' '),'intake-status',drafts.length?'success':'alert');
     },'intake-status');
   }
 
@@ -217,7 +217,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     if(!site||!readPage)return;
     await run(async token=>{
       const id=await connectionId(token);
-      status(`Reading your ${site.label} accounts…`,'snapshot-status');
+      status(`Reading your ${site.label} accounts…`,'snapshot-status','progress');
       const page=await readPage();
       const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text:page.text,today:today(),live:true,institution:site.institution},timeoutMs:130000});
       const parsed=parseFinanceUpdates(result);
@@ -228,7 +228,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         source:`${site.label} page · ${row.confidence} confidence`
       }));
       snapshotEditing=false;renderSnapshot();
-      status([snapshot.length?`${snapshot.length} account${snapshot.length===1?'':'s'} read. Nothing is saved yet.`:'No account totals were found on that page.',parsed.unread].filter(Boolean).join(' '),'snapshot-status');
+      status([snapshot.length?`${snapshot.length} account${snapshot.length===1?'':'s'} read. Nothing is saved yet.`:'No account totals were found on that page.',parsed.unread].filter(Boolean).join(' '),'snapshot-status',snapshot.length?'success':'alert');
     },'snapshot-status');
   }
   // Saved one at a time through the same validator and queue as a typed edit.
@@ -241,14 +241,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       snapshot=snapshot.slice(1);saved++;
     }
     snapshot=null;snapshotEditing=false;renderSnapshot();onChanged();
-    status(`Saved ${saved} snapshot${saved===1?'':'s'}.`,'snapshot-status');
+    status(`Saved ${saved} snapshot${saved===1?'':'s'}.`,'snapshot-status','success');
   }
 
   function renderDrafts(){
     $('drafts').replaceChildren(...drafts.map((draft,index)=>DraftRow(draft,{
       onApply:()=>apply(index),
       onEdit:()=>{applyToForm(draft);drafts.splice(index,1);renderDrafts();},
-      onDiscard:()=>{drafts.splice(index,1);renderDrafts();status(drafts.length?'':'Drafts discarded. Nothing was saved.','intake-status');}
+      onDiscard:()=>{drafts.splice(index,1);renderDrafts();status(drafts.length?'':'Drafts discarded. Nothing was saved.','intake-status','alert');}
     })));
   }
   // Applying a draft is an ordinary save through the same validator and queue as
@@ -267,7 +267,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('asOf').value=draft.asOf;
     $('editor').open=true;
     $('value').focus();
-    status('Review this draft, then save it.','form-status');
+    status('Review this draft, then save it.','form-status','alert');
   }
   function saveDraft(draft,target='status'){
     const match=draft.ambiguous?null:draft.match;
@@ -284,7 +284,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     const draft=drafts[index];
     if(await saveDraft(draft)){
       drafts.splice(index,1);renderDrafts();onChanged();
-      status(`Saved ${draft.name}.`,'intake-status');
+      status(`Saved ${draft.name}.`,'intake-status','success');
     }
   }
 
@@ -363,11 +363,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       activeToken=token;
       const result=await operation(token);
       if(current!==generation)return false;
-      if(result?.records){records=result.records;loaded=true;status(result.syncMessage||'');}
+      if(result?.records){records=result.records;loaded=true;status(result.syncMessage||'','status','alert');}
       return true;
     }catch(error){
       if(current!==generation)return false;
-      status(vaultReason(error),target);
+      status(vaultReason(error),target,'error');
       return false;
     }finally{busy=false;render();}
   }
@@ -379,13 +379,13 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh(){
     if(!gate.unlocked())return;
-    status('Loading your records…');
+    status('Loading your records…','status','progress');
     if(await run(token=>offline.request(token,'/v1/finance')))connectionNote();
   }
   function clear(){
     generation++;records=[];loaded=false;activeToken='';connection='';drafts=[];attachment=null;snapshot=null;snapshotEditing=false;engaged=false;forget();clearForm();renderDrafts();renderAttachment();renderSnapshot();
     status('','snapshot-status');
-    status('Unlock this section with your passkey.');
+    status('Unlock this section with your passkey.','status','alert');
     render();
   }
 
@@ -400,25 +400,25 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     return connection=usable[0].id;
   }
   async function connectionNote(){
-    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · Add and edit records by hand; reading a statement or a page needs the internet.','ai-status');return;}
+    if(!activeToken||globalThis.navigator?.onLine===false){status('Offline · Add and edit records by hand; reading a statement or a page needs the internet.','ai-status','alert');return;}
     try{
       const usable=await usableConnections(activeToken);
       connection=usable.find(entry=>entry.id===connection)?.id||usable[0]?.id||'';
-      status(usable.length?'':'Save an AI connection in Settings to read a statement or an account page.','ai-status');
-    }catch(error){status(error.message,'ai-status');}
+      status(usable.length?'':'Save an AI connection in Settings to read a statement or an account page.','ai-status','alert');
+    }catch(error){status(error.message,'ai-status','error');}
   }
   async function read(){
     const text=$('intake').value.trim();
     const images=attachment?.kind==='image'?[attachment.image.dataUrl]:[];
-    if(!text&&!images.length){status('Drop a statement, read the open page, or paste the figures first.','intake-status');return;}
+    if(!text&&!images.length){status('Drop a statement, read the open page, or paste the figures first.','intake-status','alert');return;}
     await run(async token=>{
       const id=await connectionId(token);
-      status(images.length?'Reading the image…':'Reading…','intake-status');
+      status(images.length?'Reading the image…':'Reading…','intake-status','progress');
       const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{text,...(images.length?{images}:{}),today:today()},timeoutMs:130000});
       const parsed=parseFinanceUpdates(result);
       drafts=matchFinanceUpdates(parsed.updates,records);
       renderDrafts();
-      status([`${drafts.length} draft${drafts.length===1?'':'s'} ready to review. Nothing is saved until you apply one.`,parsed.unread].filter(Boolean).join(' '),'intake-status');
+      status([`${drafts.length} draft${drafts.length===1?'':'s'} ready to review. Nothing is saved until you apply one.`,parsed.unread].filter(Boolean).join(' '),'intake-status',drafts.length?'success':'alert');
     },'intake-status');
   }
 
@@ -442,7 +442,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       for(const key of ['rate','commitment','unfunded'])if(input[key]==='')input[key]=null;
       const value=normalizeFinance({...input,source:'Entered by hand',...await protectedValues(id)},editing?records.find(record=>record.id===id)||{}:{});
       if(await save({...value,id,revision:editing?.revision??null})){clearForm();$('editor').open=false;}
-    }catch(error){status(vaultReason(error),'form-status');}
+    }catch(error){status(vaultReason(error),'form-status','error');}
   });
   clearForm();clear();
   if(gate.unlocked())refresh();

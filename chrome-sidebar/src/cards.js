@@ -1,5 +1,5 @@
 import {CardsView,BonusRule,SavedCard,CardMatches,CardIngest,PurchaseConditions,PurchaseReading,ComparisonResults} from './components/cards.js';
-import {Note,Option} from './components/ui.js';
+import {Note,Option,setStatus} from './components/ui.js';
 import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent} from './card-data.js';
 export function mountCards(root,{credentials,offline,remote}){
   root.replaceChildren(CardsView());
@@ -7,7 +7,7 @@ export function mountCards(root,{credentials,offline,remote}){
   const fields=['name','unit','base','cpp','source','checked','notes'];
   for(const input of root.querySelectorAll('input[type=number]')){input.min='0';input.step='any';}
   let token='',records=[],selected=null,newId=crypto.randomUUID(),busy=false,dirty=false,conditionKey='',generation=0,reading=null,readFrom='';
-  const status=(message,target='status')=>{$(target).textContent=message||'';};
+  const status=(message,target='status',tone='')=>setStatus($(target),message,tone);
   function controls(){
     for(const control of root.querySelectorAll('input,select,textarea,button'))control.disabled=busy||!token;
     for(const key of ['research','connections'])$(key).disabled=busy||!token||globalThis.navigator?.onLine===false;
@@ -47,7 +47,7 @@ export function mountCards(root,{credentials,offline,remote}){
     if(result.matches){
       $('summary').replaceChildren();
       $('matches').replaceChildren(...CardMatches(result.matches,choice=>run(()=>ingest(choice),'research-status')));
-      status('That name fits more than one card. Choose the one you hold.','research-status');return;
+      status('That name fits more than one card. Choose the one you hold.','research-status','alert');return;
     }
     const card=normalizeCard(result.card);
     $('matches').replaceChildren();populate(card);dirty=true;
@@ -61,21 +61,21 @@ export function mountCards(root,{credentials,offline,remote}){
   }
   function render(){
     $('list').replaceChildren(...(records.length?records.map(card=>SavedCard(card,{
-      onEdit:()=>{if(dirty){status('Save or cancel your current edit first.','form-status');return;}edit(card);$('editor').open=true;$('name').focus();},
-      onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting a card.');const result=await request(`/v1/cards/${card.id}`,{method:'DELETE',value:{revision:card.revision}});records=result.records;clearResults();render();status(result.syncMessage||'Card deleted.');}),
-      onResolve:choice=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before resolving a conflict.');const result=await offline.resolve(token,card.id,choice);records=result.records;clearResults();render();status(result.syncMessage);})
+      onEdit:()=>{if(dirty){status('Save or cancel your current edit first.','form-status','alert');return;}edit(card);$('editor').open=true;$('name').focus();},
+      onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting a card.');const result=await request(`/v1/cards/${card.id}`,{method:'DELETE',value:{revision:card.revision}});records=result.records;clearResults();render();status(result.syncMessage||'Card deleted.','status',result.syncMessage?'alert':'success');}),
+      onResolve:choice=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before resolving a conflict.');const result=await offline.resolve(token,card.id,choice);records=result.records;clearResults();render();status(result.syncMessage,'status','alert');})
     })):[Note(token?'No cards saved.':'Connect this device in Settings.')]));controls();
   }
   async function run(action,target='status'){
-    if(busy)return;busy=true;controls();status('Working…',target);const current=generation;
-    try{await action();}catch(error){if(current===generation)status(error.message||'Could not complete this action. Your input is preserved.',target);}
+    if(busy)return;busy=true;controls();status('Working…',target,'progress');const current=generation;
+    try{await action();}catch(error){if(current===generation)status(error.message||'Could not complete this action. Your input is preserved.',target,'error');}
     finally{busy=false;controls();if(current!==generation)reload();}
   }
   async function request(path,options){const current=generation;const result=await offline.request(token,path,options);if(current!==generation)throw Error('Connection changed.');return result;}
   async function connectionList(){
-    if(!token||globalThis.navigator?.onLine===false){status('Offline · Select a category to compare saved cards.','ai-status');return;}
-    try{const result=await remote(token,'/v1/ai-connections');const previous=$('connection').value;$('connection').replaceChildren(Option('Choose a connection',''),...result.connections.filter(c=>c.hasApiKey).map(c=>Option(`${c.name} · ${c.provider}`,c.id)));if(result.connections.some(c=>c.id===previous))$('connection').value=previous;else if(result.connections.filter(c=>c.hasApiKey).length===1)$('connection').value=result.connections.find(c=>c.hasApiKey).id;status(result.connections.some(c=>c.hasApiKey)?'':'Save an AI connection in Settings to enable category suggestions.','ai-status');}
-    catch(error){status(error.message,'ai-status');}
+    if(!token||globalThis.navigator?.onLine===false){status('Offline · Select a category to compare saved cards.','ai-status','alert');return;}
+    try{const result=await remote(token,'/v1/ai-connections');const previous=$('connection').value;$('connection').replaceChildren(Option('Choose a connection',''),...result.connections.filter(c=>c.hasApiKey).map(c=>Option(`${c.name} · ${c.provider}`,c.id)));if(result.connections.some(c=>c.id===previous))$('connection').value=previous;else if(result.connections.filter(c=>c.hasApiKey).length===1)$('connection').value=result.connections.find(c=>c.hasApiKey).id;status(result.connections.some(c=>c.hasApiKey)?'':'Save an AI connection in Settings to enable category suggestions.','ai-status','alert');}
+    catch(error){status(error.message,'ai-status','error');}
   }
   // Both AI calls fall back to something the owner can do by hand, so an
   // unavailable model opens the controls that replace it: the reading for a
@@ -116,15 +116,15 @@ export function mountCards(root,{credentials,offline,remote}){
     if(!reading||(!reading.manual&&readFrom!==$('purchase').value.trim()))await readPurchase();
     comparison();
     // The reading and the result speak for themselves; only a shaky reading needs a notice.
-    status(reading.confidence==='low'?'Compared, but the reading is low confidence. Check the category below.':'','purchase-status');
+    status(reading.confidence==='low'?'Compared, but the reading is low confidence. Check the category below.':'','purchase-status','alert');
   },'purchase-status');});
   $('purchase').addEventListener('input',()=>{clearReading();clearResults();});
   // The formatted select dispatches both input and change; the number field only input.
   $('amount').addEventListener('input',()=>{clearResults();manualReading();});
   for(const key of ['category','channel'])$(key).addEventListener('change',()=>{clearResults();manualReading();});
-  $('conditions').addEventListener('change',()=>{try{comparison();}catch(error){status(error.message,'purchase-status');}});
-  $('add').addEventListener('click',()=>{if(dirty){status('Save or cancel your current edit first.','form-status');return;}edit();$('editor').open=true;$('find').focus();});
-  $('add-rule').addEventListener('click',()=>{const values=rules();if(values.length>=20){status('Save up to 20 bonus categories.','form-status');return;}renderRules([...values,{}]);dirty=true;});
+  $('conditions').addEventListener('change',()=>{try{comparison();}catch(error){status(error.message,'purchase-status','error');}});
+  $('add').addEventListener('click',()=>{if(dirty){status('Save or cancel your current edit first.','form-status','alert');return;}edit();$('editor').open=true;$('find').focus();});
+  $('add-rule').addEventListener('click',()=>{const values=rules();if(values.length>=20){status('Save up to 20 bonus categories.','form-status','alert');return;}renderRules([...values,{}]);dirty=true;});
   $('unit').addEventListener('change',()=>{if($('unit').value==='cash')$('cpp').value='1';else $('cpp').value='';controls();});
   $('form').addEventListener('input',()=>dirty=true);
   $('cancel').addEventListener('click',()=>{edit();$('editor').open=false;});
@@ -139,17 +139,17 @@ export function mountCards(root,{credentials,offline,remote}){
     if(card.unit==='points'&&card.cpp<=0)throw Error('Enter your redemption value in cents per point.');
     if(!card.checked)throw Error('Review the card terms and enter the review date before saving.');
     const result=await request(`/v1/cards/${selected?.id||newId}`,{method:'PUT',value:{...card,revision:selected?.revision??null}});
-    records=result.records;edit();$('editor').open=false;clearResults();render();status(result.syncMessage||'Card saved.');
+    records=result.records;edit();$('editor').open=false;clearResults();render();status(result.syncMessage||'Card saved.','status',result.syncMessage?'alert':'success');
   },'form-status');});
   async function refresh(){
     const next=await credentials.get();if(next!==token){generation++;token=next;records=[];edit();clearReading();clearResults();render();}
-    if(!token){status('Connect in Settings to download your cards.');return;}
-    const result=await request('/v1/cards');records=result.records;clearResults();render();status(result.syncMessage);await connectionList();
+    if(!token){status('Connect in Settings to download your cards.','status','alert');return;}
+    const result=await request('/v1/cards');records=result.records;clearResults();render();status(result.syncMessage,'status','alert');await connectionList();
   }
   $('refresh').addEventListener('click',()=>run(refresh));
   $('connections').addEventListener('click',()=>run(connectionList,'ai-status'));
   const reload=()=>{if(!busy)return run(refresh);};
-  window.addEventListener('online',reload);window.addEventListener('offline',()=>{controls();status('Offline · Saved cards and manual comparisons are available.');});
+  window.addEventListener('online',reload);window.addEventListener('offline',()=>{controls();status('Offline · Saved cards and manual comparisons are available.','status','alert');});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
   credentials.subscribe?.(()=>{generation++;token='';records=[];edit();clearReading();clearResults();render();reload();});

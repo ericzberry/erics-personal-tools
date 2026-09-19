@@ -79,6 +79,8 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Keep labels close to their inputs. Use persistent labels rather than placeholders as the only instruction.
 - Preserve user input after failed operations. Show actionable errors near the affected workflow.
 - Provide useful empty, loading, success, error, disabled, and disconnected states. Prevent duplicate submissions and layout jumps during async work.
+- Say what kind of thing happened with the shared status tones, never with a colour chosen in a feature: `alert` for something to decide or act on, `error` for what did not happen, `progress` for work running now, `success` for what worked. Each tone owns one colour and one mark, no tone borrows another's, and an untoned status line stays plainly informational. The full definition is in [docs/DESIGN.md](docs/DESIGN.md#status-tones).
+- Work in progress is shown as motion that lasts exactly as long as the work — a spinner, or a progress bar once a fraction is known — not a sentence that appears once and then sits still. Clearing a status clears its tone, so a finished operation never keeps the colour of the last one.
 - Keep secret values masked and never expose saved secrets in previews, logs, or screenshots.
 
 ## Visual consistency and accessibility

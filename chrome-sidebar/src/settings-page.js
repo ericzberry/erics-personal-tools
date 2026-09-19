@@ -1,5 +1,5 @@
 import {mountSettings} from './components/views.js';
-import {ConnectionCard,setModelSuggestions} from './components/ui.js';
+import {ConnectionCard,setModelSuggestions,setStatus} from './components/ui.js';
 import {providerFor} from './ai-providers.js';
 mountSettings(document.getElementById('app'));
 await import('./capability-links.js');
@@ -14,7 +14,7 @@ async function send(action, data={}) {
   if (!response?.ok) throw Error(response?.error||'The settings service did not respond.');
   return response;
 }
-function status(message) {$('settings-status').textContent=message;$('settings-status').hidden=!message;}
+function status(message,tone='') {setStatus($('settings-status'),message,tone);$('settings-status').hidden=!message;}
 function controls() {
   for (const node of $('connection-form').querySelectorAll('input,select,button')) node.disabled=working||!connected;
   for (const id of ['connection-add','connection-reload']) $(id).disabled=working||!connected;
@@ -40,7 +40,7 @@ function endpointHint(){
 }
 function renderList() {
   $('connection-list').replaceChildren(...connections.map(connection=>ConnectionCard(connection,{selected:selected?.id===connection.id,onSelect:next=>{
-    if (dirty) {status('Save or cancel your edits before switching connections.');return;}
+    if (dirty) {status('Save or cancel your edits before switching connections.','alert');return;}
     edit(next);
   }})));
   $('connections-empty').hidden=connections.length>0;
@@ -64,7 +64,7 @@ function edit(connection=null) {
   $('playground-model').value='';
   $('playground-limit').value='2048';
   $('playground-output').textContent='';$('playground-output').hidden=true;
-  $('playground-status').textContent='';$('model-list-status').textContent='';
+  setStatus($('playground-status'),'');setStatus($('model-list-status'),'');
   setModelSuggestions($('provider-model-list'),[]);
   endpointHint();
   renderList();
@@ -72,7 +72,7 @@ function edit(connection=null) {
 async function run(action) {
   if (working) return;
   working=true;controls();status('');
-  try {await action();} catch (error) {status(error.message);}
+  try {await action();} catch (error) {status(error.message,'error');}
   finally {working=false;controls();}
 }
 async function load() {
@@ -84,19 +84,19 @@ async function load() {
 async function migrate() {
   try {
     const result=await send('migrate');
-    if (result.moved) {connections=(await send('list')).connections;renderList();status('Keys saved in this browser moved to your account.');}
-    else if (result.remaining) status('Some keys saved in this browser need review before they move.');
-  } catch (error) {status(`Keys saved in this browser were kept: ${error.message}`);}
+    if (result.moved) {connections=(await send('list')).connections;renderList();status('Keys saved in this browser moved to your account.','success');}
+    else if (result.remaining) status('Some keys saved in this browser need review before they move.','alert');
+  } catch (error) {status(`Keys saved in this browser were kept: ${error.message}`,'error');}
 }
 $('settings-connect').addEventListener('click',()=>run(async()=>{
   await send('connect', {token:$('settings-token').value.trim()||undefined});
   $('settings-token').value='';connected=true;
-  await load();$('settings-cloud').open=false;$('settings-cloud-status').textContent='This browser is connected.';
-  status('Connected. Your settings are ready.');
+  await load();$('settings-cloud').open=false;setStatus($('settings-cloud-status'),'This browser is connected.','success');
+  status('Connected. Your settings are ready.','success');
 }));
 $('settings-disconnect').addEventListener('click',()=>run(async()=>{
   await send('disconnect');connected=false;connections=[];edit();$('settings-token').value='';$('settings-cloud').open=true;
-  status('Disconnected from this browser. Saved AI connections remain in your account.');
+  status('Disconnected from this browser. Saved AI connections remain in your account.','success');
 }));
 $('connection-form').addEventListener('input',()=>{dirty=true;controls();});
 $('connection-form').addEventListener('change',()=>{dirty=true;controls();});
@@ -110,57 +110,57 @@ $('connection-form').addEventListener('submit',event=>{
     if (key || $('ai-clear-key').checked) connection.apiKey=key;
     const result=await send('save',{id:selected?.id||newId,connection});
     connections=[result.connection,...connections.filter(item=>item.id!==result.connection.id)];
-    edit(result.connection);status('Connection saved.');
+    edit(result.connection);status('Connection saved.','success');
   });
 });
 $('connection-add').addEventListener('click',()=>{
-  if (dirty) {status('Save or cancel your edits before adding another connection.');return;}
+  if (dirty) {status('Save or cancel your edits before adding another connection.','alert');return;}
   edit();status('');$('ai-name').focus();
 });
 $('connection-cancel').addEventListener('click',()=>{edit();status('');});
 $('connection-reload').addEventListener('click',()=>run(async()=>{
   if (dirty) throw Error('Save or cancel your edits before reloading connections.');
-  await load();edit();status('Connections reloaded.');
+  await load();edit();status('Connections reloaded.','success');
 }));
 $('connection-remove').addEventListener('click',()=>{$('connection-remove-confirm').hidden=false;});
 $('connection-keep').addEventListener('click',()=>{$('connection-remove-confirm').hidden=true;});
 $('connection-confirm-remove').addEventListener('click',()=>run(async()=>{
   if (!selected) return;
   await send('remove',{id:selected.id,revision:selected.revision});
-  connections=connections.filter(item=>item.id!==selected.id);edit();status('Connection removed.');
+  connections=connections.filter(item=>item.id!==selected.id);edit();status('Connection removed.','success');
 }));
 function requireSaved(){if(!selected||dirty||!selected.hasApiKey)throw Error('Select a saved connection with an API key first.');}
 $('connection-models').addEventListener('click',()=>run(async()=>{
-  requireSaved();$('model-list-status').textContent='Fetching models…';
+  requireSaved();setStatus($('model-list-status'),'Fetching models…','progress');
   try{
     const result=await send('models',{id:selected.id});
     setModelSuggestions($('provider-model-list'),result.models);
-    $('model-list-status').textContent=result.manual?result.message:`${result.models.length} models loaded${result.partial?' (partial list)':''}. Choose a model for this playground request. ${result.message||''}`;
-  }catch(error){$('model-list-status').textContent='Could not fetch models. You can enter a model ID manually.';throw error;}
+    setStatus($('model-list-status'),result.manual?result.message:`${result.models.length} models loaded${result.partial?' (partial list)':''}. Choose a model for this playground request. ${result.message||''}`,result.manual?'alert':'success');
+  }catch(error){setStatus($('model-list-status'),'Could not fetch models. You can enter a model ID manually.','error');throw error;}
 }));
 $('connection-test').addEventListener('click',()=>run(async()=>{
-  requireSaved();$('playground-status').textContent='Testing with a small request…';
+  requireSaved();setStatus($('playground-status'),'Testing with a small request…','progress');
   try{
     const result=await send('test',{id:selected.id,model:$('playground-model').value.trim()});
-    $('playground-status').textContent=`Provider accepted the test for ${result.model}. ${result.warning||'Connection works.'}`;
-  }catch(error){$('playground-status').textContent='Connection test failed.';throw error;}
+    setStatus($('playground-status'),`Provider accepted the test for ${result.model}. ${result.warning||'Connection works.'}`,result.warning?'alert':'success');
+  }catch(error){setStatus($('playground-status'),'Connection test failed.','error');throw error;}
 }));
 $('playground-form').addEventListener('submit',event=>{
   event.preventDefault();run(async()=>{
     requireSaved();const prompt=$('playground-prompt').value.trim(),system=$('playground-system').value.trim();
     if(!prompt)throw Error('Enter a prompt first.');
     const messages=[...(system?[{role:'system',content:system}]:[]),{role:'user',content:prompt}];
-    $('playground-status').textContent='Waiting for the provider…';$('playground-output').textContent='';$('playground-output').hidden=true;
+    setStatus($('playground-status'),'Waiting for the provider…','progress');$('playground-output').textContent='';$('playground-output').hidden=true;
     try{
       const result=await send('generate',{id:selected.id,model:$('playground-model').value.trim(),messages,maxTokens:Number($('playground-limit').value)});
       $('playground-output').textContent=result.text;$('playground-output').hidden=!result.text;
       const usage=result.usage;
-      $('playground-status').textContent=`${result.model} · ${(result.durationMs/1000).toFixed(1)}s${usage?.inputTokens!=null?` · ${usage.inputTokens} input tokens`:''}${usage?.outputTokens!=null?` · ${usage.outputTokens} output tokens`:''}${result.warning?` · ${result.warning}`:''}`;
-    }catch(error){$('playground-status').textContent='Request failed. Your prompt is still here.';throw error;}
+      setStatus($('playground-status'),`${result.model} · ${(result.durationMs/1000).toFixed(1)}s${usage?.inputTokens!=null?` · ${usage.inputTokens} input tokens`:''}${usage?.outputTokens!=null?` · ${usage.outputTokens} output tokens`:''}${result.warning?` · ${result.warning}`:''}`,result.warning?'alert':'success');
+    }catch(error){setStatus($('playground-status'),'Request failed. Your prompt is still here.','error');throw error;}
   });
 });
 $('playground-copy').addEventListener('click',()=>run(async()=>{
-  await navigator.clipboard.writeText($('playground-output').textContent);$('playground-status').textContent='Response copied.';
+  await navigator.clipboard.writeText($('playground-output').textContent);setStatus($('playground-status'),'Response copied.','success');
 }));
 window.addEventListener('beforeunload',event=>{if (dirty) {event.preventDefault();event.returnValue='';}});
 edit();

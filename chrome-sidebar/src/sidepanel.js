@@ -2,13 +2,13 @@ import {rosterCounts,currentTierPlayers,pickCountdown} from './draft-presentatio
 import {fetchEspnCatalog, reconcileRankings, reconcileSession, correctionPlayers} from './espn-catalog.js';
 import {createManualDraft, applyManualDraft, setManualPick, setManualProgress, resetManualDraft} from './manual-draft.js';
 import {playerKey} from './player-identity.js';
-import {downloadFile, RosterCounts, TieredRankings, SelectionRow} from './components/ui.js';
+import {downloadFile, RosterCounts, TieredRankings, SelectionRow, setStatus} from './components/ui.js';
 import {selectSession} from './session-selection.js';
 import {sessionKey} from './draft-state.js';
 import {recommend} from './recommendations.js';
 const $ = id => document.getElementById(id);
 const extension = !!globalThis.chrome?.storage?.local;
-let config, rankings, sourceRankings, catalog, catalogPlayers=[], syncMessage='', sessions = {}, selected = 'auto', manualDrafts = {};
+let config, rankings, sourceRankings, catalog, catalogPlayers=[], syncMessage='', syncing=false, sessions = {}, selected = 'auto', manualDrafts = {};
 let manualWrites=Promise.resolve();
 let lastBoardSignature, lastTierSession, highlightedTab, lastRosterSignature;
 let recommendedKeys=[];
@@ -35,7 +35,7 @@ function renderAdvice(session) {
   const advice = recommend({rankings, config, session});
   const countdown=pickCountdown(session,advice.turn,{blocked:!!advice.blocked});
   $('advice-context').textContent = session ? `${session.manualMode?'Manual board':`Through #${advice.throughPick}`}${advice.turn.nextPick ? ` · Next #${advice.turn.nextPick}` : ' · Your turn unknown'}${countdown?` · ${countdown}`:''}${advice.turn.followingPick ? ` · Then #${advice.turn.followingPick}` : ''}` : '';
-  $('advice-status').textContent = !session ? 'Connect a draft to see your next pick.' : advice.blocked || '';
+  setStatus($('advice-status'), !session ? 'Connect a draft to see your next pick.' : advice.blocked || '', 'alert');
   $('advice-status').hidden = !$('advice-status').textContent;
   const candidates=session?advice.candidates:[];
   recommendedKeys=candidates.map(playerKey);
@@ -67,7 +67,7 @@ function renderManual(updateFields=false) {
   const matches=query&&record?.active?catalogPlayers.filter(p=>!p.rank&&`${p.name} ${p.spreadsheetName||''} ${p.position} ${p.nflTeam} ${p.espnId}`.toLowerCase().includes(query)):[];
   const players=matches.slice(0,40);
   $('manual-result-count').textContent=query&&record?.active?(matches.length?`Showing ${players.length} of ${matches.length}`:'No players outside your spreadsheet match.'):'';
-  $('espn-sync-status').textContent=syncMessage||`${catalog.players.length.toLocaleString()} ESPN entries · ${rankings.players.filter(p=>!p.identityUnverified).length}/${rankings.players.length} ranks matched · ${new Date(catalog.fetchedAt).toLocaleDateString()}`;
+  setStatus($('espn-sync-status'),syncMessage||`${catalog.players.length.toLocaleString()} ESPN entries · ${rankings.players.filter(p=>!p.identityUnverified).length}/${rankings.players.length} ranks matched · ${new Date(catalog.fetchedAt).toLocaleDateString()}`,syncMessage?(syncing?'progress':'error'):'');
   $('manual-players').replaceChildren(...players.map(p=>{
     const pick=taken.get(playerKey(p)),owner=pick?(pick.teamId===s.teamId?'me':'other'):null;
     return SelectionRow(p,{owner,corrected:!!record?.overrides[playerKey(p)],onSelect:value=>changeManual(r=>setManualPick(r,p,value),`${p.name}: ${value==='undo'?'correction undone':value==='me'?'taken by you':'taken by someone else'}.`)});
@@ -106,7 +106,7 @@ $('download-espn-diagnostics').addEventListener('click',async()=>{
     if(!result)throw Error('Reload the extension and ESPN, then try again.');
     const url=URL.createObjectURL(new Blob([JSON.stringify({sidebarVersion:chrome.runtime.getManifest().version,...result},null,2)],{type:'application/json'}));
     downloadFile({url,filename:'espn-highlight-diagnostics.json'});setTimeout(()=>URL.revokeObjectURL(url),10000);
-  }catch(error){$('espn-sync-status').textContent=error.message;}
+  }catch(error){setStatus($('espn-sync-status'),error.message,'error');}
 });
 $('draft-settings').addEventListener('toggle',()=>{if($('draft-settings').open)renderManual(true);});
 $('capture-picks').addEventListener('change',async()=>{
@@ -116,10 +116,10 @@ $('capture-picks').addEventListener('change',async()=>{
 });
 function useCatalog(next){catalog=next;rankings=reconcileRankings(sourceRankings,catalog);catalogPlayers=correctionPlayers(rankings,catalog);}
 $('sync-espn-players').addEventListener('click',async()=>{
-  $('sync-espn-players').disabled=true;syncMessage='Syncing ESPN players…';renderManual();
+  $('sync-espn-players').disabled=true;syncing=true;syncMessage='Syncing ESPN players…';renderManual();
   try{const next=await fetchEspnCatalog(config.seasonId);if(extension)await chrome.storage.local.set({espnCatalog:next});useCatalog(next);syncMessage='';renderDraft();}
   catch(error){syncMessage=error.message;}
-  finally{$('sync-espn-players').disabled=false;renderManual();}
+  finally{syncing=false;$('sync-espn-players').disabled=false;renderManual();}
 });
 $('manual-search').addEventListener('input',()=>renderManual());
 $('save-manual-progress').addEventListener('click',()=>{

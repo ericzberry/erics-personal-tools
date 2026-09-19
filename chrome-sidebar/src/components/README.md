@@ -7,7 +7,8 @@ All extension UI is built here. `ui.js` owns native DOM construction and reusabl
 | AppHeader, ToolHeading, Main, Section, Stack | Shell, structure and layout |
 | Heading, Text, Note, Label, Strong, Badge | Consistent typography |
 | Button, Link, Field, Option, ActionGroup | Controls and accessible labels |
-| Notice, StatusCard, Highlight, Metrics, SourceNote | Status and compact information |
+| Notice + setStatus, Spinner, ProgressBar | Status in one of four tones, and constant progress indicators |
+| StatusCard, Highlight, Metrics, SourceNote | Compact information |
 | Disclosure, DataTable, List | Expandable and structured information |
 | PickRow, RecommendationCard | Reusable draft data presentation |
 | UploadField + attachFileDrop | Drop/browse upload with inline feedback |
@@ -18,6 +19,19 @@ Components accept data and return native elements. Mount them once where possibl
 If no component fits, add or extend a component here first. Add a reusable class or variant here when a visual difference is needed; never style feature IDs or add feature-local CSS. Inputs must have an associated label. Buttons must expose their action and loading/disabled state.
 
 The tests in `tests/components.test.js` enforce controller hooks, accessible fields, safe text rendering and the construction boundary. Test-only harness markup is not packaged with the extension.
+
+`Notice`, `setStatus`, `Spinner` and `ProgressBar` are the whole status
+vocabulary. A controller says what kind of thing happened —
+`setStatus(node, text, 'alert' | 'error' | 'progress' | 'success')` — and
+`status.css` supplies the colour, the mark and, for progress, a spinner that
+turns for as long as the work does. An unknown tone throws, clearing the text
+clears the tone, and a new tone replaces the last rather than stacking on it.
+Never write `status.textContent` or colour a status line from a feature
+stylesheet: both are a second vocabulary, which is what this one replaces.
+`Spinner` and `ProgressBar` are for an indicator beside the thing being worked
+on; `ProgressBar` runs indeterminate until `setProgress` gives it a fraction.
+The meanings are defined in [DESIGN.md](../../../docs/DESIGN.md#status-tones)
+and reviewed together at `tests/status-tones-preview.html`.
 
 `Title` owns title typography through `.title-text`; `Heading` is its compatibility alias. `SectionTitle`, `ToolHeading`, and `SubPage` compose it. Use `Disclosure` with `titleHeading: true` for section titles; ordinary disclosure controls retain compact labels. Do not add page-specific title font overrides. `GroupTitle` is the separate, sans-serif label for a run of records through `.group-title`; use it — not `Title` — where a heading names a group rather than a page or section.
 

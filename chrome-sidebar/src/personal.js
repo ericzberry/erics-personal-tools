@@ -1,5 +1,5 @@
 import {PersonalView,PersonalGroup} from './components/personal.js';
-import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue} from './components/ui.js';
+import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue,setStatus} from './components/ui.js';
 import {normalizePersonal,validatePersonalPayload,groupPersonalRecords,expiringPersonal} from './personal-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {sealSecret} from './secret-vault.js';
@@ -19,7 +19,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
   const $=id=>gate.content.querySelector(`#personal-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,revealTimer=null;
   const revealed=new Map();
-  const status=text=>{$('status').textContent=text||'';};
+  const status=(text,tone='')=>setStatus($('status'),text,tone);
   const action=(label,handler,variant='secondary',{enabled=false}={})=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||(!loaded&&!enabled)});
     button.addEventListener('click',handler);
@@ -33,7 +33,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
     $('value').value='';$('notes').value='';
     $('value-state').hidden=true;$('value-state').textContent='';
     $('editor-title').textContent='New record';
-    $('form-status').textContent='';
+    setStatus($('form-status'),'');
   }
   // Editing opens the sealed envelope so the value and its notes can both be
   // changed. They are sealed as one payload; prefilling is the only way to edit
@@ -56,12 +56,12 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
     });
   }
   async function copy(record){
-    if(!clipboard?.write||typeof ClipboardItem==='undefined'){status('Copy is unavailable in this browser. Use Show value instead.');return;}
+    if(!clipboard?.write||typeof ClipboardItem==='undefined'){status('Copy is unavailable in this browser. Use Show value instead.','alert');return;}
     // The clipboard write starts during the click so Safari keeps the gesture.
     await run(async()=>{
       const value=gate.open(record.id,record.secret).then(payload=>new Blob([payload.value],{type:'text/plain'}));
       await clipboard.write([new ClipboardItem({'text/plain':value})]);
-      status('Value copied to the clipboard.');
+      status('Value copied to the clipboard.','success');
     });
   }
   function render(){
@@ -109,12 +109,12 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
       activeToken=token;
       const result=await operation(token);
       if(current!==generation)return false;
-      if(result?.records){records=result.records;loaded=true;status(result.syncMessage||'');}
+      if(result?.records){records=result.records;loaded=true;status(result.syncMessage||'','alert');}
       return true;
     }catch(error){
       if(current!==generation)return false;
       const text=vaultReason(error);
-      status(text);$('form-status').textContent=text;
+      status(text,'error');setStatus($('form-status'),text,'error');
       return false;
     }finally{busy=false;render();}
   }
@@ -126,12 +126,12 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh(){
     if(!gate.unlocked())return;
-    status('Loading records…');
+    status('Loading records…','progress');
     await run(token=>offline.request(token,'/v1/personal'));
   }
   function clear(){
     generation++;records=[];loaded=false;activeToken='';forget();clearForm();
-    status('Unlock this section with your passkey to load your records.');
+    status('Unlock this section with your passkey to load your records.','alert');
     render();
   }
   $('search').addEventListener('input',render);
@@ -145,7 +145,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
       const secret=await sealSecret(await gate.key(),id,payload);
       const value=normalizePersonal({...Object.fromEntries(fields.map(key=>[key,$(key).value])),secret});
       if(await save({...value,id,revision:editing?.revision??null})){clearForm();$('editor').open=false;}
-    }catch(error){$('form-status').textContent=vaultReason(error);}
+    }catch(error){setStatus($('form-status'),vaultReason(error),'error');}
   });
   clearForm();clear();
   if(gate.unlocked())refresh();

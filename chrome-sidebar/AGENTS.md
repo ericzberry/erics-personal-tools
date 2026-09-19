@@ -8,6 +8,7 @@ The user requires every extension UI element to come from a reusable component.
 - Feature controllers own data, async work and event handling. They may update component state/content, but must not construct raw elements or inject HTML.
 - Style reusable classes and variants, not feature IDs. IDs are controller/accessibility hooks only.
 - All uploads use `UploadField` and the shared `components/file-drop.js` behavior (drop, browse, validation and status).
+- All status lines go through `setStatus` from `components/ui.js` with one of the four tones, and work in progress shows a spinner or progress bar for as long as it runs. Do not set a status element's text directly or style a status colour in a feature stylesheet; the rule is in [docs/DESIGN.md](../docs/DESIGN.md#status-tones) and checked by `tests/status-tones.test.js`.
 - Prefer native accessible elements inside components. Keep keyboard support, labels, disabled/loading states, and text-safe rendering.
 - Use the shared capability navigation and registry for every top-level tool. Do not add standalone feature buttons or function tabs to the header. Current tab is the automatic mode the sidebar starts in, named by the Tools toggle rather than listed as a menu row; a manually selected capability stays open as browser tabs change.
 - Run the component architecture checks and relevant behavior tests before building the release.

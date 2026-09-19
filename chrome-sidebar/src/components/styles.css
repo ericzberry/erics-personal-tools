@@ -89,7 +89,10 @@ input::placeholder { color: #72786f; }
 .quiet:disabled { color: #7b8077; cursor: default; }
 .footnote { color: var(--muted); font-size: 11px; line-height: 1.6; margin: 13px 0; }
 .footnote:empty { display: none; }
-.notice { border-left: 2px solid #b58c53; border-radius: 0 8px 8px 0; background: #f1ebdd; padding: 11px 13px; color: #715831; font-size: 12px; line-height: 1.5; }
+/* Untoned: plainly informational. Amber now means alert, red error, green
+   success and neutral-in-motion progress, so a status line with no tone must
+   not wear any of their colours. */
+.notice { border-left: 2px solid var(--line); border-radius: 0 8px 8px 0; background: var(--surface); padding: 11px 13px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .recommendation { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 17px; margin-top: 9px; }
 .recommendation--primary { border-top: 3px solid var(--forest); box-shadow: 0 5px 16px #173e3707; }
 .recommendation .eyebrow { color: #68794f; font-size: 9px; margin: 0 0 10px; }
@@ -428,7 +431,7 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
 .capability-item:hover, .capability-settings:hover { background: var(--sage); }
 .capability-toggle:focus-visible, .capability-item:focus-visible, .capability-settings:focus-visible { outline: 2px solid var(--forest); outline-offset: -2px; }
 
-.release-banner { margin: 0; padding: 8px var(--page-inset); background: #f3ead6; color: #614a23; font-size: 11px; line-height: 1.4; border-bottom: 1px solid #dfcea9; }
+.release-banner { margin: 0; padding: 8px var(--page-inset); font-size: 11px; line-height: 1.4; border-left: none; border-bottom: 1px solid var(--alert-line); border-radius: 0; }
 
 /* An embedded connection is a peer Settings row, not a padded wallet page. */
 .settings-list > .travel-wallet.connection-only{padding:0;margin:0;max-width:none;display:block}

@@ -1,5 +1,5 @@
 import {SizesView,SizeGroup} from './components/sizes.js';
-import {RecordRow,Button,Note,Stack,ActionGroup} from './components/ui.js';
+import {RecordRow,Button,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
 import {normalizeSize,groupSizes} from './size-data.js';
 const fields=['brand','item','size','fit'];
 
@@ -7,7 +7,7 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
   root.replaceChildren(SizesView());
   const $=id=>root.querySelector(`#sizes-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;
-  const status=text=>{$('status').textContent=text||'';};
+  const status=(text,tone='')=>setStatus($('status'),text,tone);
   const action=(label,handler,variant='secondary',{enabled=false}={})=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||(!loaded&&!enabled)});
     button.addEventListener('click',handler);
@@ -17,7 +17,7 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
     editing=null;
     for(const key of fields)$(key).value='';
     $('editor-title').textContent='New size';
-    $('form-status').textContent='';
+    setStatus($('form-status'),'');
   }
   function edit(record){
     editing={id:record.id,revision:record.revision,record};
@@ -55,12 +55,12 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
       activeToken=token;
       const result=await operation(token);
       if(current!==generation)return false;
-      if(result?.records){records=result.records;loaded=true;status(result.syncMessage||'');}
+      if(result?.records){records=result.records;loaded=true;status(result.syncMessage||'','alert');}
       return true;
     }catch(error){
       if(current!==generation)return false;
       const text=error?.message||'That did not save.';
-      status(text);$('form-status').textContent=text;
+      status(text,'error');setStatus($('form-status'),text,'error');
       return false;
     }finally{busy=false;render();}
   }
@@ -71,7 +71,7 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh(){
-    status('Loading sizes…');
+    status('Loading sizes…','progress');
     await run(token=>offline.request(token,'/v1/sizes'));
   }
   function clear(){generation++;records=[];loaded=false;activeToken='';clearForm();status('');render();}
@@ -84,7 +84,7 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
       const value=normalizeSize(Object.fromEntries(fields.map(key=>[key,$(key).value])),editing?.record||{});
       const id=editing?.id||crypto.randomUUID();
       if(await save({...value,id,revision:editing?.revision??null})){clearForm();$('editor').open=false;}
-    }catch(error){$('form-status').textContent=error?.message||'Check the size and try again.';}
+    }catch(error){setStatus($('form-status'),error?.message||'Check the size and try again.','error');}
   });
   clearForm();clear();
   refresh();

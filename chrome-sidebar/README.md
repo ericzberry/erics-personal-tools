@@ -1031,7 +1031,7 @@ after one, on a page whose balance could not be found, and on an ordinary page
 and a full tab, where no panel appears at all. Archive:
 `release/erics-sidebar-0.6.118.zip`.
 
-## Finance follows you to the bank, and says nothing until you ask (0.6.119 / mobile 0.1.73)
+## Finance follows you to the bank, and says nothing until you ask (0.6.118 / mobile 0.1.72)
 
 The sidebar knew four account sites, and only while you were signed in to one.
 `FINANCE_SITES` in `account-sites.js` now recognizes about thirty institutions by
@@ -1076,3 +1076,50 @@ the passkey-gate harness, which gained a quiet state with a readable site and
 one without, and the reveal was driven in the browser at 280px with no
 horizontal overflow. Mobile shares `finance.js` and the gate but has no tab
 beside it, so the arrival there is the deliberate one it always was.
+
+## Four things a status can say, and each one looks like itself (0.6.119 / mobile 0.1.74)
+
+Every status line in the panel used to wear the same amber, whatever it had to
+report. A sync conflict, a failed save, a reading in flight and a record saved
+were one colour and one shape, so the colour said nothing and the sentence had
+to carry all of it. Worse, work in progress was often just a sentence: *Reading
+the accounts on the open page…* appeared once and then sat perfectly still,
+which is indistinguishable from a screen that has stopped.
+
+There are four things an operation can say, so there are four tones, and
+`components/status.css` owns all of them:
+
+- **alert** — something to decide or act on: changes waiting to sync, a
+  connection to make, a low-confidence reading to check. Amber, `!` in a
+  rounded square.
+- **error** — what was asked for did not happen. Red, `×` in a circle.
+- **progress** — work is running right now. Muted forest, and a spinner that
+  turns for exactly as long as the work lasts. The only tone that moves.
+- **success** — it worked. Green, `✓` in a circle.
+
+A tone is never chosen for its colour. A controller says
+`setStatus(node, text, 'error')` and the look follows, which is why amber can
+mean alert everywhere: nothing else is allowed to wear it, and a status line
+with no tone at all — *4 offers · read 2026-09-18* — goes back to the quiet
+informational note it always should have been. Clearing the text clears the
+tone, so a finished operation never keeps the colour of the last one, and a new
+tone replaces the previous rather than stacking on it. No tone is carried by
+colour alone: the marks differ in shape as well as glyph, an error or an alert
+is announced assertively while progress and success wait for a pause, and
+reduced motion holds the spinner still and pulses it instead.
+
+`Spinner` and `ProgressBar` are the same rule for an indicator that belongs
+beside the thing being worked on rather than in a status line; the bar runs
+indeterminate until something knows a fraction to give it. The upload zone's
+private `data-state` colours are gone — an upload's result is said in the same
+four tones as everything else.
+
+Validation: 382 extension, 33 mobile and 93 API tests pass, and both apps
+build. New coverage in `tests/status-tones.test.js`: one tone at a time, an
+emptied line losing its colour, an unknown tone throwing, the live region and
+`aria-busy` following the tone, the indeterminate-to-measured bar, every tone
+having a mark of its own, and a check that no feature writes a status line
+directly. Reviewed in the browser at 380px and 280px through
+`tests/status-tones-preview.html` and the passkey-gate and points-and-miles
+harnesses, where a reading in flight now spins and its outcome lands green or
+amber on the same line.

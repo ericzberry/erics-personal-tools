@@ -2,7 +2,7 @@ import {showSettings} from './navigation.js';
 import {mountTravelTool} from './capability-links.js';
 import {sharedVault} from './secret-vault.js';
 import {vaultReason} from './vault-gate.js';
-import {MaskedValue} from './components/ui.js';
+import {MaskedValue,setStatus} from './components/ui.js';
 const $=id=>document.getElementById(id);
 // Settings holds the one cloud connection, which the travel wallet owns, so
 // arriving at Settings builds the wallet however the screen was opened.
@@ -26,9 +26,9 @@ recovery?.addEventListener('click',async()=>{
     const vault=sharedVault();
     await vault.key();
     $('recovery-code-output').replaceChildren(MaskedValue(vault.recoveryCode()));
-    $('recovery-code-status').textContent='';
+    setStatus($('recovery-code-status'),'');
     showing=true;
     recovery.textContent='Hide recovery code';
-  }catch(error){$('recovery-code-status').textContent=vaultReason(error);}
+  }catch(error){setStatus($('recovery-code-status'),vaultReason(error),'error');}
   finally{recovery.disabled=false;}
 });

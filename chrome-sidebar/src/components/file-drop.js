@@ -23,26 +23,27 @@ async function promisedFile(spec, maxBytes, fetcher = globalThis.fetch) {
   return new File([blob], name || 'attachment', {type: blob.type || type || 'application/octet-stream'});
 }
 
+import {setStatus} from './ui.js';
 export function attachFileDrop({zone,input,status,onFile,accept=['.xlsx','.json'],maxBytes=5000000,fetcher=globalThis.fetch}) {
   let busy=false;
   async function receive(dropped) {
     if(busy)return;
     try {
-      busy=true;zone.setAttribute('aria-busy','true');status.dataset.state='';
+      busy=true;zone.setAttribute('aria-busy','true');
       // A promised attachment has to be fetched before anything can be checked
       // about it, so say what is happening rather than appearing to stall.
       let files=dropped;
       if(typeof dropped==='string'){
-        status.textContent='Getting the attachment…';
+        setStatus(status,'Getting the attachment…','progress');
         files=[await promisedFile(dropped,maxBytes,fetcher)];
       }
       if(files.length!==1)throw Error('Drop one file at a time.');
       const file=files[0];
       if(!accept.some(ext=>file.name.toLowerCase().endsWith(ext)))throw Error(`Use ${accept.join(' or ')}.`);
       if(file.size>maxBytes)throw Error(`File is too large (${maxBytes/1000000} MB maximum).`);
-      status.textContent='Reading file…';
-      const message=await onFile(file);status.textContent=message||'Imported.';status.dataset.state='success';
-    } catch(error) {status.textContent=error.message;status.dataset.state='error';}
+      setStatus(status,'Reading file…','progress');
+      const message=await onFile(file);setStatus(status,message||'Imported.','success');
+    } catch(error) {setStatus(status,error.message,'error');}
     finally {busy=false;zone.removeAttribute('aria-busy');input.value='';}
   }
   zone.addEventListener('click',()=>{if(!busy)input.click();});

@@ -41,7 +41,51 @@ export const Option=(text,value)=>element('option',{text,value});
 export const List=(children=[],props={})=>element('ol',props,children);
 export const Note=(text,props={})=>Text(text,{className:'footnote',...props});
 export const Badge=(text,props={})=>Label(text,{className:'pill',...props});
-export const Notice=(text='',props={})=>Text(text,{className:'notice',role:'status',...props});
+// A status line. Four tones, and nothing else may colour one: `alert` for
+// something that needs a decision, `error` for what did not happen,
+// `progress` for work running right now, `success` for what worked. The tone
+// carries the look — colour, mark, and for progress a spinner that turns for
+// as long as the work lasts — so no feature invents its own status styling.
+export const STATUS_TONES=['alert','error','progress','success'];
+export function Notice(text='',{tone='',...props}={}) {
+  const node=Text(text,{className:'notice',role:'status',...props});
+  return tone?setStatus(node,text,tone):node;
+}
+// Says one thing about one operation. Clearing the text clears the tone, so a
+// finished operation never leaves its old colour behind, and a new tone
+// replaces the last one rather than stacking on it.
+export function setStatus(node,text='',tone='') {
+  if(!node)return node;
+  if(tone&&!STATUS_TONES.includes(tone))throw Error(`Unknown status tone: ${tone}`);
+  const active=text?tone:'';
+  node.textContent=text||'';
+  for(const name of STATUS_TONES)node.classList.toggle(`notice--${name}`,name===active);
+  // The element keeps whatever role it was built with — controllers find their
+  // status lines by it — so urgency is carried by the live region instead.
+  node.setAttribute('aria-live',active==='error'||active==='alert'?'assertive':'polite');
+  if(active==='progress')node.setAttribute('aria-busy','true');
+  else node.removeAttribute('aria-busy');
+  return node;
+}
+// The in-place indicator for work whose length is unknown: it turns for the
+// whole operation instead of appearing once. Put it beside the thing being
+// worked on; a status line uses the progress tone instead.
+export const Spinner=({label='Working…',...props}={})=>element('span',{className:'spinner',role:'status','aria-label':label,...props});
+// Work with a knowable fraction. Left alone it runs indeterminate, which is
+// still constant motion; `setProgress` switches it to the measured form.
+export function ProgressBar({label='Working…',value=null,...props}={}) {
+  const bar=element('div',{className:'progress-bar',role:'progressbar','aria-label':label,'aria-valuemin':'0','aria-valuemax':'100',...props},[element('span',{})]);
+  return setProgress(bar,value);
+}
+export function setProgress(bar,value=null) {
+  const measured=Number.isFinite(value);
+  const percent=measured?Math.min(100,Math.max(0,Math.round(value))):null;
+  bar.classList.toggle('progress-bar--indeterminate',!measured);
+  bar.firstChild.style.width=measured?`${percent}%`:'';
+  if(measured)bar.setAttribute('aria-valuenow',String(percent));
+  else bar.removeAttribute('aria-valuenow');
+  return bar;
+}
 // Small label heading a run of records. Sans-serif and quiet on purpose so it
 // reads as a divider between groups rather than competing with record names.
 export const GroupTitle=(text,{className='',...props}={})=>element('h2',{text,...props,className:`group-title ${className}`.trim()});

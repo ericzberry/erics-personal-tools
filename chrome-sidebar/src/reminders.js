@@ -1,5 +1,5 @@
 import {RemindersView} from './components/reminders.js';
-import {RecordRow,Button,Note,Stack,ActionGroup} from './components/ui.js';
+import {RecordRow,Button,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
 import {normalizeReminder,attentionSplit,reminderDue,reminderAge,duePhrase,intervalLabel,markedDone,canMarkDone,
   localDate,DEFAULT_NOTICE_DAYS,REMINDER_KINDS,REMINDER_EVENT_KINDS} from './reminder-data.js';
 const fields=['kind','title','subject','date','every','since','notice','notes'];
@@ -11,7 +11,7 @@ export function mountReminders(root,{credentials,offline,onSettings=()=>{},onCha
   root.replaceChildren(RemindersView());
   const $=id=>root.querySelector(`#reminders-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;
-  const status=text=>{$('status').textContent=text||'';};
+  const status=(text,tone='')=>setStatus($('status'),text,tone);
   const action=(label,handler,variant='secondary',{enabled=false}={})=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||(!loaded&&!enabled)});
     button.addEventListener('click',handler);
@@ -24,7 +24,7 @@ export function mountReminders(root,{credentials,offline,onSettings=()=>{},onCha
     $('every').value='12';
     $('notice').value=String(DEFAULT_NOTICE_DAYS);
     $('editor-title').textContent='New reminder';
-    $('form-status').textContent='';
+    setStatus($('form-status'),'');
     syncDateLabel();
   }
   function syncDateLabel(){
@@ -96,12 +96,12 @@ export function mountReminders(root,{credentials,offline,onSettings=()=>{},onCha
       activeToken=token;
       const result=await operation(token);
       if(current!==generation)return false;
-      if(result?.records){records=result.records;loaded=true;status(result.syncMessage||'');}
+      if(result?.records){records=result.records;loaded=true;status(result.syncMessage||'','alert');}
       return true;
     }catch(error){
       if(current!==generation)return false;
       const text=error?.message||'That did not save.';
-      status(text);$('form-status').textContent=text;
+      status(text,'error');setStatus($('form-status'),text,'error');
       return false;
     }finally{busy=false;render();}
   }
@@ -112,7 +112,7 @@ export function mountReminders(root,{credentials,offline,onSettings=()=>{},onCha
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh(){
-    status('Loading reminders…');
+    status('Loading reminders…','progress');
     await run(token=>offline.request(token,'/v1/reminders'));
   }
   function clear(){
@@ -128,7 +128,7 @@ export function mountReminders(root,{credentials,offline,onSettings=()=>{},onCha
       const value=normalizeReminder({...input,every:Number(input.every),notice:Number(input.notice||DEFAULT_NOTICE_DAYS)});
       const id=editing?.id||crypto.randomUUID();
       if(await save({...value,id,revision:editing?.revision??null})){clearForm();$('editor').open=false;}
-    }catch(error){$('form-status').textContent=error?.message||'Check the reminder and try again.';}
+    }catch(error){setStatus($('form-status'),error?.message||'Check the reminder and try again.','error');}
   });
   clearForm();clear();
   refresh();

@@ -16,7 +16,7 @@ test('drop and picker share parsing, type/size checks and error feedback',async(
   const drop=new Event('drop',{cancelable:true});drop.dataTransfer={files:[{name:'board.xlsx',size:100}]};zone.dispatchEvent(drop);await new Promise(r=>setImmediate(r));
   assert.equal(calls,1);assert.equal(status.textContent,'Loaded board');assert.equal(drop.defaultPrevented,true);
   Object.defineProperty(input,'files',{value:[{name:'board.json',size:100}]});input.dispatchEvent(new Event('change'));await new Promise(r=>setImmediate(r));assert.equal(calls,2);
-  await uploader.receive([{name:'bad.txt',size:2}]);assert.equal(status.dataset.state,'error');assert.equal(calls,2);
+  await uploader.receive([{name:'bad.txt',size:2}]);assert.ok(status.classList.contains('notice--error'));assert.equal(calls,2);
   await uploader.receive([{name:'board.xlsx',size:6000000}]);assert.match(status.textContent,/too large/);
   await uploader.receive([{name:'a.json',size:2},{name:'b.json',size:2}]);assert.match(status.textContent,/one file/);
 });

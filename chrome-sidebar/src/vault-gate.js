@@ -12,7 +12,7 @@
 import {sharedVault} from './secret-vault.js';
 import {autoUnlock} from './auto-unlock.js';
 import {VaultGateView} from './components/vault.js';
-import {Button} from './components/ui.js';
+import {Button,setStatus} from './components/ui.js';
 
 export const vaultReason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
   ?'Passkey verification was canceled or timed out.'
@@ -56,10 +56,11 @@ export function mountVaultGate(root,{
     $('title').hidden=unlocked;
     // Being open is not news. Unlocked, the gate says nothing at all and simply
     // shows the section; only a failed attempt still has something to report.
-    $('status').textContent=message||(unlocked?''
+    setStatus($('status'),message||(unlocked?''
       :busy?'Waiting for your passkey…'
       :available?'Locked'
-      :'Locked · This browser cannot use passkeys. Use your recovery code.');
+      :'Locked · This browser cannot use passkeys. Use your recovery code.'),
+      message?'error':unlocked?'':busy?'progress':'alert');
     $('detail').hidden=unlocked;
     $('content').hidden=!unlocked;
     // The actions stay put while the passkey sheet is up — disabled, not

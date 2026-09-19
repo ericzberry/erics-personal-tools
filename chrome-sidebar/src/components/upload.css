@@ -18,5 +18,5 @@
 .file-drop[aria-busy=true]{opacity:.65;cursor:progress}
 .upload-status{margin:0;font-size:11px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
 .upload-status:empty{display:none}
-.upload-status[data-state=error]{color:#974c36}
-.upload-status[data-state=success]{color:#436c45}
+/* An upload's own result is said in the shared status tones; this file no
+   longer carries a second set of result colours. */

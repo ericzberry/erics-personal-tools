@@ -1,4 +1,5 @@
 import {gmailConnection} from './gmail-connection.js';
+import {setStatus} from './components/ui.js';
 import {summarizeEmail,draftReply} from './email-cloud.js';
 import {showTool,selectCapability} from './navigation.js';
 import {accountSiteWatcher,financeSite} from './account-sites.js';
@@ -27,7 +28,7 @@ const JOBS = {
 };
 function clearOutput(job) {
   const nodes = JOBS[job];
-  $(nodes.result).hidden = true; $(nodes.output).value = ''; $(nodes.copy).hidden = true; $(nodes.status).textContent = '';
+  $(nodes.result).hidden = true; $(nodes.output).value = ''; $(nodes.copy).hidden = true; setStatus($(nodes.status),'');
 }
 function showOutput(job, text) {
   const nodes = JOBS[job];
@@ -92,36 +93,37 @@ async function refresh() {
     if (current?.id !== tab.id || current?.url !== tab.url) {clearEmail();return;}
     const data = response?.email;
     clearEmail(data?.text ? data : null);
-    $('email-read-status').textContent = response?.error || data?.error || (email ? 'Latest expanded message' : 'Open a message, then expand it.');
+    const trouble = response?.error || data?.error;
+    setStatus($('email-read-status'), trouble || (email ? 'Latest expanded message' : 'Open a message, then expand it.'), trouble ? 'error' : email ? '' : 'alert');
     renderEmail();
   } catch {
-    clearEmail(); renderEmail(); $('email-read-status').textContent = 'Could not connect to Gmail. Check extension site access, then click Refresh.';
+    clearEmail(); renderEmail(); setStatus($('email-read-status'),'Could not connect to Gmail. Check extension site access, then click Refresh.','error');
   } finally {polling = false;}
 }
 for (const [job, nodes] of Object.entries(JOBS)) $(nodes.button).addEventListener('click', async () => {
   if (!email || working) return;
   const token = ++generation, source = email;
   controller?.abort(); controller = new AbortController(); working = true; renderEmail();
-  clearOutput(job); $(nodes.status).textContent = 'Working…';
+  clearOutput(job); setStatus($(nodes.status),'Working…','progress');
   try {
     // Re-read at click time so an email navigation cannot use stale sidebar content.
     const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
     const fresh = tab && await readCurrentEmail(tab.id);
     if (token !== generation || JSON.stringify(fresh?.email) !== JSON.stringify(source)) {clearEmail();await refresh();return;}
-    const options={email:source,signal:controller.signal,onProgress:message=>{if(token===generation)$(nodes.status).textContent=message;}};
+    const options={email:source,signal:controller.signal,onProgress:message=>{if(token===generation)setStatus($(nodes.status),message,'progress');}};
     const text = await (job==='reply'?draftReply({...options,instruction:$('reply-intent').value}):summarizeEmail(options));
     const [afterTab] = await chrome.tabs.query({active:true,currentWindow:true});
     const after = afterTab?.id === tab.id && await readCurrentEmail(tab.id);
     if (JSON.stringify(after?.email) !== JSON.stringify(source)) {clearEmail();await refresh();return;}
     if (token !== generation) return;
     showOutput(job, text);
-    $(nodes.status).textContent = job === 'reply' ? 'Review and edit before using.' : '';
-  } catch (error) {if(token===generation)$(nodes.status).textContent=error.message;}
+    setStatus($(nodes.status), job === 'reply' ? 'Review and edit before using.' : '', 'success');
+  } catch (error) {if(token===generation)setStatus($(nodes.status),error.message,'error');}
   finally {if(token===generation){working=false;renderEmail();}}
 });
 for (const nodes of Object.values(JOBS)) $(nodes.copy).addEventListener('click',async()=>{
-  try {await navigator.clipboard.writeText($(nodes.output).value);$(nodes.status).textContent='Copied.';}
-  catch {$(nodes.status).textContent='Select the text and copy it manually.';}
+  try {await navigator.clipboard.writeText($(nodes.output).value);setStatus($(nodes.status),'Copied.','success');}
+  catch {setStatus($(nodes.status),'Select the text and copy it manually.','alert');}
 });
 $('refresh-email').addEventListener('click',refresh);
 
@@ -140,4 +142,4 @@ const voice=mountWritingVoice({
 if(extension)$('email-voice').addEventListener('toggle',()=>{if($('email-voice').open)voice.load();});
 
 if (extension) {refresh();setInterval(refresh,1500);chrome.tabs.onActivated.addListener(refresh);chrome.tabs.onUpdated.addListener(refresh);}
-else {const previewTool=new URL(location.href).searchParams.get('tool');showTool(['gmail','home'].includes(previewTool)?previewTool:'football');$('email-read-status').textContent='Preview · open the extension on Gmail to read a message.';renderEmail();}
+else {const previewTool=new URL(location.href).searchParams.get('tool');showTool(['gmail','home'].includes(previewTool)?previewTool:'football');setStatus($('email-read-status'),'Preview · open the extension on Gmail to read a message.','alert');renderEmail();}

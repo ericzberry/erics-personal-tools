@@ -1,5 +1,5 @@
 import {AttentionView} from './components/attention.js';
-import {Button,RecordRow,Note} from './components/ui.js';
+import {Button,RecordRow,Note,setStatus} from './components/ui.js';
 import {attentionItems,ATTENTION_SOURCES} from './attention-data.js';
 import {mountVaultGate} from './vault-gate.js';
 export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings=()=>{},vault}={}){
@@ -7,10 +7,10 @@ export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings
   gate.content.replaceChildren(AttentionView());
   const $=id=>gate.content.querySelector(`#attention-${id}`);
   let generation=0,busy=false;
-  function clear(){generation++;busy=false;$('records').replaceChildren();$('coverage').replaceChildren();$('status').textContent='';}
+  function clear(){generation++;busy=false;$('records').replaceChildren();$('coverage').replaceChildren();setStatus($('status'),'');}
   async function refresh(){
     if(busy||!gate.unlocked())return;
-    busy=true;const current=++generation;$('status').textContent='Checking saved records…';refreshButton.disabled=true;
+    busy=true;const current=++generation;setStatus($('status'),'Checking saved records…','progress');refreshButton.disabled=true;
     try{
       const token=await credentials.get();if(!token)throw Error('Open Settings to connect this device.');
       if(current!==generation||!gate.unlocked())return;
@@ -24,8 +24,10 @@ export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings
         const open=Button(`Open ${ATTENTION_SOURCES[item.tool]}`,{variant:'secondary',size:'compact'});open.addEventListener('click',()=>onOpen(item.tool,item.recordId));
         return RecordRow({title:item.title,detail:[item.reason,item.due,item.pending?'Waiting to sync':''].filter(Boolean).join(' · '),actions:[open]});
       }):[Note(failures?'No attention items in the sources that could be checked. Other sources are unavailable.':'Nothing needs attention in the saved records checked.')]));
-      $('status').textContent=`${items.length} item${items.length===1?'':'s'} · ${results.length-failures} of ${results.length} sources checked`;
-    }catch(error){if(current===generation)$('status').textContent=error.message;}
+      // Items waiting and sources that could not be checked are both things to
+      // act on; a clean, complete check is the only success here.
+      setStatus($('status'),`${items.length} item${items.length===1?'':'s'} · ${results.length-failures} of ${results.length} sources checked`,items.length||failures?'alert':'success');
+    }catch(error){if(current===generation)setStatus($('status'),error.message,'error');}
     finally{if(current===generation){busy=false;refreshButton.disabled=false;}}
   }
   const refreshButton=Button('Refresh',{variant:'secondary',size:'compact'});refreshButton.addEventListener('click',refresh);

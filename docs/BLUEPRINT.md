@@ -67,7 +67,9 @@ state, release checks, launcher) and the content scripts
 ### `src/components/` — all DOM construction
 
 `ui.js` (primitives and reusable presentation) · `views.js` (screens composed from
-them) · `tokens.css` (design tokens) · `styles.css` (component classes) ·
+them) · `tokens.css` (design tokens) · `status.css` (the four status tones and the
+progress indicators, imported by `tokens.css` so every host has them) ·
+`styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
@@ -306,6 +308,7 @@ The extension build now includes `attention.html` and `subscriptions.html`.
 | --- | --- |
 | Add a capability (tool) | `chrome-sidebar/src/capabilities.js` (id, label, href, 24x24 `icon`), a page + controller, a `*-data.js`/`*-offline.js` pair, mobile mounting in `mobile-app/public/app/capabilities.js`, the shared list in `mobile-app/build.js`, the `SHELL` list in `sw.js`, and a Worker route if it stores records |
 | Change a control's look | `chrome-sidebar/src/components/ui.js` + `styles.css`/`tokens.css` — never in a feature controller |
+| Say that something failed, needs attention, is running, or worked | `setStatus(node, text, tone)` from `components/ui.js`, with `Spinner`/`ProgressBar` for an in-place indicator — never a colour chosen in a feature |
 | Add a dropdown | `components/select.js` via `FormField({kind:'select'})` |
 | Change stored record shape | the `*-data.js` validator (shared by app and Worker), the matching `*-schema.sql` with an upgrade path, and the offline adapter's revision/normalize |
 | Add a value the cloud must not be able to read | `chrome-sidebar/src/secret-vault.js` — seal on the device, store the envelope in the record, and keep only a safe hint (such as last four digits) in the clear |

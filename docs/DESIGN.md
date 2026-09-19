@@ -39,6 +39,42 @@ All extension UI must be composed from the [shared component library](../chrome-
 
 Pick history uses the shared compact two-line row: player name, then round/NFL team/fantasy team. Recommendations show a short reason for both options, not only the primary card. The draft board is fixed, so do not display an upload or board-update control there.
 
+## Status tones
+
+Four things can be said about an operation, and each one looks like itself. A
+feature never picks a status colour: it picks a meaning, and the shared tone
+supplies the look.
+
+| Tone | Means | Look |
+| --- | --- | --- |
+| Alert | Something to decide or act on: changes waiting to sync, a connection to make, a reading to check | Amber `#7b5a1b` on `#f6eeda`, amber rule, `!` in a rounded square |
+| Error | What was asked for did not happen | Red `#8c2f26` on `#f8eae7`, red rule, `×` in a circle |
+| Progress | Work is running right now | Muted forest `#3e564d` on `#eef1ed`, a turning spinner — the only tone that moves |
+| Success | It worked | Green `#245138` on `#e6efe4`, green rule, `✓` in a circle |
+
+A status line with no tone is plainly informational — what is listed, what was
+read — and keeps the quiet surface and muted text of an ordinary note. Amber
+means alert, so nothing else may wear it.
+
+Progress is constant: the spinner turns, or the bar advances, for exactly as
+long as the operation lasts. Never announce work with a sentence that appears
+once and then sits still, and never leave a spinner running after the work has
+finished or failed. A bar is for work with a knowable fraction, a spinner for
+work without one; under reduced motion both hold still and pulse instead of
+travelling. Clearing a status clears its tone, so a finished operation never
+keeps the colour of the last one.
+
+No tone is carried by colour alone: the mark and its shape differ tone to tone,
+and the sentence says what happened. An error or an alert is announced
+assertively; progress and success wait for a pause.
+
+`setStatus(node, text, tone)` in `chrome-sidebar/src/components/ui.js` is the
+only way to write a status line, with `Spinner` and `ProgressBar` for an
+indicator placed beside the thing being worked on. The implementation lives in
+`chrome-sidebar/src/components/status.css`, which every host imports through
+`tokens.css`. Review the four tones together at
+`chrome-sidebar/tests/status-tones-preview.html`.
+
 ## Controls and action hierarchy
 
 Use role and density together. Do not shrink one button with a feature-specific override or give record actions the same prominence as a form submission.

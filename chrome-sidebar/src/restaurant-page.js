@@ -1,5 +1,5 @@
 import {RestaurantWorkspace,RestaurantCandidate,ReservationResult} from './components/views.js';
-import {Option} from './components/ui.js';
+import {Option,setStatus} from './components/ui.js';
 import {searchInput,localDate,isNYC,partySizes,searchDates,needsRestaurantChoice,bookingURL,searchTimes} from './restaurant-search.js';
 import {reservationBrowser} from './reservation-browser.js';
 import {analyzeAvailability,combineObservations} from './reservation-availability.js';
@@ -10,9 +10,9 @@ const browser=api?reservationBrowser(api):null;
 let connections=[],search=null,research=null,selected=new Set(),results=[],busy=false,generation=0,abort=null,ai=null;
 const fields=['mode','query','city','neighborhood','date','through','start','end','party','min','max','flexible','flex-dates','travel','limit','connection'];
 const dateRange=value=>value.date===value.endDate?value.date:`${value.date} – ${value.endDate}`;
-const status=text=>{$('restaurant-status').textContent=text;$('restaurant-status').hidden=!text;};
-const error=text=>{$('restaurant-error').textContent=text;$('restaurant-error').hidden=!text;};
-const connectionStatus=text=>{$('restaurant-connection-status').textContent=text;$('restaurant-connection-status').hidden=!text;};
+const status=(text,tone='')=>{setStatus($('restaurant-status'),text,tone);$('restaurant-status').hidden=!text;};
+const error=text=>{setStatus($('restaurant-error'),text,'error');$('restaurant-error').hidden=!text;};
+const connectionStatus=(text,tone='alert')=>{setStatus($('restaurant-connection-status'),text,tone);$('restaurant-connection-status').hidden=!text;};
 function visibility() {
   const category=$('restaurant-mode').value==='category',flex=$('restaurant-flexible').checked;
   document.querySelector('label[for="restaurant-query"]').textContent=category?'Restaurant category':'Restaurant name';
@@ -100,7 +100,7 @@ async function find(event) {
   event.preventDefault();if(busy)return;
   let next,nextAI;
   try {next=searchInput(formValue());nextAI=selectedAI();}catch(e){error(e.message);return;}
-  const token=++generation;abort=new AbortController();error('');setBusy(true);status('Researching names, ratings, and booking providers… This can take up to two minutes.');
+  const token=++generation;abort=new AbortController();error('');setBusy(true);status('Researching names, ratings, and booking providers… This can take up to two minutes.','progress');
   try {
     await api.storage.local.set({restaurantSearchPreferences:formValue()});
     const data=await request('restaurants',{...nextAI,search:next});if(token!==generation)return;
@@ -111,8 +111,8 @@ async function find(event) {
     $('restaurant-summary').hidden=false;$('restaurant-summary').textContent=[data.summary,`${data.restaurants.length} verified candidates · Shortlist, not an exhaustive list.`,data.excluded?`${data.excluded} longer-travel options excluded.`:'',data.unverified?`${data.unverified} candidates omitted because their sources, addresses, or requested geography could not be verified.`:''].filter(Boolean).join(' ');
     $('restaurant-clarification').hidden=!choose&&!data.clarification;
     $('restaurant-clarification').textContent=data.clarification||(choose?'Select the restaurant you meant. Check the name, address, and travel distance before continuing.':'');
-    renderCandidates();renderResults();status(data.restaurants.length?'Review the shortlist, then check availability.':'No source-backed matches found. Try a clearer name, another neighborhood, or broader criteria.');
-  }catch(e){if(token===generation){error(e.message);status('Research could not finish. Your search inputs are preserved.');}}
+    renderCandidates();renderResults();status(data.restaurants.length?'Review the shortlist, then check availability.':'No source-backed matches found. Try a clearer name, another neighborhood, or broader criteria.',data.restaurants.length?'success':'alert');
+  }catch(e){if(token===generation){error(e.message);status('Research could not finish. Your search inputs are preserved.','error');}}
   finally{if(token===generation){setBusy(false);updateCheck();}}
 }
 async function checkSelected() {
@@ -135,7 +135,7 @@ async function checkSelected() {
       results.push(result);renderResults();
       for(const time of searchTimes(job.provider,search)) {
         if(token!==generation)break;
-        status(`Checking ${completed+1} of ${total}: ${job.restaurant.name}, ${job.size} people, ${job.provider}, ${job.date} near ${time}.`);
+        status(`Checking ${completed+1} of ${total}: ${job.restaurant.name}, ${job.size} people, ${job.provider}, ${job.date} near ${time}.`,'progress');
         let opened;
         try {
           opened=await browser.open(job.url,dated,job.size,abort.signal,time);
@@ -147,7 +147,7 @@ async function checkSelected() {
         if(token===generation){Object.assign(result,combineObservations(result.observations));renderResults();}
       }
     }
-    if(token===generation){const found=results.filter(r=>r.status==='available').length,attention=results.filter(r=>['attention','error'].includes(r.status)).length;status(`Finished ${results.length} checks. ${found} found tables; ${attention} need attention. Only the selected providers, dates, sizes, and time window were checked.`);}
+    if(token===generation){const found=results.filter(r=>r.status==='available').length,attention=results.filter(r=>['attention','error'].includes(r.status)).length;status(`Finished ${results.length} checks. ${found} found tables; ${attention} need attention. Only the selected providers, dates, sizes, and time window were checked.`,attention?'alert':'success');}
   }finally{if(token===generation){setBusy(false);updateCheck();}}
 }
 async function openResult(result) {
@@ -161,11 +161,11 @@ async function openResult(result) {
 }
 async function recheck(result) {
   if(busy||!result.tabId)return;
-  const token=++generation;abort=new AbortController();error('');setBusy(true);status(`Rechecking ${result.restaurant.name} for ${result.size} people on ${result.date}…`);
+  const token=++generation;abort=new AbortController();error('');setBusy(true);status(`Rechecking ${result.restaurant.name} for ${result.size} people on ${result.date}…`,'progress');
   try{
     const snapshot=await browser.read(result.tabId,result.url),value=await interpret(snapshot,result.restaurant,result.size,token,{...search,date:result.date});
-    if(token===generation){Object.assign(result,value,{checkedAt:snapshot.capturedAt});status('Page rechecked.');}
-  }catch(e){if(token===generation){error(e.message);status('Recheck failed. Previous observations are retained.');}}
+    if(token===generation){Object.assign(result,value,{checkedAt:snapshot.capturedAt});status('Page rechecked.','success');}
+  }catch(e){if(token===generation){error(e.message);status('Recheck failed. Previous observations are retained.','error');}}
   finally{if(token===generation){setBusy(false);updateCheck();}}
 }
 $('restaurant-form').addEventListener('submit',find);
@@ -174,9 +174,9 @@ $('restaurant-reload').addEventListener('click',loadConnections);
 $('restaurant-stop').addEventListener('click',()=>{
   generation++;abort?.abort();
   results.filter(r=>r.status==='checking'||(r.observations&&r.observations.length<searchTimes(r.provider,search).length)).forEach(r=>{r.observations??=[];r.observations.push({status:'cancelled',slots:[],detail:'Stopped before all checks completed.'});Object.assign(r,combineObservations(r.observations));});
-  setBusy(false);updateCheck();status('Stopped. Completed checks remain visible. An AI request already sent may still finish and be billed.');
+  setBusy(false);updateCheck();status('Stopped. Completed checks remain visible. An AI request already sent may still finish and be billed.','alert');
 });
 for(const id of ['mode','city','flexible','flex-dates'])$('restaurant-'+id).addEventListener('input',visibility);
 fill();
-if(api){try{const saved=await api.storage.local.get('restaurantSearchPreferences');fill(saved.restaurantSearchPreferences);}catch{status('Could not load saved preferences. Using defaults.');}await loadConnections();}
-else{$('restaurant-connection').replaceChildren(Option('Extension required',''));connectionStatus('Preview only. Open the installed extension for live search.');status('Interface preview · Live searches require the Chrome extension.');}
+if(api){try{const saved=await api.storage.local.get('restaurantSearchPreferences');fill(saved.restaurantSearchPreferences);}catch{status('Could not load saved preferences. Using defaults.','alert');}await loadConnections();}
+else{$('restaurant-connection').replaceChildren(Option('Extension required',''));connectionStatus('Preview only. Open the installed extension for live search.');status('Interface preview · Live searches require the Chrome extension.','alert');}

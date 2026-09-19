@@ -1,5 +1,5 @@
 import {CaptureField} from './components/capture.js';
-import {Button} from './components/ui.js';
+import {Button,setStatus} from './components/ui.js';
 import {localDate} from './reminder-data.js';
 // Types a note, gets a record. The reading happens in the cloud, but the write
 // goes through the same offline store the tool itself uses, so a captured
@@ -15,7 +15,7 @@ export function mountCapture(root,{credentials,remote,stores,onSaved=()=>{},toda
   const undo=Button('Undo',{variant:'subtle',size:'compact',hidden:true});
   $('actions').append(undo);
   let busy=false,connection='',last=null;
-  const status=text=>{$('status').textContent=text||'';};
+  const status=(text,tone='')=>setStatus($('status'),text,tone);
   function render(){
     $('note').disabled=busy;$('add').disabled=busy;undo.disabled=busy;undo.hidden=!last;
   }
@@ -27,7 +27,7 @@ export function mountCapture(root,{credentials,remote,stores,onSaved=()=>{},toda
       if(!token)throw Error('Connect this device in Settings first.');
       await operation(token);
     }catch(error){
-      status(error?.message||'That did not save.');
+      status(error?.message||'That did not save.','error');
     }finally{busy=false;render();}
   }
   // The connection is remembered for the session only: quick add uses whichever
@@ -43,7 +43,7 @@ export function mountCapture(root,{credentials,remote,stores,onSaved=()=>{},toda
     event.preventDefault();
     const note=$('note').value.trim();
     if(!note)return;
-    last=null;status('Reading…');
+    last=null;status('Reading…','progress');
     run(async token=>{
       const id=await connectionId(token);
       const reading=await remote(token,`/v1/ai-connections/${id}/capture`,{method:'POST',value:{note,today:today()},timeoutMs});
@@ -53,17 +53,17 @@ export function mountCapture(root,{credentials,remote,stores,onSaved=()=>{},toda
       const result=await store.request(token,`${reading.path}/${recordId}`,{method:'PUT',value:{...reading.record,id:recordId,revision:null}});
       last={capability:reading.capability,path:reading.path,id:recordId,revision:result.record?.revision??null};
       $('note').value='';
-      status(`Saved · ${reading.summary}`);
+      status(`Saved · ${reading.summary}`,'success');
       onSaved(reading.capability);
     });
   });
   undo.addEventListener('click',()=>{
     const target=last;
     if(!target)return;
-    status('Removing…');
+    status('Removing…','progress');
     run(async token=>{
       await stores[target.capability].request(token,`${target.path}/${target.id}`,{method:'DELETE',value:{revision:target.revision}});
-      last=null;status('Removed.');
+      last=null;status('Removed.','success');
       onSaved(target.capability);
     });
   });

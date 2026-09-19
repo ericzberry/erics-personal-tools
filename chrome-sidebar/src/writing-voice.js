@@ -6,7 +6,7 @@
 // far it has got — and closing the panel mid-study loses nothing but the
 // asking.
 import {VoiceLines} from './components/views.js';
-import {Button} from './components/ui.js';
+import {Button,setStatus} from './components/ui.js';
 import {VOICE_SAMPLE_TARGET} from './voice-data.js';
 
 const CONSENT_POLL_MS=3000,CONSENT_POLL_LIMIT=40;
@@ -23,9 +23,12 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
   let busy=false,scanning=false,stopping=false,loaded=false,polling=0,dirty=false,connectionId='';
   // What just happened, which outlives a re-render; where there is nothing to
   // report, the line falls back to what the voice currently is.
-  let message='';
+  let message='',tone='';
 
-  const say=text=>{message=text||'';status.textContent=message||describe();};
+  // A study in flight describes itself, so the fallback line carries the
+  // progress tone and its spinner for as long as the reading runs.
+  const show=()=>setStatus(status,message||describe(),message?tone:scanning?'progress':'');
+  const say=(text,next='')=>{message=text||'';tone=next;show();};
   // The section is where the voice is kept, not the screen's main act: its
   // actions stay quiet so the one dark button on an email screen is the one
   // that writes the reply. Saving an edit is the exception, and forgetting is
@@ -49,14 +52,14 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
     const rows=[];
     if(!state.google.connected)rows.push(action('Connect Google',connect));
     else if(!state.google.sentMail)rows.push(action('Approve reading mail',connect));
-    else if(scanning)rows.push(action('Stop',()=>{stopping=true;say('Stopping…');}));
+    else if(scanning)rows.push(action('Stop',()=>{stopping=true;say('Stopping…','progress');}));
     else rows.push(action(state.scan?'Resume':state.profile?'Study again':'Study my sent mail',()=>study(!state.scan)));
     if(state.profile&&!scanning)rows.push(dirty?action('Save',save,'primary'):action('Forget',forget,'danger'));
     actions.replaceChildren(...rows);
     list.replaceChildren(...VoiceLines(state.profile?.voices||[]));
     editor.hidden=!state.profile;
     if(state.profile&&!dirty)prompt.value=state.profile.prompt;
-    status.textContent=message||describe();
+    show();
   }
   function adopt(result){
     state={profile:result.profile||null,scan:result.scan||null,google:result.google||state.google};
@@ -64,9 +67,9 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
   }
   async function run(operation){
     if(busy)return false;
-    busy=true;message='';render();
+    busy=true;message='';tone='';render();
     try{return await operation();}
-    catch(error){message=error.message;return false;}
+    catch(error){message=error.message;tone='error';return false;}
     finally{busy=false;render();}
   }
 
@@ -82,7 +85,8 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
   async function connect(){
     await run(async()=>{
       const {url}=await request('google-connect');
-      message=openExternal(url)?'Approve reading your sent mail, then come back.':'Waiting for Google…';
+      const opened=openExternal(url);
+      message=opened?'Approve reading your sent mail, then come back.':'Waiting for Google…';tone=opened?'alert':'progress';
       awaitConsent();
     });
   }
@@ -92,7 +96,7 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
     const current=++polling;let tries=0;
     const tick=async()=>{
       if(current!==polling)return;
-      if(++tries>pollLimit){say('Google did not answer. Connect again.');return;}
+      if(++tries>pollLimit){say('Google did not answer. Connect again.','error');return;}
       try{
         const result=await request('voice');
         if(current!==polling)return;
@@ -118,7 +122,7 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
     if(scanning)return;
     const id=await run(readingConnection);
     if(!id)return;
-    scanning=true;stopping=false;message='';render();
+    scanning=true;stopping=false;message='';tone='';render();
     let failed='';
     // Chrome retires the message bridge while a page of Gmail is being read, so
     // this keeps the service worker's activity bounded to the pending study.
@@ -135,7 +139,7 @@ export function mountWritingVoice({nodes,request,openExternal=()=>false,pollMs=C
     }catch(error){failed=error.message;}
     // Whatever the study said while it ran — how far it had got, that it was
     // stopping — is spent. What is left is the reason it ended, or the voice.
-    finally{clearInterval(heartbeat);scanning=false;stopping=false;message=failed;render();}
+    finally{clearInterval(heartbeat);scanning=false;stopping=false;message=failed;tone=failed?'error':'';render();}
     // A refusal can be the connection losing its permission to read mail, and
     // then resuming is not the thing to offer. Ask what the state is now, so
     // the action in front of the reason is the one that clears it.

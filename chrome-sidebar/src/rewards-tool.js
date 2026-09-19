@@ -1,6 +1,6 @@
 import {RewardsView,RewardGroup,CardBenefits,BalancePanel,BalanceTotals} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
-import {RecordRow,Button,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField} from './components/ui.js';
+import {RecordRow,Button,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogCategories,offerUrl} from './program-data.js';
@@ -36,8 +36,8 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null,syncFailed=false;
   let found=null,connectionsFor='';
   const revealed=new Map();
-  const status=text=>{$('rewards-status').textContent=text;};
-  const cardStatus=text=>{$('reward-card-status').textContent=text||'';};
+  const status=(text,tone='')=>setStatus($('rewards-status'),text,tone);
+  const cardStatus=(text,tone='')=>setStatus($('reward-card-status'),text,tone);
   const action=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:busy||!loaded});b.addEventListener('click',fn);return b;};
   const connectAction=()=>{const b=Button('Connection settings',{variant:'secondary',size:'compact',disabled:busy});b.addEventListener('click',onSettings);return b;};
   const vaultAction=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:vaultBusy});b.addEventListener('click',fn);return b;};
@@ -55,7 +55,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     editing=null;clearSecret=false;
     for(const key of fields)$(`reward-${key}`).value=key==='kind'?'balance':key==='state'?'available':'';
     $('reward-secret-number').value='';$('reward-secret-expiry').value='';
-    $('reward-form-status').textContent='';
+    setStatus($('reward-form-status'),'');
     renderKind();renderSecret();
   }
   // A card is the thing benefits belong to, so it has no card of its own and no
@@ -90,9 +90,10 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     root.querySelector('.rewards-wallet').classList.toggle('vault-locked',!open);
     // Open is the quiet state: no banner announcing it, just readable numbers
     // and the controls that still apply. Only a failed attempt speaks up.
-    $('vault-status').textContent=vaultMessage||(open?''
+    // A failed attempt is an error; simply being locked is something to act on.
+    setStatus($('vault-status'),vaultMessage||(open?''
       :available?'Locked · Your passkey is required to show a card number.'
-      :'Locked · This browser cannot use passkeys. Unlock with your recovery code.');
+      :'Locked · This browser cannot use passkeys. Unlock with your recovery code.'),vaultMessage?'error':'alert');
     $('vault-detail').textContent=open?''
       :'Numbers are sealed with a key only your passkey can derive, so the cloud stores unreadable text. Keep your recovery code safe: without the passkey or that code, a saved number cannot be recovered.';
     $('vault-actions').replaceChildren(...(open
@@ -181,9 +182,11 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const read=live.map(catalog=>catalog.listedAt||'').filter(Boolean).sort().at(-1);
     // With one program the heading cannot name it, so the status does. With
     // several, each group names itself instead.
-    $('programs-status').textContent=[live.length===1?live[0].label:'',
+    // What is listed, plainly — not a result and nothing to act on, so it
+    // takes no tone.
+    setStatus($('programs-status'),[live.length===1?live[0].label:'',
       shown===total?`${total} offer${total===1?'':'s'}`:`${shown} of ${total} offers`,
-      read?`read ${read.slice(0,10)}`:''].filter(Boolean).join(' · ');
+      read?`read ${read.slice(0,10)}`:''].filter(Boolean).join(' · '));
     $('programs-list').replaceChildren(...(shown?groups.flatMap(({catalog,offers})=>[
       live.length>1?Note(catalog.label):null,
       ...offers.map(offer=>{
@@ -201,14 +204,14 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   function renderBalances(){
     const show=!!site&&!!readPage&&!!remote;
     $('balance-panel').hidden=!show;
-    if(!show){$('balance-body').replaceChildren();$('balance-status').textContent='';return;}
+    if(!show){$('balance-body').replaceChildren();setStatus($('balance-status'),'');return;}
     $('balance-body').replaceChildren(BalancePanel({
       site,rows:balances||[],disabled:busy||!loaded,
       onRead:readBalances,onSave:saveBalances,
-      onDiscard:()=>{balances=null;renderBalances();status('','balance-status');}
+      onDiscard:()=>{balances=null;renderBalances();balanceStatus('');}
     }));
   }
-  const balanceStatus=text=>{$('balance-status').textContent=text||'';};
+  const balanceStatus=(text,tone='')=>setStatus($('balance-status'),text,tone);
   // Which saved connection does the reading is not a decision worth putting in
   // front of the owner: connections are managed in Settings, and this tool
   // needs one rather than a particular one. The same rule the ledger follows.
@@ -222,7 +225,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // into one figure per program, and show them. Nothing is saved yet.
   async function readBalances(){
     if(!site||!readPage||!remote||busy)return;
-    busy=true;render();balanceStatus(`Reading your ${site.label} balance…`);
+    busy=true;render();balanceStatus(`Reading your ${site.label} balance…`,'progress');
     try{
       const token=await credentials.get();
       if(!token)throw Error('Open Settings to connect this device.');
@@ -235,8 +238,8 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       balances=rows.length?rows:null;
       balanceStatus(rows.length
         ?`${rows.length} balance${rows.length===1?'':'s'} read. Nothing is saved yet.`
-        :[`No balance was found on that page. Open your account page and read again.`,result.unread||''].filter(Boolean).join(' '));
-    }catch(error){balanceStatus(reason(error));}
+        :[`No balance was found on that page. Open your account page and read again.`,result.unread||''].filter(Boolean).join(' '),rows.length?'success':'alert');
+    }catch(error){balanceStatus(reason(error),'error');}
     finally{busy=false;render();renderBalances();}
   }
   // Saved one at a time through the same validator and queue as a typed edit.
@@ -247,11 +250,11 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     while(balances.length){
       const [row]=balances,match=row.ambiguous?null:row.match;
       const entry=balanceRecord(row,match);
-      if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent);return;}
+      if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent,'error');return;}
       balances=balances.slice(1);saved++;
     }
     balances=null;renderBalances();
-    balanceStatus(`Saved ${saved} balance${saved===1?'':'s'}.`);
+    balanceStatus(`Saved ${saved} balance${saved===1?'':'s'}.`,'success');
   }
   function startCard(){$('reward-card-intake').open=true;$('reward-card-name').focus();}
   const detailOf=e=>[e.source,e.value,e.kind==='card'?'':STATES[e.state],CADENCE_LABELS[e.cadence]||'',
@@ -318,15 +321,15 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('rewards-connection').replaceChildren(...(loaded?[]:[connectAction()]));
     for(const node of $('balance-panel').querySelectorAll('button'))node.disabled=busy||!loaded;
   }
-  async function run(operation){if(busy)return false;busy=true;const current=++generation;render();try{const token=await credentials.get();if(!token)throw Error('Open Settings to connect this device.');if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. This wallet is reloading for the new connection.');}activeToken=token;const result=await operation(token);if(current!==generation)return false;entries=result.records;loaded=true;syncFailed=false;status(result.syncMessage||'');return true;}catch(error){if(current!==generation)return false;syncFailed=true;status(error.message);$('reward-form-status').textContent=error.message;return false;}finally{busy=false;render();renderVault();}}
+  async function run(operation){if(busy)return false;busy=true;const current=++generation;render();try{const token=await credentials.get();if(!token)throw Error('Open Settings to connect this device.');if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. This wallet is reloading for the new connection.');}activeToken=token;const result=await operation(token);if(current!==generation)return false;entries=result.records;loaded=true;syncFailed=false;status(result.syncMessage||'','alert');return true;}catch(error){if(current!==generation)return false;syncFailed=true;status(error.message,'error');setStatus($('reward-form-status'),error.message,'error');return false;}finally{busy=false;render();renderVault();}}
   async function save(entry,method='PUT'){
     const success=await run(token=>offline.request(token,`/v1/rewards/${entry.id}`,{method,value:entry}));
     if(success)onChanged();
     return success;
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
-  async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
-  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;balanceConnection='';forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
+  async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…','progress');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
+  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;balanceConnection='';forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.','alert');render();renderVault();renderPrograms();renderBalances();}
   // The connection list is the only thing this tool reads outside the wallet, so
   // it is fetched once per connection rather than on every automatic sync.
   async function connectionList(){
@@ -339,8 +342,8 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       $('reward-card-connection').replaceChildren(Option('Choose a connection',''),...usable.map(connection=>Option(`${connection.name} · ${connection.provider}`,connection.id)));
       $('reward-card-connection').value=usable.some(connection=>connection.id===chosen)?chosen:usable.length===1?usable[0].id:'';
       connectionsFor=token;
-      if(!usable.length)cardStatus('Save an AI connection in Settings to look up a card.');
-    }catch(error){cardStatus(error.message);}
+      if(!usable.length)cardStatus('Save an AI connection in Settings to look up a card.','alert');
+    }catch(error){cardStatus(error.message,'error');}
   }
   async function researchCard(name){
     if(!remote)throw Error('Looking up a card is not available here.');
@@ -355,7 +358,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     if(result.matches){
       found=null;$('reward-card-review').replaceChildren();
       $('reward-card-matches').replaceChildren(...CardMatches(result.matches,choice=>cardRun(()=>researchCard(choice))));
-      cardStatus('That name fits more than one card. Choose the one you hold.');
+      cardStatus('That name fits more than one card. Choose the one you hold.','alert');
       return;
     }
     // Validated again here: the wallet accepts nothing the API has not proved,
@@ -363,7 +366,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     found=parseCardBenefits(result);
     $('reward-card-matches').replaceChildren();
     showFound();
-    cardStatus(`Found ${found.benefits.length} benefit${found.benefits.length===1?'':'s'}. Review them, then save.`);
+    cardStatus(`Found ${found.benefits.length} benefit${found.benefits.length===1?'':'s'}. Review them, then save.`,'success');
   }
   function showFound(){$('reward-card-review').replaceChildren(...CardBenefits(found,{onSave:saveFound,onDiscard:discardFound}));}
   function discardFound(){found=null;$('reward-card-review').replaceChildren();$('reward-card-matches').replaceChildren();cardStatus('');}
@@ -373,22 +376,22 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   async function saveFound(){
     if(!found||busy)return;
     const {card,benefits,cardSaved}=found;
-    if(!cardSaved&&!await save(card)){cardStatus($('reward-form-status').textContent);return;}
+    if(!cardSaved&&!await save(card)){cardStatus($('reward-form-status').textContent,'error');return;}
     for(const [index,benefit] of benefits.entries()){
-      cardStatus(`Saving benefit ${index+1} of ${benefits.length}…`);
+      cardStatus(`Saving benefit ${index+1} of ${benefits.length}…`,'progress');
       if(!await save({...benefit,card:card.id})){
         found={card,benefits:benefits.slice(index),cardSaved:true};showFound();
-        cardStatus($('reward-form-status').textContent);return;
+        cardStatus($('reward-form-status').textContent,'error');return;
       }
     }
     const saved=benefits.length;
     discardFound();$('reward-card-name').value='';
-    cardStatus(`Saved ${card.name} and ${saved} benefit${saved===1?'':'s'}.`);
+    cardStatus(`Saved ${card.name} and ${saved} benefit${saved===1?'':'s'}.`,'success');
   }
   async function cardRun(operation){
     if(busy)return;
-    busy=true;render();cardStatus('Looking up this card…');
-    try{await operation();}catch(error){cardStatus(reason(error));}
+    busy=true;render();cardStatus('Looking up this card…','progress');
+    try{await operation();}catch(error){cardStatus(reason(error),'error');}
     finally{busy=false;render();}
   }
   $('rewards-search').addEventListener('input',()=>{render();renderPrograms();});
@@ -396,7 +399,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   $('reward-cancel').addEventListener('click',()=>{clearForm();$('reward-editor').open=false;});
   $('reward-card-form').addEventListener('submit',event=>{event.preventDefault();
     const name=$('reward-card-name').value.trim();
-    if(!name){cardStatus('Say which card you have. A rough name is enough.');return;}
+    if(!name){cardStatus('Say which card you have. A rough name is enough.','alert');return;}
     cardRun(()=>researchCard(name));
   });
   $('vault-recovery-cancel').addEventListener('click',()=>{$('vault-recovery-code').value='';$('vault-recovery').hidden=true;});
@@ -410,7 +413,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const base=validateReward({...values,id:editing?.id});
     const entry=validateReward({...base,...await protectedValues(base.id)},base.updatedAt);
     if(await save({...entry,revision:editing?.revision??null})){clearForm();$('reward-editor').open=false;}
-  }catch(error){$('reward-form-status').textContent=reason(error);}});
+  }catch(error){setStatus($('reward-form-status'),reason(error),'error');}});
   clearForm();render();renderVault();renderPrograms();renderBalances();
   const reconnect=()=>{if(!$('reward-editor').open)refresh({quiet:true});};
   window.addEventListener('online',reconnect);
