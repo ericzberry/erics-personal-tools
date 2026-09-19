@@ -32,7 +32,7 @@ test('mobile restaurant search preserves failures, ignores canceled replies, res
   const submit=()=>$('form').dispatchEvent(new window.Event('submit',{cancelable:true}));
   const research={summary:'Verified shortlist',clarification:'Check the address',restaurants:[{id:'1',name:'Example Bistro',address:'100 Example',city:'New York City',neighborhood:'UWS',borough:'Manhattan',travel:'included',booking:[{url:'https://resy.com/cities/new-york-ny/venues/example',provider:'Resy'}],evidence:[{url:'https://example.com/review',title:'Source',detail:'Verified rating',published:'2026'}]}]};
   try{
-    await mountRestaurants(root,options).open();$('connection').value='test';$('query').value='Example';$('party').value='4';
+    await mountRestaurants(root,options).open();$('query').value='Example';$('party').value='4';
     submit();await settle();assert.equal($('find').disabled,true);submit();assert.equal(calls,1);
     resolveResearch(research);await settle();assert.ok(saved);assert.match($('candidates').textContent,/17:00–22:00 local time/);
     const url=new URL(root.querySelector('.booking-links a').href);assert.equal(url.searchParams.get('seats'),'4');assert.equal(url.searchParams.get('date'),saved.search.date);

@@ -28,11 +28,7 @@ export function RestaurantWorkspace({mobile=false}={}) {
             ]})
           ],{className:'workspace-form'}),
           Disclosure('Research settings',[
-            Stack([
-              F({id:'restaurant-limit',label:'Maximum restaurants',kind:'select',options:[{text:'6 restaurants',value:'6'},{text:'12 restaurants',value:'12'},{text:'24 restaurants',value:'24'}]}),
-              F({id:'restaurant-connection',label:'OpenAI connection',kind:'select',options:[{text:'Loading connections\u2026',value:''}]}),
-              Button('Reload',{id:'restaurant-reload',variant:'secondary'})
-            ],{className:'research-grid'}),
+            F({id:'restaurant-limit',label:'Maximum restaurants',kind:'select',options:[{text:'6 restaurants',value:'6'},{text:'12 restaurants',value:'12'},{text:'24 restaurants',value:'24'}]}),
             Notice('',{id:'restaurant-connection-status',role:'status',hidden:true})
           ],{className:'research-settings'}),
           ActionGroup([Button('Find restaurants',{id:'restaurant-find',variant:'primary',type:'submit'}),Button('Stop search',{id:'restaurant-stop',variant:'secondary',hidden:true})],{compact:true}),

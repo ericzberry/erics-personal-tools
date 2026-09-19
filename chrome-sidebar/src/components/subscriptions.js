@@ -7,10 +7,8 @@ export function SubscriptionsView(){
     ToolTitle('Subscriptions & renewals',{actionsId:'subscriptions-actions',statusId:'subscriptions-status'}),
     Note('',{id:'subscriptions-total'}),Stack([],{id:'subscriptions-records'}),
     Disclosure('Read a statement',[
-      Note('Read bank or credit card statements one at a time. Review possible recurring charges before confirming them. A single statement cannot reveal every subscription.'),
-      field('connection','AI connection','select',{options:[{text:'Connect AI in Settings',value:''}]}),
       field('import-account','Account nickname (no account number)', 'text',{placeholder:'e.g. Everyday card'}),
-      UploadField({id:'subscriptions-drop',inputId:'subscriptions-file',statusId:'subscriptions-file-status',label:'Drop a statement',formats:'PDF, spreadsheet, text or image',accept:'.pdf,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp',status:'Files are read on this device; text or a downscaled image goes to your selected AI provider.'}),
+      UploadField({id:'subscriptions-drop',inputId:'subscriptions-file',statusId:'subscriptions-file-status',label:'Drop a statement',formats:'PDF, spreadsheet, text or image',accept:'.pdf,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp',status:''}),
       field('text','Statement text to read','textarea',{rows:5}),
       Notice('',{id:'subscriptions-intake-status',role:'status'}),
       ActionGroup([Button('Find recurring charges',{id:'subscriptions-read',variant:'primary'}),Button('Clear statement',{id:'subscriptions-clear-statement',variant:'secondary'})])
@@ -29,7 +27,6 @@ export function SubscriptionsView(){
       ],{id:'subscriptions-form',className:'form-stack'})
     ],{id:'subscriptions-editor'}),
     SettingsGroup({title:'Find cheaper alternatives',level:2,children:[
-      Note('Choose Find alternatives on a saved subscription. Prices are researched online; saved results remain available offline.'),
       field('country','Country / market','text',{placeholder:'e.g. United States'}),
       field('requirements','Features you need to keep (optional)','textarea',{rows:2}),
       Notice('',{id:'subscriptions-research-status',role:'status'})

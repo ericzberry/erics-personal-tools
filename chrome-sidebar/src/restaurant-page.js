@@ -1,5 +1,5 @@
 import {RestaurantWorkspace,RestaurantCandidate,ReservationResult} from './components/views.js';
-import {Option,setStatus} from './components/ui.js';
+import {setStatus} from './components/ui.js';
 import {searchInput,localDate,isNYC,partySizes,searchDates,needsRestaurantChoice,bookingURL,searchTimes} from './restaurant-search.js';
 import {reservationBrowser} from './reservation-browser.js';
 import {analyzeAvailability,combineObservations} from './reservation-availability.js';
@@ -8,7 +8,7 @@ document.getElementById('app').replaceChildren(RestaurantWorkspace());
 const $=id=>document.getElementById(id),api=globalThis.chrome?.runtime?.id?globalThis.chrome:null;
 const browser=api?reservationBrowser(api):null;
 let connections=[],search=null,research=null,selected=new Set(),results=[],busy=false,generation=0,abort=null,ai=null;
-const fields=['mode','query','city','neighborhood','date','through','start','end','party','min','max','flexible','flex-dates','travel','limit','connection'];
+const fields=['mode','query','city','neighborhood','date','through','start','end','party','min','max','flexible','flex-dates','travel','limit'];
 const dateRange=value=>value.date===value.endDate?value.date:`${value.date} – ${value.endDate}`;
 const status=(text,tone='')=>{setStatus($('restaurant-status'),text,tone);$('restaurant-status').hidden=!text;};
 const error=text=>{setStatus($('restaurant-error'),text,'error');$('restaurant-error').hidden=!text;};
@@ -31,7 +31,7 @@ function formValue() {return {mode:$('restaurant-mode').value,query:$('restauran
 function fill(value={}) {
   const values={mode:'restaurant',query:'',city:'New York City',neighborhood:'',date:localDate(),endDate:value.date||localDate(),startTime:'17:00',endTime:'22:00',partySize:value.minParty||2,minParty:2,maxParty:6,limit:12,...value};
   const names={start:'startTime',end:'endTime',through:'endDate',party:'partySize',min:'minParty',max:'maxParty'};
-  for(const id of fields.filter(id=>!['connection','flexible','flex-dates','travel'].includes(id)))$('restaurant-'+id).value=values[names[id]||id];
+  for(const id of fields.filter(id=>!['flexible','flex-dates','travel'].includes(id)))$('restaurant-'+id).value=values[names[id]||id];
   $('restaurant-flexible').checked=!!value.flexible;$('restaurant-flex-dates').checked=!!value.flexibleDates;$('restaurant-travel').checked=!!value.includeLongTravel;
   for(const id of ['date','through'])$('restaurant-'+id).min=localDate();
   for(const id of ['party','min','max']){const el=$('restaurant-'+id);el.min=1;el.max=20;el.step=1;}
@@ -48,21 +48,18 @@ async function request(action,data={}) {
   if(!response?.ok)throw Error(response?.error||'Could not reach the extension service. Reload the extension and try again.');
   return response;
 }
+// Research runs on a saved OpenAI connection. Which one is not a question worth
+// asking, so this only finds out whether there is one to run on.
 async function loadConnections() {
-  $('restaurant-reload').disabled=true;
   try {
-    const previous=$('restaurant-connection').value;
     const data=await request('list');connections=(data.connections||[]).filter(c=>c.provider==='openai'&&c.hasApiKey);
-    $('restaurant-connection').replaceChildren(...(connections.length?connections.map(c=>Option(c.name,c.id)):[Option('Add an OpenAI connection in AI settings','')]));
-    if(connections.some(c=>c.id===previous))$('restaurant-connection').value=previous;
-    connectionStatus(connections.length?'':'Add an OpenAI key in AI settings.');
-  }catch(e){$('restaurant-connection').replaceChildren(Option('Connection needed',''));connectionStatus(e.message);}
-  finally{$('restaurant-reload').disabled=busy;}
+    connectionStatus(connections.length?'':'Save an OpenAI connection in AI settings to research restaurants.');
+  }catch(e){connections=[];connectionStatus(e.message);}
 }
 function setBusy(value) {
   busy=value;
   for(const id of fields)$('restaurant-'+id).disabled=value;
-  for(const id of ['find','check','reload'])$('restaurant-'+id).disabled=value;
+  for(const id of ['find','check'])$('restaurant-'+id).disabled=value;
   $('restaurant-stop').hidden=!value;
   $('restaurant-candidates').inert=value;
   renderResults();
@@ -83,9 +80,8 @@ function renderResults() {
   $('restaurant-results').replaceChildren(...results.map(r=>ReservationResult(r,{busy,onOpen:()=>openResult(r),onRecheck:()=>recheck(r)})));
 }
 function selectedAI() {
-  const connection=connections.find(c=>c.id===$('restaurant-connection').value);
-  if(!connection)throw Error('Connect an OpenAI account in AI settings, then reload connections.');
-  return {id:connection.id};
+  if(!connections.length)throw Error('Save an OpenAI connection in AI settings to research restaurants.');
+  return {id:connections[0].id};
 }
 async function interpret(snapshot,r,size,token,context=search) {
   const result=await analyzeAvailability(snapshot,r,context,size,async messages=>{
@@ -170,7 +166,6 @@ async function recheck(result) {
 }
 $('restaurant-form').addEventListener('submit',find);
 $('restaurant-check').addEventListener('click',checkSelected);
-$('restaurant-reload').addEventListener('click',loadConnections);
 $('restaurant-stop').addEventListener('click',()=>{
   generation++;abort?.abort();
   results.filter(r=>r.status==='checking'||(r.observations&&r.observations.length<searchTimes(r.provider,search).length)).forEach(r=>{r.observations??=[];r.observations.push({status:'cancelled',slots:[],detail:'Stopped before all checks completed.'});Object.assign(r,combineObservations(r.observations));});
@@ -179,4 +174,4 @@ $('restaurant-stop').addEventListener('click',()=>{
 for(const id of ['mode','city','flexible','flex-dates'])$('restaurant-'+id).addEventListener('input',visibility);
 fill();
 if(api){try{const saved=await api.storage.local.get('restaurantSearchPreferences');fill(saved.restaurantSearchPreferences);}catch{status('Could not load saved preferences. Using defaults.','alert');}await loadConnections();}
-else{$('restaurant-connection').replaceChildren(Option('Extension required',''));connectionStatus('Preview only. Open the installed extension for live search.');status('Interface preview · Live searches require the Chrome extension.');}
+else{connectionStatus('Preview only. Open the installed extension for live search.');status('Interface preview · Live searches require the Chrome extension.');}

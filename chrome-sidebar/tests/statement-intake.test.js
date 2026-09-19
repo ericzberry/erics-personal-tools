@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {readFileSync, writeFileSync, mkdtempSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pdfText, readableRatio} from '../src/pdf-text.js';
@@ -41,12 +42,127 @@ test('a generated statement PDF gives up its figures, dates and account names', 
   assert.equal(result.note, '');
 });
 
-test('a PDF with no text layer says so instead of returning nothing quietly', async () => {
+test('a PDF with no text in it says so instead of returning nothing quietly', async () => {
   // A structurally valid PDF whose only stream is not text content.
   const empty = new TextEncoder().encode('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF');
   const result = await pdfText(empty);
   assert.equal(result.confidence, 'none');
-  assert.match(result.note, /scan|no text layer/i);
+  assert.match(result.note, /no text in it/i);
+  assert.match(result.note, /image|paste/i);
+});
+
+// A bank's statement is not a plain page of text. Its rows are drawn inside
+// form XObjects that carry no resources of their own, through a subset font
+// whose bytes mean nothing without its ToUnicode table, and the whole file is
+// usually locked with an owner password. This builds one the same way, so the
+// reader is proved against the shape a statement actually arrives in.
+function builtStatement(rows, {locked = false, password = false} = {}) {
+  const codes = new Map();
+  const encode = text => [...text].map(character => {
+    if (!codes.has(character)) codes.set(character, 0x80 + codes.size);
+    return codes.get(character).toString(16).padStart(2, '0');
+  }).join('');
+  const drawn = rows.map(([left, right], index) =>
+    `BT /F1 10 Tf 1 0 0 1 0 ${200 - index * 14} Tm <${encode(left)}> Tj 1 0 0 1 90 ${200 - index * 14} Tm <${encode(right)}> Tj ET`).join('\n');
+  const cmap = [
+    '/CIDInit /ProcSet findresource begin 12 dict begin begincmap',
+    '1 begincodespacerange <00> <FF> endcodespacerange',
+    `${codes.size} beginbfchar`,
+    ...[...codes].map(([character, code]) => `<${code.toString(16)}> <${character.charCodeAt(0).toString(16).padStart(4, '0')}>`),
+    'endbfchar', 'endcmap end end'
+  ].join('\n');
+
+  const pad = Buffer.from([0x28,0xBF,0x4E,0x5E,0x4E,0x75,0x8A,0x41,0x64,0x00,0x4E,0x56,0xFF,0xFA,0x01,0x08,
+    0x2E,0x2E,0x00,0xB6,0xD0,0x68,0x3E,0x80,0x2F,0x0C,0xA9,0xFE,0x64,0x53,0x69,0x7A]);
+  const owner = Buffer.alloc(32, 0x5a), id = Buffer.alloc(16, 0x11);
+  const permissions = Buffer.alloc(4);
+  permissions.writeInt32LE(-12, 0);
+  const key = createHash('md5').update(Buffer.concat([pad, owner, permissions, id])).digest().subarray(0, 5);
+  const rc4 = (secret, data) => {
+    const box = Uint8Array.from({length: 256}, (_, i) => i);
+    let j = 0;
+    for (let i = 0; i < 256; i++) { j = (j + box[i] + secret[i % secret.length]) & 255; [box[i], box[j]] = [box[j], box[i]]; }
+    const out = Buffer.alloc(data.length);
+    let i = 0;
+    j = 0;
+    for (let at = 0; at < data.length; at++) {
+      i = (i + 1) & 255;
+      j = (j + box[i]) & 255;
+      [box[i], box[j]] = [box[j], box[i]];
+      out[at] = data[at] ^ box[(box[i] + box[j]) & 255];
+    }
+    return out;
+  };
+  const user = rc4(key, pad);
+  if (password) user[0] ^= 0xff;
+  const lock = number => body => {
+    if (!locked) return Buffer.from(body, 'latin1');
+    const objectKey = createHash('md5')
+      .update(Buffer.concat([key, Buffer.from([number & 255, (number >> 8) & 255, (number >> 16) & 255, 0, 0])]))
+      .digest().subarray(0, 10);
+    return rc4(objectKey, Buffer.from(body, 'latin1'));
+  };
+  const stream = (number, body) => {
+    const bytes = lock(number)(body);
+    return Buffer.concat([Buffer.from(`<< /Length ${bytes.length} >>\nstream\n`, 'latin1'), bytes, Buffer.from('\nendstream', 'latin1')]);
+  };
+  const objects = [
+    Buffer.from('<< /Type /Catalog /Pages 2 0 R >>', 'latin1'),
+    Buffer.from('<< /Type /Pages /Kids [3 0 R] /Count 1 >>', 'latin1'),
+    Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /XObject << /X1 5 0 R >> /Font << /F1 6 0 R >> >> >>', 'latin1'),
+    stream(4, 'q 1 0 0 1 72 400 cm /X1 Do Q'),
+    // Deliberately no /Resources: a form inherits the page's, and a reader that
+    // forgets that loses whole columns of the statement.
+    Buffer.concat([Buffer.from('<< /Type /XObject /Subtype /Form /BBox [0 0 500 300] ', 'latin1'), stream(5, drawn)]),
+    Buffer.from('<< /Type /Font /Subtype /Type1 /BaseFont /AAAAAA+Statement /FirstChar 128 /LastChar 255 /ToUnicode 7 0 R >>', 'latin1'),
+    stream(7, cmap),
+    Buffer.from(`<< /Filter /Standard /V 1 /R 2 /Length 40 /P -12 /O <${owner.toString('hex')}> /U <${user.toString('hex')}> >>`, 'latin1')
+  ];
+  const parts = [Buffer.from('%PDF-1.4\n', 'latin1')];
+  const offsets = [];
+  let at = parts[0].length;
+  objects.forEach((body, index) => {
+    // The form's dictionary and its stream were built separately; join them.
+    const opening = Buffer.from(`${index + 1} 0 obj\n`, 'latin1');
+    const closing = Buffer.from('\nendobj\n', 'latin1');
+    const piece = Buffer.concat([opening, body, closing]);
+    offsets.push(at);
+    parts.push(piece);
+    at += piece.length;
+  });
+  const xref = [`xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`,
+    ...offsets.map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`)].join('');
+  const trailer = `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${locked ? ` /Encrypt 8 0 R /ID [<${id.toString('hex')}> <${id.toString('hex')}>]` : ''} >>\nstartxref\n${at}\n%%EOF`;
+  return new Uint8Array(Buffer.concat([...parts, Buffer.from(xref + trailer, 'latin1')]));
+}
+
+const ROWS = [['08/18', 'AUTOMATIC PAYMENT - THANK YOU  -17,496.69'], ['07/25', 'APPLE.COM/BILL 866-712-7753 CA  4.30']];
+
+test('a statement drawn in form XObjects through a subset font reads as its own rows', async () => {
+  const result = await pdfText(builtStatement(ROWS));
+  assert.equal(result.confidence, 'good', result.note);
+  // Both columns, on one line, in the order they are printed in.
+  assert.match(result.text, /08\/18\s+AUTOMATIC PAYMENT - THANK YOU\s+-17,496\.69/);
+  assert.match(result.text, /07\/25\s+APPLE\.COM\/BILL 866-712-7753 CA\s+4\.30/);
+  assert.ok(result.text.indexOf('08/18') < result.text.indexOf('07/25'), 'rows keep the order they are drawn in');
+});
+
+// Banks ship statements locked with an owner password and an empty user
+// password: any reader may open them. Before this, every stream failed to
+// decompress and a statement full of figures was reported as a scan.
+test('a statement locked with an owner password opens and reads', async () => {
+  const result = await pdfText(builtStatement(ROWS, {locked: true}));
+  assert.equal(result.confidence, 'good', result.note);
+  assert.match(result.text, /AUTOMATIC PAYMENT - THANK YOU/);
+  assert.match(result.text, /4\.30/);
+});
+
+test('a PDF that genuinely needs a password says so rather than calling itself a scan', async () => {
+  const result = await pdfText(builtStatement(ROWS, {locked: true, password: true}));
+  assert.equal(result.confidence, 'none');
+  assert.match(result.note, /password/i);
+  assert.doesNotMatch(result.note, /scan/i);
+  assert.equal(result.text, '');
 });
 
 test('a file that is not a PDF is refused rather than parsed as one', async () => {
@@ -136,6 +252,26 @@ test('a dashboard is narrowed to the accounts, their numbers and their dates', (
   assert.equal(page.text.includes('Charitable Giving'), false);
   assert.equal(/^\$1M$/m.test(page.text), false, 'a chart axis is not a balance');
   assert.ok(page.text.length < 300, `narrowed to ${page.text.length} characters`);
+});
+
+// A bank that holds a family's whole structure lists the accounts under the
+// title that holds each one. The nickname on the tile is not the answer —
+// "Total Checking" belongs to somebody — so the heading has to travel with the
+// balance or nothing downstream can tell one holder's money from another's.
+test('the heading an account is grouped under travels with its balance', () => {
+  const page = inPage(pageOf({text: [
+    'Berry 2020 Descendants’ Irrevocable Trust',
+    'CHASE TOTAL CHECKING (...4421)',
+    '$250,000.00',
+    'CHASE SAVINGS (...4422)',
+    '$18,004.10',
+    'Celsie LLC',
+    'BUSINESS COMPLETE BANKING (...9912)',
+    '$41,000.00'
+  ].join('\n')}), HERE);
+  assert.match(page.text, /Berry 2020 Descendants’ Irrevocable Trust\nCHASE TOTAL CHECKING \(\.\.\.4421\)\n\$250,000\.00/);
+  assert.match(page.text, /Celsie LLC\nBUSINESS COMPLETE BANKING \(\.\.\.9912\)\n\$41,000\.00/);
+  assert.equal(page.text.split('Celsie LLC').length - 1, 1, 'a heading already just kept is not repeated for the next figure under it');
 });
 
 test('a page whose figures this filter cannot see is sent whole rather than gutted', () => {

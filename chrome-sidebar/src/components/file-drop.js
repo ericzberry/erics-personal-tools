@@ -42,7 +42,11 @@ export function attachFileDrop({zone,input,status,onFile,accept=['.xlsx','.json'
       if(!accept.some(ext=>file.name.toLowerCase().endsWith(ext)))throw Error(`Use ${accept.join(' or ')}.`);
       if(file.size>maxBytes)throw Error(`File is too large (${maxBytes/1000000} MB maximum).`);
       setStatus(status,'Reading file…','progress');
-      const message=await onFile(file);setStatus(status,message||'Imported.','success');
+      // A reader that got something imperfect says so in its own tone: a file
+      // that half read is not a success, and green is not how that is said.
+      const result=await onFile(file);
+      const {message,tone}=typeof result==='object'&&result?result:{message:result,tone:'success'};
+      setStatus(status,message||'Imported.',tone||'success');
     } catch(error) {setStatus(status,error.message,'error');}
     finally {busy=false;zone.removeAttribute('aria-busy');input.value='';}
   }

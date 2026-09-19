@@ -1,14 +1,19 @@
 import {SubscriptionsView,SubscriptionEvidence,SubscriptionResearch,subscriptionFields} from './components/subscriptions.js';
-import {Button,Option,RecordRow,Stack,Note,ActionGroup,Link,setStatus} from './components/ui.js';
+import {Button,RecordRow,Stack,Note,ActionGroup,Link,setStatus} from './components/ui.js';
 import {normalizeSubscription,parseSubscriptionReading,mergeSubscriptionReading,subscriptionKey,annualCost,money,BILLING_CYCLES,estimatedRenewal,subscriptionAlerts,chargeKey} from './subscription-data.js';
 import {mountVaultGate} from './vault-gate.js';
 import {attachFileDrop} from './components/file-drop.js';
-import {readStatement,MAX_BYTES,ACCEPTED} from './statement-text.js';
+import {aiConnections} from './ai-connection.js';
+import {readStatement,trimForReading,MAX_BYTES,MAX_SEND,ACCEPTED} from './statement-text.js';
 export function mountSubscriptions(root,{credentials,offline,remote,onSettings=()=>{},onChanged=()=>{},vault}={}){
   const gate=mountVaultGate(root,{id:'subscriptions-vault',title:'Subscriptions & renewals',lockedDetail:'Unlock to review private charges and subscriptions.',...(vault?{vault}:{}),onChange:open=>open?refresh():clear()});
   gate.content.replaceChildren(SubscriptionsView());
   const $=id=>gate.content.querySelector(`#subscriptions-${id}`);
   let records=[],editing=null,busy=false,loaded=false,generation=0,activeToken='',image='',source='';
+  // Reading a statement takes any saved connection; live price research takes
+  // an OpenAI one, because that is the only provider whose search this uses.
+  const reader=aiConnections({load:async token=>(await remote(token,'/v1/ai-connections')).connections,need:'to read a statement.'});
+  const researcher=aiConnections({load:async token=>(await remote(token,'/v1/ai-connections')).connections,provider:'openai',need:'to research prices.'});
   const status=(message,target='status',tone='')=>setStatus($(target),message,tone);
   const action=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:busy||!loaded});b.addEventListener('click',fn);return b;};
   function resetForm(){editing=null;for(const key of subscriptionFields)$(key).value='';$('currency').value='USD';$('cycle').value='unknown';$('state').value='Active';$('notice').value='14';status('','form-status');}
@@ -29,7 +34,7 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
       return Stack([RecordRow({title:r.name,detail:[r.state,money(r.amount,r.currency),BILLING_CYCLES[r.cycle],r.account,r.state==='Canceled'?(r.canceledOn?`Cancellation effective ${r.canceledOn}`:'Add the cancellation date to check later charges'):'',due?`${r.renewal?'Renewal':'Estimated next charge'} ${due}`:'',r.pending?(r.conflict?'Conflict':r.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · '),notes:[...alerts.map(a=>a.reason),r.notes].filter(Boolean).join('\n'),actions:controls}),...(r.url?[Link('Open account',r.url,{rel:'noopener noreferrer'})]:[]),SubscriptionEvidence(r),SubscriptionResearch(r),confirm].filter(Boolean));
     });
     $('records').replaceChildren(...(rows.length?rows:loaded?[Note('No subscriptions saved yet. Read a statement or add one below.')]:[]));
-    for(const key of [...subscriptionFields,'connection','import-account','text','country','requirements','file','read','save','cancel','drop','clear-statement'])$(key).disabled=busy||!loaded;
+    for(const key of [...subscriptionFields,'import-account','text','country','requirements','file','read','save','cancel','drop','clear-statement'])$(key).disabled=busy||!loaded;
     const settings=Button('Connection settings',{variant:'secondary',size:'compact',disabled:busy});settings.addEventListener('click',onSettings);
     $('actions').replaceChildren(loaded?action('Refresh',refresh):settings);
   }
@@ -49,25 +54,22 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
   }
   async function refresh(){
     const ok=await run(token=>offline.request(token,'/v1/subscriptions'));
-    if(ok&&!$('connection').value&&remote)await run(async(token,valid)=>{
-      const result=await remote(token,'/v1/ai-connections');if(!valid())return;
-      const connections=result.connections.filter(c=>c.provider==='openai'&&c.hasApiKey);
-      $('connection').replaceChildren(Option('Choose AI connection',''),...connections.map(c=>Option(c.name,c.id)));
-      if(connections.length===1)$('connection').value=connections[0].id;
-      if(!connections.length)status('Add an OpenAI connection in Settings to read statements or research prices.','intake-status');
+    // The only thing worth saying about connections is that there is none.
+    if(ok&&remote&&globalThis.navigator?.onLine!==false)await run(async(token,valid)=>{
+      const note=await reader.note(token);
+      if(valid())status(note,'intake-status',note?'alert':'');
     },'intake-status');
   }
   async function save(r,method='PUT',target='status'){
     const ok=await run(token=>offline.request(token,`/v1/subscriptions/${r.id}`,{method,value:r}),target);if(ok)onChanged();return ok;
   }
   async function read(){
-    const connection=$('connection').value,account=$('import-account').value.trim(),text=$('text').value;
-    if(!connection){status('Choose an AI connection.','intake-status','alert');return;}
+    const account=$('import-account').value.trim(),text=$('text').value;
     if(!account){status('Give this statement an account nickname so separate accounts are not merged.','intake-status','alert');return;}
     if(text.length>24000){status('Split this statement into sections of up to 24,000 characters. Nothing was sent.','intake-status','alert');return;}
     status('Reading possible recurring charges…','intake-status','progress');
     await run(async(token,valid)=>{
-      const result=await remote(token,`/v1/ai-connections/${connection}/subscription-intake`,{method:'POST',value:{text,image},maxBytes:1536*1024,timeoutMs:120000});
+      const result=await remote(token,`/v1/ai-connections/${await reader.id(token)}/subscription-intake`,{method:'POST',value:{text,image},maxBytes:1536*1024,timeoutMs:120000});
       if(!valid())return;
       const readings=parseSubscriptionReading({subscriptions:result.subscriptions},{account,source:source||'Pasted statement'});
       let latest=records;
@@ -84,18 +86,18 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
     },'intake-status');
   }
   async function research(record){
-    const connection=$('connection').value,country=$('country').value.trim();
-    if(!connection||!country){status('Choose an AI connection under Read a statement and enter the country / market below.','research-status','alert');$('country').focus();return;}
+    const country=$('country').value.trim();
+    if(!country){status('Enter the country / market below.','research-status','alert');$('country').focus();return;}
     status(`Researching alternatives to ${record.name}…`,'research-status','progress');
     await run(async(token,valid)=>{
-      const result=await remote(token,`/v1/ai-connections/${connection}/subscription-research`,{method:'POST',value:{name:record.name,currency:record.currency,country,requirements:$('requirements').value},timeoutMs:130000});
+      const result=await remote(token,`/v1/ai-connections/${await researcher.id(token)}/subscription-research`,{method:'POST',value:{name:record.name,currency:record.currency,country,requirements:$('requirements').value},timeoutMs:130000});
       if(!valid())return;
       const saved=await offline.request(token,`/v1/subscriptions/${record.id}`,{method:'PUT',value:{...record,research:result.research}});
       if(valid()){status(`Saved alternatives for ${record.name}. Open its Alternatives details to compare prices and tradeoffs.`,'research-status','success');onChanged();}return saved;
     },'research-status');
   }
   function clearStatement(){image='';source='';$('text').value='';status('','file-status');status('','intake-status');}
-  function clear(){generation++;busy=false;records=[];loaded=false;activeToken='';clearStatement();resetForm();$('connection').replaceChildren(Option('Choose AI connection',''));$('import-account').value='';$('requirements').value='';status('');status('','research-status');render();}
+  function clear(){generation++;busy=false;records=[];loaded=false;activeToken='';reader.forget();researcher.forget();clearStatement();resetForm();$('import-account').value='';$('requirements').value='';status('');status('','research-status');render();}
   $('form').addEventListener('submit',async e=>{e.preventDefault();if(busy||!loaded)return;try{const values=Object.fromEntries(subscriptionFields.map(k=>[k,$(k).value]));const value=normalizeSubscription({...editing,...values,...(editing&&(values.name!==editing.name||values.currency.toUpperCase()!==editing.currency)?{research:null}:{})});if(await save({...value,id:editing?.id||crypto.randomUUID(),revision:editing?.revision??null},'PUT','form-status')){resetForm();$('editor').open=false;}}catch(error){status(error.message,'form-status','error');}});
   $('cancel').addEventListener('click',()=>{resetForm();$('editor').open=false;});
   $('read').addEventListener('click',read);$('clear-statement').addEventListener('click',clearStatement);
@@ -105,8 +107,18 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
     try{
       const result=await readStatement(file);
       if(current!==generation||!gate.unlocked())throw Error('Unlock again to read this statement.');
-      source=file.name.slice(0,120);image=result.kind==='image'?result.image.dataUrl:'';$('text').value=result.kind==='text'?result.text:'';
-      return result.kind==='image'?'Image ready to send when you choose Find recurring charges.':`${result.note||'Text ready to review.'}${result.text.length>24000?' Split the text into smaller sections before reading.':''}`;
+      source=file.name.slice(0,120);
+      if(result.kind==='image'){image=result.image.dataUrl;$('text').value='';return 'Ready to read.';}
+      // Nothing came out of the file: that is a failure of the reading, not a
+      // statement with no subscriptions in it, and it is said as one.
+      if(!result.text.trim()){image='';$('text').value='';throw Error(result.note||'Nothing readable came out of that file.');}
+      image='';
+      const {text,trimmed}=trimForReading(result.text);
+      $('text').value=text;
+      const cut=trimmed?`${trimmed.toLocaleString('en-US')} characters past the ${MAX_SEND.toLocaleString('en-US')}-character limit were left out.`:'';
+      return result.confidence==='good'&&!cut
+        ?'Ready to read.'
+        :{message:[result.note,cut].filter(Boolean).join(' ')||'The text came out unevenly — check the figures before reading.',tone:'alert'};
     }finally{if(current===generation){busy=false;render();}}
   }});
   resetForm();render();if(gate.unlocked())refresh();

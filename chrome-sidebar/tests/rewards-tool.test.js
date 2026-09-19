@@ -168,12 +168,14 @@ test('naming a card brings back its benefits to review, and saving files them un
  const {tool,records,asked}=walletHost(h);
  await tool.refresh();
  const $=id=>h.document.getElementById(id);
- assert.equal($('reward-card-connection').value,CONNECTION,'a single saved connection is chosen without being asked for');
  $('reward-card-name').value='amex platinum';
  $('reward-card-form').dispatchEvent(new h.window.Event('submit',{cancelable:true}));
  await settle(()=>$('reward-card-review').textContent.includes('Lounge access'));
  // Only the name typed into the intake is sent; nothing already in the wallet is.
+ // A saved connection answers without being asked for: the wallet never shows
+ // a picker, and the card lookup still reaches the one connection there is.
  assert.deepEqual(asked,[{path:`/v1/ai-connections/${CONNECTION}/card-benefits`,value:{name:'amex platinum'}}]);
+ assert.equal(h.document.getElementById('reward-card-connection'),null,'no connection picker is shown');
  // Every benefit is readable before any of it is saved, including what it costs
  // in attention: the reset period and the enrollment step.
  const review=$('reward-card-review').textContent;

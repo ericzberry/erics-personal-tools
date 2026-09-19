@@ -18,7 +18,9 @@ test('subscriptions preserve rejected edits, accept decimal prices, and exclude 
   let records=[{...normalizeSubscription({name:'Synthetic Stream',currency:'USD',amount:12.99,cycle:'monthly',state:'Review'}),id:'one',revision:'r'}];
   const offline={request:async(t,p,o={})=>{if(o.method){writes++;if(fail)throw Error('Could not save');records=[{...normalizeSubscription(o.value),id:'one',revision:'next'}];}return {records};}};
   mountSubscriptions(root,{vault,credentials,offline,remote:async()=>({connections:[]})});
-  await settle(()=>root.textContent.includes('Add an OpenAI connection')&&!root.querySelector('#subscriptions-save').disabled);
+  await settle(()=>root.textContent.includes('Save an AI connection in Settings')&&!root.querySelector('#subscriptions-save').disabled);
+  // Reading a statement never asks which saved connection should do it.
+  assert.equal(root.querySelector('#subscriptions-connection'),null);
   assert.equal(root.querySelector('#subscriptions-total').textContent,'');assert.equal(root.querySelector('#subscriptions-amount').getAttribute('step'),'0.01');
   [...root.querySelectorAll('button')].find(b=>b.textContent==='Review terms').click();
   assert.equal(root.querySelector('#subscriptions-cycle').value,'monthly');root.querySelector('#subscriptions-name').value='Edited name';root.querySelector('#subscriptions-state').value='Active';fail=true;

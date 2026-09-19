@@ -17,7 +17,8 @@ export function CardsView(){
         field('channel','Purchase method','select',options(PURCHASE_CHANNELS)),
         field('amount','Purchase amount (USD, optional)','number')
       ],{id:'cards-adjust',hidden:true}),
-      Stack([],{id:'cards-conditions'}),Stack([],{id:'cards-results',className:'comparison-results'})
+      Stack([],{id:'cards-conditions'}),Stack([],{id:'cards-results',className:'comparison-results'}),
+      Notice('',{id:'cards-ai-status'})
     ],{id:'cards-purchase-form',className:'form-stack'})],{className:'settings-group'}),
     Section([Heading('Your cards',2),Stack([],{id:'cards-list'}),ActionGroup([button('Add card','add','primary',{size:'compact'}),button('Refresh cards','refresh','secondary',{size:'compact'})])],{className:'settings-group'}),
     Disclosure('Add or edit a card',[
@@ -41,8 +42,7 @@ export function CardsView(){
         Notice('',{id:'cards-form-status'}),
         ActionGroup([button('Save card','save','primary',{type:'submit'}),button('Cancel edit','cancel')])
       ],{id:'cards-form',className:'form-stack'})
-    ],{id:'cards-editor'}),
-    Disclosure('AI connection',[field('connection','Saved AI connection','select',[]),button('Refresh connections','connections'),Notice('',{id:'cards-ai-status'})])
+    ],{id:'cards-editor'})
   ],{className:'travel-wallet card-tool'});
 }
 // A rough name can name more than one real card, so research answers with the

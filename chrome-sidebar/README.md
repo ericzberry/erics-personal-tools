@@ -1266,3 +1266,46 @@ trust holding a fund, an SPV whose paperwork disagrees with it, and an
 investment with no statement yet. An amount no longer breaks across lines, and a
 record row carries more than one note without the last reading as the next
 record's first. Archive: `release/erics-sidebar-0.6.125.zip`.
+
+## Read the statement the bank actually sent (0.6.126 / mobile 0.1.80)
+
+A Chase statement dropped into **Subscriptions** came back as "This PDF has no
+text layer — it is probably a scan", in green, on a file that is nothing but
+text. Two things were wrong and both are fixed.
+
+The file was not a scan. Banks lock a statement with an owner password and an
+empty user password — anyone may open it, nobody may copy from it — and every
+stream in it is encrypted. `pdf-crypt.js` is the standard security handler for
+exactly that case: RC4 and AES-128, the empty user password only, checked
+against the file's own `/U` rather than assumed. A PDF that genuinely wants a
+password says so, and is not guessed at.
+
+Underneath, the extractor is no longer a scan for text operators. It follows
+the page tree, draws each page's content, steps into the form XObjects the text
+is actually inside — inheriting the page's fonts, which is where a statement's
+date column lives — decodes subset fonts through their own ToUnicode tables,
+and puts the runs back into rows by where they were painted. A transaction
+arrives as `08/18  PELOTON CREDIT $10/MONTH  -10.00`, not as three separate
+lines or as nothing at all. Object streams are unpacked, so modern producers
+read too, and inline images no longer derail the parse.
+
+The green was the second bug. A file that did not read is an error, a file that
+half read is an alert, and only a file that read is a success: a reader now
+returns its own tone with its message, and Subscriptions throws when nothing
+readable came out rather than reporting the failure as a result.
+
+**The AI connection picker is gone from the whole app.** Subscriptions, Best
+card, the rewards wallet's card lookup and Restaurants — on the phone as well as
+the sidebar — no longer ask which saved connection should do the work. A new
+`ai-connection.js` picks one that can answer, filtered by provider where a
+feature needs a particular one, and says something only when there is none.
+Connections are still set up once in Settings. The intake lost its explanatory
+paragraph with it: the heading, the fields and the live status say what is
+happening.
+
+Reviewed at 380px and 280px in a new `tests/subscriptions-preview.html`, which
+carries the intake with a connection and without one, a wallet of saved
+services, and what a dropped file leaves behind: read, half read, and not read
+at all. The phone's own shell was not driven for this; the view is the shared
+component reviewed in the sidebar harness, and the mobile suite covers the
+capability. Archive: `release/erics-sidebar-0.6.126.zip`.

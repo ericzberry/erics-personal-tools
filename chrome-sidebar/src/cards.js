@@ -1,5 +1,6 @@
 import {CardsView,BonusRule,SavedCard,CardMatches,CardIngest,PurchaseConditions,PurchaseReading,ComparisonResults} from './components/cards.js';
-import {Note,Option,setStatus} from './components/ui.js';
+import {Note,setStatus} from './components/ui.js';
+import {aiConnections} from './ai-connection.js';
 import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent} from './card-data.js';
 export function mountCards(root,{credentials,offline,remote}){
   root.replaceChildren(CardsView());
@@ -7,10 +8,11 @@ export function mountCards(root,{credentials,offline,remote}){
   const fields=['name','unit','base','cpp','source','checked','notes'];
   for(const input of root.querySelectorAll('input[type=number]')){input.min='0';input.step='any';}
   let token='',records=[],selected=null,newId=crypto.randomUUID(),busy=false,dirty=false,conditionKey='',generation=0,reading=null,readFrom='';
+  const connections=aiConnections({load:async current=>(await remote(current,'/v1/ai-connections')).connections,need:'to read a purchase or look up a card.'});
   const status=(message,target='status',tone='')=>setStatus($(target),message,tone);
   function controls(){
     for(const control of root.querySelectorAll('input,select,textarea,button'))control.disabled=busy||!token;
-    for(const key of ['research','connections'])$(key).disabled=busy||!token||globalThis.navigator?.onLine===false;
+    $('research').disabled=busy||!token||globalThis.navigator?.onLine===false;
     $('cpp').disabled=busy||!token||$('unit').value==='cash';
   }
   function clearResults(){conditionKey='';$('conditions').replaceChildren();$('results').replaceChildren();status('','purchase-status');}
@@ -74,7 +76,7 @@ export function mountCards(root,{credentials,offline,remote}){
   async function request(path,options){const current=generation;const result=await offline.request(token,path,options);if(current!==generation)throw Error('Connection changed.');return result;}
   async function connectionList(){
     if(!token||globalThis.navigator?.onLine===false){status('Offline · Select a category to compare saved cards.','ai-status');return;}
-    try{const result=await remote(token,'/v1/ai-connections');const previous=$('connection').value;$('connection').replaceChildren(Option('Choose a connection',''),...result.connections.filter(c=>c.hasApiKey).map(c=>Option(`${c.name} · ${c.provider}`,c.id)));if(result.connections.some(c=>c.id===previous))$('connection').value=previous;else if(result.connections.filter(c=>c.hasApiKey).length===1)$('connection').value=result.connections.find(c=>c.hasApiKey).id;status(result.connections.some(c=>c.hasApiKey)?'':'Save an AI connection in Settings to enable category suggestions.','ai-status');}
+    try{status(await connections.note(token),'ai-status','alert');}
     catch(error){status(error.message,'ai-status','error');}
   }
   // Both AI calls fall back to something the owner can do by hand, so an
@@ -87,7 +89,8 @@ export function mountCards(root,{credentials,offline,remote}){
   async function ai(action,value){
     if(!token)throw Error('Connect in Settings first.');
     if(globalThis.navigator?.onLine===false)throw Error(`AI needs internet. ${fallback(action)}`);
-    const id=$('connection').value;if(!id)throw Error(`Choose a saved AI connection below. ${fallback(action)}`);
+    let id;
+    try{id=await connections.id(token);}catch(error){throw Error(`${error.message} ${fallback(action)}`);}
     const current=generation;
     const result=await remote(token,`/v1/ai-connections/${id}/${action}`,{method:'POST',value,timeoutMs:130000});
     if(current!==generation)throw Error('Connection changed. Try again.');return result;
@@ -147,7 +150,6 @@ export function mountCards(root,{credentials,offline,remote}){
     const result=await request('/v1/cards');records=result.records;clearResults();render();status(result.syncMessage,'status','alert');await connectionList();
   }
   $('refresh').addEventListener('click',()=>run(refresh));
-  $('connections').addEventListener('click',()=>run(connectionList,'ai-status'));
   const reload=()=>{if(!busy)return run(refresh);};
   window.addEventListener('online',reload);window.addEventListener('offline',()=>{controls();status('Offline · Saved cards and manual comparisons are available.');});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});

@@ -15,7 +15,6 @@ test('controller preserves failed inputs, stops pending research and rejects sta
     await import('../src/restaurant-page.js');
     const $=id=>document.getElementById('restaurant-'+id),settle=async()=>{for(let i=0;i<6;i++)await new Promise(r=>setImmediate(r));};
     const submit=()=>$('form').dispatchEvent(new window.Event('submit',{cancelable:true}));
-    $('connection').value='test';
     $('query').value='Exampel Bistro';submit();await settle();assert.equal($('find').disabled,true);assert.equal($('stop').hidden,false);
     $('stop').click();assert.equal($('find').disabled,false);resolveResearch({ok:true,restaurants:[],summary:'stale response'});await settle();assert.equal($('summary').textContent,'');assert.match($('status').textContent,/Stopped/);
     fail=true;submit();await settle();assert.equal($('query').value,'Exampel Bistro');assert.match($('error').textContent,/Research failed/);

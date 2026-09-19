@@ -5,6 +5,7 @@ import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} f
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogCategories,offerUrl} from './program-data.js';
 import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord} from './balance-data.js';
+import {aiConnections} from './ai-connection.js';
 const fields=['kind','name','source','card','value','due','cadence','state','url','notes'];
 // A revealed number returns to its masked form on its own, so an unattended
 // sidebar does not keep a card number on screen.
@@ -32,9 +33,10 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // The loyalty program whose site is open beside the panel, and what was read
   // off it. A reading is a proposal until it is saved: the figures are shown as
   // they will be stored, and nothing is written by reading.
-  let site=null,balances=null,balanceConnection='';
+  let site=null,balances=null;
   let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null,syncFailed=false;
   let found=null,connectionsFor='';
+  const connections=aiConnections({load:async token=>(await remote(token,'/v1/ai-connections')).connections,need:'to read a balance off a page or look up a card.'});
   const revealed=new Map();
   const status=(text,tone='')=>setStatus($('rewards-status'),text,tone);
   const cardStatus=(text,tone='')=>setStatus($('reward-card-status'),text,tone);
@@ -213,15 +215,6 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     }));
   }
   const balanceStatus=(text,tone='')=>setStatus($('balance-status'),text,tone);
-  // Which saved connection does the reading is not a decision worth putting in
-  // front of the owner: connections are managed in Settings, and this tool
-  // needs one rather than a particular one. The same rule the ledger follows.
-  async function balanceConnectionId(token){
-    if(balanceConnection)return balanceConnection;
-    const usable=(await remote(token,'/v1/ai-connections')).connections.filter(entry=>entry.hasApiKey);
-    if(!usable.length)throw Error('Save an AI connection in Settings to read a balance off a page.');
-    return balanceConnection=usable[0].id;
-  }
   // One press does the whole errand: read the page beside the panel, turn it
   // into one figure per program, and show them. Nothing is saved yet.
   async function readBalances(){
@@ -230,7 +223,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     try{
       const token=await credentials.get();
       if(!token)throw Error('Open Settings to connect this device.');
-      const connection=await balanceConnectionId(token);
+      const connection=await connections.id(token);
       const page=await readPage();
       const result=await remote(token,`/v1/ai-connections/${connection}/balance-intake`,
         {method:'POST',value:{text:page.text,program:site.label,source:site.source,unit:site.unit},timeoutMs:130000});
@@ -315,7 +308,6 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     // it is the one that disappears where neither is available.
     $('reward-card-intake').hidden=!remote;
     $('reward-card-name').disabled=busy||!loaded;
-    $('reward-card-connection').disabled=busy||!loaded;
     $('reward-card-find').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     // The wallet syncs on its own, so the title carries no Refresh. A wallet
     // that never loaded is the one case with something to press.
@@ -330,20 +322,17 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…','progress');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
-  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;balanceConnection='';forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
-  // The connection list is the only thing this tool reads outside the wallet, so
-  // it is fetched once per connection rather than on every automatic sync.
+  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
+  // Whether a connection exists at all is the only thing worth saying, and it
+  // is checked once per connected device rather than on every automatic sync.
   async function connectionList(){
     if(!remote||!loaded||globalThis.navigator?.onLine===false)return;
     const token=await credentials.get();
     if(!token||connectionsFor===token)return;
     try{
-      const result=await remote(token,'/v1/ai-connections');
-      const usable=(result.connections||[]).filter(connection=>connection.hasApiKey),chosen=$('reward-card-connection').value;
-      $('reward-card-connection').replaceChildren(Option('Choose a connection',''),...usable.map(connection=>Option(`${connection.name} · ${connection.provider}`,connection.id)));
-      $('reward-card-connection').value=usable.some(connection=>connection.id===chosen)?chosen:usable.length===1?usable[0].id:'';
+      const note=await connections.note(token);
       connectionsFor=token;
-      if(!usable.length)cardStatus('Save an AI connection in Settings to look up a card.');
+      if(note)cardStatus(note,'alert');
     }catch(error){cardStatus(error.message,'error');}
   }
   async function researchCard(name){
@@ -351,8 +340,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const token=await credentials.get();
     if(!token)throw Error('Open Settings to connect this device.');
     if(globalThis.navigator?.onLine===false)throw Error('Looking up a card needs internet. Add it by hand below instead.');
-    const connection=$('reward-card-connection').value;
-    if(!connection)throw Error('Choose a saved AI connection below.');
+    const connection=await connections.id(token);
     const result=await remote(token,`/v1/ai-connections/${connection}/card-benefits`,{method:'POST',value:{name},timeoutMs:130000});
     // A rough name can name more than one real card, so research answers with
     // the products it could be. Choosing one is the only way a card is read.

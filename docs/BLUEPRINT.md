@@ -71,7 +71,8 @@ them) · `tokens.css` (design tokens) · `status.css` (the four status tones and
 progress indicators, imported by `tokens.css` so every host has them) ·
 `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
-every dropdown) · `file-drop.js`/`upload.css` (all uploads) · plus per-feature component
+every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns
+`{message, tone}` when what it got was not a success) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
 `vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
@@ -138,10 +139,14 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   Taxes keeps nothing on the device). The `*-data.js` modules own validation and
   are also imported by the Worker.
 - **Statement intake** — `statement-text.js` (turns a dropped file into text or
-  a downscaled image, entirely on the device), `pdf-text.js` (the PDF text-layer
-  extractor, with its own confidence reporting), `finance-page-read.js` (one
+  a downscaled image, entirely on the device), `pdf-text.js` (the PDF reader:
+  page tree, form XObjects, subset fonts through their ToUnicode tables, and
+  text laid out back into rows, with its own confidence reporting),
+  `pdf-crypt.js` (the standard security handler, so a statement locked with an
+  owner password and an empty user password — what a bank sends — opens
+  instead of looking like a scan), `finance-page-read.js` (one
   text snapshot of the tab the owner is looking at, narrowed to the lines that
-  carry a figure and the lines that name one). All three ship to mobile
+  carry a figure and the lines that name one). All four ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
   `account-sites.js` is the sidebar's alone: `FINANCE_SITES`, the registry of
@@ -173,7 +178,11 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   build the wallet whose connection panel is the screen's one cloud connection),
   `settings-bridge.js`, `credential-migration.js` (legacy local keys → D1, run by
   the AI connections page). AI connections and their keys live only on
-  `settings.html`; no second key form exists.
+  `settings.html`; no second key form exists. No feature asks which connection
+  to use: `ai-connection.js` picks a saved one that can answer — filtered by
+  provider where a feature needs a particular one — and says something only
+  when there is none. Subscriptions, Best card, the rewards wallet and
+  Restaurants all read it; Finance and quick add resolve their own the same way.
 - **Releases** — `release-check.js` (hourly throttle), `release-banner.js`.
 - **Fantasy football** — `draft-*.js`, `espn-*.js`, `manual-draft.js`,
   `player-identity.js`, `recommendations.js`, `session-selection.js`,

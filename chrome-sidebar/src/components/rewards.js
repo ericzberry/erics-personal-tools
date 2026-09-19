@@ -36,8 +36,7 @@ export function RewardsView(){
         Notice('',{id:'reward-card-status'}),
         Stack([],{id:'reward-card-matches'}),
         Stack([],{id:'reward-card-review'})
-      ],{id:'reward-card-form',className:'form-stack'}),
-      UI.FormField({id:'reward-card-connection',label:'Saved AI connection',kind:'select',options:[]})
+      ],{id:'reward-card-form',className:'form-stack'})
     ],{id:'reward-card-intake'}),
     Disclosure('Add or edit a reward',[
       Note('A membership with no balance — a perks portal or partner program — is a membership entry: name it, say who provides it, and describe what it gets you.'),

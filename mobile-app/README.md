@@ -85,3 +85,9 @@ upcoming dates, unused benefits, stale balances and recurring charges together.
 Read bank / card statements into review candidates, confirm terms, and research
 cheaper plans for a chosen country with dated sources. Saved charges and comparison
 results remain available offline. See [behavior and limits](../docs/ATTENTION.md).
+
+Mobile 0.1.80 carries the same statement reading as the extension: a PDF locked
+with an owner password opens, text drawn inside form XObjects and subset fonts
+comes out as rows, and a file that did not read says so as an error rather than
+in the colour of a success. No tool asks which AI connection to use — including
+Restaurants, whose picker and its Reload are gone.

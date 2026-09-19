@@ -21,6 +21,24 @@ test('drop and picker share parsing, type/size checks and error feedback',async(
   await uploader.receive([{name:'a.json',size:2},{name:'b.json',size:2}]);assert.match(status.textContent,/one file/);
 });
 
+// A file that only half read is not a success. The reader says which tone its
+// result deserves, so a warning never arrives wearing the colour of a win.
+test('a reader that got something imperfect keeps its own tone',async()=>{
+  const {document}=parseHTML('<button id="zone"></button><input id="file"><p id="status"></p>');
+  const zone=document.getElementById('zone'),input=document.getElementById('file'),status=document.getElementById('status');
+  let result='Ready to read.';
+  const uploader=attachFileDrop({zone,input,status,accept:['.pdf'],onFile:async()=>result});
+  await uploader.receive([{name:'statement.pdf',size:100}]);
+  assert.ok(status.classList.contains('notice--success'));
+  result={message:'2 pages had no readable text on them.',tone:'alert'};
+  await uploader.receive([{name:'statement.pdf',size:100}]);
+  assert.ok(status.classList.contains('notice--alert'));
+  assert.ok(!status.classList.contains('notice--success'));
+  result=Promise.reject(Error('Nothing readable came out of that file.'));
+  await uploader.receive([{name:'statement.pdf',size:100}]);
+  assert.ok(status.classList.contains('notice--error'));
+});
+
 // A K-1 dragged out of an open mail message is not a file yet: the page hands
 // over a promise of one, and the drop zone has to fetch it or the drag looks
 // like it did nothing.

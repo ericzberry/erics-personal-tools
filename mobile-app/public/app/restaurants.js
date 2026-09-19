@@ -1,5 +1,4 @@
 import {MobileRestaurantWorkspace,MobileRestaurantCandidate} from './shared/components/restaurant-views.js';
-import {Option} from './shared/components/ui.js';
 import {searchInput,localDate,partySizes,searchDates,isNYC,bookingURL,searchTimes} from './shared/restaurant-search.js';
 
 export function mountRestaurants(root,{credentials,request,cache,loadConnections,online=()=>navigator.onLine!==false}) {
@@ -33,7 +32,7 @@ export function mountRestaurants(root,{credentials,request,cache,loadConnections
   function controls(){
     for(const node of $('form').querySelectorAll('input,select,button'))node.disabled=busy;
     $('find').disabled=busy||!online()||!connections.length;
-    $('reload').disabled=busy||!online();$('stop').disabled=false;$('stop').hidden=!busy;
+    $('stop').disabled=false;$('stop').hidden=!busy;
   }
   function render(){
     $('empty').hidden=!!snapshot;
@@ -47,15 +46,13 @@ export function mountRestaurants(root,{credentials,request,cache,loadConnections
       links:r.booking.flatMap(b=>dates.flatMap(date=>partySizes(search).flatMap(size=>searchTimes(b.provider,search).map(time=>({provider:b.provider,size,date:dates.length>1?date:null,time:['OpenTable','Tock'].includes(b.provider)?time:null,url:bookingURL(b.url,search,size,time,date)})))))
     })));
   }
+  // Research runs on a saved OpenAI connection; which one is nobody's decision
+  // to make here. Only its absence is worth a line.
   async function reloadConnections(){
-    if(!online()){if(!connections.length)$('connection').replaceChildren(Option('Reconnect for research',''));controls();connectionStatus('Offline. Saved results are available; reconnect for new research.');return;}
-    $('reload').disabled=true;
+    if(!online()){controls();connectionStatus('Offline. Saved results are available; reconnect for new research.');return;}
     try{
-      const previous=$('connection').value;
       connections=(await loadConnections()).filter(c=>c.provider==='openai'&&c.hasApiKey);
-      $('connection').replaceChildren(...(connections.length?connections.map(c=>Option(c.name,c.id)):[Option('Add an OpenAI connection','')]));
-      if(connections.some(c=>c.id===previous))$('connection').value=previous;
-      connectionStatus(connections.length?'':'Add an OpenAI connection in the extension’s AI settings, then reload connections here.');
+      connectionStatus(connections.length?'':'Save an OpenAI connection in Settings to research restaurants.');
     }catch(e){connectionStatus(e.message);}
     finally{controls();}
   }
@@ -66,8 +63,8 @@ export function mountRestaurants(root,{credentials,request,cache,loadConnections
       if(!online())throw Error('Reconnect to find restaurants. Your saved shortlist remains available.');
       const input=Object.fromEntries(Object.entries(fields).map(([id,key])=>[key,$(id).value]));
       search=searchInput({...input,flexible:$('flexible').checked,flexibleDates:$('flex-dates').checked,includeLongTravel:$('travel').checked});
-      id=connections.find(c=>c.id===$('connection').value)?.id;
-      if(!id)throw Error('Choose an OpenAI connection for research.');
+      id=connections[0]?.id;
+      if(!id)throw Error('Save an OpenAI connection in Settings to research restaurants.');
     }catch(e){error(e.message);return;}
     const attempt=++generation,startedAt=Date.now();busy=true;controls();error('');status('Researching restaurants and booking providers… This can take up to two minutes.');
     try{
@@ -83,7 +80,6 @@ export function mountRestaurants(root,{credentials,request,cache,loadConnections
     finally{if(attempt===generation){busy=false;controls();}}
   }
   $('form').addEventListener('submit',find);
-  $('reload').addEventListener('click',reloadConnections);
   $('stop').addEventListener('click',()=>{generation++;busy=false;controls();status('Stopped. The previous shortlist is preserved. Research already sent may still use API credit.');});
   for(const id of ['mode','city','flexible','flex-dates'])$(id).addEventListener('input',visibility);
   const connectionChanged=()=>{if(!loaded)return;render();controls();if(!busy)reloadConnections();};
