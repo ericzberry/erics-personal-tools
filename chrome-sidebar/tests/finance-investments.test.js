@@ -94,7 +94,11 @@ test('a capital account statement is read into an investment, reviewed, and save
     ['h1-20260630',1100000,800000,250000,1000000]);
 
   await settle(()=>document.getElementById('finance-list').textContent.includes('Acme'));
-  assert.equal(document.getElementById('finance-capital-drafts').textContent,'','a saved review is gone');
+  assert.equal(document.getElementById('finance-capital-page').textContent,'','a saved review is gone');
+  assert.equal(document.getElementById('finance-capital-drafts').textContent,'');
+  // Saving reports where the review was, not where capital reviews usually are.
+  assert.match(document.getElementById('finance-snapshot-status').textContent,/Saved 1 capital account\./);
+  assert.equal(document.getElementById('finance-intake-status').textContent,'');
   const list=document.getElementById('finance-list').textContent;
   assert.match(list,/Acme Ventures Fund III, L\.P\. · Fund/);
   assert.match(list,/Commitment \$1,000,000 · Funded \$800,000 · Returned \$250,000 · Unfunded \$200,000 · 1\.69×/);

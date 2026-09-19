@@ -382,7 +382,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // that fails leaves itself and the rest in place to be corrected.
   async function saveCapitalReview(){
     if(!capital?.rows.length)return;
-    const target='intake-status',madePortfolios=new Map(),madeHoldings=new Map();
+    // Reported where the review is, not where capital reviews usually are.
+    const target=capitalSource==='page'?'snapshot-status':'intake-status';
+    const madePortfolios=new Map(),madeHoldings=new Map();
     let saved=0;
     while(capital.rows.length){
       const row=capital.rows[0];

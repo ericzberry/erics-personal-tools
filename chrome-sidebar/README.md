@@ -1331,3 +1331,11 @@ candidate. Anything short of that proposes instead and says so on the row.
 A first statement showing only the period's contributions now says nothing was
 filed before it rather than reporting that the figure was added to nothing.
 Archive: `release/erics-sidebar-0.6.127.zip`.
+
+## Report a saved statement where it was reviewed (0.6.128 / mobile 0.1.82)
+
+A capital account read off the open page is reviewed in the page's own block,
+but saving it reported into the intake block below — a confirmation under a
+heading about something else, which is the alternating scope the Finance layout
+exists to stop. The save now reports where its review is. Archive:
+`release/erics-sidebar-0.6.128.zip`.
