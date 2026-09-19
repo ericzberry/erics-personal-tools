@@ -85,6 +85,46 @@ test('a signed-in account page offers one action, and nothing before that',async
   tool.stop();restore();
 });
 
+// The panel turns to Finance beside a bank page on its own. What it must not do
+// is answer a question nobody asked: the figures wait for one press, while the
+// ways of getting new ones into the ledger are ready straight away.
+test('a quiet arrival shows what can be put in, and none of what is already there',async()=>{
+  const {document,restore}=setup();
+  const {tool}=financeHost(document,{saved:[{id:'existing',revision:'r1',kind:'brokerage',name:'Individual Brokerage',institution:'E*TRADE',currency:'USD',value:100000,asOf:'2026-06-01',ownership:100,liquidity:'Liquid',history:'[]'}]});
+  await ready(document);
+  assert.match(document.getElementById('finance-totals').textContent,/\$100,000/,'chosen by hand, the ledger is the ledger');
+
+  tool.quiet(true);
+  tool.site(ETRADE);
+  assert.equal(document.getElementById('finance-position').hidden,true);
+  assert.equal(document.getElementById('finance-records').hidden,true);
+  // Not hidden figures — figures that were never built.
+  for(const id of ['finance-totals','finance-list','finance-breakdown','finance-trend'])
+    assert.equal(document.getElementById(id).textContent,'',id);
+  assert.equal(document.body.textContent.includes('100,000'),false,'no balance is anywhere on the page');
+
+  // Everything that puts a figure into the ledger is ready without asking.
+  assert.equal(document.getElementById('finance-snapshot').hidden,false);
+  assert.deepEqual([...document.querySelectorAll('#finance-snapshot-body button')].map(node=>node.textContent),['Read my E*TRADE accounts']);
+  assert.ok(document.getElementById('finance-drop'),'drop a statement');
+  assert.equal(document.getElementById('finance-read').disabled,false);
+  assert.equal(document.getElementById('finance-editor').hidden,false,'and a record typed by hand');
+  assert.equal(document.getElementById('finance-editor').hasAttribute('open'),false,'offered, not opened');
+  assert.equal(document.getElementById('finance-actions').textContent,'Show position','one action, and it is the one that applies');
+
+  document.querySelector('#finance-actions button').click();
+  await settle(()=>document.getElementById('finance-position').hidden===false);
+  assert.match(document.getElementById('finance-totals').textContent,/\$100,000/);
+  assert.equal(document.getElementById('finance-records').hidden,false);
+  assert.equal(document.getElementById('finance-actions').textContent,'Refresh');
+
+  // Asked once, answered for the sitting: the next bank page does not cover it
+  // up again and ask a second time.
+  tool.quiet(true);
+  assert.equal(document.getElementById('finance-position').hidden,false);
+  tool.stop();restore();
+});
+
 test('storing snapshots reads one total per account and saves nothing until Save',async()=>{
   const {document,restore}=setup();
   let sent=null;

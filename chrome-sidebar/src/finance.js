@@ -14,9 +14,13 @@ const today=()=>new Date().toISOString().slice(0,10);
 // `readPage` is the host's ability to read the tab the owner is looking at.
 // The sidebar sits beside that tab and supplies it; a full tab and the phone
 // have no such page, so they pass nothing and the action never appears.
-export function mountFinance(root,{credentials,offline,remote,readPage=null,onSettings=()=>{},onChanged=()=>{},vault,clipboard=globalThis.navigator?.clipboard}){
+export function mountFinance(root,{credentials,offline,remote,readPage=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false,clipboard=globalThis.navigator?.clipboard}){
   const gate=mountVaultGate(root,{
     id:'finance-vault',title:'Finance',
+    // A tool built because the tab beside the panel is a finance page raises no
+    // passkey sheet of its own. The mode is settled here rather than a moment
+    // after mounting, so the prompt cannot get out first.
+    automatic:!hushed,
     ...(vault?{vault}:{}),
     onChange:unlocked=>{unlocked?refresh():clear();}
   });
@@ -27,6 +31,13 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // what was read off it. A snapshot is a proposal until it is saved, exactly
   // like a draft: the amounts stay editable and nothing is written by reading.
   let site=null,snapshot=null,snapshotEditing=false;
+  // Arriving because the tab is a finance page is not the owner asking to see
+  // what they are worth. Such an arrival is quiet: the intake is ready for what
+  // the page in front of them can put into the ledger, and the ledger's own
+  // figures are not there to be read over a shoulder until one press asks for
+  // them. Asking is remembered for the sitting, and forgotten when the section
+  // locks, so the answer is not given again on every bank page.
+  let quiet=hushed,engaged=false;
   // A picture has no text to show, so it is held here and described instead.
   // Text out of a dropped file goes straight into the box, where it can be
   // read, corrected, or thrown away before anything is sent. An open page is
@@ -277,7 +288,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     }
   }
 
-  function render(){
+  // The totals and the records, built only when they have been asked for.
+  function renderLedger(){
     const query=$('search').value.trim().toLowerCase();
     const visible=records.filter(record=>[record.name,record.institution,record.owner,record.tags,kindLabel(record.kind)].join(' ').toLowerCase().includes(query));
     const row=record=>{
@@ -310,6 +322,18 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       ?groupFinanceRecords(visible).map(group=>FinanceGroup(group.label,group.side,group.records.map(row)))
       :[Note(!loaded?'Connect in Settings to load your records.':records.length?'No matching records.':'No records yet.')]));
     renderPosition();
+  }
+  // Not hidden figures: figures that were never put on the page.
+  function sealLedger(){
+    for(const id of ['currency-switch','totals','breakdown','trend','list'])$(id).replaceChildren();
+    $('currency-switch').hidden=true;$('stale').hidden=true;
+  }
+  function render(){
+    // What the ledger holds — the totals and the saved records — waits to be
+    // asked for. Putting a figure in does not: the snapshot, the statement, the
+    // page reading and a record typed by hand are all ready.
+    $('position').hidden=quiet;$('records').hidden=quiet;
+    if(quiet)sealLedger();else renderLedger();
     for(const key of [...core,...extra])$(key).disabled=busy||!loaded;
     for(const key of ['number','expiry'])$(`secret-${key}`).disabled=busy||!loaded;
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
@@ -321,9 +345,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // whose accounts it is about to read. Two buttons for one errand is the
     // confusion, not the second reading.
     $('page').hidden=!readPage||!!site;
-    // Beside the title, only what applies: a loaded ledger can be refreshed, and
-    // one that never loaded needs the connection rather than a dead Refresh.
-    $('actions').replaceChildren(loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
+    // Beside the title, only what applies: a quiet arrival can be asked for the
+    // position, a loaded ledger can be refreshed, and one that never loaded
+    // needs the connection rather than a dead Refresh.
+    $('actions').replaceChildren(quiet?toolAction('Show position',showPosition)
+      :loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
     syncSnapshot();
   }
 
@@ -357,7 +383,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     if(await run(token=>offline.request(token,'/v1/finance')))connectionNote();
   }
   function clear(){
-    generation++;records=[];loaded=false;activeToken='';connection='';drafts=[];attachment=null;snapshot=null;snapshotEditing=false;forget();clearForm();renderDrafts();renderAttachment();renderSnapshot();
+    generation++;records=[];loaded=false;activeToken='';connection='';drafts=[];attachment=null;snapshot=null;snapshotEditing=false;engaged=false;forget();clearForm();renderDrafts();renderAttachment();renderSnapshot();
     status('','snapshot-status');
     status('Unlock this section with your passkey.');
     render();
@@ -424,6 +450,23 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   window.addEventListener('online',reload);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   credentials.subscribe?.(()=>{clear();if(gate.unlocked())refresh();});
+  // One press, and the ledger is the tool it always was. Asking counts as
+  // arriving at the section, so a locked vault may raise its prompt again.
+  function showPosition(){
+    engaged=true;
+    if(!quiet)return;
+    quiet=false;gate.automatic(true);
+    if(loaded)render();else refresh();
+  }
+  // The host says how the tool was arrived at: quietly, because the tab beside
+  // the panel is a finance page, or because the owner chose Finance. Choosing it
+  // is the asking, so it reveals; and once revealed, a later finance page does
+  // not cover the ledger up again in the same sitting.
+  function arrival(hushed){
+    if(!hushed){showPosition();return;}
+    if(engaged||quiet)return;
+    quiet=true;gate.automatic(false);render();
+  }
   // The host watches the tab beside the panel and says which account site is
   // open, or passes nothing when the owner has moved on.
   function detected(next){
@@ -431,5 +474,5 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     site=next||null;snapshot=null;snapshotEditing=false;
     status('','snapshot-status');renderSnapshot();render();
   }
-  return {refresh,clear,site:detected,stop(){gate.stop();clearTimeout(revealTimer);}};
+  return {refresh,clear,site:detected,quiet:arrival,stop(){gate.stop();clearTimeout(revealTimer);}};
 }

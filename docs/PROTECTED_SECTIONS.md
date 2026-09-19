@@ -21,6 +21,15 @@ reader is looking at, and **Lock now** means locked: it is the one lock the gate
 does not offer to undo by itself. `auto-unlock.js` holds that one-attempt rule,
 shared with the mobile app's own lock screen.
 
+**A section the sidebar opened on its own account does not ask.** The panel
+turns to Finance beside a finance page by itself (below), and a system prompt in
+front of someone who only opened a tab would be the sidebar arriving at a
+protected section on somebody else's behalf. Such a mount is given
+`automatic: false`, and `gate.automatic(on)` turns the prompt back on the moment
+the reader asks for the section — which counts as an arrival, so the prompt it
+suppressed is offered then. The lock screen itself is unchanged: **Unlock** is
+right there for anyone who wants in.
+
 **In the side panel, the check runs in a small window.** Chrome sends a passkey
 request from the side panel and never shows the sheet, so a section there sat on
 "Waiting for your passkey…" with nothing to answer — every protected section
@@ -158,6 +167,32 @@ newest by date. Value over time is a step function between observed snapshots;
 nothing is interpolated, and a record contributes nothing before its first
 snapshot.
 
+### Arriving beside a finance page
+
+**The panel turns to Finance on its own, and says nothing about what is in it.**
+`FINANCE_SITES` in `account-sites.js` recognizes about thirty institutions by
+host — the four whose signed-in pages can be read, and the rest of the
+brokerages, banks, card issuers, retirement and private-holding sites a figure
+comes from. Recognition costs one URL comparison, so `context-panel.js` asks it
+of every tab, and a recognized page shows Finance beside the tab those figures
+would come off.
+
+What it does not do is answer a question nobody asked. An arrival like that is
+**quiet**: the totals, the breakdown, the value over time and the record list
+are not hidden but unbuilt — no balance is anywhere in the page — while
+everything that puts a figure *into* the ledger is ready at once: the site's own
+reading where the page can be read, the statement drop zone, **Read the accounts
+on the open page**, and a record typed by hand. One action sits beside the
+title, **Show position**, and one press makes it the ledger it always was.
+Visiting a bank should not put a net worth on a shared screen, and it does not
+raise a passkey sheet either.
+
+Asking is remembered for the sitting and forgotten when the section locks, so
+the next institution's page does not cover the ledger up again and make the
+owner ask twice. Choosing Finance from Tools is itself the asking and opens it
+whole; the strip's own offer hands the panel back to the tab, which is the quiet
+arrival.
+
 ### Reading a statement
 
 Figures reach the ledger five ways, and all five end at the same place: draft
@@ -195,8 +230,11 @@ updates the owner reviews before anything is saved.
   the original file never leaves. Images travel as content parts to a model
   marked `vision` in the catalog; a connection with no such model is refused
   rather than sent something it cannot read.
-- **Read the accounts on a site the sidebar recognizes.** The sidebar knows the account sites in
-  `account-sites.js` from the tab beside it, and asks every frame of that page
+- **Read the accounts on a site the sidebar recognizes.** The sidebar knows the
+  readable account sites in `ACCOUNT_SITES` from the tab beside it — the four
+  whose signed-in pages have been checked against their log-on and public pages,
+  which is the only work separating them from the rest of the registry above —
+  and asks every frame of that page
   four things — its path, whether it has finished loading, whether a password
   field is on screen, and whether a sign-out control is — to tell a signed-in
   session from a log-on form. No page text crosses back to answer that, and a
@@ -210,7 +248,8 @@ updates the owner reviews before anything is saved.
   A site whose accounts live on one subdomain is recognized by that subdomain
   alone — Schwab's client host, not the marketing site around it — so the rest
   of its domain is never asked anything.
-  On a signed-in site the sidebar opens Finance and offers one action, named for
+  On a signed-in site the sidebar opens Finance — quietly, as above — and offers
+  one action, named for
   the site — **Read my Schwab accounts** — in a group of its own that says what
   pressing it will do and that nothing is saved by reading. Pressing it takes
   the same single page snapshot as above and reads it as a live page: one figure

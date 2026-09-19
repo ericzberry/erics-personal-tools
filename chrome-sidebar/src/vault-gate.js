@@ -26,7 +26,7 @@ export function mountVaultGate(root,{
   root.replaceChildren(VaultGateView({id,title,detail:lockedDetail}));
   const $=name=>root.querySelector(`#${id}-${name}`);
   const page=root.ownerDocument;
-  let busy=false,message='',open=vault.unlocked(),deliberate=false;
+  let busy=false,message='',open=vault.unlocked(),deliberate=false,asks=auto;
   const action=(label,handler,variant='secondary')=>{
     const button=Button(label,{variant,size:'compact',disabled:busy});
     button.addEventListener('click',handler);
@@ -42,7 +42,7 @@ export function mountVaultGate(root,{
     return true;
   }
   const attempt=autoUnlock({
-    eligible:()=>auto&&!busy&&!vault.unlocked()&&vault.available()&&onScreen(),
+    eligible:()=>asks&&!busy&&!vault.unlocked()&&vault.available()&&onScreen(),
     unlock:()=>run(()=>vault.key())
   });
   // Arriving again — a shown section, a foregrounded tab — is a fresh arrival,
@@ -129,6 +129,17 @@ export function mountVaultGate(root,{
     key:()=>vault.key(),
     open:(id,envelope)=>vault.open(id,envelope),
     lock,
+    // A section that is on screen for some reason of its own rather than
+    // because the reader went to it — the sidebar turning to Finance beside a
+    // bank page — turns the arrival prompt off while that lasts. A passkey sheet
+    // is for someone who asked for this section, not for someone who opened a
+    // tab. Turning it back on is an arrival, so the prompt it suppressed is
+    // offered then.
+    automatic(on){
+      if(asks===!!on)return;
+      asks=!!on;
+      if(asks)arrive();else attempt.suppress();
+    },
     // Lets a section report its own failure through the gate's status line.
     status(text){message=text||'';render();},
     stop(){clearInterval(watch);shown?.disconnect();page?.removeEventListener?.('visibilitychange',returned);}

@@ -34,22 +34,27 @@ const vault=({answer='open'}={})=>{
 const root=document.getElementById('gate-states');
 // The open state is shown once per registered account site, so a site added to
 // the registry brings its own snapshot prompt to this page to be reviewed
-// rather than sitting behind whichever one happens to be listed first.
+// rather than sitting behind whichever one happens to be listed first. The last
+// two are the quiet arrival — the panel turning to Finance because the tab
+// beside it is a finance page — with and without a site it can read, which is
+// the difference between offering the snapshot and offering only the intake.
 const states=[
-  ['Waiting for the passkey sheet','wait',null],
-  ['Sheet dismissed','dismiss',null],
+  ['Waiting for the passkey sheet','wait',null,false],
+  ['Sheet dismissed','dismiss',null,false],
   // The panel beside an ordinary page: no site to name, so reading the page is
   // offered by the one action in Read an update rather than a panel of its own.
-  ['Open · beside a page that is not an account site','open',null],
-  ...ACCOUNT_SITES.map(site=>[`Open · beside a signed-in ${site.label} page`,'open',site])
+  ['Open · beside a page that is not an account site','open',null,false],
+  ...ACCOUNT_SITES.map(site=>[`Open · beside a signed-in ${site.label} page`,'open',site,false]),
+  ['Quiet · beside a signed-in Schwab page','open',ACCOUNT_SITES.find(site=>site.id==='schwab'),true],
+  ['Quiet · beside a finance page with no reader','open',null,true]
 ];
-for(const [label,answer,site] of states){
+for(const [label,answer,site,quiet] of states){
   const heading=document.createElement('h2');
   heading.textContent=`Synthetic state · ${label}`;
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:16px 0 8px;color:#666';
   const host=document.createElement('div');
   root.append(heading,host);
-  const tool=mountFinance(host,{vault:vault({answer}),credentials,offline,
+  const tool=mountFinance(host,{vault:vault({answer}),credentials,offline,quiet,
     // The open state stands in for the sidebar, the one host that sits beside a
     // logged-in account page, so the page action can be reviewed too.
     ...(answer==='open'?{readPage:async()=>({text:'Synthetic balances from the open page',host:'accounts.example',title:'',trimmed:0,tables:1})}:{}),

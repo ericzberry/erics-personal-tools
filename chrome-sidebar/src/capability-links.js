@@ -9,21 +9,27 @@ document.getElementById('navigate-travel')?.addEventListener('click',mountTravel
 
 // Finance opens in the sidebar, beside the account page it reads. The tool is
 // built on first use so a sidebar that never opens it pays nothing for it.
+//
+// How it was arrived at is the tool's to know: choosing Finance is the owner
+// asking for their position, while the panel turning to it beside a finance page
+// is not, and opens it quiet.
 let finance=null;
-export function openFinanceTool(){
+export function openFinanceTool({quiet=false}={}){
   const root=document.getElementById('finance-tool');
   if(!root)return null;
   finance??=(async()=>{
     const [{mountExtensionFinance},{readOpenAccountPage}]=await Promise.all([import('./finance-page.js'),import('./finance-page-read.js')]);
-    return mountExtensionFinance(root,{readPage:()=>readOpenAccountPage(),onSettings:()=>document.getElementById('open-settings')?.click()});
+    return mountExtensionFinance(root,{quiet,readPage:()=>readOpenAccountPage(),onSettings:()=>document.getElementById('open-settings')?.click()});
   })();
+  finance.then(tool=>tool.quiet(quiet)).catch(()=>{/* A tool that will not mount reports itself through its own caller. */});
   return finance;
 }
-// Whoever is already mounted, without building the tool to ask. Arriving at
-// Finance asks for the passkey, so nothing may mount it except a deliberate
-// arrival — a tab that has stopped being an account page included.
+// Whoever is already mounted, without building the tool to ask. A tab that has
+// stopped being a finance page has nothing to tell a panel that never opened
+// Finance, and building one to hear it would be the sidebar arriving at a
+// protected section on its own account.
 export const mountedFinanceTool=()=>finance;
-document.getElementById('navigate-finance')?.addEventListener('click',openFinanceTool);
+document.getElementById('navigate-finance')?.addEventListener('click',()=>openFinanceTool());
 
 // Taxes opens in the panel beside the mail a document arrives in, so a K-1 can
 // go from the message straight into the drop zone without a tab in between.

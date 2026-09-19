@@ -125,6 +125,36 @@ test('finance totals and drafts stay behind the gate, and an applied draft is sa
   tool.stop();h.restore();
 });
 
+test('a section the sidebar opened on its own raises no passkey sheet until it is asked for',async()=>{
+  // Visiting a bank is not asking for Finance. The panel turns to it beside such
+  // a page, and a system prompt in front of someone who only opened a tab would
+  // be the sidebar arriving at a protected section on its own account.
+  const h=harness();
+  let prompts=0,open=false;
+  const vault={idleMs:900000,available:()=>true,unlocked:()=>open,touch(){},lock(){open=false;},
+    async key(){prompts++;open=true;return 'key';},async unlockWithRecoveryCode(){open=true;},recoveryCode:()=>'EV1'};
+  const tool=mountFinance(h.document.querySelector('main'),{vault,quiet:true,credentials:{get:async()=>'token'},
+    readPage:async()=>({text:'',host:'client.schwab.com',title:'',trimmed:0,tables:0}),
+    remote:async()=>({connections:[]}),offline:{request:async()=>({records:[]})}});
+  await settle(()=>true,50);
+  assert.equal(prompts,0,'no passkey sheet, and the gate is still locked');
+  assert.equal(h.document.getElementById('finance-vault-content').hidden,true);
+  // Being told again is the same arrival, not a new one.
+  tool.quiet(true);
+  await settle(()=>true,50);
+  assert.equal(prompts,0);
+  // Unlocking from the lock screen opens the section — and answers only the
+  // question it was asked. The figures still wait to be sent for.
+  h.document.querySelector('#finance-vault-actions button').click();
+  await settle(()=>prompts>0&&h.document.getElementById('finance-vault-content').hidden===false);
+  await settle(()=>h.document.getElementById('finance-actions').textContent==='Show position');
+  assert.equal(h.document.getElementById('finance-position').hidden,true);
+  tool.quiet(false);
+  assert.equal(h.document.getElementById('finance-position').hidden,false);
+  assert.equal(prompts,1,'one passkey, given once, for the whole sitting');
+  tool.stop();h.restore();
+});
+
 test('arriving at a locked section asks for the passkey, and a dismissed prompt leaves a button instead of a loop',async()=>{
   const h=harness();
   let prompts=0,refuse=true,open=false;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {accountSite,signedIn,readSignInState,combineSignInState,accountSiteWatcher,ACCOUNT_SITES} from '../src/account-sites.js';
+import {accountSite,financeSite,signedIn,readSignInState,combineSignInState,accountSiteWatcher,ACCOUNT_SITES,FINANCE_SITES} from '../src/account-sites.js';
 
 const etrade=ACCOUNT_SITES.find(site=>site.id==='etrade');
 const chase=ACCOUNT_SITES.find(site=>site.id==='chase');
@@ -31,6 +31,32 @@ test('an account site is recognized by its host, and nothing else is',()=>{
   // A look-alike host is not the site, and neither is an unencrypted one.
   for(const url of ['https://etrade.com.example.invalid/','https://notetrade.com/','http://us.etrade.com/etx/','https://chase.com.example.invalid/','https://notchase.com/','https://morganstanleyclientserv.com.example.invalid/','https://notmorganstanleyclientserv.com/','https://client.schwab.com.example.invalid/','https://notclient.schwab.com/','chrome://extensions','',undefined])
     assert.equal(accountSite(url),null,String(url));
+});
+
+test('a finance page is recognized wherever it is, and reading is the narrower question',()=>{
+  // Recognition costs one URL comparison, so the pages a snapshot cannot be
+  // read from are recognized too: the marketing site, the log-on form, and the
+  // institutions that have no reader at all.
+  for(const url of ['https://www.schwab.com/','https://client.schwab.com/Areas/Access/Login','https://www.schwaballiance.com/'])
+    assert.equal(financeSite(url)?.id,'schwab',url);
+  assert.equal(financeSite('https://www.morganstanley.com/what-we-do/wealth-management')?.id,'morgan-stanley');
+  assert.equal(financeSite('https://www.ubs.com/us/en/wealth-management.html')?.id,'ubs');
+  assert.equal(financeSite('https://digital.fidelity.com/ftgw/digital/portfolio/summary')?.id,'fidelity');
+  assert.equal(financeSite('https://www.americanexpress.com/en-us/account/')?.institution,'American Express');
+  // And nothing else is: a look-alike host, an unencrypted one, or a page that
+  // is simply not an institution's.
+  for(const url of ['https://ubs.com.example.invalid/','https://notubs.com/','http://www.ubs.com/','https://example.invalid/banking','chrome://extensions','',undefined])
+    assert.equal(financeSite(url),null,String(url));
+  // The readable sites are the same registry, narrowed: every one of them is
+  // recognized as a finance page first.
+  for(const site of ACCOUNT_SITES)
+    for(const host of site.hosts)assert.equal(financeSite(`https://${host}/`)?.id,site.id,host);
+  assert.deepEqual(ACCOUNT_SITES.map(site=>site.id),FINANCE_SITES.filter(site=>site.read).map(site=>site.id));
+  // One entry per institution and per host, so a page cannot be two sites.
+  const ids=FINANCE_SITES.map(site=>site.id),hosts=FINANCE_SITES.flatMap(site=>site.hosts);
+  assert.equal(new Set(ids).size,ids.length);
+  assert.equal(new Set(hosts).size,hosts.length);
+  for(const site of FINANCE_SITES)assert.ok(site.label&&site.institution&&site.kind,site.id);
 });
 
 test('a log-on form settles it: the owner is not signed in yet',()=>{

@@ -1031,7 +1031,7 @@ after one, on a page whose balance could not be found, and on an ordinary page
 and a full tab, where no panel appears at all. Archive:
 `release/erics-sidebar-0.6.118.zip`.
 
-## Finance follows you to the bank, and says nothing until you ask (0.6.118 / mobile 0.1.72)
+## Finance follows you to the bank, and says nothing until you ask (0.6.119 / mobile 0.1.73)
 
 The sidebar knew four account sites, and only while you were signed in to one.
 `FINANCE_SITES` in `account-sites.js` now recognizes about thirty institutions by

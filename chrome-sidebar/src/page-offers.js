@@ -21,6 +21,7 @@
 // tab to show — handing the panel back to the tab is what the owner means by
 // pressing those, and it is navigation the sidebar already had.
 import {capabilities} from './capabilities.js';
+import {financeSite} from './account-sites.js';
 import {rewardProgram} from './program-data.js';
 import {loyaltySite} from './loyalty-sites.js';
 import {isBought} from './gift-data.js';
@@ -49,7 +50,15 @@ export const OFFER_SOURCES=[
     // present being bought twice.
     return `${isBought(record)?'Bought':'Saved'} for ${record.person}`;
   }},
-  {id:'account-site',capability:'finance',viaTab:true,match:({site})=>site?`Read ${site.label} accounts`:null},
+  // A page the owner is signed in to is read where they stand, in one press,
+  // which is the offer worth naming. Any other page of an institution's is
+  // still where its figures come from — a statement, a page reading, a typed
+  // record — so it offers the ledger without promising the reading.
+  {id:'account-site',capability:'finance',viaTab:true,match:({page,site})=>{
+    if(site)return `Read ${site.label} accounts`;
+    const place=financeSite(page.href);
+    return place?`Store ${place.label} figures`:null;
+  }},
   {id:'reward-program',capability:'rewards',match:({page})=>{
     const program=rewardProgram(page.href);
     return program?`${program.label} offers`:null;

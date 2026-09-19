@@ -62,7 +62,7 @@ export function FinanceView(){
   return Stack([
     ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
     Section([Stack([],{id:'finance-snapshot-body'}),Notice('',{id:'finance-snapshot-status'})],{id:'finance-snapshot',className:'settings-group snapshot-panel',hidden:true}),
-    SettingsGroup({title:'Position',level:2,children:[
+    SettingsGroup({title:'Position',level:2,id:'finance-position',children:[
       Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
       Stack([],{id:'finance-totals',className:'finance-totals'}),
       Notice('',{id:'finance-stale',hidden:true}),
@@ -83,7 +83,7 @@ export function FinanceView(){
       Notice('',{id:'finance-intake-status',role:'status'}),
       Stack([],{id:'finance-drafts'})
     ]}),
-    SettingsGroup({title:'Accounts & assets',level:2,children:[
+    SettingsGroup({title:'Accounts & assets',level:2,id:'finance-records',children:[
       FormField({id:'finance-search',label:'Find a record',kind:'search',placeholder:'Name, institution, owner, tag…'}),
       Stack([],{id:'finance-list',className:'travel-list'})
     ]}),

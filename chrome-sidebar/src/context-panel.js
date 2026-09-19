@@ -1,7 +1,7 @@
 import {gmailConnection} from './gmail-connection.js';
 import {summarizeEmail,draftReply} from './email-cloud.js';
 import {showTool,selectCapability} from './navigation.js';
-import {accountSiteWatcher} from './account-sites.js';
+import {accountSiteWatcher,financeSite} from './account-sites.js';
 import {loyaltySite} from './loyalty-sites.js';
 import {rewardsTool} from './rewards.js';
 import {openFinanceTool,mountedFinanceTool,openPanelTool} from './capability-links.js';
@@ -49,13 +49,16 @@ function renderEmail() {
   $('email-from').textContent = email ? `${email.name || email.from} · ${email.from}` : '';
   for (const job of Object.values(JOBS)) $(job.button).disabled = !email || working;
 }
-// An account page the owner is already signed in to is the one thing that
-// opens Finance on its own, because reading it is only possible from beside
-// that tab. Leaving the page tells the tool so, but never builds it: a sidebar
-// that has not opened Finance keeps its passkey prompt to itself.
-async function announceAccountSite(site) {
+// A finance page opens Finance on its own: it is where the figures on that page
+// would go, and on the sites that can be read it is the only place from which
+// they can be. Opening it that way is quiet — the intake is ready, the ledger's
+// own figures are not shown — and it raises no passkey prompt, because visiting
+// a bank is not the same as asking for a section. Leaving the page tells the
+// tool so, but never builds it: a sidebar that has not opened Finance keeps its
+// prompt to itself.
+async function announceFinancePage(place, site) {
   try {
-    const tool = site ? openFinanceTool() : mountedFinanceTool();
+    const tool = place ? openFinanceTool({quiet:true}) : mountedFinanceTool();
     if (tool) (await tool)?.site(site);
   } catch {/* A tool that will not mount is not a Gmail failure, and must not be reported as one. */}
 }
@@ -66,8 +69,12 @@ async function refresh() {
     const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
     const url = new URL(tab?.url || 'https://invalid.local');
     const gmail = url.hostname === 'mail.google.com';
-    const site = gmail ? null : await detectAccountSite(tab);
-    await announceAccountSite(site);
+    // Two questions about the same tab: is this page about the owner's money,
+    // which costs a URL comparison, and — only on the sites a snapshot can be
+    // read from — are they signed in to it, which costs asking the page.
+    const place = gmail ? null : financeSite(tab?.url);
+    const site = place?.read ? await detectAccountSite(tab) : null;
+    await announceFinancePage(place, site);
     // The wallet is told which program's site is in front, and nothing more: it
     // is already mounted, it reads no page until the owner presses for it, and
     // a tab that is not a program's takes the offer away again.
@@ -76,7 +83,7 @@ async function refresh() {
     // The draft board follows the draft room, not the whole of ESPN fantasy:
     // outside a draft it is a tool for something that is not happening.
     const draft = url.hostname === 'fantasy.espn.com' && /^\/football\/draft/i.test(url.pathname);
-    const tool = gmail ? 'gmail' : site ? 'finance' : draft ? 'football' : 'home';
+    const tool = gmail ? 'gmail' : place ? 'finance' : draft ? 'football' : 'home';
     showTool(tool);
     if (activeTab !== tab?.id) {clearEmail();activeTab = tab?.id;}
     if (!gmail) {clearEmail();renderEmail();return;}

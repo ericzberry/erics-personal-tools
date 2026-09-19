@@ -58,8 +58,20 @@ test('a signed-in account site offers the snapshot, and hands the panel back to 
   assert.equal(offer.viaTab,true,'Finance beside the tab is what Automatic mode shows');
   assert.equal(offer.href,'','a tool that lives in the panel is not a link');
   // Being on the site is not being signed in to it: the probe answers that, and
-  // without its answer there is nothing to offer.
-  assert.deepEqual(pageOffers({url:'https://client.schwab.com/Areas/Access/Login'}),[]);
+  // without its answer the snapshot is not promised. The page is still an
+  // institution's, which is an offer of its own.
+  assert.deepEqual(pageOffers({url:'https://client.schwab.com/Areas/Access/Login'}).map(item=>item.label),['Store Schwab figures']);
+});
+
+test('any institution’s page offers the ledger, whether or not it can be read',()=>{
+  // Recognition costs a URL comparison, so a marketing page and a site with no
+  // reader at all are offered the same way the readable ones are.
+  assert.deepEqual(pageOffers({url:'https://www.schwab.com/'}).map(item=>item.label),['Store Schwab figures']);
+  const [ubs]=pageOffers({url:'https://www.ubs.com/us/en/wealth-management.html'});
+  assert.equal(ubs.label,'Store UBS figures');
+  assert.equal(ubs.capability,'finance');
+  assert.equal(ubs.viaTab,true);
+  assert.deepEqual(pageOffers({url:'https://example.invalid/banking'}),[],'a page nothing knows is still nothing');
 });
 
 test('a reward program’s own site offers its offers, and Gmail and a draft offer theirs',()=>{

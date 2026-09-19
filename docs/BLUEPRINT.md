@@ -132,11 +132,13 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   carry a figure and the lines that name one). All three ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
-  `account-sites.js` is the sidebar's alone: the registry of account sites worth
-  recognizing (E*TRADE, Chase, Morgan Stanley, Schwab) plus the in-page probe that says
-  whether the owner is already signed in to one. `context-panel.js` drives it
-  from the tab it already watches, and a signed-in site opens Finance with its
-  snapshot prompt.
+  `account-sites.js` is the sidebar's alone: `FINANCE_SITES`, the registry of
+  institutions worth recognizing, and `ACCOUNT_SITES`, the four of them whose
+  signed-in pages can be read (E*TRADE, Chase, Morgan Stanley, Schwab), plus the
+  in-page probe that says whether the owner is already signed in to one.
+  `context-panel.js` drives both from the tab it already watches: any recognized
+  page turns the panel to Finance quietly — intake ready, figures unbuilt, no
+  passkey prompt — and a signed-in site adds the snapshot prompt.
   `loyalty-sites.js` is the same registry for reward programs that keep a
   balance (United, Marriott, Membership Rewards): one URL comparison says
   whether the tab beside the panel is a program's own site, which is what makes

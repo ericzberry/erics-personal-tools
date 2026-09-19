@@ -1,20 +1,33 @@
-// Recognizes the account sites this tool knows how to read, and answers one
-// question about the tab beside the panel: is the owner already signed in to
-// one of them?
+// Recognizes the finance sites this tool knows, and answers two questions about
+// the tab beside the panel: is this page about the owner's money at all, and —
+// for the few sites whose account pages can be read — is the owner already
+// signed in to one?
 //
-// The probe is deliberately thin. It runs inside the page, decides there, and
-// hands back four facts — the path, whether the document has finished loading,
-// whether a password field is on screen, and whether a sign-out control is — so
-// no page text crosses back into the extension merely to detect a site. Reading
-// the balances themselves stays what it was: one snapshot of the visible page,
-// taken only when the owner asks for it, in `finance-page-read.js`.
-
-export const ACCOUNT_SITES=[
-  {id:'etrade',label:'E*TRADE',institution:'E*TRADE',kind:'brokerage',
+// The first question costs one URL comparison, so every tab can be asked it.
+// A recognized site is what turns the panel to Finance, which then arrives
+// quiet: the intake is ready for what the page can put into the ledger, and
+// nothing of what is already in it appears until the owner asks.
+//
+// The second question is the narrower one the snapshot needs, and it is put
+// only to the sites that can be read. The probe behind it is deliberately thin.
+// It runs inside the page, decides there, and hands back four facts — the path,
+// whether the document has finished loading, whether a password field is on
+// screen, and whether a sign-out control is — so no page text crosses back into
+// the extension merely to detect a site. Reading the balances themselves stays
+// what it was: one snapshot of the visible page, taken only when the owner asks
+// for it, in `finance-page-read.js`.
+//
+// An entry is one institution: the hosts it is recognized by, the name its
+// records should carry, and the kind of record its accounts usually are. A
+// `read` block is what makes a site readable — the path its signed-in
+// application occupies, and the host that application lives on when that is
+// narrower than the institution's own.
+export const FINANCE_SITES=[
+  {id:'etrade',label:'E*TRADE',institution:'E*TRADE',kind:'brokerage',hosts:['etrade.com'],
     // The signed-in application lives under /etx/ (Complete View and the
     // account pages) and the older /e/t/ paths; the marketing site does not.
-    hosts:['etrade.com'],app:/^\/(etx|e\/t)\//i},
-  {id:'chase',label:'Chase',institution:'Chase',kind:'bank',
+    read:{app:/^\/(etx|e\/t)\//i}},
+  {id:'chase',label:'Chase',institution:'Chase',kind:'bank',hosts:['chase.com','jpmorganonline.com'],
     // Banking, cards and the J.P. Morgan investment accounts all sit behind the
     // same sign-on: jpmorganonline.com redirects to secure.chase.com, so one
     // entry covers both names. The signed-in application lives under /web/auth/
@@ -22,12 +35,14 @@ export const ACCOUNT_SITES=[
     // /web/auth/dashboard path and puts its password field in a frame. That is
     // why the password question is put to every frame below: on this site it is
     // the only thing that tells a log-on page from a signed-in one.
-    hosts:['chase.com'],app:/^\/web\/auth\//i},
+    read:{hosts:['chase.com'],app:/^\/web\/auth\//i}},
   {id:'morgan-stanley',label:'Morgan Stanley',institution:'Morgan Stanley',kind:'brokerage',
+    hosts:['morganstanley.com','morganstanleyclientserv.com'],
     // Morgan Stanley Online is one site under two names: the log-on form is
     // served from login.morganstanleyclientserv.com/ux/ and the signed-in
     // application from www. under /cs/, so the shared registrable domain covers
-    // both and the log-on path falls outside the application's own.
+    // both and the log-on path falls outside the application's own. The firm's
+    // public site is its own name, recognized but never read.
     //
     // The site keeps its public pages under that same /cs/ prefix, marked by a
     // `free` segment: /cs/freecontent/logout.aspx is exactly where signing out
@@ -39,12 +54,14 @@ export const ACCOUNT_SITES=[
     //
     // Self-directed accounts at E*TRADE from Morgan Stanley sign in separately
     // and are already their own entry above.
-    hosts:['morganstanleyclientserv.com'],app:/^\/cs\/(?!free)/i},
+    read:{hosts:['morganstanleyclientserv.com'],app:/^\/cs\/(?!free)/i}},
   {id:'schwab',label:'Schwab',institution:'Charles Schwab',kind:'brokerage',
+    hosts:['schwab.com','schwaballiance.com'],
     // The balances are on client.schwab.com and nowhere else: www.schwab.com is
     // the marketing site, and schwaballiance.com now redirects there too. So
-    // this entry names the client subdomain instead of the registrable domain,
-    // and an ordinary visit to schwab.com is never asked anything.
+    // reading names the client subdomain instead of the registrable domain, and
+    // an ordinary visit to schwab.com is never asked anything — recognized as
+    // Schwab's, which costs a string comparison, and nothing more.
     //
     // The signed-in application is everything under /app/ — /app/accounts/summary/
     // is where signing on lands. Nothing signed out sits on that prefix: an
@@ -60,16 +77,65 @@ export const ACCOUNT_SITES=[
     //
     // The label is what the panel calls the site; the institution is the name
     // the ledger's own field asks for, and the one a new record should carry.
-    hosts:['client.schwab.com'],app:/^\/app\//i}
+    read:{hosts:['client.schwab.com'],app:/^\/app\//i}},
+
+  // The rest are recognized but not read. Recognition is all the panel needs to
+  // turn to Finance with its intake ready, and a statement, a page reading or a
+  // typed record works the same wherever the figures came from. A site moves up
+  // into the group above once its signed-in application has been checked
+  // against its log-on and public pages, which is the only work that separates
+  // the two groups.
+  {id:'ubs',label:'UBS',institution:'UBS',kind:'brokerage',hosts:['ubs.com']},
+  {id:'fidelity',label:'Fidelity',institution:'Fidelity',kind:'brokerage',hosts:['fidelity.com','netbenefits.com']},
+  {id:'vanguard',label:'Vanguard',institution:'Vanguard',kind:'brokerage',hosts:['vanguard.com']},
+  {id:'merrill',label:'Merrill',institution:'Merrill',kind:'brokerage',hosts:['merrilledge.com','ml.com']},
+  {id:'bank-of-america',label:'Bank of America',institution:'Bank of America',kind:'bank',hosts:['bankofamerica.com']},
+  {id:'wells-fargo',label:'Wells Fargo',institution:'Wells Fargo',kind:'bank',hosts:['wellsfargo.com','wellsfargoadvisors.com']},
+  {id:'citi',label:'Citi',institution:'Citi',kind:'bank',hosts:['citi.com','citibank.com']},
+  {id:'us-bank',label:'U.S. Bank',institution:'U.S. Bank',kind:'bank',hosts:['usbank.com']},
+  {id:'pnc',label:'PNC',institution:'PNC',kind:'bank',hosts:['pnc.com']},
+  {id:'truist',label:'Truist',institution:'Truist',kind:'bank',hosts:['truist.com']},
+  {id:'ally',label:'Ally',institution:'Ally',kind:'bank',hosts:['ally.com']},
+  {id:'marcus',label:'Marcus',institution:'Marcus by Goldman Sachs',kind:'bank',hosts:['marcus.com']},
+  {id:'capital-one',label:'Capital One',institution:'Capital One',kind:'bank',hosts:['capitalone.com']},
+  {id:'american-express',label:'American Express',institution:'American Express',kind:'credit',hosts:['americanexpress.com']},
+  {id:'discover',label:'Discover',institution:'Discover',kind:'credit',hosts:['discover.com']},
+  {id:'interactive-brokers',label:'Interactive Brokers',institution:'Interactive Brokers',kind:'brokerage',hosts:['interactivebrokers.com']},
+  {id:'robinhood',label:'Robinhood',institution:'Robinhood',kind:'brokerage',hosts:['robinhood.com']},
+  {id:'ameriprise',label:'Ameriprise',institution:'Ameriprise',kind:'brokerage',hosts:['ameriprise.com']},
+  {id:'raymond-james',label:'Raymond James',institution:'Raymond James',kind:'brokerage',hosts:['raymondjames.com']},
+  {id:'edward-jones',label:'Edward Jones',institution:'Edward Jones',kind:'brokerage',hosts:['edwardjones.com']},
+  {id:'northern-trust',label:'Northern Trust',institution:'Northern Trust',kind:'brokerage',hosts:['northerntrust.com']},
+  {id:'pershing',label:'Pershing',institution:'BNY Pershing',kind:'brokerage',hosts:['netxinvestor.com','pershing.com']},
+  {id:'betterment',label:'Betterment',institution:'Betterment',kind:'brokerage',hosts:['betterment.com']},
+  {id:'wealthfront',label:'Wealthfront',institution:'Wealthfront',kind:'brokerage',hosts:['wealthfront.com']},
+  {id:'empower',label:'Empower',institution:'Empower',kind:'retirement',hosts:['empower.com','empower-retirement.com']},
+  {id:'tiaa',label:'TIAA',institution:'TIAA',kind:'retirement',hosts:['tiaa.org']},
+  {id:'carta',label:'Carta',institution:'Carta',kind:'private',hosts:['carta.com']},
+  {id:'coinbase',label:'Coinbase',institution:'Coinbase',kind:'crypto',hosts:['coinbase.com']},
+  {id:'kraken',label:'Kraken',institution:'Kraken',kind:'crypto',hosts:['kraken.com']},
+  {id:'treasury-direct',label:'TreasuryDirect',institution:'TreasuryDirect',kind:'other-asset',hosts:['treasurydirect.gov']}
 ];
 
+// The sites a snapshot can be read from: each institution's own entry, narrowed
+// to the host and path its signed-in application occupies.
+export const ACCOUNT_SITES=FINANCE_SITES.filter(site=>site.read)
+  .map(({read,...site})=>({...site,hosts:read.hosts||site.hosts,app:read.app}));
+
 const hostMatches=(hostname,host)=>hostname===host||hostname.endsWith(`.${host}`);
-export function accountSite(url){
+function match(url,sites){
   let parsed;
   try{parsed=new URL(url);}catch{return null;}
   if(parsed.protocol!=='https:')return null;
-  return ACCOUNT_SITES.find(site=>site.hosts.some(host=>hostMatches(parsed.hostname,host)))||null;
+  return sites.find(site=>site.hosts.some(host=>hostMatches(parsed.hostname,host)))||null;
 }
+// Is this page about the owner's money? One URL comparison and nothing else: no
+// page is read, no request is made, and being signed in is not asked.
+export const financeSite=url=>match(url,FINANCE_SITES);
+// And the narrower question: is this one of the pages a snapshot can be read
+// from? Being on such a site is not being signed in to it; `signedIn` settles
+// that from what the page itself reports.
+export const accountSite=url=>match(url,ACCOUNT_SITES);
 
 // Runs inside the page, once per frame. Self-contained: an injected function
 // carries no closure from this module, and it returns no page content.
@@ -113,7 +179,7 @@ export const signedIn=(site,state)=>!!site&&!!state&&!state.password&&(state.exi
 
 export const PROBE_MS=8000;
 // Asks the page at most once every `throttleMs`, and only while the tab is on a
-// site this tool recognizes. Every other tab costs nothing but a URL comparison.
+// site this tool can read. Every other tab costs nothing but a URL comparison.
 export function accountSiteWatcher({api=globalThis.chrome,now=()=>Date.now(),throttleMs=PROBE_MS}={}){
   let key='',asked=0,current=null;
   return async function detect(tab){
