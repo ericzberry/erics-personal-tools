@@ -162,7 +162,7 @@ test('a sweep puts the birthdays it wrote in the list before it says what it did
   restore();tool.clear();
 });
 
-test('what a sweep wrote is in the list before the sentence about it, and each row says where it came from',async()=>{
+test('what a sweep wrote is in the list before the sentence about it, and each row is just a name and a date',async()=>{
   const {document,restore}=setup();
   const {tool,buttons,press,status}=calendarTool(document,{google:{connected:true,calendar:true},
     onScan:store=>{
@@ -177,8 +177,8 @@ test('what a sweep wrote is in the list before the sentence about it, and each r
   assert.match(status().textContent,/added 1 · 1 already written down/);
   assert.match(status().className,/success/,'a finished sweep reports as one');
   assert.match(document.querySelector('#reminders-later').textContent,/turns 37/);
-  assert.match(document.querySelector('#reminders-later').textContent,/From your calendar/,
-    'a row nobody typed says why it is there');
+  assert.equal(/From your calendar|Every year/.test(document.querySelector('#reminders-later').textContent),false,
+    'a row says who and when, not where it came from or how often it repeats');
   assert.ok(buttons().includes('Look again from the start'),'starting over is offered once there is something to forget');
   tool.clear();restore();
 });

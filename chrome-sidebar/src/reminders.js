@@ -1,8 +1,8 @@
 import {RemindersView} from './components/reminders.js';
 import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,UNDO_GLYPH,Link,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
 import {cloudRequest} from './cloud-storage.js';
-import {normalizeReminder,attentionSplit,reminderDue,reminderAge,duePhrase,intervalLabel,markedDone,canMarkDone,
-  fromCalendar,localDate,DEFAULT_NOTICE_DAYS,REMINDER_KINDS,REMINDER_EVENT_KINDS} from './reminder-data.js';
+import {normalizeReminder,attentionSplit,reminderDue,reminderAge,duePhrase,markedDone,canMarkDone,
+  localDate,DEFAULT_NOTICE_DAYS,REMINDER_KINDS,REMINDER_EVENT_KINDS} from './reminder-data.js';
 const fields=['kind','title','subject','date','every','since','notice','notes'];
 // The anchor means something different for the two kinds of repeat, and the
 // field says which rather than making the owner infer it.
@@ -68,16 +68,16 @@ export function mountReminders(root,{credentials,offline,remote=cloudRequest,
     const decide=record.conflict
       ?[ActionGroup(['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))),{compact:true})]
       :[];
+    // Who it is about and when it lands, and nothing that reads the same on
+    // every row: how often it repeats and which calendar it came out of are
+    // true of half the list at once, and the notes are for the editor.
     const detail=[
       record.completed&&!record.every?`Completed ${record.completed}`:`${duePhrase(record)} · ${record.due}`,
       record.subject,
       age?`turns ${age}`:'',
-      record.every?intervalLabel(record.every):'',
-      // Why this one is here without anybody typing it.
-      fromCalendar(record)?'From your calendar':'',
       record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):''
     ].filter(Boolean).join(' · ');
-    const entry=RecordRow({title:record.title,detail,notes:record.notes,actions,extra:[...decide,confirmation]});
+    const entry=RecordRow({title:record.title,detail,actions,extra:[...decide,confirmation]});
     if(record.days!==null&&record.days<0)entry.classList.add('record-row--overdue');
     return entry;
   }
