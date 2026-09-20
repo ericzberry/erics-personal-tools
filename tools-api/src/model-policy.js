@@ -68,6 +68,22 @@ export function measureInput(input={}) {
     images:parts.filter(part=>part?.type==='image').length
   };
 }
+// How long the answer itself may take. A task's time budget follows the size of
+// the answer it asked for, because producing that answer is what the time is
+// spent on: 600 tokens of purchase reading come back in seconds, and the
+// twenty-eight accounts a wealth manager prints on one page do not. One flat
+// 25 seconds for both meant the reading that needed the room most was the one
+// that ran out of it — the page was read, the figures were found, and the
+// request was abandoned mid-answer with the provider still billing for it.
+//
+// The ceiling is the one the research calls already run at, and the floor is
+// what every task had before, so no task gets less time than it used to.
+export const TIMEOUT_FLOOR=25000, TIMEOUT_CEILING=120000, MS_PER_TOKEN=15;
+// Whole seconds, because the refusal says the budget out loud and "longer than
+// 112.68 seconds" is a number nobody chose.
+export const taskTimeout=maxTokens=>
+  Math.min(TIMEOUT_CEILING,Math.max(TIMEOUT_FLOOR,Math.round(maxTokens*MS_PER_TOKEN/1000)*1000));
+
 export function taskPolicy(task,input={}) {
   if(!Object.hasOwn(TASK_POLICIES,task))throw {status:400,message:'Unknown AI task. Register its capability and cost policy first.'};
   const policy={...TASK_POLICIES[task]};
@@ -108,14 +124,14 @@ export function chooseTaskModel({provider,available,task,input={},catalog=MODEL_
     const reasoningTokens=picked.reasoning?(policy.web?2048:512):0,maxTokens=policy.outputTokens+reasoningTokens;
     if(policy.inputTokens+maxTokens>picked.context)throw {status:400,message:`${picked.id} cannot hold this much text. Choose another model for ${policy.label} in Settings.`};
     const estimatedCost=((policy.inputTokens+(policy.web?(picked.searchTokens||6000):0))*picked.input+maxTokens*picked.output)/1e6+(policy.web?0.01:0);
-    return {model:picked,policy,maxTokens,estimatedCost};
+    return {model:picked,policy,maxTokens,estimatedCost,timeoutMs:taskTimeout(maxTokens)};
   }
   const candidates=catalog.filter(m=>m.provider===provider&&(!policy.model||m.id===policy.model)&&ids.has(m.id)&&m.level>=policy.level&&(!policy.web||m.web)&&(!policy.vision||m.vision))
     .map(model=>{
       const reasoningTokens=model.reasoning?(policy.web?2048:512):0;
       const maxTokens=policy.outputTokens+reasoningTokens;
       const estimatedCost=((policy.inputTokens+(policy.web?(model.searchTokens||6000):0))*model.input+maxTokens*model.output)/1e6+(policy.web?0.01:0);
-      return {model,policy,maxTokens,estimatedCost};
+      return {model,policy,maxTokens,estimatedCost,timeoutMs:taskTimeout(maxTokens)};
     }).filter(c=>c.policy.inputTokens+c.maxTokens<=c.model.context&&c.estimatedCost<=policy.maxCost)
     .sort((a,b)=>a.estimatedCost-b.estimatedCost||a.model.id.localeCompare(b.model.id));
   if(!candidates.length)throw {status:400,message:policy.vision

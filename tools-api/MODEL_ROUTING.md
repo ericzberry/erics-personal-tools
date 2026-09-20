@@ -69,6 +69,15 @@ many words. The device's fold is what caught them, and it should not have to.
 The reasoning model the raised level selects costs about a tenth of a cent more
 per read and stays inside the same ceiling.
 
+A task's provider timeout is derived from that same output budget rather than
+set per task: 15 ms per token the answer may run to, floored at the 25 seconds
+every task had before and capped at the 120 seconds the research calls already
+use. Raising the finance reading's budget without this only moved the failure —
+the page was read, the figures were found, and the request was abandoned
+mid-answer at 25 seconds with the provider still billing for it. The reading now
+waits 113 seconds, inside the 130 the device itself allows, so the Worker gives
+up first and can say why.
+
 It reads one block of pasted text, or an image of a statement, into draft
 figures and nothing else: the owner's saved records are never sent, so it
 cannot match a figure to a record, and its instructions forbid totalling,

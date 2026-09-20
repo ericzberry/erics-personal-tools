@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MODEL_CATALOG,chooseTaskModel,taskCatalog} from '../src/model-policy.js';
+import {MODEL_CATALOG,chooseTaskModel,taskCatalog,taskTimeout,TASK_POLICIES,TIMEOUT_FLOOR,TIMEOUT_CEILING} from '../src/model-policy.js';
 import {generate} from '../src/providers.js';
 const choose=(task='email.summary',input={},available=MODEL_CATALOG)=>chooseTaskModel({provider:'openai',available,task,input});
 test('task selection minimizes estimated cost among capable and available candidates',()=>{
@@ -71,4 +71,32 @@ test('every AI action is listed for settings, with the models that could run it'
  // A searching action only offers models that can search.
  assert.deepEqual(tasks.find(e=>e.task==='cards.research').options.filter(o=>!MODEL_CATALOG.find(m=>m.id===o.id).web),[]);
  assert.equal(tasks.find(e=>e.task==='email.summary').automatic,'gpt-5.6-terra');
+});
+
+// A flat time budget belonged to a flat output budget. Once a reading was
+// allowed the twenty-eight accounts a wealth manager prints on one page, the
+// answer took longer to produce than the request was allowed to wait, and the
+// press came back "The provider took longer than 25 seconds" with the page
+// read, the figures found and the provider still billing for the abandoned
+// answer. The time a task may take now follows the size of the answer it asked
+// for, which is what the time is spent producing.
+test('a task waits in proportion to the answer it asked for',()=>{
+  const available=MODEL_CATALOG.map(model=>({id:model.id}));
+  const route=task=>chooseTaskModel({provider:'openai',available,task,input:{messages:[{role:'user',content:'x'}]}});
+
+  const reading=route('finance.intake');
+  assert.equal(reading.timeoutMs,taskTimeout(reading.maxTokens));
+  assert.ok(reading.timeoutMs>=90000,`a page of accounts gets room to answer, not ${reading.timeoutMs}ms`);
+  // And stays inside what the device itself waits for, so the worker gives up
+  // first and can say why rather than the press dying on the other side.
+  assert.ok(reading.timeoutMs<=TIMEOUT_CEILING&&TIMEOUT_CEILING<130000,'the device allows 130s; the budget stays under it');
+
+  // No task waits less than every task used to.
+  for(const task of Object.keys(TASK_POLICIES).filter(name=>!TASK_POLICIES[name].web))
+    assert.ok(route(task).timeoutMs>=TIMEOUT_FLOOR,`${task} keeps at least the standing budget`);
+  assert.equal(route('capture.note').timeoutMs,TIMEOUT_FLOOR,'a short answer keeps the short leash');
+
+  // Whole seconds, because the refusal prints the budget.
+  for(const tokens of [500,2500,7512,40000])assert.equal(taskTimeout(tokens)%1000,0,`${tokens} rounds to whole seconds`);
+  assert.equal(taskTimeout(1e6),TIMEOUT_CEILING,'and it is capped');
 });

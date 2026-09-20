@@ -157,7 +157,9 @@ export async function generate(connection,input,fetcher=fetch) {
   const {path,body}=generationRequest(config,normalized),started=Date.now();
   if(config.format==='responses'&&routing?.model.reasoningEffort)body.reasoning={effort:routing.model.reasoningEffort};
   else if(input.routingReasoning&&config.format==='responses')body.reasoning={effort:'minimal'};
-  const data=await upstream(connection,config,path,body,fetcher);
+  // A task brings its own time budget, sized to the answer it asked for; a
+  // request that named its own model keeps the standing one.
+  const data=await upstream(connection,config,path,body,fetcher,routing?.timeoutMs);
   if(!data||typeof data!=='object'||data.error)fail(502,'The provider returned an error or invalid response. Check the selected model and API URL.');
   if(config.format==='responses'&&!Array.isArray(data.output)||config.format==='anthropic'&&!Array.isArray(data.content)||config.format==='chat'&&!data.choices?.[0]?.message)fail(502,'The provider returned an incompatible response. Check the API format and model.');
   let text='',stopReason,usage=data.usage||{};
