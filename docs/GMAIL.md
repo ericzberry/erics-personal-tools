@@ -60,14 +60,20 @@ first draft of the voice, not the last word on it.
 
 **How the reading works.** One call to `POST /v1/voice/scan` takes one page of
 twenty-five sent messages, so the Worker stays well inside its request budget
-and the panel can show progress and stop. Each message is reduced to the part
-Eric typed — `writtenPortion` in `voice-data.js` cuts at the quote, the forward
-header, the `From:`/`Sent:` block and the signature delimiter, and drops `>`
-lines — and a message with nothing of his own left in it is skipped. Samples
-accumulate until they fill one prompt, then that batch is read into a short
-account of how he writes and the samples are dropped. When Gmail runs out, a
-thousand samples are in, or twenty batches have been read, those accounts are
-combined into the profile.
+and the panel can show progress and stop. It also stays inside Google's: an
+account is allowed 250 quota units a second and each of these calls costs five,
+so the Worker keeps that budget itself rather than trusting the loop that is
+asking. A page's worth of credit may be spent at once — a study starts at full
+speed — and the page after it has to be earned, which is what stops the panel,
+which asks again the moment a page lands, from spending three pages of quota
+inside one second. Each message is reduced to the part Eric typed —
+`writtenPortion` in `voice-data.js` cuts at the quote, the forward header, the
+`From:`/`Sent:` block and the signature delimiter, and drops `>` lines — and a
+message with nothing of his own left in it is skipped. Samples accumulate until
+they fill one prompt, then that batch is read into a short account of how he
+writes and the samples are dropped. When Gmail runs out, a thousand samples are
+in, or twenty batches have been read, those accounts are combined into the
+profile.
 
 **It can be stopped and resumed.** The Worker holds the page it reached, the
 accounts already read and the samples not yet folded into one, so closing the
@@ -100,15 +106,20 @@ mail** when there is one Google will not let read mail. The study is refused
 before Gmail is touched, saying what is missing.
 
 **Google refuses in three different ways, and they need different repairs.**
-Reading too fast is the commonest and the least serious: the study holds its
-place, so it says to resume in a minute and nothing is recorded. A project that
-never switched the Gmail API on is fixed in the Google console and no amount of
-consenting again will touch it, so that refusal says so and passes on Google's
-own sentence, which carries the project and the link. What is left is the grant
-itself: the Worker writes that down against the connection, so the next thing
-the panel asks reports a connection that cannot read mail and offers the consent
-again instead of a *Resume* that would fail the same way. Reconnecting replaces
-that record, which is what clears it.
+Reading too fast is the commonest and the least serious, and the pace above is
+there so it does not arise. One that arises anyway — the account is busy
+elsewhere, or a panel on an older version is asking — is waited out once and
+read around, for as long as Google asks or a second when it does not say, so the
+owner never hears about it. Only a limit that outlasts that wait reaches the
+screen, and then the study holds its place, so it says to resume in a minute and
+nothing is recorded. A project that never switched the Gmail API on is fixed in
+the Google console and no amount of consenting again will touch it, so that
+refusal says so and passes on Google's own sentence, which carries the project
+and the link. What is left is the grant itself: the Worker writes that down
+against the connection, so the next thing the panel asks reports a connection
+that cannot read mail and offers the consent again instead of a *Resume* that
+would fail the same way. Reconnecting replaces that record, which is what clears
+it.
 
 A single 401 is none of the three. A held access token can go stale early, so
 one is worth one fresh token and one retry before it is read as the connection,

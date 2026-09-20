@@ -190,6 +190,28 @@ test('a stopped study resumes where it stopped instead of reading everything aga
   });
 });
 
+// Reading as fast as the Worker can is what reached the limit in the first
+// place: the panel asks for the next page the moment the last one lands, and
+// three pages inside a second is well over what one account is allowed.
+test('page after page is held to a pace Gmail allows, with the first page free',async()=>{
+  const {env}=environment();
+  const fake=fakeCloud({total:50});
+  await withCloud(fake,async()=>{
+    await connect(env);await saveConnection(env);
+    const started=Date.now();
+    const turns=await study(env);
+    const elapsed=Date.now()-started;
+    assert.equal(turns.at(-1).done,true);
+    assert.equal(turns.at(-1).profile.sampled,50);
+    // Google allows 250 quota units a second and each of these 52 requests
+    // costs five. One page's worth of credit is there to be spent at once, so a
+    // study starts immediately; the page after it has to be earned, which is
+    // what keeps the loop inside the account's share.
+    assert.ok(elapsed>=400,`two pages went out in ${elapsed}ms, faster than Gmail allows`);
+    assert.equal(fake.calls.filter(entry=>/\/messages\/m\d+$/.test(entry)).length,50);
+  });
+});
+
 test('the owner can correct the voice and forget it, and neither invents a profile',async()=>{
   const {env}=environment();
   const fake=fakeCloud({total:25});
@@ -281,14 +303,32 @@ test('reading too fast is said to be that, and a token that goes stale early is 
   // recorded against the connection and the panel is not sent back to consent.
   {
     const {env}=environment();
-    await withCloud(fakeCloud({gmailRefusal:{reason:'rateLimitExceeded',message:'User-rate limit exceeded.'}}),async()=>{
+    const fake=fakeCloud({gmailRefusal:{reason:'rateLimitExceeded',message:'User-rate limit exceeded.'}});
+    await withCloud(fake,async()=>{
       await connect(env);
       await saveConnection(env);
       const response=await call(env,'/v1/voice/scan','POST',{connectionId:CONNECTION});
       assert.equal(response.status,429);
       assert.match((await response.json()).error,/limiting how fast|Resume in a minute/);
+      // Waited out once before it was reported: a limit the page can read
+      // around is not the owner's to hear about, and one that outlasts a wait
+      // is not a pace this request can fix.
+      assert.equal(fake.calls.filter(entry=>entry.includes('gmail.googleapis.com')).length,2);
       const state=await (await call(env,'/v1/voice')).json();
       assert.deepEqual([state.google.connected,state.google.sentMail],[true,true]);
+    });
+  }
+  // And a limit that clears is never seen at all: the page waits, carries on
+  // from where it was, and the study finishes.
+  {
+    const {env}=environment();
+    const fake=fakeCloud({total:25,gmailRefusal:{status:429,reason:'rateLimitExceeded',message:'User-rate limit exceeded.',once:true}});
+    await withCloud(fake,async()=>{
+      await connect(env);
+      await saveConnection(env);
+      const turns=await study(env);
+      assert.equal(turns.at(-1).done,true);
+      assert.equal(turns.at(-1).profile.sampled,25);
     });
   }
   // One 401 is worth one fresh token before it is read as the connection
