@@ -171,6 +171,23 @@ Next actions also raises a passed deadline to verify, a benefit that still needs
 activating, and a balance not updated in 30 days. A card itself carries no
 deadline and is never raised.
 
+### Before the quarter closes
+
+The home screen both hosts open on carries the few of these worth crossing the
+room for, under the birthdays: every credit with at least $50 left whose
+deadline — its own date, or the close of the period it repeats on — lands inside
+the quarter you are in now, largest first. `creditsThisQuarter` in
+`rewards-data.js` decides it, and the screen shows six, then counts the rest and
+what they come to.
+
+The floor is what keeps it a glance rather than a second Next actions: a $15
+ride credit resetting on Tuesday is true and not worth a home screen. What the
+issuer's own tracker says is *left* wins over what the card gives, so a credit
+half spent reads `$62.50 left`; one already used, one worth something that is
+not money — four lounge visits — and one whose period closes next quarter are
+all left off. Nothing is written and nothing is asked for: a wallet that will
+not open leaves the birthdays above it exactly where they were.
+
 ## Limits
 
 Research reports what the issuer's pages say on the day it ran. Benefits change,
