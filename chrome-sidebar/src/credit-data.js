@@ -13,14 +13,17 @@
 // record: a credit is the benefit entry the wallet already holds, and the
 // reading fills in `remaining` and, when there is nothing left, marks it used.
 import {validateReward,CADENCES} from './rewards-data.js';
+// Which card a name is, and what an issuer prints beside it, belong to the
+// cards themselves: Best card reads the same wallet to find the cards it has no
+// rates for, and both have to tell one card from another the same way.
+import {key,matchCard} from './card-data.js';
+export {key,matchCard};
 
 // A premium card tracks a couple of dozen credits; a page stating more than
 // this is not a benefits page.
 export const CREDIT_LIMIT=40;
 const text=(value,max)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
 const CONFIDENCE=['high','medium','low'];
-export const key=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-
 // An amount as the page prints it, kept as money and nothing else. A tracker
 // says "$25 To Go"; what is stored is the figure, because the words around it
 // are the page's and change with it.
@@ -71,26 +74,6 @@ export function parseCreditReading(input,source='',now=new Date().toISOString())
       confidence:CONFIDENCE.includes(row?.confidence)?row.confidence:'medium',
       readAt:now};
   }).filter(Boolean);
-}
-
-// Words that name no card in particular. Every Amex is an American Express
-// card, so matching on those words matches every card the owner holds.
-const COMMON=new Set(['card','cards','american','express','from','the','and','with','credit','rewards','preferred','account']);
-const words=value=>key(value).split(' ').filter(word=>word.length>2&&!COMMON.has(word));
-// Which of the owner's cards a page's card name is. The page says "Morgan
-// Stanley Platinum Card® (-61007)" and the wallet holds whatever research
-// called it, so they are matched on the words that tell one card from another.
-// One card sharing the most of them wins; a tie names nothing, because filing a
-// Platinum's credits under a Blue Cash is worse than not filing them at all.
-export function matchCard(name,cards=[]){
-  const wanted=words(name);
-  if(!wanted.length)return {card:null,ambiguous:false};
-  const scored=cards.map(card=>({card,score:words(card.name).filter(word=>wanted.includes(word)).length}))
-    .filter(entry=>entry.score>0)
-    .sort((a,b)=>b.score-a.score);
-  if(!scored.length)return {card:null,ambiguous:false};
-  const best=scored.filter(entry=>entry.score===scored[0].score);
-  return best.length===1?{card:best[0].card,ambiguous:false}:{card:null,ambiguous:true};
 }
 
 // Which saved benefit a read credit is about: the card it is filed under first,

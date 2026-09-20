@@ -469,6 +469,7 @@ export const SHOW_GLYPH='M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.
 export const HIDE_GLYPH='M4 4l16 16 M9.8 5.9A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.6 4.3 M6.5 7.9A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1 0 2-.2 2.9-.5 M10.2 10.2a2.5 2.5 0 0 0 3.6 3.6';
 export const COPY_GLYPH='M9.5 8.5h9v11h-9z M14.5 8.5v-4h-9v11h4';
 export const OPEN_GLYPH='M14 4h6v6 M20 4l-8.5 8.5 M18 14.5V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10';
+export const SEARCH_GLYPH='M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z M15.2 15.2 20 20';
 export const HISTORY_GLYPH='M12 7.5V12l3.2 1.9 M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z';
 // Read it again, now: a record whose figure is published somewhere else and
 // stands until it is looked up again.

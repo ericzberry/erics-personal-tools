@@ -2061,3 +2061,49 @@ saying where it came from; and the API returning both halves of one reading.
 Validation: 505 extension, 33 mobile and 128 API tests pass. The panel and the
 saved rows were reviewed against a synthetic reading of the Amex benefits page
 at 420px and 280px with no horizontal overflow.
+
+## The cards you hold are not a list to type twice (0.6.181 / mobile 0.1.131)
+
+**Best card knew nothing about the cards the rest of the app had already seen.**
+The wallet holds the cards the owner has — added there by name, or named by an
+issuer's own benefits page when a credit was read off it, down to the account
+the page prints beside them — and Best card, the one screen whose whole job is
+to compare those cards, opened on *No cards saved* and a box to type a name
+into.
+
+**In your wallet.** The cards the wallet knows are listed under the saved ones,
+each with the account it was seen under — `Card ending 1007` — and one press
+researches what that card earns and opens it here, filled in and ready to save.
+Only the product name is sent: `Platinum Card® (-61007)` is asked about as `The
+Platinum Card®`, because the digits say whose card it is and research is about a
+card anyone can look up. No card number is read, asked for or stored here.
+
+**A card is offered only while its rates are missing.** Saved, it becomes this
+tool's card and leaves that list. Which card a name is now lives in
+`card-data.js` with the cards themselves, and asks for more than the credit
+filing does: every word that tells a card apart has to be in the saved card's
+name too, because `Chase Sapphire Reserve` shares all but one word with `Chase
+Sapphire Preferred`, and a card mistaken for one already here is a card the
+owner never gets offered. A name that fits two saved cards is left alone.
+
+**And the comparison says what it could not compare.** While a card the owner
+holds has no rates, the result says so — *2 cards in your wallet have no rates
+yet, so they were not compared* — because a recommendation made without a card
+in the owner's pocket is the one thing this screen can get wrong while looking
+right.
+
+The wallet is read and never written: this tool takes the device's own encrypted
+copy with no request and no sync, downloads it once on a device that has never
+opened Rewards, and a wallet it cannot read leaves the saved cards exactly as
+they are.
+
+New coverage: the wallet's cards read out of card entries and out of the cards an
+issuer's page named, a program and a balance counted as neither, the account
+digits kept out of the product name and shown as the card's own, one card named
+twice kept once, a near-miss family name left unlinked while the card itself
+links, and the tool mounted over a synthetic wallet — listing the card,
+researching the product name, and dropping the row once it is saved. Validation:
+529 extension, 33 mobile and 130 API tests pass from an archive of HEAD. The
+standalone card view was reviewed against the synthetic wallet at 380px, 280px
+and 390px: populated, nothing saved yet, the comparison caveat, and the research
+that one press starts. Archive: `release/erics-sidebar-0.6.181.zip`.

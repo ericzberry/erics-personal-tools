@@ -89,3 +89,86 @@ export function parsePurchaseIntent(value){
   try{amount=normalizePurchase({...classification,channel,amount:value.amount}).amount;}catch{amount=null;}
   return {...classification,merchant,channel,amount};
 }
+
+// ---------------------------------------------------------------------------
+// Which card is which
+//
+// One card is named differently everywhere it appears. Research calls it "The
+// Platinum Card® from American Express", the issuer's own benefits page calls
+// it "Platinum Card® (-61007)", and the owner calls it "my amex platinum". So
+// cards are told apart on the words that actually distinguish them, and the
+// account digits a page prints are not part of the product's name at all —
+// they say which of two identical cards it is, which is the one thing the
+// product name cannot say.
+export const key=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+// Words that name no card in particular. Every Amex is an American Express
+// card, so matching on those words matches every card the owner holds.
+const COMMON=new Set(['card','cards','american','express','from','the','and','with','credit','rewards','preferred','account']);
+const words=value=>key(value).split(' ').filter(word=>word.length>2&&!COMMON.has(word));
+// Which of the owner's cards a name is. One card sharing the most distinguishing
+// words wins; a tie names nothing, because filing a Platinum's credits under a
+// Blue Cash is worse than not filing them at all.
+export function matchCard(name,cards=[]){
+  const wanted=words(name);
+  if(!wanted.length)return {card:null,ambiguous:false};
+  const scored=cards.map(card=>({card,score:words(card.name).filter(word=>wanted.includes(word)).length}))
+    .filter(entry=>entry.score>0)
+    .sort((a,b)=>b.score-a.score);
+  if(!scored.length)return {card:null,ambiguous:false};
+  const best=scored.filter(entry=>entry.score===scored[0].score);
+  return best.length===1?{card:best[0].card,ambiguous:false}:{card:null,ambiguous:true};
+}
+// The account an issuer prints beside a card's name: "(-61007)", "(...4321)",
+// "•••• 4321", "ending in 4321". Only a masked figure counts, so a product name
+// that simply ends in a number keeps it.
+const MASKED=/\((?:[\s\-–—*x•·.…]*)(\d{3,6})\)|(?:ending(?:\s+in)?|acct\.?|account(?:\s*(?:number|no\.?|#))?)\s*:?\s*#?\s*(\d{3,6})|[*x•·.…]{2,}\s*(\d{3,6})/gi;
+export function cardDigits(name){
+  const found=[...String(name||'').matchAll(MASKED)].map(match=>match[1]||match[2]||match[3]).filter(Boolean);
+  return found.length?found[found.length-1].slice(-4):'';
+}
+// The card's name with the account taken back off it, which is what research is
+// asked about: the product is a real card anyone can look up, the account is
+// the owner's and is never sent anywhere.
+export const cardProductName=name=>String(name||'').replace(MASKED,' ').replace(/\s{2,}/g,' ').replace(/[\s·•,;:\-–—]+$/,'').trim();
+// Whether a card is one this tool already has. A card is the same card when
+// every word that tells it apart is in the other name too: "Platinum Card®
+// (-61007)" is "The Platinum Card® from American Express (United States)",
+// while "Chase Sapphire Reserve" is not "Chase Sapphire Preferred", which
+// shares everything but the one word that matters. Scoring the shared words
+// the way a credit is filed would call those two the same card, and a card
+// wrongly taken for one that is already here is a card the owner never gets
+// offered — so this asks for all of them, and errs towards offering a card
+// twice rather than never mentioning it.
+export const coversCard=(name,other)=>{
+  const wanted=words(name),held=words(other);
+  return wanted.length>0&&wanted.every(word=>held.includes(word));
+};
+// The cards the owner is known to hold, whether or not this tool has rates for
+// them. Two things in the wallet say a card exists: a card entry, which is the
+// card itself, and a benefit read off an issuer's page, which carries the card
+// the page filed it under down to the account it belongs to. Neither is a
+// reward rate — but a card that has to be typed in again before it can be
+// compared is a card the owner already told this app about once.
+export function walletCards(entries=[],cards=[]){
+  const found=[];
+  for(const entry of entries||[]){
+    if(!entry||entry.deleting)continue;
+    if(entry.kind==='card')found.push({name:String(entry.name||''),digits:/^\d{4}$/.test(String(entry.secretHint||''))?entry.secretHint:cardDigits(entry.name)});
+    else if(['benefit','membership'].includes(entry.kind)&&cardDigits(entry.source))found.push({name:String(entry.source||''),digits:cardDigits(entry.source)});
+  }
+  const held=[];
+  for(const row of found){
+    const product=cardProductName(row.name);
+    // The same card named by the wallet and named again by the page a credit
+    // was read from is one card, and the wallet's own name for it wins.
+    if(!product||held.some(kept=>coversCard(kept.product,product)||coversCard(product,kept.product)||(kept.digits&&kept.digits===row.digits)))continue;
+    held.push({...row,product});
+  }
+  return held.map(row=>{
+    const saved=cards.filter(card=>!card.deleting&&coversCard(row.product,card.name));
+    // More than one saved card answers to this name, so cards like it are
+    // already here with their rates and offering it again would put a second
+    // copy of one of them into the comparison.
+    return {...row,card:saved.length===1?saved[0]:null,ambiguous:saved.length>1};
+  });
+}

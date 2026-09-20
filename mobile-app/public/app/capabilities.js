@@ -58,7 +58,9 @@ const credentials={
   set:token=>mobileCredentials.set(token),
   async remove(){const token=await this.get();if(token){await subscriptionStore.disconnect(token);await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await reminderStore.disconnect(token);await giftStore.disconnect(token);await sizeStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
-const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,remote:cloudRequest});
+// Best card reads the same wallet Rewards keeps, for the cards it already
+// knows the owner holds but has no rates for.
+const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,wallet:rewardStore,remote:cloudRequest});
 const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
 const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,programs:programStore,remote:cloudRequest,onSettings:openSettings});
 const financeTool=mountFinance(document.getElementById('capability-finance'),{credentials,offline:financeStore,remote:cloudRequest,onSettings:openSettings});

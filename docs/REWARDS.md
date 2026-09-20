@@ -168,7 +168,10 @@ confirm against the linked terms. It returns at most 40 benefits per card, omits
 welcome offers and introductory rates, and knows nothing about how much of a
 credit you have used — that comes from reading the card's own tracker, which the
 issuer itself says may not reflect recent activity. Earning rates stay on the card entry; **Best card**
-is where rates are compared (see [BEST_CARD.md](BEST_CARD.md)).
+is where rates are compared (see [BEST_CARD.md](BEST_CARD.md)), and it reads this
+wallet for the cards you hold: a card entry, or a card an issuer's page named
+when a credit was read off it, appears there as a card awaiting its rates rather
+than one to add again.
 
 ## Private data and offline behavior
 

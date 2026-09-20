@@ -113,13 +113,18 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `unlockInWindow()`, which runs the check in `unlock.html` and lets the panel
   adopt the session it stores.
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
-  `card-data.js`/`cards-offline.js`, `rewards-data.js`/`rewards-offline.js`,
+  `card-data.js`/`cards-offline.js` (the reward rates and the comparison, plus
+  card identity: which of the owner's cards a name is, the account digits an
+  issuer prints beside it, and `walletCards` — the cards the Rewards wallet
+  already says the owner holds, matched against the cards saved here),
+  `rewards-data.js`/`rewards-offline.js`,
   `rewards-sync.js`, `balance-data.js` (points and miles: what a page reading
   may become, which saved balance it updates, and the per-unit totals the
   wallet opens with — shared with mobile and the Worker),
   `credit-data.js` (the other half of that reading: what an issuer's own
-  tracker says is left of each recurring credit, which of the owner's cards it
-  belongs to, and which saved benefit it fills in — shared the same way),
+  tracker says is left of each recurring credit, which saved benefit it fills
+  in, and — through `card-data.js`, where card identity lives — which of the
+  owner's cards it belongs to; shared the same way),
   `program-data.js`/`program-offline.js` (the offer
   catalogues reward programs publish, read-only on every host),
   `finance-data.js`/`finance-offline.js` (the ledger: the asset-class and

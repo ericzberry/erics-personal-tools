@@ -2,6 +2,25 @@
 
 Choose **Best card** from Tools in the extension or unlocked mobile app. To add a card, say which card you have however you name it — `chase sapphire`, `amex gold`, `my citi 2% card` — and select Find card and rewards. Research using a saved OpenAI connection identifies the exact product from the issuer's current pages and fills in the whole card: reward type, base rate, every bonus category, enrollment, caps, exclusions, the issuer link and today's review date. A name that fits more than one real card returns the products it could be, each with what separates it, and researches nothing until one is chosen. The summary lists every rate that was ingested; Card terms holds the same values as ordinary fields, and opens by itself for a points card, which still needs your redemption value. Saving is always yours: review the summary or the terms, then save. Without a connection or internet, Card terms accepts a card entered by hand. No card account numbers, security codes or bank credentials are collected.
 
+## The cards you already hold
+
+Best card knows which cards you hold without being told again. A card in your
+[rewards wallet](REWARDS.md) — one you added there, or one an issuer's own
+benefits page named when a credit was read off it — appears under **In your
+wallet** with the account it was seen under, and one press researches what it
+earns and opens it here ready to save. Only the product name is sent; the
+account digits an issuer prints beside a card stay on the device, and no card
+number is read, asked for or stored by this tool.
+
+A card is only offered while its rates are missing. Once saved here it is this
+tool's card and leaves that list, and a card whose name fits more than one saved
+card is left alone rather than added a second time. While any remain, the
+comparison says how many were not compared — a recommendation made without a
+card you hold is the one thing this screen can get wrong while looking right.
+The wallet is read, never written: what is in it stays Rewards' to change.
+
+## Your purchase
+
 The whole intake is one description box. Write the purchase at whatever level of detail you have — `gas`, `pharmacy`, `Amazon`, `dinner at Cote`, `$180 at Saks` — and select Find best card. AI reads that description into a merchant, a reward category, a purchase method and an amount if you stated one, and the reading is shown above the result. Adjust what AI read reveals those three values as ordinary controls; correcting any of them replaces the reading and recomputes. A description that simply names a reward category — `gas`, `groceries`, `dining` — is a complete reading on its own; no merchant is asked for, and a missing one never makes the reading low confidence. Low confidence is reserved for a category that is genuinely in doubt, and such a reading still returns a result, marked as low confidence in both the reading and the status. Changing the description clears the earlier reading and result. Confirm any applicable bonus requirements; unconfirmed requirements are excluded.
 
 An amount is optional. With one, results are estimated dollars; without one, results are effective rates over the same reference spend for every card, and a remaining bonus cap is disclosed rather than blended, because it cannot be applied to an unknown amount.
@@ -20,7 +39,7 @@ Remaining spending caps are entered manually and are not decremented by comparis
 
 Cards use the shared encrypted IndexedDB adapter, authenticated encrypted D1 records and per-record revisions. Saved rules remain available after a cold offline reopen. Offline changes are queued before attempting network access and synchronize on reconnect or foreground. Conflicts offer Keep my change or Use cloud version. Disconnect is blocked while card changes remain pending; successful disconnect removes device card copies and retains cloud records. Device storage is a cache, not a permanent backup. API responses are excluded from service-worker shell caching.
 
-Only the purchase description goes to the reading model; saved card names and terms never leave the device for it. Issuer research sends only the name typed into the intake, or the exact product name chosen from its alternatives. Provider keys remain on the Worker. `cards.category` and `cards.research` select models through the central task policy. Research requires web sources and source URL membership in the provider's reported evidence; the owner still reviews the returned terms.
+Only the purchase description goes to the reading model; saved card names and terms never leave the device for it. Issuer research sends only the name typed into the intake, the exact product name chosen from its alternatives, or the product name of a card your wallet already holds — never the account digits printed beside it. The wallet itself is read from this device's own encrypted copy, with one download if this device has never opened Rewards; nothing in it is written by this tool, and a wallet that cannot be read leaves the saved cards exactly as they are. Provider keys remain on the Worker. `cards.category` and `cards.research` select models through the central task policy. Research requires web sources and source URL membership in the provider's reported evidence; the owner still reviews the returned terms.
 
 ## API and deployment
 
@@ -33,4 +52,4 @@ Apply `tools-api/cards-schema.sql` to the existing D1 database before deploying 
 - `POST /v1/ai-connections/:uuid/card-category`: `{purchase}`.
 - `POST /v1/ai-connections/:uuid/card-research`: `{name}` — a rough or exact card name. Returns `{card}` for one identified product, or `{matches:[{name,note}]}` when the name fits several. Both require web-search evidence; only `{card}` requires the issuer source URL to appear in it.
 
-The local synthetic fixture is `mobile-app/tests/cards-preview-server.js`; build mobile first and run it with an unused `PORT`. `/cards-preview` exercises the shared standalone view and `/app/` exercises the full mobile shell. Fixture authentication, passkeys, cards and AI responses are synthetic and never included in builds.
+The local synthetic fixture is `mobile-app/tests/cards-preview-server.js`; build mobile first and run it with an unused `PORT`. `/cards-preview` exercises the shared standalone view and `/app/` exercises the full mobile shell. Its synthetic wallet carries a card already saved here, a card that is not, and a card only an issuer's page ever named, so **In your wallet** and the linking behind it can be reviewed. Fixture authentication, passkeys, cards and AI responses are synthetic and never included in builds.
