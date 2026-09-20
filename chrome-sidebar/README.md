@@ -2150,9 +2150,7 @@ digits kept out of the product name and shown as the card's own, one card named
 twice kept once, a near-miss family name left unlinked while the card itself
 links, and the tool mounted over a synthetic wallet — listing the card,
 researching the product name, and dropping the row once it is saved. Validation:
-526 extension and 130 API tests pass from an archive of HEAD, which another
-session's in-flight shell list keeps the mobile suite from building against; the
-working tree's 527 extension and 33 mobile tests pass. The
+529 extension, 33 mobile and 130 API tests pass from an archive of HEAD. The
 standalone card view was reviewed against the synthetic wallet at 380px, 280px
 and 390px: populated, nothing saved yet, the comparison caveat, and the research
 that one press starts. Archive: `release/erics-sidebar-0.6.184.zip`.
