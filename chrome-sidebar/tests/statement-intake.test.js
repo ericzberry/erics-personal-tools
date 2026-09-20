@@ -524,3 +524,55 @@ test('a page whose figures this filter cannot see is sent whole rather than gutt
   assert.equal(page.filtered, false);
   assert.match(page.text, /about a thousand pounds/);
 });
+
+// A wealth manager's dashboard is a grid, not a stack of cards: one row per
+// account, grouped under the trust or the joint title that holds it, with
+// three money columns against every row — what it holds, the cash inside it,
+// and the day's move. The rows carry all of that already, and the text pass
+// then said every figure over again as a bare line under a repeat of the
+// account's name, with nothing saying which of the three columns it fell out
+// of. Twenty-eight accounts arrived as eighty-four figures, the reading ran
+// past what it was allowed to say, and a page stating $26.9M came back as
+// nothing at all.
+test('a grid of accounts is read once, from its rows, and the day’s move is not a balance', () => {
+  const group = (name, total) => [name, total, '$1,000.00', '-$500.00', '-0.10%'];
+  const row = (number, label, value) => [number, label, value, '$2,000.00', '-$300.00', '-0.07%'];
+  const grid = [
+    ['Joint Accounts', '$16,976,026.12'],
+    ['Descendants Tst', '$4,048,694.16']
+  ];
+  const holdings = [
+    ['Y1 60033', 'Brokerage', '$8,454,037.54'],
+    ['Y1 60184', 'Core Munis', '$4,020,675.81'],
+    ['Y1 60187', 'Brokerage', '$965,857.19']
+  ];
+  const text = [
+    'Accounts', 'Investment Accounts', 'Total value', '$26,925,388.90', 'Cash Available', '$211,621.55',
+    'Change In Value', '-$27,467.55', '-0.10%',
+    ...grid.flatMap(([name, total]) => group(name, total)),
+    ...holdings.flatMap(([number, label, value]) => row(number, label, value))
+  ].join('\n');
+  const table = {rows: [
+    cells(['', '', 'Total value', 'Cash Available', 'Change In Value']),
+    cells(['Investment Accounts', '$26,925,388.90', '$211,621.55', '-$27,467.55 -0.10%']),
+    ...grid.map(([name, total]) => cells([name, total, '$1,000.00', '-$500.00 -0.10%'])),
+    ...holdings.map(([number, label, value]) => cells([number, label, value, '$2,000.00', '-$300.00 -0.07%']))
+  ]};
+  const page = inPage(pageOf({tables: [table], text}), HERE);
+
+  // Every account is still there, in the row that names it and says which
+  // column each figure came out of.
+  assert.match(page.tables[0], /Total value {2}\| {2}Cash Available {2}\| {2}Change In Value/);
+  for (const [number, label, value] of holdings)
+    assert.ok(page.tables[0].includes(`${number}  |  ${label}  |  ${value}`),
+      `${number} keeps its label and its total value`);
+  assert.match(page.tables[0], /Joint Accounts {2}\| {2}\$16,976,026\.12/, 'the title a group of accounts is held under states its own total');
+
+  // And said once. A figure the row already carried is not repeated loose.
+  for (const figure of ['$8,454,037.54', '$4,020,675.81', '$965,857.19', '$16,976,026.12', '$26,925,388.90'])
+    assert.equal(page.text.includes(figure), false, `${figure} is already in its row`);
+  // The day's move is not money the owner has, whichever side of the page
+  // writes the percentage on a line of its own.
+  assert.equal(page.text.includes('-$27,467.55'), false, 'a change printed above its own percentage is a move, not a balance');
+  assert.ok(page.text.length < 400, `the text beside the rows narrowed to ${page.text.length} characters`);
+});

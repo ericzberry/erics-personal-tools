@@ -343,3 +343,55 @@ test('a property keeps its address encrypted, its valuations in integers, and di
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_properties').get().n,0);
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_valuations').get().n,0);
 });
+
+// A wealth manager holds a household's joint account and its trusts on one
+// page: twenty-eight accounts, each of which comes back named, classified and
+// dated. The whole reading is some 2,800 output tokens, and against the old
+// 2,500-token ceiling the JSON stopped in the middle of an account — so a page
+// stating $26.9M was refused as unreadable, and the advice offered for it was
+// to add more detail.
+test('a page of two dozen accounts fits one reading, and a reading cut short is never filed',async()=>{
+  const accounts=Array.from({length:28},(unused,index)=>({
+    account:`Descendants Tst Y1 ${60000+index}`,label:'Core Munis',class:'bonds',registration:'trust',
+    scope:'account',value:400000+index,asOf:'2026-09-20',confidence:'high',
+    reason:'The accounts page states this total value against the account.'}));
+  const whole=JSON.stringify({readings:accounts,capital:[],unread:''});
+  let body,payload={status:'completed',output:[{type:'message',content:[{type:'output_text',text:whole}]}]};
+  const fetcher=async(url,options)=>url.endsWith('/models')
+    ?Response.json({data:[{id:'gpt-5-mini'}]})
+    :(body=JSON.parse(options.body),Response.json(payload));
+
+  const result=await readFinanceUpdates(connection,{text:'Y1 60000 | Core Munis | $400,000.00',live:true,institution:'UBS',today:'2026-09-20'},fetcher);
+  assert.equal(result.readings.length,28,'every account on the page survives the reading');
+  // The ceiling has to clear what the answer actually weighs, not what a page
+  // stating one balance weighs.
+  assert.ok(body.max_output_tokens>=Math.ceil(whole.length/3),
+    `${body.max_output_tokens} output tokens must hold a ${whole.length}-character answer`);
+
+  // Stopping at the ceiling is refused in its own words. Half a ledger is not a
+  // short ledger — it is one silently missing the accounts after the cut —
+  // so it is refused whether or not what came back happens to parse.
+  for(const text of ['{"readings":[{"account":"Descendants','{"readings":[],"capital":[],"unread":""}',whole]){
+    payload={status:'incomplete',incomplete_details:{reason:'max_output_tokens'},
+      output:[{type:'message',content:[{type:'output_text',text}]}]};
+    await assert.rejects(readFinanceUpdates(connection,{text:'anything $1.00',live:true,today:'2026-09-20'},fetcher),
+      error=>error.status===502&&/more accounts than one reading can carry/.test(error.message)
+        &&!/add more detail/i.test(error.message));
+  }
+});
+
+// The ceiling on a prompt counts the instructions as well as the text being
+// read. The finance reading's own instructions run to nearly 9,000 characters,
+// and against a cap set for the text alone a device sending the page length it
+// is allowed to send was refused for the length of the question asked about it.
+test('the longest page a device may send fits under the prompt ceiling',async()=>{
+  const reply=JSON.stringify({readings:[{account:'Brokerage',label:'Total value',class:'liquid',
+    scope:'account',value:1000,asOf:'2026-09-20',confidence:'high',reason:'Stated.'}],capital:[],unread:''});
+  const fetcher=async url=>url.endsWith('/models')
+    ?Response.json({data:[{id:'gpt-5-mini'}]})
+    :Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:reply}]}]});
+  const page='Y1 60033 | Brokerage | $8,454,037.54\n'.repeat(700).slice(0,MAX_INTAKE_TEXT);
+  assert.equal(page.length,MAX_INTAKE_TEXT);
+  const result=await readFinanceUpdates(connection,{text:page,live:true,institution:'UBS',today:'2026-09-20'},fetcher);
+  assert.equal(result.readings.length,1);
+});

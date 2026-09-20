@@ -558,6 +558,17 @@ its job. Everything after that is `foldReadings` on the device:
   recognized by the index named in the lines above it. Narrowing applies only
   when it actually found figures: a page whose balances this filter cannot see
   is sent whole rather than sent gutted.
+
+  **A row that already said it is not said again.** Where the accounts are laid
+  out in a table, the rows carry each one with its label and its columns beside
+  it, and the page then prints every one of those figures a second time as a bare
+  line in the text around them. A wealth manager's dashboard sets three money
+  columns against every account — what it holds, the cash inside it, and the
+  day's move — so twenty-eight accounts reached the reading as eighty-four
+  figures, each under a repeat of the account's name and none of them saying
+  which column it came from. A bare figure a kept row already states is dropped,
+  and so is one printed directly above its own percentage, which is a move rather
+  than money the owner has.
 - **Drop an image.** A screenshot, a photo, or a scanned statement. The picture
   is downscaled to 1400px and re-encoded on the device before it is sent —
   the original file never leaves. Images travel as content parts to a model

@@ -320,6 +320,8 @@ const CAPITAL_KINDS=VEHICLES.map(entry=>`${entry.id} (${entry.label})`).join(', 
 // cannot know which portfolio it belongs to, what anything totals, or what the
 // owner already holds. Folding, matching and arithmetic stay on the device.
 export const MAX_INTAKE_TEXT=24000;
+// What every provider calls hitting the output ceiling.
+const TRUNCATED=['length','max_tokens','max_output_tokens'];
 export const MAX_INTAKE_IMAGES=4;
 export async function readFinanceUpdates(connection,input,fetcher=fetch){
   const images=Array.isArray(input.images)?input.images:input.image?[input.image]:[];
@@ -375,6 +377,13 @@ ${live?`This text was read from an account page the owner is signed in to right 
       ...(images.length&&!text.trim()?[{type:'text',text:'Read every account, holding and capital account shown.'}]:[])
     ]}
   ]},fetcher);
+  // A reading that ran out of room is not a short reading, it is half of one:
+  // the JSON stops mid-account, and what parses out of it is a ledger missing
+  // however many accounts came after the cut. Refused here, and named, because
+  // read as a parse failure it says "add more detail" — which is the one thing
+  // that cannot help a page that already said too much.
+  if(TRUNCATED.includes(result.stopReason))throw {status:502,
+    message:'That page states more accounts than one reading can carry. Read it a part at a time, collapsing the groups already filed, or drop the statement instead.'};
   try{return {...parseFinanceUpdates(parse(result.text)),model:result.model};}
   catch(error){throw {status:502,message:error?.message?.startsWith('AI did not')?error.message:'AI did not return readable figures. Add more detail, or enter the figure by hand.'};}
 }

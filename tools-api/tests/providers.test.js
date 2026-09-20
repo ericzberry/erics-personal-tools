@@ -49,7 +49,7 @@ test('upstream errors, timeouts and invalid responses do not expose credentials 
  await assert.rejects(generate(connection,input,async()=>new Response('x'.repeat(2*1024*1024+1))),error=>error.status===502);
 });
 test('limits, empty/refusal output and truncation are handled explicitly',async()=>{
- for(const invalid of [{...input,maxTokens:99999},{...input,messages:[{role:'tool',content:'bad'}]},{...input,messages:[{role:'user',content:'x'.repeat(32001)}]},{...input,model:''}])assert.throws(()=>generationInput(invalid,{}));
+ for(const invalid of [{...input,maxTokens:99999},{...input,messages:[{role:'tool',content:'bad'}]},{...input,messages:[{role:'user',content:'x'.repeat(40001)}]},{...input,model:''}])assert.throws(()=>generationInput(invalid,{}));
  const connection={provider:'groq',apiKey:key};
  let result=await generate(connection,input,async()=>Response.json({choices:[{message:{content:null},finish_reason:'length'}]}));assert.match(result.warning,/no text/);
  result=await generate(connection,input,async()=>Response.json({choices:[{message:{content:key},finish_reason:'length'}]}));assert.equal(result.text,'[redacted]');assert.match(result.warning,/incomplete/);

@@ -51,8 +51,15 @@ is marked `vision` only where image input is known to be supported; an unmarked
 model is simply never chosen for an image, which surfaces as a clear "no model
 available" rather than a provider error.
 
-`finance.intake` uses level 3, 2,500 output tokens, no web tool, and a $0.03
-estimated request ceiling. It was raised from level 2 on 2026-09-20: reading a
+`finance.intake` uses level 3, 7,000 output tokens, no web tool, and a $0.03
+estimated request ceiling. The output budget was raised from 2,500 on
+2026-09-20: a wealth manager listing a household's joint account and its trusts
+puts twenty-eight accounts on one page, each of which comes back named,
+classified and dated, and that answer weighs some 2,800 output tokens. Against
+the old ceiling the JSON stopped mid-account, and a page stating $26.9M was
+reported to the owner as figures AI could not read. A reading that stops at the
+ceiling is now refused in its own words rather than parsed, because half a
+ledger is one quietly missing whatever came after the cut. It was raised from level 2 on 2026-09-20: reading a
 broker dashboard means holding several accounts apart, recognizing the total
 printed over them, and ignoring a table of day's gains and last prices that look
 exactly like balances, and a level-2 model read E*TRADE's complete view by

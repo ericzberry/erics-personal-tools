@@ -957,6 +957,17 @@ down from 4,388 characters to 442, every one of them an account, a number or a
 date. A page whose balances this filter cannot see is sent whole rather than
 sent gutted.
 
+**A row that already said it is not said again.** Where the accounts are laid
+out in a table, the rows carry each one with its label and its columns beside
+it, and the page then prints every one of those figures a second time as a bare
+line in the text around them. A wealth manager's dashboard sets three money
+columns against every account — what it holds, the cash inside it, and the
+day's move — so twenty-eight accounts reached the reading as eighty-four
+figures, each under a repeat of the account's name and none of them saying
+which column it came from. A bare figure a kept row already states is dropped,
+and so is one printed directly above its own percentage, which is a move rather
+than money the owner has.
+
 **One press, one errand.** Reading the open page no longer fills the intake box
 with a transcript to be read again: the page is open beside the panel, where the
 owner can see it better than any copy of it, and the drafts are the readout

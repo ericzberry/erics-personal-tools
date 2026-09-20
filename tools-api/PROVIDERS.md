@@ -32,7 +32,7 @@ All routes require the existing bearer access token.
 | POST | `/v1/ai-connections/<uuid>/test` | Accepts `{model?}`; sends a fixed short prompt with a 256-token limit |
 | POST | `/v1/ai-connections/<uuid>/generate` | Accepts `{model?, messages: [{role, content}], maxTokens?}` |
 
-Roles are `system`, `user`, `assistant`; content is text. Supply a model or save a default. Limits: 40 messages, 32,000 total characters, output tokens between 128 and 8,192 (default 2,048). The shared result is `{text, model, provider, durationMs, usage: {inputTokens, outputTokens}, stopReason, warning}`. Missing usage is null. Empty/truncated output is reported explicitly. Reasoning traces are omitted; refusal text may be returned.
+Roles are `system`, `user`, `assistant`; content is text. Supply a model or save a default. Limits: 40 messages, 40,000 total characters, output tokens between 128 and 8,192 (default 2,048). The shared result is `{text, model, provider, durationMs, usage: {inputTokens, outputTokens}, stopReason, warning}`. Missing usage is null. Empty/truncated output is reported explicitly. Reasoning traces are omitted; refusal text may be returned.
 
 Models are never guessed or hardcoded. Z.AI and Perplexity use manual model IDs. Others request `/models`; partial lists are labeled. A failed catalog request does not prevent manually entering a model. Catalogs can contain non-text models, and a successful catalog request is not proof that a key can generate text. Test connection makes an actual generation request and may use provider credit.
 

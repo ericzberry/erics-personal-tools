@@ -99,11 +99,22 @@ export function readAccountPage() {
   // Tables carry the balances on most account pages, and innerText alone
   // collapses their columns into an unreadable run. Rendering them row by row
   // keeps a label beside its figure; a table with no figure in it is furniture.
+  //
+  // Every cell a kept row states is remembered, because the same page states it
+  // twice: once in the row, where the account, the column and the figure sit
+  // together, and again as a loose line in the text around it. A wealth
+  // manager's dashboard prints three columns against every account — what it
+  // holds, the cash inside it, and the day's move — so twenty-eight accounts
+  // arrived as eighty-four bare figures, each under a repeat of the account's
+  // name and none of them saying which column it fell out of. The row has
+  // already said all of it.
+  const celled = new Set();
   const tables = [...document.querySelectorAll('table')].slice(0, 12).map(table => {
-    const rows = [...table.rows].slice(0, 200).map(row =>
-      [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean).join('  |  ')
-    ).filter(Boolean);
+    const cells = [...table.rows].slice(0, 200).map(row => [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean));
+    const rows = cells.map(row => row.join('  |  ')).filter(Boolean);
     const figures = rows.filter(row => row.length <= 400 && !blocked(row) && (MONEY.test(row) || CONTEXT.test(row)));
+    const kept = new Set(figures);
+    cells.forEach(row => {if (kept.has(row.join('  |  '))) row.forEach(cell => celled.add(cell.toLowerCase()));});
     // The header row states what the columns mean, so it travels with them.
     return figures.length ? [...new Set([rows[0], ...figures])].join('\n') : '';
   }).filter(Boolean);
@@ -183,8 +194,25 @@ export function readAccountPage() {
   // is one heading said four times, so that place keeps the wider test.
   const repeats = label => kept.length && kept[kept.length - 1].toLowerCase() === label.toLowerCase();
   const fresh = label => !kept.slice(-4).some(entry => entry.toLowerCase() === label.toLowerCase());
+  // A figure the page also prints under a percentage is a move, not a balance.
+  // The bracketed form is caught above, but a table writes the two apart — the
+  // amount in the cell and the percentage beneath it — and read on its own the
+  // amount is the same shape as money. A wealth manager's accounts page prints
+  // a change against every row that way, so a third of the figures reaching the
+  // reading were the day's moves wearing an account's name.
+  const moves = index => {
+    for (let step = index + 1; step < lines.length; step++) if (lines[step]) return PERCENT.test(lines[step]);
+    return false;
+  };
   lines.forEach((line, index) => {
     if (quotes[index] || !wanted(line)) return;
+    // What a table already stated, stated again with nothing around it. The row
+    // said which account and which column it belongs to; the loose copy says
+    // neither, and its labels are a repeat of the row's. Only a figure with no
+    // words of its own goes this way — "IRA $412,880.17" names itself, and a
+    // line that names itself is never only a copy of a cell.
+    if (BARE.test(line) && celled.has(line.toLowerCase())) return;
+    if (BARE.test(line) && moves(index)) return;
     // Five candidates for two places: a card can print a link, a tag and a
     // disclosure between the name and the number. Market data is still judged
     // on the three nearest lines, because an index named five lines up is on

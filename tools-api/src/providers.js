@@ -64,7 +64,14 @@ export function generationInput(input,connection) {
     length+=partsLength(parts);
     return {role:message.role,content:parts};
   });
-  if (length>32000) fail(400,'The prompt is too long (32,000 characters maximum).');
+  // The ceiling counts the instructions as well as the text being read, so it
+  // has to clear the largest of both at once. The finance reading's own
+  // instructions run to nearly 9,000 characters — the asset classes, the
+  // registrations and the rules for telling a balance from a gain — against the
+  // 24,000 characters of statement or page a device is allowed to send, and the
+  // two together went over a ceiling set for the text alone. A page long enough
+  // to reach it was refused for the length of the prompt asking about it.
+  if (length>40000) fail(400,'The prompt is too long (40,000 characters maximum).');
   if (!messages.some(message=>message.role==='user')) fail(400,'A user message is required.');
   const maxTokens=input.maxTokens??2048;
   if (!Number.isInteger(maxTokens)||maxTokens<128||maxTokens>8192) fail(400,'Output limit must be between 128 and 8,192 tokens.');
