@@ -75,7 +75,10 @@ test('the Cloudflare storage read uses request options workerd accepts',async()=
         // Throws in workerd if any option is one the edge does not implement.
         const request=new Request(url,options);
         seen.push({url:String(url),redirect:request.redirect,auth:request.headers.get('Authorization')});
-        return Response.json({success:true,result:[{uuid:'u',name:'erics-personal-tools',file_size:310000,num_tables:24}]});
+        // The listing, then the per-database call the reader always makes.
+        return Response.json(String(url).includes('/d1/database?')
+          ? {success:true,result:[{uuid:'u',name:'erics-personal-tools',file_size:310000,num_tables:0}]}
+          : {success:true,result:{uuid:'u',name:'erics-personal-tools',file_size:310000,num_tables:24}});
       }});
       return Response.json({usage,seen});
     }catch(error){return Response.json({error:error?.message||String(error),seen});}
@@ -85,10 +88,14 @@ test('the Cloudflare storage read uses request options workerd accepts',async()=
     const result=await (await mf.dispatchFetch('http://localhost/storage')).json();
     assert.equal(result.error,undefined);
     assert.equal(result.usage.totalBytes,310000);
-    assert.equal(result.seen.length,1);
-    assert.match(result.seen[0].url,/\/accounts\/acct\/d1\/database/);
+    assert.equal(result.seen.length,2);
+    assert.match(result.seen[0].url,/\/accounts\/acct\/d1\/database\?/);
+    assert.match(result.seen[1].url,/\/accounts\/acct\/d1\/database\/u$/);
+    assert.equal(result.usage.databases[0].tables,24);
     // Never followed, so the read token cannot be handed on to another host.
-    assert.equal(result.seen[0].redirect,'manual');
-    assert.equal(result.seen[0].auth,'Bearer synthetic-read-token');
+    for(const made of result.seen){
+      assert.equal(made.redirect,'manual');
+      assert.equal(made.auth,'Bearer synthetic-read-token');
+    }
   }finally{await mf.dispose();}
 });

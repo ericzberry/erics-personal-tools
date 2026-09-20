@@ -59,12 +59,11 @@ export async function measureUsage(env, {fetcher = fetch, now = new Date()} = {}
   const listed = (await cloudflare(env, '/d1/database?per_page=100', fetcher) || []).slice(0, MAX_DATABASES);
   const databases = [];
   for (const entry of listed) {
-    // The listing carries the size but not the table count, so a database is
-    // asked about by itself unless a listing turns up with both. Checking for
-    // both is the point: reading only `file_size` here is what put "0 tables"
-    // on the screen, because a missing field is not a zero.
-    const complete = Number.isFinite(entry?.file_size) && Number.isFinite(entry?.num_tables);
-    const detail = complete ? entry : await cloudflare(env, `/d1/database/${entry.uuid}`, fetcher);
+    // The listing is good for enumerating and nothing else: it reports
+    // `num_tables: 0` for every database — present, and wrong, which is worse
+    // than absent because no test of the field can catch it. So each database
+    // is asked about by itself. One extra request an hour, for the truth.
+    const detail = await cloudflare(env, `/d1/database/${entry.uuid}`, fetcher);
     databases.push({
       name: String(detail?.name || entry?.name || 'database').slice(0, 80),
       bytes: Number(detail?.file_size) || 0,

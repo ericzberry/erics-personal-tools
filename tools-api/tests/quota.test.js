@@ -27,15 +27,14 @@ function environment(extra = {}) {
   };
 }
 
-// Cloudflare's own shapes. Its real listing carries file_size and no
-// num_tables, which is `full: false`; `detailOnly` is a listing with neither;
-// the default is a listing that happens to carry both.
-const cloudflare = (databases, {calls = [], detailOnly = false, full = true} = {}) => async (url, options) => {
+// Cloudflare's own shapes, as the live API actually returns them: the listing
+// carries a size and `num_tables: 0` for every database whatever its real
+// count, and only the per-database call tells the truth.
+const cloudflare = (databases, {calls = []} = {}) => async (url, options) => {
   calls.push({url: String(url), auth: options?.headers?.Authorization});
   const path = String(url).split('/accounts/acct')[1];
-  const strip = database => detailOnly ? {uuid: database.uuid, name: database.name}
-    : full ? database : {uuid: database.uuid, name: database.name, file_size: database.file_size};
-  if (path.startsWith('/d1/database?')) return Response.json({success: true, result: databases.map(strip)});
+  const listed = ({uuid, name, file_size}) => ({uuid, name, file_size, num_tables: 0});
+  if (path.startsWith('/d1/database?')) return Response.json({success: true, result: databases.map(listed)});
   const found = databases.find(database => path === `/d1/database/${database.uuid}`);
   return found ? Response.json({success: true, result: found})
     : Response.json({success: false, errors: [{message: 'not found'}]}, {status: 404});
@@ -54,25 +53,22 @@ test('a reading names every database, sorts by size, and measures the worse of t
   assert.equal(usage.plan, 'Free');
   assert.equal(usage.worst, 'database');
   assert.equal(usage.checkedAt, '2026-09-20T12:00:00.000Z');
-  // One listing is enough when the listing already carries the sizes.
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].auth, 'Bearer cf-read-token');
+  // One listing, then one call per database it named.
+  assert.equal(calls.length, 3);
+  for (const made of calls) assert.equal(made.auth, 'Bearer cf-read-token');
 });
 
-// Cloudflare's own listing gives a size and no table count, so a size alone is
-// not enough to skip the detail call: taking it would report every database as
-// having no tables.
-test('a listing without a table count is not mistaken for a complete one', async () => {
-  const calls = [];
-  const usage = await measureUsage(environment(), {fetcher: cloudflare([db('erics-personal-tools', 311296, 25)], {calls, full: false})});
-  assert.equal(calls.length, 2);
+// The listing says every database has no tables. Believing it put
+// "erics-personal-tools · 0 tables" on the screen for one deployment.
+test('the table count in the listing is never believed', async () => {
+  const usage = await measureUsage(environment(), {fetcher: cloudflare([db('erics-personal-tools', 311296, 25)])});
   assert.deepEqual(usage.databases, [{name: 'erics-personal-tools', bytes: 311296, tables: 25}]);
 });
 
-test('a database the listing did not size is asked for by itself, and nothing beyond the cap is asked for at all', async () => {
+test('nothing beyond the cap is asked about at all', async () => {
   const calls = [];
   const many = Array.from({length: 40}, (_, index) => db(`d${index}`, 1024));
-  const usage = await measureUsage(environment(), {fetcher: cloudflare(many, {calls, detailOnly: true})});
+  const usage = await measureUsage(environment(), {fetcher: cloudflare(many, {calls})});
   assert.equal(usage.databases.length, 25);
   assert.equal(calls.length, 26);
 });
@@ -125,8 +121,13 @@ test('the route is authenticated, GET only, and returns the figure without the n
 
 test('a saved reading stands for an hour, is taken again after it, and survives Cloudflare going away', async () => {
   const env = environment();
+  // Only the listing is counted: it starts every reading, so one listing is one
+  // trip to Cloudflare however many databases it then names.
   let served = 0;
-  const counting = databases => async (...args) => {served++; return cloudflare(databases)(...args);};
+  const counting = databases => {
+    const answer = cloudflare(databases);
+    return async (url, ...rest) => {if (String(url).includes('/d1/database?')) served++; return answer(url, ...rest);};
+  };
   const first = await readUsage(env, {fetcher: counting([db('a', 1000)]), now: new Date('2026-09-20T12:00:00Z')});
   assert.equal(first.totalBytes, 1000);
   // Within the hour nothing is asked of Cloudflare again.
