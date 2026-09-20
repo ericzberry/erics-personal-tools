@@ -242,6 +242,32 @@ export const ACCOUNT_TITLES=[
     // an account nobody claims starts a portfolio of its own, so leaving this
     // one out of the roster files it rather than skipping it.
     {owner:'Bedford Bridge Capital, LLC',ignore:true,match:['bedfordbridge']}
+  ]},
+  // UBS holds the same family structure as Chase and abbreviates every title on
+  // the way to the screen: the joint estate is "Joint Accounts", the two 2020
+  // trusts are "Descendants Tst" and "Irrevocable Tst", and the 2021 trust is
+  // "AE 2021 Trust". None of those is what the trust is called on its own
+  // paperwork, and none of them contains a fragment the Chase roster would
+  // recognize — so without this every account number on the page started a
+  // portfolio of its own, and twenty-eight accounts arrived as twenty-eight new
+  // portfolios with an account number in each name.
+  //
+  // The owners are spelled exactly as the existing portfolios are, because that
+  // spelling is what folds these figures into the trusts already in the ledger
+  // rather than beside them. "JT Liquidity" is the joint estate too: a second
+  // heading over the same money, not a second holder.
+  {institution:'UBS',match:['ubs'],holders:[
+    {owner:'Eric and Ariana Berry Estate',registration:'taxable',
+      match:['jointaccounts','jtliquidity']},
+    {owner:'Berry 2020 Irrevocable Family Trust',registration:'trust',
+      match:['irrevocabletst']},
+    {owner:'Berry 2020 Descendants\u2019 Irrevocable Trust',registration:'trust',
+      match:['descendantstst']},
+    // Written out in full, because "ae21" does not appear in "AE 2021 Trust":
+    // fragments are matched after spacing and punctuation are dropped, and
+    // a-e-2-0-2-1 does not contain a-e-2-1.
+    {owner:'Berry AE 21 Irrevocable Trust',registration:'trust',
+      match:['ae2021trust']}
   ]}
 ];
 export const titledAccount=institution=>{

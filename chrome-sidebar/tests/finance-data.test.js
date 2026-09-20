@@ -893,3 +893,49 @@ test('a statement nobody can place proposes rather than guessing, and names the 
   assert.equal(exact.rows[0].vehicle,1);
   assert.match(exact.notes.join(' '),/calls this spv investment and it is filed as direct fund investment/);
 });
+
+// UBS abbreviates every title on the way to the screen: the joint estate is
+// "Joint Accounts", the 2020 trusts are "Descendants Tst" and "Irrevocable
+// Tst", and the 2021 trust is "AE 2021 Trust". None of those is what the trust
+// is called on its own paperwork, and none carries a fragment the Chase roster
+// would recognize — so twenty-eight accounts arrived as twenty-eight new
+// portfolios, each named after an account number.
+test('a UBS heading is the title it abbreviates, and its accounts join the trust already there',()=>{
+  const estate={row:'portfolio',number:1,name:'Eric and Ariana Berry Estate',kind:1,currency:'USD'};
+  const family={row:'portfolio',number:2,name:'Berry 2020 Irrevocable Family Trust',kind:5,currency:'USD'};
+  const descendants={row:'portfolio',number:3,name:'Berry 2020 Descendants\u2019 Irrevocable Trust',kind:5,currency:'USD'};
+  const ae={row:'portfolio',number:4,name:'Berry AE 21 Irrevocable Trust',kind:5,currency:'USD'};
+  const portfolios=[estate,family,descendants,ae];
+
+  for(const [said,owner] of [
+    ['Joint Accounts Y1 60033',estate.name],
+    // A second heading over the same money, not a second holder.
+    ['JT Liquidity Y1 69921',estate.name],
+    ['Descendants Tst Y1 60187',descendants.name],
+    ['Irrevocable Tst Y1 60157',family.name],
+    // "ae21" does not appear in "AE 2021 Trust" once spacing is dropped, so the
+    // fragment has to be written out in full.
+    ['AE 2021 Trust Y1 63541',ae.name]
+  ]) assert.equal(titledHolder('UBS',said)?.owner,owner,said);
+  assert.equal(holdsManyTitles('UBS'),true,'an unrecognized UBS account must not fall into another trust');
+
+  const reading=(account,cls,value)=>({account,label:'',class:cls,registration:'',scope:'account',
+    value,asOf:'2026-09-20',confidence:'high',reason:''});
+  const folded=foldReadings([
+    reading('Joint Accounts Y1 60184','bonds',4020675.81),
+    reading('Descendants Tst Y1 60250','stocks',1827635.08),
+    reading('Irrevocable Tst Y1 60203','stocks',1835811.54),
+    reading('AE 2021 Trust Y1 85516','bonds',381402.85),
+    reading('JT Liquidity Y1 69921','bonds',0)
+  ],portfolios,{institution:'UBS',today:'2026-09-20'});
+
+  assert.deepEqual(folded.portfolios,[],'nothing here needs a portfolio that is not already in the ledger');
+  const filed=Object.fromEntries(folded.marks.map(mark=>[mark.portfolio,mark.amount]));
+  assert.equal(filed[estate.number],4020675.81);
+  assert.equal(filed[descendants.number],1827635.08);
+  assert.equal(filed[family.number],1835811.54);
+  assert.equal(filed[ae.number],381402.85);
+  // The two 2020 trusts are the pair that has been folded into each other
+  // before, so they are checked apart rather than merely present.
+  assert.notEqual(filed[family.number],filed[descendants.number]);
+});
