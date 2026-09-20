@@ -97,6 +97,17 @@ export function readAccountPage(options) {
   // figure of its own — a sentence that merely contains the word is prose.
   const ACCOUNT = /\b(brokerage|ira|roth|401\s*\(?k\)?|403\s*\(?b\)?|457|529|hsa|stock plan|espp|rsu|checking|savings|money market|certificate|trust|custodial|utma|ugma|rollover|annuity|individual|joint|margin|cash management)\b/i;
   const names = line => line.length <= 60 && line.split(/\s+/).length <= 8 && ACCOUNT.test(line);
+  // What a private position is called, which is the name of a fund. A capital
+  // account has no number, no kind of account and no institution standing in
+  // for it, so "Eric Berry - iCapital-Vista Equity Partners Fund VIII U.S.
+  // Access Fund, L.P." is the whole of what says which investment the figures
+  // under it belong to, and the only thing tying this quarter's reading to the
+  // one filed last quarter. It is far too long and too wordy to pass for an
+  // account name, and on that page it sits six lines above the first figure,
+  // so both tests that keep a name refused it and the page arrived stating a
+  // capital account without saying whose or which.
+  const FUND = /\b(fund|funds|l\.? ?p\.?|llp|lllp|partners|partnership|ventures|holdings|spv|feeder|co-?invest(ment)?s?)\b/i;
+  const funds = line => line.length <= 140 && line.split(/\s+/).length <= 22 && FUND.test(line);
   // A price beside a coin's name is not a balance. An exchange prints its
   // watchlist, the day's movers and what is trending in the shape it prints
   // the owner's own money in — a name, a ticker, an amount — and the one line
@@ -119,9 +130,28 @@ export function readAccountPage(options) {
   // same short-and-few-words bound the account names are held to settles it,
   // and a finance page sends exactly what it sent before.
   const rates = line => line.length <= 80 && line.split(/\s+/).length <= 9 && RATE.test(line);
-  const figure = line => MONEY.test(line) || rates(line);
+  // An amount abbreviated to a scale is an amount. A private fund's dashboard
+  // states every figure it has that way — "USD 500K" committed, 341K called,
+  // 392K of net asset value — and not one of them is a currency symbol against
+  // a digit, an amount with cents or a grouped thousand. So the page reporting
+  // the owner's capital account in a Vista fund stated no figure this reader
+  // could see, and the six numbers he came for were handed over buried in the
+  // whole of it: chart axes, navigation and three screens of disclosure.
+  //
+  // A chart's axis is abbreviated the same way, which is what TICK above is
+  // already for, and it holds out the form an axis actually prints — a
+  // currency symbol against a round number and nothing else.
+  const SHORT = /(?:[$€£¥]\s?|\b(?:usd|eur|gbp|chf|cad|aud|jpy) ?)-?\d[\d,]*(?:\.\d+)?\s?[kmb]\b|(?:^|[\s(])-?\d[\d,]*(?:\.\d+)?\s?[kmb]\b/i;
+  // Except where the digits and the letter are the name of a retirement plan
+  // rather than a scale. "401K" is four hundred and one thousand dollars of
+  // nobody's money. Taken out of the line rather than refusing it, so a plan
+  // and a balance on one line — which is what a row of a retirement table is
+  // — keeps the balance.
+  const PLAN = /\b40[13] ?\(?[kb]\)?|\b457\b/gi;
+  const short = line => SHORT.test(line.replace(PLAN, ' '));
+  const figure = line => MONEY.test(line) || short(line) || rates(line);
   const wanted = line => !!line && line.length <= 200 && !blocked(line)
-    && (figure(line) || CONTEXT.test(line) || (!MONEY.test(line) && names(line)));
+    && (figure(line) || CONTEXT.test(line) || (!MONEY.test(line) && (names(line) || funds(line))));
 
   // Tables carry the balances on most account pages, and innerText alone
   // collapses their columns into an unreadable run. Rendering them row by row
@@ -269,7 +299,11 @@ export function readAccountPage(options) {
   };
   // A figure with no words of its own: the large number on a tile, which says
   // nothing about what it counts. Only these are read for the name under them.
-  const BARE = /^[^\p{L}]*$/u;
+  // The letter on the end of an abbreviated amount is a scale and not a word,
+  // so "392K" is as bare as 392,000 is — read otherwise, the tile stating the
+  // owner's net asset value kept the label above it and dropped the date
+  // printed under it, which is the date the whole capital account is struck at.
+  const BARE = /^[^\p{L}]*[kmb]?$/iu;
   // The nearest line under a figure. A card of tiles is laid out the other way
   // round from a table: the figure is the large thing and what it is sits under
   // it, which is how an issuer's own home page prints every one of its cards

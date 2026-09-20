@@ -775,3 +775,65 @@ test('the same page read for figures keeps the balance rules, and loses what has
   assert.equal(inPage(pageOf({text: CARD_PAGE}), AMEX).text, page.text);
   assert.equal(inPage(pageOf({text: CARD_PAGE}), AMEX, {}).text, page.text);
 });
+
+// A private fund states everything in thousands: "USD 500K" committed, 341K
+// called, 392K of net asset value. None of those is a currency symbol against
+// a digit, an amount with cents or a grouped thousand, so the page reporting
+// the owner's capital account in a Vista fund stated no figure this reader
+// could see, and it went off whole — chart axes, navigation and disclosures —
+// for the six numbers he came for to be found in.
+const VISTA = {href: 'https://vistaequitypartners.icapitalnetwork.com/investment_dashboard',
+  host: 'vistaequitypartners.icapitalnetwork.com'};
+const FUND_PAGE = [
+  'Institutional Use Only / Not an Offer or Recommendation',
+  'Invest', 'Manage',
+  'Investment Reporting: Alternative Investments',
+  'Investor', 'Eric Berry', 'Account', 'Eric Berry', 'Fund',
+  'Eric Berry - iCapital-Vista Equity Partners Fund VIII U.S. Access Fund, L.P.',
+  'Quarterly Performance Update',
+  'Overview', 'Cash Flow', 'Documents',
+  'Total Commitment', 'USD 500K',
+  '337K Investment Contributions', '4K Recallable Distributions',
+  '167K (33%)', 'Unfunded Commitment',
+  'Contributions', '341K', '30-Jun-2026',
+  'Distributions', '4K', '30-Jun-2026',
+  'NAV', '392K', '30-Jun-2026',
+  'Total Value', '395K', '30-Jun-2026',
+  'Net MOIC', '1.16x', '30-Jun-2026',
+  'Net IRR', '7.92%', '30-Jun-2026',
+  'Investment Overview', '(as of 30-Jun-2026)',
+  '(USD K)', '420', '360', '300'
+].join('\n');
+
+test('a fund that states its capital account in thousands states figures, and says which fund', () => {
+  const page = inPage(pageOf({text: FUND_PAGE}), VISTA);
+  assert.equal(page.filtered, true, 'the page states figures this reader can see');
+  // Every figure the position is made of, each under the label it is printed
+  // with, and the date the whole account is struck at.
+  assert.match(page.text, /Total Commitment\nUSD 500K/);
+  assert.match(page.text, /Contributions\n341K\n30-Jun-2026/);
+  assert.match(page.text, /NAV\n392K\n30-Jun-2026/);
+  assert.match(page.text, /^Total Value$/m);
+  assert.match(page.text, /^395K$/m);
+  assert.match(page.text, /^4K$/m);
+  // Which investment they belong to, and whose it is. The fund's own name is
+  // the only thing tying this quarter's reading to the one filed last quarter,
+  // and it is too long and too wordy to pass for the name of an account.
+  assert.match(page.text, /Eric Berry - iCapital-Vista Equity Partners Fund VIII U\.S\. Access Fund, L\.P\./);
+  // A return is not a figure of the owner's, and a chart's axis is not one at
+  // all.
+  assert.equal(page.text.includes('7.92%'), false, 'an IRR is a return, not an amount');
+  for (const tick of ['420', '360', '300'])
+    assert.equal(new RegExp(`^${tick}$`, 'm').test(page.text), false, tick);
+  assert.equal(page.text.includes('Institutional Use Only'), false);
+  assert.ok(page.text.length < 600, `narrowed to ${page.text.length} characters`);
+});
+
+test('the digits and the letter naming a retirement plan are not an amount', () => {
+  const plan = inPage(pageOf({text: ['Retirement', '401K Plan', 'Enroll'].join('\n')}), HERE);
+  assert.equal(plan.filtered, false, 'a page whose only number is the name of a plan states no figure');
+  // And the plan's own balance, abbreviated beside it, still is one.
+  const held = inPage(pageOf({text: ['Retirement', '401K Plan', '412K', '30-Jun-2026'].join('\n')}), HERE);
+  assert.equal(held.filtered, true);
+  assert.match(held.text, /401K Plan\n412K/);
+});

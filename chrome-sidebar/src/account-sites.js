@@ -109,12 +109,14 @@ export const FINANCE_SITES=[
     // string comparison, and is never asked anything more.
     read:{hosts:['onlineservices.ubs.com'],app:/^\/wma\//i}},
 
-  // The rest are recognized but not read. Recognition is all the panel needs to
-  // turn to Finance with its intake ready, and a statement, a page reading or a
-  // typed record works the same wherever the figures came from. A site moves up
-  // into the group above once its signed-in application has been checked
-  // against its log-on and public pages, which is the only work that separates
-  // the two groups.
+  // The rest are recognized but not read, save for the few further down that
+  // carry a `read` block of their own and are left standing beside the
+  // institutions they belong with rather than moved up. Recognition is all the
+  // panel needs to turn to Finance with its intake ready, and a statement, a
+  // page reading or a typed record works the same wherever the figures came
+  // from. A site becomes readable once its signed-in application has been
+  // checked against its log-on and public pages, which is the only work that
+  // separates the two.
   {id:'fidelity',label:'Fidelity',institution:'Fidelity',kind:'brokerage',hosts:['fidelity.com','netbenefits.com'],
     url:'https://digital.fidelity.com/ftgw/digital/portfolio/summary'},
   {id:'vanguard',label:'Vanguard',institution:'Vanguard',kind:'brokerage',hosts:['vanguard.com'],
@@ -184,6 +186,30 @@ export const FINANCE_SITES=[
     // named the portfolio would refuse every other page the figures are on.
     read:{hosts:['app.carta.com'],
       app:/^\/(?!(login|logout|signin|sign-?in|sign-?up|register|password|reset|mfa|verify)\b)/i}},
+  // The other site that states positions and no balances, and the one the
+  // owner's fund commitments are actually administered on. iCapital serves one
+  // application per manager, each on that manager's own subdomain — the
+  // owner's is Vista's — so the registrable domain covers every one of them at
+  // once and a second manager needs nothing added here.
+  {id:'icapital',label:'iCapital',institution:'iCapital',kind:'private',hosts:['icapitalnetwork.com'],
+    url:'https://vistaequitypartners.icapitalnetwork.com/investment_dashboard',
+    // Nothing the server does tells a signed-in visitor from a signed-out one:
+    // every path on the host answers 200 with the same single-page shell —
+    // /investment_dashboard, /documents and a path that does not exist alike —
+    // and the shell then routes a visitor with no session to /login, carrying
+    // what it refused as ?referral=. Neither does the form, which asks for an
+    // email address and shows no password field at all until the step after:
+    // the one signal that settles Chase and Schwab never fires here, exactly
+    // as it never fires at Coinbase.
+    //
+    // What is left is the path the shell has settled on, and it is settled by
+    // the time the document is complete — asked for /investment_dashboard with
+    // no session, the tab reports /login before readyState does. So the
+    // application is named by the area the figures are on, the way Coinbase's
+    // is: Investment Reporting, where a fund's capital account is printed, is
+    // /investment_dashboard, and the log-on, registration and password pages
+    // are all outside it.
+    read:{app:/^\/investment_dashboard\b/i}},
   {id:'coinbase',label:'Coinbase',institution:'Coinbase',kind:'crypto',hosts:['coinbase.com'],
     url:'https://www.coinbase.com/assets',
     // Coinbase signs in on a host of its own: asking for www.coinbase.com/home

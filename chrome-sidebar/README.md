@@ -3106,3 +3106,65 @@ whole of its fund and says nothing: no page overflow at 280px, and the edit
 form was driven in the browser to confirm it opens on the tab it lives on with
 the share filled in.
 Archive: `release/erics-sidebar-0.6.223.zip`.
+
+## The fund that states its capital account in thousands (0.6.224 / mobile 0.1.174)
+
+The Vista position is administered on iCapital, and pressing Read on its
+reporting page found nothing. Not a wrong figure — no figure at all: a private
+fund prints **USD 500K** committed, **341K** called, **392K** of net asset
+value, and none of those is a currency symbol against a digit, an amount with
+cents, or a grouped thousand, which is everything the page reader had ever been
+told money looks like. Finding none, it fell back to sending the page whole,
+and the six numbers the owner came for went off buried in chart axes,
+navigation and three screens of disclosure.
+
+**An amount abbreviated to a scale is an amount.** The reader now sees one, and
+the model is told to write it out — 341K is 341000 — which is reading a figure
+rather than computing one. A retirement plan is the one place those digits and
+that letter are a name instead of a scale, so "401K" is taken out of the line
+before the test and the balance beside it still counts. A chart's axis is
+abbreviated the same way and was already held out.
+
+**A capital account has to say which fund it is.** Nothing else on that page
+does: a position has no account number, no kind of account and no institution
+standing in for it, so *Eric Berry - iCapital-Vista Equity Partners Fund VIII
+U.S. Access Fund, L.P.* is the whole of what ties this quarter's reading to the
+one filed last quarter — and at 76 characters and eleven words it was far too
+long to pass for the name of an account. A line that names a fund is kept for
+its own sake now, the way a line naming an account already was. The date under
+each tile comes with it: the letter ending an abbreviated amount is a scale and
+not a word, so **392K** is as bare as 392,000, and the line under a bare figure
+is its name or its date.
+
+**Total Value is not what the position is worth.** It is the net asset value
+plus the distributions already taken, and those are reported on their own, so
+reporting it as the value counts them twice. The intake takes the NAV where a
+source states both, and it now recognizes the shape this page states a capital
+account in: a row of tiles for one investment rather than a table of rows, with
+the investor and the account named in the selectors above them.
+
+**iCapital joins the readable sites, and states positions rather than
+balances.** One application per manager, each on that manager's own subdomain,
+so the registrable domain covers every one of them and a second manager needs
+no new entry. Nothing the server does separates signed in from signed out —
+every path answers 200 with the same single-page shell, which then routes a
+visitor with no session to `/login` — and the log-on form asks for an email
+address and shows no password field, so the signal that settles Chase and
+Schwab never fires. The application is named by the area the figures are on,
+the way Coinbase's is. Like Carta, it states one investment's committed, called
+and distributed capital beside the fund's own net asset value, and a figure
+read there is refused as a balance and filed as a capital account instead; the
+investor and the account both say "Eric Berry", which is also the name of the
+portfolio holding the owner's IRA, so the roster titles the position to the
+estate rather than putting a buyout feeder inside a retirement account.
+
+Validation: 594 extension, 33 mobile and 134 API tests pass from an archive of
+this release, and both apps build. New coverage: the Vista page read down to
+473 characters with every figure, its label, its date and the fund's own name,
+and the IRR and the chart axis left out; a plan name refused as an amount and a
+plan's balance in thousands kept; iCapital read on the reporting page, on a
+second manager's subdomain, refused on the way in and refused while the shell
+is still loading. Not directly checked: the live page, which is behind a
+sign-on — the reading above is of the page as the owner sees it, and the
+signed-out shell was checked for its paths and its log-on form.
+Archive: `release/erics-sidebar-0.6.224.zip`.

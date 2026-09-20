@@ -9,6 +9,7 @@ const schwab=ACCOUNT_SITES.find(site=>site.id==='schwab');
 const coinbase=ACCOUNT_SITES.find(site=>site.id==='coinbase');
 const ubs=ACCOUNT_SITES.find(site=>site.id==='ubs');
 const carta=ACCOUNT_SITES.find(site=>site.id==='carta');
+const icapital=ACCOUNT_SITES.find(site=>site.id==='icapital');
 const frame=(result,frameId=0)=>({frameId,result});
 
 test('an account site is recognized by its host, and nothing else is',()=>{
@@ -114,6 +115,30 @@ test('Carta is read wherever the application is, and never on the way into it',(
   for(const url of ['https://www.carta.com/','https://carta.com/pricing','https://app.carta.com.example.invalid/'])
     assert.equal(accountSite(url),null,url);
   assert.equal(financeSite('https://www.carta.com/')?.id,'carta');
+});
+
+// iCapital is the opposite case: one application per manager, each on that
+// manager's own subdomain, and the whole of it — log-on included — served
+// from one single-page shell that answers 200 to every path there is. Nothing
+// the server does separates the two, and the log-on form asks for an email
+// address and shows no password field, so the area the figures are on is
+// named the way Coinbase's is.
+test('iCapital is read on the reporting page, on any manager\u2019s subdomain, and nowhere else',()=>{
+  const app={ready:true,password:false,exit:false};
+  for(const path of ['/investment_dashboard','/investment_dashboard/cash_flow'])
+    assert.equal(signedIn(icapital,{...app,path}),true,path);
+  for(const path of ['/login','/register','/forgot_password','/documents','/'])
+    assert.equal(signedIn(icapital,{...app,path}),false,path);
+  // The shell routes a visitor with no session to /login, but only once it has
+  // run: a half-built page still reporting the path it asked for is not the
+  // application yet.
+  assert.equal(signedIn(icapital,{...app,path:'/investment_dashboard',ready:false}),false);
+  // Every manager's site is the same application under a different name, so
+  // the registrable domain covers a second one without another entry.
+  for(const url of ['https://vistaequitypartners.icapitalnetwork.com/investment_dashboard','https://someotherfirm.icapitalnetwork.com/investment_dashboard'])
+    assert.equal(accountSite(url)?.id,'icapital',url);
+  assert.equal(accountSite('https://vistaequitypartners.icapitalnetwork.com.example.invalid/'),null);
+  assert.equal(financeSite('https://vistaequitypartners.icapitalnetwork.com/login')?.institution,'iCapital');
 });
 
 test('a page still loading cannot be read as a signed-in one by its path',()=>{
