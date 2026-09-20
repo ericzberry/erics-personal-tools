@@ -1760,3 +1760,55 @@ a site's navigation not swallowing the balances below it. Validation: 482
 extension tests pass. The fix was proved against a reconstruction of the page in
 the screenshot rather than a live signed-in session, which is not reachable from
 here. Archive: `release/erics-sidebar-0.6.162.zip`.
+
+## One password, eight holders, and none of them called Bank accounts (0.6.165 / mobile 0.1.118)
+
+Chase is one sign-on over a whole family structure: a joint estate, four
+irrevocable trusts, an LLC, two children's custodial accounts, and a company
+that is not the owner's money at all. Read, it came back as three portfolios —
+**Bank accounts**, **Credit cards**, **Investment accounts** — holding every one
+of those added together. Nothing in that ledger belongs to anybody, and a trust
+inside a joint estate is the mistake nobody sees once it is saved.
+
+**A kind of account is not an account.** The heading a bank sorts its accounts
+under is now taken off the front of the name it precedes, so "Investment
+accounts · BERRY 2020 IRREV FAM TR (...5007)" stays one trust's account and
+never names a portfolio. Where nothing but the heading names the figure, the
+figure is every account under it added up: it is refused the way a dashboard's
+headline total already was, and if the page states nothing else, the reading
+says to open the list of accounts instead — that is the page carrying the names
+and the last four digits the titling matches on.
+
+**Two 2020 trusts, told apart.** `berry2020` matched the family trust and filed
+it as the descendants' trust; neither fragment names a bare year now. The joint
+accounts titled with both names written out are recognized as well, by fragments
+long enough that a child's UTMA — titled to a parent as custodian — cannot be
+carried into the parents' estate by the parent's name inside it.
+
+**Money behind the password that is not counted.** A roster holder can be marked
+`ignore`, and Bedford Bridge Capital is. Silence would not have left it out: an
+account no title claims starts a portfolio of its own, so the way to leave
+something out is to name it.
+
+**Two figures that look like balances and are not.** A card's available credit,
+which is the larger of the two and would have filed the whole limit as debt; and
+the available balance a bank prints beside the present one, which is the same
+money less what has not cleared and was being added to it. A card's balance is
+filed as credit whatever class the reading gave it, because a debt read as cash
+moves net worth by twice the figure.
+
+**What the fold refused now reaches the screen.** Its notes were built and
+thrown away — neither review rendered them — so the single line under the
+figures says what was left out, which is the only evidence there is of a figure
+that is not there.
+
+New coverage: the whole Chase structure folded into one figure per class per
+holder, with the two 2020 trusts apart and Bedford Bridge absent; a page that
+states only its kinds filing nothing and saying where to go; a card's balance as
+debt and its available credit refused; the roster's fragments pinned one account
+title at a time; and Chase's two account tables read with every name and number
+against its own figure. Validation: 488 extension, 33 mobile and 124 API tests
+pass. The snapshot panel was reviewed against a synthetic reading of the same
+structure at 380px and 280px, with no horizontal overflow. The fix was proved
+against the account lists in the owner's screenshots rather than a live
+signed-in session, which is not reachable from here.
