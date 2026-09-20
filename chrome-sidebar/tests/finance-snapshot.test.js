@@ -339,8 +339,9 @@ test('a debt is reviewed as what it does to the total, and is still typed as wha
   const panel=()=>document.getElementById('finance-snapshot-body');
   panel().querySelector('button').click();
   await settle(()=>panel().textContent.includes('Credit'));
-  assert.match(panel().textContent,/-\$15,835/,'the figure is what it does to net worth');
-  assert.match(panel().textContent,/Credit · liability/,'and the word says so as well, for a reader who misses the sign');
+  assert.match(panel().textContent,/\(\$15,835\)/,'the figure is what it does to net worth, in accounting notation');
+  assert.ok(panel().querySelector('.amount--negative'),'and in the negative ink');
+  assert.match(panel().textContent,/Credit · liability/,'and the word says so as well, for a reader who reads neither');
 
   // Correcting it is typing what is owed. The sign belongs to the class, and a
   // negative amount is not a figure this ledger can hold.

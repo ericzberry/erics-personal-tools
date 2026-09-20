@@ -1,4 +1,5 @@
 import {FormattedSelect,FormattedSuggestions} from './select.js';
+import {money} from '../money.js';
 import {capabilities,capabilitiesByName,capabilitySections} from '../capabilities.js';
 // All DOM construction lives here. Features compose components and supply data.
 function element(tag, props={}, children=[]) {
@@ -30,6 +31,12 @@ export const Label=(text,props={})=>element('span',{text,...props});
 export const Title=(text,level=2,{className='',...props}={})=>element(`h${level}`,{text,...props,className:`title-text ${className}`.trim()});
 export const Heading=Title;
 export const Strong=(text,props={})=>element('strong',{text,...props});
+export {money} from '../money.js';
+// The parentheses say it and the ink says it again, because a reader scanning a
+// column of figures for what is owed should not have to read the punctuation.
+// Not a status tone: it carries no mark and no surface, only the red.
+export const Amount=(value,currency='USD',props={})=>Strong(money(value,currency),
+  {className:`amount${value<0?' amount--negative':''}`,...props});
 export const Stack=(children=[],props={})=>element('div',props,children);
 export const Section=(children=[],props={})=>element('section',props,children);
 export const PageBody=children=>element('main',{className:'page-body'},children);
@@ -491,7 +498,7 @@ export function RecordRow({title,detail,meta='',figure='',notes='',actions=[],ex
   const head=meta?Stack([name,Label(meta,{className:'record-meta'})],{className:'record-head'}):name;
   return Section([
     Stack([head,
-      figure?Stack([Strong(figure),verbs],{className:'record-figure'}):verbs],
+      figure?Stack([typeof figure==='string'?Strong(figure):figure,verbs],{className:'record-figure'}):verbs],
       {className:`record-line${figure?' record-line--figure':''}`}),
     ...(detail?[Note(detail)]:[]),...lines.map(line=>Text(line)),...extra.filter(Boolean)
   ],{className:'record-row'});

@@ -97,7 +97,7 @@
   gap: 12px;
   min-height: var(--control-height);
   padding: 8px 10px;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
   overflow-wrap: anywhere;
   box-sizing: border-box;

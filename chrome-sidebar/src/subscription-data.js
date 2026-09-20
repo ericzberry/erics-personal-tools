@@ -1,5 +1,6 @@
 import {isDate,addMonths,daysBetween,localDate} from './reminder-data.js';
 import {safePublicURL} from './public-url.js';
+import {money as formatMoney} from './money.js';
 const fail=message=>{throw Object.assign(Error(message),{status:400});};
 export const BILLING_CYCLES={unknown:'Not established',monthly:'Monthly',quarterly:'Quarterly',semiannual:'Every six months',annual:'Yearly',weekly:'Weekly'};
 export const SUBSCRIPTION_STATES=['Review','Active','Canceled','Not recurring'];
@@ -101,4 +102,4 @@ export function mergeSubscriptionReading(previous,incoming){
   // Importing never reactivates a cancellation or overwrites an owner's terms.
   return normalizeSubscription({...previous,charges,...(previous.state==='Review'?{cycle:suggestedCycle(charges),amount:charges.at(-1)?.amount??previous.amount}:{})});
 }
-export const money=(amount,currency)=>amount===null?'Amount unknown':new Intl.NumberFormat('en-US',{style:'currency',currency}).format(amount);
+export const money=(amount,currency)=>amount===null?'Amount unknown':formatMoney(amount,currency);

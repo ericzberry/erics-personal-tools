@@ -33,13 +33,15 @@ const RADII=new Set(['0','inherit','50%','999px','4px','6px','7px','8px','12px',
 
 const RULES={
   'UI-6 colour comes from a token':{
-    budget:{'styles.css':92,'capabilities.css':37,'select.css':16,'upload.css':7,'travel.css':5,
-      'workspace.css':4,'cards.css':2,'finance.css':1,'home.css':1,'reminders.css':1},
+    // capabilities.css keeps one: the forest-at-12% shadow under the open Tools
+    // menu, which has no token because it is the only elevation in the product.
+    budget:{'styles.css':92,'select.css':16,'upload.css':7,'travel.css':5,
+      'workspace.css':4,'cards.css':2,'capabilities.css':1,'home.css':1,'reminders.css':1},
     fix:'use a token from tokens.css, or add one there if the tone is genuinely new',
     count:name=>PALETTE.includes(name)?0:(sheet(name).match(/#[0-9a-fA-F]{3,8}\b/g)||[]).length
   },
   'UI-7 nothing is set below 10px':{
-    budget:{'styles.css':15,'travel.css':1},
+    budget:{},
     fix:'metadata is 10-11px and body text 12-14px; 7, 8 and 9px is loss, not density',
     count:name=>[...sheet(name).matchAll(/font-size: *([0-9.]+)px/g),
       ...sheet(name).matchAll(/font: *(?:[a-z0-9]+ )*?([0-9.]+)px/g)]
@@ -49,12 +51,12 @@ const RULES={
     // travel.css is left for the next pass because another session is editing
     // it; capabilities.css needs `@import tokens.css` first, since data.html
     // loads it with no palette at all and relies on its var() fallbacks.
-    budget:{'travel.css':4,'capabilities.css':3},
+    budget:{},
     fix:'inherit the stack from :root in tokens.css instead of inlining it again',
     count:name=>name==='tokens.css'?0:(sheet(name).match(/-apple-system/g)||[]).length
   },
   'UI-9 corners come from the radius set':{
-    budget:{'styles.css':17,'travel.css':3,'select.css':1,'workspace.css':1},
+    budget:{},
     fix:`use one of ${[...RADII].join(', ')}`,
     count:name=>[...sheet(name).matchAll(/border-radius: *([^;}]+)/g)]
       .flatMap(([,value])=>value.trim().split(/\s+/)).filter(part=>!RADII.has(part)).length
@@ -95,5 +97,100 @@ test('one owner per dropdown: only the shared Select builds a select element',()
   for(const page of readdirSync(new URL('../',import.meta.url)).filter(name=>name.endsWith('.html'))){
     const markup=readFileSync(new URL(`../${page}`,import.meta.url),'utf8');
     assert.doesNotMatch(markup,/<select\b/,`${page} writes a select into the shell`);
+  }
+});
+
+// UI-16. The owner's complaint was a dead Refresh/Disconnect row sitting under
+// Connect while the tool was disconnected — "something the app keeps doing".
+// Two rows of buttons where most are dead read as clutter and hide which action
+// applies right now, so a state gets one row and the rest are hidden, not
+// disabled. Adjacent sibling groups are the shape of the defect and the part a
+// file can be read for; whether a row's own buttons are all dead is read on the
+// screen.
+test('one action row per state: no component builds two action groups side by side',()=>{
+  const dir=new URL('../src/components/',import.meta.url);
+  for(const name of readdirSync(dir).filter(file=>file.endsWith('.js'))){
+    const code=readFileSync(new URL(name,dir),'utf8');
+    for(let at=code.indexOf('ActionGroup(');at>=0;at=code.indexOf('ActionGroup(',at+1)){
+      let depth=0,end=at+'ActionGroup'.length;
+      for(;end<code.length;end++){
+        if(code[end]==='(')depth++;
+        else if(code[end]===')'&&--depth===0)break;
+      }
+      const after=code.slice(end+1,end+40).replace(/\s+/g,'');
+      assert.ok(!after.startsWith(',ActionGroup('),
+        `${name}: two action groups as siblings around character ${at} — give the state one row `+
+        'and hide the actions that do not apply. See UI-16 in docs/UI_RULES.md.');
+    }
+  }
+});
+
+// UI-17, the half a file can be read for. He asked for this about the Tools
+// menu's "Follow Gmail and ESPN automatically" and then generalised it: these
+// are his own tools and he knows what each one does, so a description field is
+// a place for clutter to grow back. A capability is a name, a way in and an
+// icon.
+test('nothing explains itself: a capability entry carries a name, a way in and an icon',async()=>{
+  const {CAPABILITIES,capabilities}=await import('../src/capabilities.js');
+  const allowed=new Set(['id','label','href','icon','section']);
+  for(const list of [CAPABILITIES,capabilities])for(const entry of list){
+    for(const key of Object.keys(entry))assert.ok(allowed.has(key),
+      `capability ${entry.id} carries "${key}" — the launcher and the Tools menu show a label and `+
+      'an icon, and nothing on screen explains itself. See UI-17 in docs/UI_RULES.md.');
+    assert.ok(entry.label&&entry.icon,`capability ${entry.id} needs both a label and an icon`);
+  }
+});
+
+// UI-21. Keyboard focus is the one state a reader cannot discover by pointing,
+// so it has to look the same everywhere. It did not: the extension's global
+// ring was brass and the segmented control's matched it, the Tools navigation
+// drew a 3px yellow-green one, and the phone carried three more of those that
+// a later rule in its own sheet already superseded. The gear in the header is
+// the single exception, because it sits on forest and a forest ring on forest
+// is no ring at all.
+test('one focus ring: 2px, forest, in every sheet either host loads',()=>{
+  const sheets=[...readdirSync(COMPONENTS).filter(name=>name.endsWith('.css'))
+    .map(name=>[name,sheet(name)]),
+    ['mobile-app/public/app/styles.css',
+      readFileSync(new URL('../../mobile-app/public/app/styles.css',import.meta.url),'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g,'')]];
+  const colours=['var(--forest)','var(--wallet-forest)','var(--control-focus)','currentColor'];
+  let found=0;
+  for(const [name,css] of sheets)
+    for(const [,rule] of css.matchAll(/:focus-visible[^{]*\{([^}]*)\}/g)){
+      const outline=/outline: *([^;}]+)/.exec(rule);
+      if(!outline)continue;
+      found++;
+      const [width,style,...rest]=outline[1].trim().split(/\s+/);
+      const colour=rest.join(' ')||style;
+      assert.equal(width,'2px',`${name}: a ${width} focus ring — every ring in the product is 2px`);
+      assert.ok(colours.includes(colour),
+        `${name}: focus ring painted ${colour} — use var(--forest) (or the token that resolves to it). `+
+        'See UI-21 in docs/UI_RULES.md.');
+    }
+  assert.ok(found>=12,`only ${found} focus rings found — the check stopped matching`);
+});
+
+// UI-26. Three modules formatted currency, each with its own rounding, and one
+// of them printed what is owed as -$15,835 — a minus sign in front of a
+// currency symbol is a hyphen the eye skips, and the figure passed for an
+// asset. `money()` in `src/money.js` is the only one now, it writes a negative
+// in parentheses, and it holds no DOM so a data module the Worker imports can
+// use it without dragging the component library in behind it.
+test('one currency formatter, and it writes what is owed in parentheses',async()=>{
+  const {money}=await import('../src/money.js');
+  assert.equal(money(-15835),'($15,835)');
+  assert.equal(money(-0.54),'($0.54)');
+  assert.equal(money(2039492),'$2,039,492');
+  const src=new URL('../src/',import.meta.url);
+  const walk=dir=>readdirSync(new URL(dir,src),{withFileTypes:true}).flatMap(entry=>
+    entry.isDirectory()?walk(`${dir}${entry.name}/`):[`${dir}${entry.name}`]);
+  for(const file of walk('').filter(name=>name.endsWith('.js'))){
+    if(file==='money.js')continue;
+    // Constructing one to check that a currency code is real is not formatting;
+    // calling .format on it is.
+    assert.doesNotMatch(readFileSync(new URL(file,src),'utf8'),
+      /new Intl\.NumberFormat\([^;]*style:'currency'[^;]*\)\.format\(/,
+      `${file} formats its own currency — use money() from src/money.js. See UI-26 in docs/UI_RULES.md.`);
   }
 });

@@ -2,7 +2,8 @@ import * as UI from './ui.js';
 import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,classLabel,registrationLabel,vehicleLabel,vehicleShort,valueSourceLabel,classSide,signed} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
 import {FINANCE_SITES} from '../account-sites.js';
-const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link,Tabs}=UI;
+const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link,Tabs,Amount}=UI;
+export const {money}=UI;
 
 // Where each institution prints its balances. Reaching the figures is its own
 // small errand — a bank's own front page is marketing, and the account summary
@@ -23,10 +24,6 @@ export function AccountPages(sites=[]){
   });
 }
 
-export function money(value,currency='USD'){
-  try{return new Intl.NumberFormat('en-US',{style:'currency',currency,maximumFractionDigits:Math.abs(value)>=1000?0:2}).format(value);}
-  catch{return `${value.toLocaleString('en-US',{maximumFractionDigits:2})} ${currency}`;}
-}
 export const Figure=({label,value,id,tone=''})=>Stack([Label(label,{className:'figure-label'}),Strong(value,{id,className:`figure-value${tone?` figure-value--${tone}`:''}`})],{className:'figure'});
 export const classOptions=()=>ASSET_CLASSES.map(entry=>({text:`${entry.label}${entry.side==='liability'?' (liability)':''}`,value:String(entry.code)}));
 export const registrationOptions=()=>REGISTRATIONS.map(entry=>({text:entry.label,value:String(entry.code)}));
@@ -122,7 +119,7 @@ export function FoldReview({rows=[],editing=false,disabled=false,saveLabel='Save
     // the one thing about a new portfolio the owner cannot check afterwards
     // without opening it.
     ...groups.map(group=>Section([
-      Stack([GroupTitle(`${group.name}${group.isNew&&some?' · new':''}`,{className:'record-group-title'}),
+      Stack([GroupTitle(`${group.name}${group.isNew&&some?' · new':''}`,{className:'record-group-title group-title--name'}),
         group.kind?Badge(registrationLabel(group.kind),{className:'pill portfolio-kind'}):null],{className:'group-name'}),
       ...group.rows.map(({row,index})=>FoldRow(row,{index,editing,dated:!shared,onAmount}))
     ],{className:'record-group snapshot-group'})),
@@ -162,7 +159,7 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
   // saving the statement does not change how the investment is filed.
   const claimed=row.stated&&row.stated!==row.vehicle?`The statement calls this a ${vehicleLabel(row.stated)}.`:'';
   if(!editing)return Stack([
-    Stack([Label(row.name),Strong(money(value,row.currency))],{className:'snapshot-figure'}),
+    Stack([Label(row.name),Amount(value,row.currency)],{className:'snapshot-figure'}),
     Note(where),
     Note(flows),
     claimed?Note(claimed):null
@@ -203,7 +200,7 @@ function FoldRow(row,{index,editing,dated,onAmount}){
   const owed=classSide(row.class)==='liability';
   const what=[classLabel(row.class),owed?'liability':'',dated?`as of ${row.asOf}`:''].filter(Boolean).join(' · ');
   if(!editing)return Stack([
-    Stack([Label(what),Strong(money(signed(row),row.currency))],{className:'snapshot-figure'})
+    Stack([Label(what),Amount(signed(row),row.currency)],{className:'snapshot-figure'})
   ],{className:'snapshot-row'});
   // The field holds the figure the way it is stored and saved: a positive
   // amount under a liability class. Its label is what says which that is, so
@@ -291,10 +288,7 @@ export function FinanceView(){
           Stack([],{id:'finance-totals',className:'finance-totals'}),
           Notice('',{id:'finance-stale',hidden:true}),
           Disclosure('Breakdown',[Stack([],{id:'finance-breakdown'})],{id:'finance-breakdown-panel',className:'ledger-panel'}),
-          // Quarterly or daily is a question about this table and nothing else,
-          // so the choice lives inside it rather than beside the totals.
           Disclosure('Value over time',[
-            Stack([],{id:'finance-trend-switch',className:'currency-switch trend-switch',hidden:true}),
             Stack([],{id:'finance-trend'})
           ],{id:'finance-trend-panel',className:'ledger-panel'}),
           Stack([],{id:'finance-list',className:'travel-list'})
@@ -391,12 +385,12 @@ export function FinanceView(){
 export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[]}){
   return Section([
     Stack([
-      Stack([GroupTitle(name,{className:'record-group-title'}),
+      Stack([GroupTitle(name,{className:'record-group-title group-title--name'}),
         kind?Badge(kind,{className:'pill portfolio-kind'}):null],{className:'group-name'}),
       // The total and the portfolio's verbs are one block, so a narrow sidebar
       // drops them under the name together instead of stranding the actions on
       // a line of their own.
-      Stack([Strong(money(total,currency)),
+      Stack([Amount(total,currency),
         ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})],{className:'group-figure'})
     ],{className:'breakdown-row group-line'}),
     meta?Note(meta):null,
@@ -427,7 +421,7 @@ export function BreakdownList(title,rows,currency,{shares=true}={}){
       return Stack([
         Label(row.label,{className:'breakdown-name'}),
         share?Label(share<0.005?'<1%':`${Math.round(share*100)}%`,{className:'breakdown-share'}):null,
-        Strong(money(row.total,currency))
+        Amount(row.total,currency)
       ],{className:'breakdown-row breakdown-line',...(share?{style:`--share:${(share*100).toFixed(1)}%`}:{})});
     }):[Note('Nothing recorded yet.')])
   ],{className:'breakdown-group'});
@@ -444,11 +438,13 @@ export const quarterOf=asOf=>`${asOf.slice(0,4)} Q${Math.floor((Number(asOf.slic
 // how much of the ledger it covers, and a change is drawn only between two
 // points that cover all of it.
 //
-// Quarterly by default, because that is the grain these figures have. A quarter
-// is shown by its last reading — the one with everything in it — and the
-// part-filled days spent getting there stop being rows of their own. Daily is
-// there for the run-up to today, where every reading is worth seeing.
-export function TrendTable(series,currency,{period='quarter'}={}){
+// Quarterly, and only quarterly: that is the grain these figures have. A
+// quarter is shown by its last reading — the one with everything in it — and
+// the part-filled days spent getting there stop being rows of their own. A
+// daily grain was offered beside it and answered nothing a quarter did not;
+// when there is enough history to be worth a shape, it gets a chart, not a
+// second list of the same numbers.
+export function TrendTable(series,currency){
   if(!series.length)return Note('No dated figures yet.');
   // The newest point carries every figure the ledger holds, because a figure
   // stands until a later one replaces it. So it is the measure of a full
@@ -456,10 +452,8 @@ export function TrendTable(series,currency,{period='quarter'}={}){
   const whole=series.at(-1).figures;
   // A later reading in the same quarter replaces the earlier one in the map,
   // so each quarter keeps the last reading taken in it.
-  const points=period==='quarter'?[...new Map(series.map(point=>[quarterOf(point.asOf),point])).values()]:series;
-  const rows=points.slice(-12).map(point=>({...point,
-    label:period==='quarter'?quarterOf(point.asOf):point.asOf,
-    complete:point.figures>=whole}));
+  const points=[...new Map(series.map(point=>[quarterOf(point.asOf),point])).values()];
+  const rows=points.slice(-12).map(point=>({...point,label:quarterOf(point.asOf),complete:point.figures>=whole}));
   const full=rows.filter(row=>row.complete);
   const change=full.length>1?full.at(-1).net-full[0].net:null;
   const headline=change!==null
@@ -473,7 +467,7 @@ export function TrendTable(series,currency,{period='quarter'}={}){
       if(row.complete)previous=row;
       return Stack([
         Label(row.label),
-        Strong(money(row.net,currency)),
+        Amount(row.net,currency),
         // Partial coverage is said in words, never in a colour: this point is
         // missing figures the newest one has, and that is why no change is
         // drawn against it.

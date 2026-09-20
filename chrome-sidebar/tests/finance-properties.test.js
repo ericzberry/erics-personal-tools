@@ -250,7 +250,11 @@ test('the ledger shows one Real estate line, with the houses behind it',async()=
   // own rather than a sentence hung beneath the figure.
   assert.deepEqual([...rows[0].children].filter(node=>node.tagName==='P'&&node.textContent.trim()),[]);
   assert.doesNotMatch(rows[0].querySelector('.record-line').textContent,/propert/);
-  assert.match(rows[1].textContent,/-\$320,000/,'what is owed, in the shape every liability on the card has');
+  // Accounting notation and the negative ink, the shape every liability in the
+  // product has: a minus sign in front of a currency symbol reads as a hyphen
+  // and the figure passes for an asset.
+  assert.match(rows[1].textContent,/\(\$320,000\)/,'what is owed, in the shape every liability on the card has');
+  assert.ok(rows[1].querySelector('.amount--negative'),'and in the negative ink');
   assert.match(rows[1].textContent,/liability/);
 
   const detail=document.querySelector('#finance-list .estate-detail');

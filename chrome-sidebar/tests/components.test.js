@@ -237,9 +237,15 @@ test('an open disclosure is marked, in the wallet and on the pages around it',()
   // A wallet panel has no box of its own until it is opened; then it takes one,
   // with the band on the summary that was clicked.
   assert.match(wallet,/\.travel-wallet details\[open\][^{]*\{[^}]*background:var\(--wallet-surface\)/);
-  assert.match(wallet,/\.travel-wallet details\[open\][^{]*>summary\{[^}]*background:var\(--wallet-open\)/);
-  // A record that opens into a block, and a panel with no label to click, keep
-  // the marking they already have.
-  assert.match(wallet,/details\[open\]:where\(:not\(\.reward-group,:has\(>summary\[hidden\]\)\)\)/);
+  assert.match(wallet,/\.travel-wallet details\[open\]>summary[^{]*\{[^}]*background:var\(--wallet-open\)/);
+  // UI-22: one idiom, so nothing is exempt. A record that opens — a card and
+  // its benefits, a travel record and its number — takes the same block as a
+  // panel of figures, and the toggle that opened it wears the same band.
+  assert.match(wallet,/\.record-row:has\(\.record-row-toggle\[aria-expanded=true\]\)[^{]*\{[^}]*background:var\(--wallet-surface\)/);
+  assert.match(wallet,/\.record-row-toggle\[aria-expanded=true\][^{]*\{[^}]*background:var\(--wallet-open\)/);
+  assert.doesNotMatch(wallet,/details\[open\]:where\(:not\(/,
+    'no sheet carries a list of disclosures exempt from the open block');
+  assert.equal(/border-left:2px solid var\(--wallet-line\)/.test(wallet),false,
+    'the rail under a card’s benefits was the second idiom; the block says it now');
   assert.match(pages,/details\[open\][^{]*>\s*summary\s*\{[^}]*background:\s*var\(--open-band\)/);
 });

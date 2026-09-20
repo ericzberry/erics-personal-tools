@@ -24,5 +24,5 @@ export function GiftsView(){
   ],{className:'travel-wallet gift-list'});
 }
 export function GiftGroup(person,rows){
-  return Section([GroupTitle(person,{className:'record-group-title'}),...rows],{className:'record-group'});
+  return Section([GroupTitle(person,{className:'record-group-title group-title--name'}),...rows],{className:'record-group'});
 }

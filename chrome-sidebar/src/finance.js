@@ -1,15 +1,11 @@
 import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionDetail,propertyDetail} from './components/finance.js';
-import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
+import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 const today=()=>new Date().toISOString().slice(0,10);
-// How the value-over-time table is read. Quarterly leads, because a quarter is
-// shown by its last reading and the part-filled days spent reaching it stop
-// being rows of their own.
-const TREND_PERIODS=[['quarter','Quarterly'],['day','Daily']];
 
 // `readPage` is the host's ability to read the tab the owner is looking at.
 // The sidebar sits beside that tab and supplies it; a full tab and the phone
@@ -32,7 +28,6 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   gate.content.replaceChildren(FinanceView());
   const $=id=>gate.content.querySelector(`#finance-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',connection='';
-  let trendPeriod='quarter';
   // What was read, before any of it is saved. A reading is a proposal: the
   // amounts stay editable, and nothing is written by reading. The site panel
   // and a dropped statement produce the same thing — figures already folded
@@ -283,15 +278,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         {label:'Value',total:summary.positions.value}
       ],currency,{shares:false})]:[])
     ]:[Note('Nothing recorded yet.')]);
-    // One reading is not a series, and a table of one row needs no grain to be
-    // read at.
-    $('trend-switch').hidden=series.length<2;
-    $('trend-switch').replaceChildren(...(series.length<2?[]:TREND_PERIODS.map(([id,label])=>{
-      const button=Button(label,{variant:trendPeriod===id?'primary':'secondary',size:'compact','aria-pressed':String(trendPeriod===id)});
-      button.addEventListener('click',()=>{trendPeriod=id;renderPosition();});
-      return button;
-    })));
-    $('trend').replaceChildren(TrendTable(series,currency,{period:trendPeriod}));
+    $('trend').replaceChildren(TrendTable(series,currency));
     // Currencies are never added together, so say what a total covers.
     $('breakdown-panel').querySelector('summary').textContent=currencies.length>1?`Breakdown · ${currency} only`:'Breakdown';
   }
@@ -340,7 +327,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // be. The owner should not have to say "this one is a capital account
     // statement" — the reading says which of the two it found, and each is
     // folded by the part of the device that knows how.
-    return {...folded,capital:foldCapital(parsed.capital||[],records,{today:today()}),
+    // The institution reaches the capital fold too: it is what says whose
+    // portfolio a statement read off a page belongs to, and a dropped file that
+    // names no site simply passes nothing.
+    return {...folded,capital:foldCapital(parsed.capital||[],records,{institution,today:today()}),
       unread:parsed.unread,read:parsed.readings.length};
   }
   function renderFold(){
@@ -662,7 +652,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // because a minus sign is a shape and some readers will not see it.
       const meta=[row.side==='liability'?'liability':'',
         mark.pending?(mark.conflict?'Conflict':mark.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
-      return RecordRow({title:row.label,figure:money(signed(mark),portfolio.currency),meta,
+      return RecordRow({title:row.label,figure:Amount(signed(mark),portfolio.currency),meta,
         actions,extra:[past,...decide,confirm]});
     };
     // A position reads as what it is: a name, what kind of vehicle it is, what
@@ -691,7 +681,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       const notes=[positionDetail(position,portfolio.currency),
         position.disputed?`The statement calls this a ${vehicleLabel(holding.stated)}.`:''];
       return RecordRow({title:`${holding.name} · ${vehicleShort(holding.vehicle)}`,
-        figure:money(position.value,portfolio.currency),meta,notes,actions,extra:[past,confirm]});
+        figure:Amount(position.value,portfolio.currency),meta,notes,actions,extra:[past,confirm]});
     };
     // A property reads as what it is: an address, what it is worth, and
     // underneath, the two things the value alone cannot say — where the number
@@ -720,7 +710,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // valued, and a house repeating it under it is one fact written twice.
       const meta=[current?dated(current.asOf,against):(unvalued?'':'not valued yet'),
         property.pending?'Waiting to sync':''].filter(Boolean).join(' · ');
-      return RecordRow({title:property.name,figure:money(entry.value,portfolio.currency),meta,
+      return RecordRow({title:property.name,figure:Amount(entry.value,portfolio.currency),meta,
         notes:[propertyDetail(entry,portfolio.currency)],actions,extra:[past,confirm]});
     };
     // Every house in one portfolio, as one line of the ledger. A portfolio is
@@ -752,12 +742,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // holding the equity would show a house at its full value and a total
       // that is smaller, with nothing on the card saying why.
       const owing=debt?[RecordRow({title:classLabel(PROPERTY_DEBT_CLASS),
-        figure:money(-debt,portfolio.currency),meta:'liability'})]:[];
+        figure:Amount(-debt,portfolio.currency),meta:'liability'})]:[];
       // The addresses open under the block rather than inside it, so a debt
       // line is never separated from the value it is against.
       (owing[0]||null)?.append(houses);
       return [
-        RecordRow({title:classLabel(PROPERTY_CLASS),figure:money(value,portfolio.currency),meta,
+        RecordRow({title:classLabel(PROPERTY_CLASS),figure:Amount(value,portfolio.currency),meta,
           actions:[rowAction(SHOW_GLYPH,`Show the properties in ${portfolio.name}`,()=>{houses.hidden=!houses.hidden;})],
           extra:debt?[]:[houses]}),
         ...owing
@@ -799,8 +789,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   }
   // Not hidden figures: figures that were never put on the page.
   function sealLedger(){
-    for(const id of ['currency-switch','totals','breakdown','trend','trend-switch','list'])$(id).replaceChildren();
-    $('currency-switch').hidden=true;$('trend-switch').hidden=true;$('stale').hidden=true;
+    for(const id of ['currency-switch','totals','breakdown','trend','list'])$(id).replaceChildren();
+    $('currency-switch').hidden=true;$('stale').hidden=true;
   }
   function render(){
     // What the ledger holds — the totals and the saved figures — waits to be

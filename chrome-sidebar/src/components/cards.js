@@ -1,4 +1,5 @@
 import {Stack,Section,Heading,Note,Notice,Form,FormField,Button,ActionGroup,Disclosure,Link,Strong,RecordRow,RowAction,SEARCH_GLYPH} from './ui.js';
+import {money} from '../money.js';
 import {PURCHASE_CATEGORIES,PURCHASE_CHANNELS,rewardRules} from '../card-data.js';
 const options=values=>values.map(value=>({value,text:value}));
 const field=(key,label,kind='text',values,extra={})=>FormField({id:`cards-${key}`,label,kind,options:values,...extra});
@@ -123,7 +124,7 @@ export function PurchaseConditions(cards,purchase){
   }));
   return fields.length?[Note('Confirm only what this purchase meets.'),...fields]:[];
 }
-const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(value);
+
 const percent=value=>`${value.toFixed(2)}%`;
 // What AI read out of the description, shown before the recommendation so the
 // reading can be checked and corrected before any number is trusted.

@@ -2726,3 +2726,76 @@ narrowing the tab to its own offers; and a page of another origin's dropped.
 Validation: 578 extension, 33 mobile and 134 API tests pass from an archive of
 HEAD. The Offers tab was reviewed at 380px against a synthetic catalogue holding
 two cards' offers beside a published one. Archive: `release/erics-sidebar-0.6.213.zip`.
+
+## Five complaints, five rules, and the ledger they came from (0.6.215 / mobile 0.1.165)
+
+**"Every time I make comments that something's ugly, extract a rule out of it
+and enforce it generally."** The screen he points at is the example; the rule is
+the task. That loop is now written into `AGENTS.md`, and the five standing
+preferences that had been carried in a session's private notes for eleven days
+— one action row per state, nothing on screen explains itself, never announce a
+state the screen is showing, never ask for detail that changes nothing,
+describe it rather than filling it in — are UI-16 to UI-20 in the register,
+each recorded with the complaint that produced it. Two of them now fail a
+build: a component may not draw two action groups as siblings, and a capability
+entry carries a name, a way in and an icon and no prose.
+
+**Then he looked at the ledger.** Five more, and each one is general.
+
+*"I like this concept, you should use that inset everywhere there's an
+expandable thing."* Everything that expands now opens into the same block with
+the same banded head — a panel of figures, a card and its benefits, a program
+and its offers, a travel record and its number. The rail down a card's benefits
+and the half-rounded surface on an expanded row were two more idioms for one
+thing; both are gone, and no sheet carries a list of disclosures exempt from
+the rule. UI-22, and the old UI-Q3 is answered.
+
+*"The graphs are ok but make them a little lighter."* The proportion behind a
+breakdown line is `--share-bar` — sage carried most of the way back to paper —
+so the bar stays behind the figure instead of competing with it. UI-23.
+
+*"For Value over Time — just have quarterly."* The Quarterly/Daily switch is
+gone and the grain is fixed. Daily answered nothing a quarter did not: the same
+figures, one row per reading. When there is enough history to be worth a shape
+it gets a chart, not a second list. UI-24: no control whose other answer
+answers nothing.
+
+*"The names of the trusts are too long in this listing and they don't need to
+be all caps."* Uppercase with tracking is what makes a short label this product
+wrote read as a label — By liquidity, Airlines, Today. A heading carrying
+something the owner named is sentence case, because five words of "BERRY 2020
+DESCENDANTS' IRREVOCABLE TRUST" is a wall a reader spells out. The portfolio
+headings, the holders in a reading and the people in Gift ideas all changed.
+UI-25. The heading also became two columns, so a long name wraps inside its own
+column and every portfolio's total stays in one place to read down — it used to
+push its own total onto a row of its own.
+
+*"Use parens not minus sign for all liabilities. Make it a shade of red."* A
+negative amount is `($15,835)` in the danger ink, everywhere. A minus sign in
+front of a currency symbol is a hyphen the eye skips and the figure passes for
+an asset. Three modules formatted currency with three different rounding rules;
+there is one now, `money()` in `src/money.js`, which holds no DOM so the data
+modules the Worker imports can use it without dragging the component library in
+behind them. UI-26.
+
+**And the sweep underneath.** A reviewer ran UI-7 and UI-9 to zero: no type
+below 10px anywhere — the 8px "Taxable" tag beside a portfolio's name is 10px
+now, and it bought the width back from its own tracking and padding, so seven
+heading rows measure byte-identical at 380px and at 280px — and thirteen corner
+radii became the set. UI-8 reached zero too. All three move from ratcheting to
+enforced. `capabilities.css` went from 37 raw colours to one: its `var(--x,
+#hex)` fallbacks were vestigial, since the sheet has imported `tokens.css` all
+along. It also drew its own 3px yellow-green focus ring while the launcher
+tiles three rules below drew the product's 2px forest one; the extension's
+global ring was brass and the phone carried three superseded rings of its own.
+There is one ring now, and UI-21 holds it in every sheet either host loads.
+
+New coverage: the two action groups, the registry entry's shape, the focus
+ring, the currency formatter and its parentheses, and the absence of any
+exemption from the open block. Validation: 583 extension and 33 mobile tests
+pass from an archive of this release, built with the vendored reader it ships.
+The ledger was reviewed at 380px and the 280px minimum against the synthetic
+states — the mortgage line reads ($1,359,800) in red, the bars sit behind the
+figures, and the trust names read as names. Native iPhone and installed Chrome
+behavior were not directly tested. Archive:
+`release/erics-sidebar-0.6.215.zip`.

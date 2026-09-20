@@ -95,6 +95,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `home-page.js`; mobile mounts it in its own `capabilities.js`.
 - **Links** — `public-url.js`: the one reading of "a link safe to show and
   open", used by gift links and restaurant booking links alike.
+- **Money** — `money.js`: the one currency formatter, accounting notation, no
+  DOM — so a data module the Worker imports can use it without pulling the
+  component library in. `components/ui.js` re-exports it and builds `Amount`
+  on top, which carries the negative ink.
 - **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),
   `offline-storage.js` (encrypted IndexedDB), `cloud-storage.js` (`CLOUD_URL`,
   `cloudRequest`, `cloudUpload` for a file too big to travel as JSON,

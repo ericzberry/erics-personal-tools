@@ -16,6 +16,13 @@
   --open-band: #dde6d8;
   --open-band-hover: #d3ded0;
   --line: #dedfd5;
+  /* What is owed, and what a proportion is drawn with. The red is the one the
+     product already uses for danger; a negative amount borrows the ink and
+     none of the rest of a status tone. The share bar sits behind a line of
+     figures rather than in front of them, so it is sage carried most of the
+     way back to paper. */
+  --danger: #8c2f26;
+  --share-bar: #eff2eb;
   --accent: #ad8050;
   --radius: 14px;
   /* The one system stack. Every sheet that needs a family in a `font`

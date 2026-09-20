@@ -58,6 +58,13 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 
 Apply these rules to every user-facing interface in this repository. Follow each project's component architecture and established visual language.
 
+## A complaint becomes a rule
+
+- When the owner says something looks ugly, cluttered or wrong, the screen he pointed at is the example, not the task. Fixing only that screen guarantees the same complaint arrives again from somewhere else.
+- Write down what he actually objected to, in his words. Name the general case behind it. Add it to [docs/UI_RULES.md](docs/UI_RULES.md) with a status, put a check behind it if one is possible, and fix every other instance of the same thing in the same change. A rule with no possible check names the screen to look at instead.
+- Never answer a complaint with a setting, a toggle or an explanation on the screen. The default becomes right for everyone.
+- The register is the memory. A preference that lives only in a conversation is lost to the next session and to every other one working in this checkout at the same time.
+
 ## Structure and hierarchy
 
 - Group related status, content, and actions in a named section. A user should immediately see what each action affects.

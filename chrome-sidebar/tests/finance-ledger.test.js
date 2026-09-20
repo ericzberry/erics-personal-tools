@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
 import {mountFinance} from '../src/finance.js';
 import {openSecret} from '../src/secret-vault.js';
-import {TrendTable,BreakdownList} from '../src/components/finance.js';
+import {TrendTable,BreakdownList,FinanceView} from '../src/components/finance.js';
 import {markRef} from '../src/finance-data.js';
 
 const settle=async(check,attempts=500)=>{
@@ -122,14 +122,25 @@ const SERIES=[
 
 test('value over time draws no change against a reading that covers part of the ledger',()=>{
   setup();
-  const table=TrendTable(SERIES,'USD',{period:'day'});
+  const table=TrendTable(SERIES,'USD');
   const rows=[...table.querySelectorAll('.trend-row')].map(row=>row.textContent);
-  assert.equal(rows.length,3);
-  assert.match(rows[0],/2026-03-31\$500\.001 of 6 figures/);
-  assert.match(rows[1],/2026-09-19\$0\.543 of 6 figures/);
-  assert.match(rows[2],/2026-09-20\$2,039,492$/,'the only full reading, and nothing to compare it with');
+  assert.equal(rows.length,2);
+  assert.match(rows[0],/2026 Q1\$500\.001 of 6 figures/);
+  assert.match(rows[1],/2026 Q3\$2,039,492$/,'the only full reading, and nothing to compare it with');
   assert.equal(table.textContent.includes('higher than'),false);
   assert.match(table.textContent,/first full picture/);
+});
+
+// The table had a Quarterly/Daily switch above it. Daily answered nothing a
+// quarter did not — the same figures, one row per reading — so the grain is
+// fixed and the control is gone.
+test('value over time offers no grain to choose: the table is quarterly and says so once',()=>{
+  setup();
+  assert.equal(TrendTable(SERIES,'USD',{period:'day'}).querySelectorAll('.trend-row').length,2,
+    'a leftover period argument changes nothing');
+  const view=FinanceView();
+  assert.equal(view.querySelector('#finance-trend-switch'),null);
+  assert.equal([...view.querySelectorAll('button')].some(b=>/Quarterly|Daily/.test(b.textContent)),false);
 });
 
 test('value over time is read quarterly by default, each quarter shown by its last reading',()=>{
