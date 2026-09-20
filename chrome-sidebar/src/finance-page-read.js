@@ -36,13 +36,31 @@ export function readAccountPage() {
   const STATUS = /\b(delayed|market (closed|open))\b|\bclosed\b(?=[^\n]*\bET\b)/i;
   // The labels on a chart's axis are not balances.
   const TICK = /^[$€£¥]\s?(0|\d{1,3}(\.\d)?\s?[kmbt])$/i;
+  // A balance and a change are printed in the same shape, and on an exchange's
+  // home page the change carries no label to tell them apart: Coinbase sets
+  // "↘ $185.01 (1.17%) 24H" directly under the portfolio total, with an arrow
+  // and a colour doing all the work and neither surviving innerText. Read as a
+  // figure it is $185 of somebody's money. A line that is only an amount, a
+  // percentage in brackets and the window it was measured over is a change,
+  // whichever way it points — and so is a broker's own "-$7,036.71 (-0.42%)",
+  // which says the same thing under a label the reading is told to drop.
+  const CHANGE = /^[^\w$€£¥]*[-+]?[$€£¥]?\s?[\d,]+(\.\d+)?\s*\(\s*[-+]?\d+(\.\d+)?\s*%\s*\)(\s*(1h|24h|1d|7d|30d|1w|1m|1y|ytd|all|today))?$/i;
   // The site's own furniture, sitting between an account's name and its
   // balance. E*TRADE prints "Show number" under "Traditional IRA -4144", so the
   // two lines above the figure were "Net Account Value" and "Show number" and
   // the account's name never travelled with its balance at all. The reading
   // then had nothing saying which balance was the IRA, and a retirement account
   // was folded into a joint taxable estate — which it cannot be.
-  const CHROME = /^(show (number|more|less|all|details)|view (all|full|details|more)|hide|trade|buy|sell|transfer|deposit|withdraw|quick links|open orders|edit|manage|settings|help|learn more|more|details|\u2026|\.{3})\b/i;
+  // An exchange puts a whole order ticket beside the balances — Quick buy, Max,
+  // Convert, Review order — and every one of those sat directly above a figure,
+  // where the page reader looks for the name of the account it belongs to.
+  const CHROME = /^(show (number|more|less|all|details)|view (all|full|details|more)|hide|trade|buy|sell|transfer|deposit|withdraw|quick links|open orders|edit|manage|settings|help|learn more|more|details|quick buy|review order|place order|preview order|convert|max|continue|\u2026|\.{3})\b/i;
+  // What a change calls itself. Dropping the change leaves its caption behind,
+  // and a caption with no figure under it is the nearest line above the next
+  // balance — which is how "Day's Gain" ended up labelling the IRA's value.
+  // A line naming a change names the figure that was just refused, never the
+  // one that follows it.
+  const CHANGE_LABEL = /^(today's |day's |daily |total )?(gain|loss|change|return|performance|profit)( ?\/ ?loss)?\b|^(1h|24h|1d|7d|30d|1w|1m|1y|ytd|all|today)$/i;
   // No figure of its own, but it names the account or the date the figures
   // around it belong to.
   const CONTEXT = /\b(as of|updated|statement period|period ending|closing date|account (number|no\.?|#)|ending in)\b|\.{3}\s?\d{3}/i;
@@ -55,7 +73,7 @@ export function readAccountPage() {
   // figure of its own — a sentence that merely contains the word is prose.
   const ACCOUNT = /\b(brokerage|ira|roth|401\s*\(?k\)?|403\s*\(?b\)?|457|529|hsa|stock plan|espp|rsu|checking|savings|money market|certificate|trust|custodial|utma|ugma|rollover|annuity|individual|joint|margin|cash management)\b/i;
   const names = line => line.length <= 60 && line.split(/\s+/).length <= 8 && ACCOUNT.test(line);
-  const blocked = line => NOISE.test(line) || INDEX.test(line) || STATUS.test(line) || TICK.test(line);
+  const blocked = line => NOISE.test(line) || INDEX.test(line) || STATUS.test(line) || TICK.test(line) || CHANGE.test(line);
   const wanted = line => !!line && line.length <= 200 && !blocked(line)
     && (MONEY.test(line) || CONTEXT.test(line) || (!MONEY.test(line) && names(line)));
 
@@ -109,6 +127,16 @@ export function readAccountPage() {
   // The site's own controls are not names and never take one of those two
   // places. Counting them pushed the account's name out of the snapshot on
   // every broker page that puts a link beside the heading, which is all of them.
+  //
+  // The two places are not asked the same question, because the same words
+  // mean different things in each. The nearest line says what the figure is —
+  // "Net Account Value" is printed over every card on a broker page — so it
+  // travels with each one and is dropped only when it is already the line
+  // directly above; suppressing it across cards left an account with its name
+  // and nothing saying what kind of number sat under it. The line above that
+  // says who holds it, and a holder repeated down the accounts grouped under it
+  // is one heading said four times, so that place keeps the wider test.
+  const repeats = label => kept.length && kept[kept.length - 1].toLowerCase() === label.toLowerCase();
   const fresh = label => !kept.slice(-4).some(entry => entry.toLowerCase() === label.toLowerCase());
   lines.forEach((line, index) => {
     if (!wanted(line)) return;
@@ -118,9 +146,12 @@ export function readAccountPage() {
     // the other side of the page, not over this figure.
     const previous = above(index, 5);
     if (previous.slice(0, 3).some(entry => INDEX.test(entry))) return;
-    const labels = previous.filter(entry => entry.length <= 80 && !MONEY.test(entry) && !blocked(entry) && !CHROME.test(entry))
+    const labels = previous.filter(entry => entry.length <= 80 && !MONEY.test(entry) && !blocked(entry)
+      && !CHROME.test(entry) && !CHANGE_LABEL.test(entry))
       .slice(0, 2).reverse();
-    for (const label of labels) if (fresh(label)) push(label, true);
+    const [outer, inner] = labels.length > 1 ? labels : [null, labels[0]];
+    if (outer && fresh(outer)) push(outer, true);
+    if (inner && !repeats(inner)) push(inner, true);
     push(line);
   });
 

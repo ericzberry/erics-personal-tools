@@ -150,7 +150,22 @@ export const FINANCE_SITES=[
   {id:'carta',label:'Carta',institution:'Carta',kind:'private',hosts:['carta.com'],
     url:'https://app.carta.com/'},
   {id:'coinbase',label:'Coinbase',institution:'Coinbase',kind:'crypto',hosts:['coinbase.com'],
-    url:'https://www.coinbase.com/assets'},
+    url:'https://www.coinbase.com/assets',
+    // Coinbase signs in on a host of its own: asking for www.coinbase.com/home
+    // with no session lands on login.coinbase.com/signin, which is why reading
+    // names the www host alone. The log-on form is still recognized as
+    // Coinbase's — it is on the registrable domain — but it can never be read,
+    // and that matters here more than elsewhere: the form asks for an email
+    // first and shows no password field at all until the step after, so the
+    // one signal that settles every other site would not fire on it.
+    //
+    // The same host serves the marketing site, so the application is named by
+    // its own areas rather than by a prefix. Everything the owner's money is on
+    // is in this list; what is left over — /explore, /price/…, /learn, /card,
+    // /one, the product pages — is public, has no balance on it, and is
+    // recognized the way any other finance page is without being read.
+    read:{hosts:['www.coinbase.com'],
+      app:/^\/(home|assets|accounts|portfolio|transactions|statements|settings|notifications|advanced-trade)\b/i}},
   {id:'kraken',label:'Kraken',institution:'Kraken',kind:'crypto',hosts:['kraken.com'],
     url:'https://pro.kraken.com/app/portfolio'},
   {id:'treasury-direct',label:'TreasuryDirect',institution:'TreasuryDirect',kind:'other-asset',hosts:['treasurydirect.gov'],

@@ -252,6 +252,7 @@ test('a reading needs a saved connection, and a bad amount is reported without l
 // sign-on over a joint account, several trusts, an LLC and the children's
 // accounts — so the page's own headings decide where its figures land.
 const CHASE={id:'chase',label:'Chase',institution:'Chase',kind:'bank'};
+const COINBASE={id:'coinbase',label:'Coinbase',institution:'Coinbase',kind:'crypto'};
 test('a second account site reads under its own name, its own default class and its own titles',async()=>{
   const {document,restore}=setup();
   let sent=null;
@@ -286,6 +287,36 @@ test('a second account site reads under its own name, its own default class and 
   assert.deepEqual([checking.portfolio,brokerage.portfolio],[1,2]);
   const made=writes.find(write=>write.row==='portfolio');
   assert.deepEqual([made.name,made.kind],['Berry AE 21 Irrevocable Trust',5]);
+  tool.stop();restore();
+});
+
+// An exchange states one balance for a page and never says what kind of money
+// it is, because to it there is only one kind. The site is what answers: a
+// figure read at Coinbase is coin, which is the whole reason the class exists.
+test('an exchange page reads under its own name and files what it holds as crypto',async()=>{
+  const {document,restore}=setup();
+  let sent=null;
+  const {tool,writes}=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'Coinbase',label:'Total balance',class:'unclassified',value:15576.31,asOf:'2026-09-11'}
+    ],unread:''},
+    readPage:async()=>({text:'Crypto\n$15,576.25\nCash\n$0.06',host:'www.coinbase.com',title:'Coinbase',trimmed:0,tables:0}),
+    onIntake:value=>{sent=value;}
+  });
+  await ready(document);
+  tool.site(COINBASE);
+  const panel=()=>document.getElementById('finance-snapshot-body');
+  assert.match(panel().textContent,/Read my Coinbase accounts/,'the page says whose accounts it is offering to read');
+  panel().querySelector('button').click();
+  await settle(()=>panel().textContent.includes('Crypto'));
+  assert.equal(sent.institution,'Coinbase');
+  assert.equal(sent.live,true,'a signed-in page dates its own balances');
+
+  panel().querySelector('button').click();
+  await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 1 figure.'));
+  const saved=writes.find(write=>write.row==='mark');
+  assert.deepEqual([saved.class,saved.amount,saved.portfolio],[classById('crypto').code,15576.31,1]);
   tool.stop();restore();
 });
 

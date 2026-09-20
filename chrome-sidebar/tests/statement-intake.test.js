@@ -355,6 +355,59 @@ test('an index quote is dropped and a market-status line takes no balance with i
   assert.match(page.text, /Net Account Value\n\$1,668,402\.54/);
 });
 
+// Coinbase's home page, in the order it reads: the portfolio total with its
+// day's move directly under it, the buy panel beside it, two promotional cards,
+// and the two balances that are the whole point of the page. The move carries
+// no label at all — an arrow and a colour say it is a change, and neither
+// survives innerText — so read as a figure it is $185 of somebody's money.
+test('an exchange home page keeps the balances and drops the move printed under them', () => {
+  const page = inPage(pageOf({text: [
+    'Home',
+    '$15,576.31',
+    '↘ $185.01 (1.17%) 24H',
+    'Earn 3.75%',
+    'Buy', 'Sell', 'Convert',
+    'Quick buy',
+    '0 USD',
+    'Max',
+    '0 BTC',
+    'Pay with',
+    'Cash (USD)',
+    '$0.06',
+    'Available',
+    'Review order',
+    'Crypto',
+    '$15,576.25',
+    'Cash',
+    '$0.06'
+  ].join('\n')}), HERE);
+  assert.equal(page.filtered, true);
+  assert.match(page.text, /Crypto\n\$15,576\.25/, 'what is in coin travels with the word for it');
+  assert.match(page.text, /Cash\n\$0\.06/);
+  assert.match(page.text, /^\$15,576\.31$/m, 'the portfolio total is kept');
+  assert.equal(page.text.includes('185.01'), false, 'a move with no label is still a move, not a balance');
+  assert.equal(page.text.includes('Review order'), false, 'the buy panel is a control, not an account');
+});
+
+// The same line under a label, which is how a broker prints it. Dropping the
+// figure must not leave its caption behind to be read as the name of whatever
+// balance comes next.
+test("a change's own caption does not become the label of the balance below it", () => {
+  const page = inPage(pageOf({text: [
+    'Individual Brokerage -4049',
+    'Net Account Value',
+    '$1,668,402.54',
+    "Day's Gain",
+    '-$7,036.71 (-0.42%)',
+    'Traditional IRA -4144',
+    'Net Account Value',
+    '$122,666.62'
+  ].join('\n')}), HERE);
+  assert.equal(page.text.includes('7,036.71'), false);
+  assert.equal(page.text.includes("Day's Gain"), false, 'a caption with nothing under it names nothing');
+  assert.match(page.text, /Traditional IRA -4144\nNet Account Value\n\$122,666\.62/);
+});
+
 test('a page whose figures this filter cannot see is sent whole rather than gutted', () => {
   const page = inPage(pageOf({text: 'Balance\nabout a thousand pounds\nSettings'}), HERE);
   assert.equal(page.filtered, false);

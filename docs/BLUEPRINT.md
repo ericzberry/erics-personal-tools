@@ -163,9 +163,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `chrome.scripting` and hides its own button where there is none.
   `account-sites.js` holds `FINANCE_SITES`, the registry of institutions worth
   recognizing — each with the page its balances are printed on — and
-  `ACCOUNT_SITES`, the four of them whose signed-in pages can be read (E*TRADE,
-  Chase, Morgan Stanley, Schwab), plus the in-page probe that says whether the
-  owner is already signed in to one. Recognition and the probe are the sidebar's
+  `ACCOUNT_SITES`, the five of them whose signed-in pages can be read (E*TRADE,
+  Chase, Morgan Stanley, Schwab, Coinbase), plus the in-page probe that says
+  whether the owner is already signed in to one. Recognition and the probe are the sidebar's
   alone, but the registry ships to mobile too, because `components/finance.js`
   lists those pages under **Open an account page**.
   `context-panel.js` drives both from the tab it already watches: any recognized

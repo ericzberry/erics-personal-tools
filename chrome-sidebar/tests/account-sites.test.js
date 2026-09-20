@@ -6,6 +6,7 @@ const etrade=ACCOUNT_SITES.find(site=>site.id==='etrade');
 const chase=ACCOUNT_SITES.find(site=>site.id==='chase');
 const morganStanley=ACCOUNT_SITES.find(site=>site.id==='morgan-stanley');
 const schwab=ACCOUNT_SITES.find(site=>site.id==='schwab');
+const coinbase=ACCOUNT_SITES.find(site=>site.id==='coinbase');
 const frame=(result,frameId=0)=>({frameId,result});
 
 test('an account site is recognized by its host, and nothing else is',()=>{
@@ -27,6 +28,13 @@ test('an account site is recognized by its host, and nothing else is',()=>{
     assert.equal(accountSite(url)?.id,'schwab',url);
   // The marketing site has nothing to read, and Schwab Alliance redirects to it.
   for(const url of ['https://www.schwab.com/','https://schwab.com/branches','https://www.schwaballiance.com/'])
+    assert.equal(accountSite(url),null,url);
+  // Coinbase serves its application and its marketing site from the same host,
+  // so reading names www and the areas the owner's money is on; the sign-in
+  // host beside it is Coinbase's page but never a readable one.
+  for(const url of ['https://www.coinbase.com/home','https://www.coinbase.com/assets','https://www.coinbase.com/explore'])
+    assert.equal(accountSite(url)?.id,'coinbase',url);
+  for(const url of ['https://login.coinbase.com/signin','https://coinbase.com/'])
     assert.equal(accountSite(url),null,url);
   // A look-alike host is not the site, and neither is an unencrypted one.
   for(const url of ['https://etrade.com.example.invalid/','https://notetrade.com/','http://us.etrade.com/etx/','https://chase.com.example.invalid/','https://notchase.com/','https://morganstanleyclientserv.com.example.invalid/','https://notmorganstanleyclientserv.com/','https://client.schwab.com.example.invalid/','https://notclient.schwab.com/','chrome://extensions','',undefined])
@@ -72,6 +80,21 @@ test('a log-on form settles it: the owner is not signed in yet',()=>{
 // Chase's log-on shell and its signed-in application serve the same path, so the
 // path alone is never allowed to answer until the page has finished loading and
 // had its chance to show a password field.
+// Coinbase asks for an email before it ever shows a password field, so the
+// signal that settles every other site does not fire on its log-on page. The
+// path is what answers instead, and it has to tell the application from the
+// marketing site sharing its host.
+test('Coinbase is read on the pages the money is on, and on none of the pages anyone can see',()=>{
+  const app={ready:true,password:false,exit:false};
+  for(const path of ['/home','/assets','/assets/bitcoin','/accounts','/portfolio','/transactions','/settings/limits'])
+    assert.equal(signedIn(coinbase,{...app,path}),true,path);
+  for(const path of ['/explore','/price/bitcoin','/learn/tips-and-tutorials','/card','/one','/'])
+    assert.equal(signedIn(coinbase,{...app,path}),false,path);
+  // And the sign-in step that does show a password field is refused whatever
+  // path it is on.
+  assert.equal(signedIn(coinbase,{...app,path:'/home',password:true}),false);
+});
+
 test('a page still loading cannot be read as a signed-in one by its path',()=>{
   const loading={path:'/web/auth/dashboard',ready:false,password:false,exit:false};
   assert.equal(signedIn(chase,loading),false,'the log-on frame may not have arrived yet');

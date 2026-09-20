@@ -1660,3 +1660,61 @@ one today with three behind it, two today and nothing after, nobody today,
 nothing at all, and not connected — and on the mobile home screen at 375px.
 Native iPhone and installed Chrome behavior were not directly tested. Archive:
 `release/erics-sidebar-0.6.154.zip`.
+
+## Coinbase reads like any other account page (0.6.161 / mobile 0.1.114)
+
+Coinbase was recognized but never readable: standing on it, Finance offered
+**Read the accounts on this page** — the offer any page gets — so the reading
+went out with no institution behind it and no idea what kind of money it was
+looking at. It is now the fifth site the snapshot can be read from, on the same
+terms as E*TRADE, Chase, Morgan Stanley and Schwab: signed in, the block is
+headed **Coinbase**, one press reads the balances on screen, and what the page
+does not classify is filed as **Crypto** rather than left unplaced.
+
+The sign-in lives on a host of its own. Asking for `www.coinbase.com/home` with
+no session lands on `login.coinbase.com/signin`, so reading names the www host
+alone. That split matters more here than elsewhere: the form asks for an email
+first and shows no password field until the step after it, so the one signal
+that settles every other site — a password field on screen — would not fire on
+Coinbase's log-on page at all. Leaving the log-on host out is what answers it
+instead. The marketing site shares the application's host, so the application is
+named by its own areas rather than by a prefix: `/home`, `/assets`,
+`/accounts`, `/portfolio`, `/transactions`, `/statements`, `/settings`,
+`/notifications`, `/advanced-trade`. Everything else there — `/explore`,
+`/price/…`, `/learn`, the product pages — is public, has no balance on it, and
+stays recognized without being read.
+
+**A move printed under a total is not a balance.** Coinbase sets
+"↘ $185.01 (1.17%) 24H" directly beneath the portfolio value, and the arrow and
+the colour that say it is a change are exactly what `innerText` throws away.
+Read as a figure it is $185 of somebody's money. A line that is only an amount,
+a percentage in brackets and the window it was measured over is now dropped
+whichever way it points — including a broker's own "-$7,036.71 (-0.42%)", which
+says the same thing under a label the reading was already told to ignore.
+Dropping the figure leaves its caption behind, so a caption naming a change no
+longer stands in as the name of the next balance down the page: "Day's Gain"
+was one line above the IRA's value.
+
+Which forced a second rule out into the open. The two places a figure's name can
+come from were being asked the same question, and they are not the same
+question. The nearest line says what the figure *is* — "Net Account Value" is
+printed over every card on a broker page — so it travels with each one and is
+dropped only when it is already the line directly above. The line above that
+says *who holds it*, and a holder repeated down the accounts grouped under it is
+one heading said four times, so that place keeps the wider test. Counting a
+fixed number of lines back instead made the answer depend on how much sat
+between two balances: dropping one card's change line was enough to lose the
+second account's "Net Account Value".
+
+The order ticket beside the balances is furniture like any other: Quick buy,
+Max, Convert and Review order each sat directly above a figure, where the reader
+looks for the name of the account it belongs to.
+
+New coverage: the pages Coinbase is read on and the public ones it is not; its
+log-on host refused while staying a recognized Coinbase page; a home page read
+down to the two balances with the move and the order ticket left out; a change's
+caption not becoming the next balance's label; and an end-to-end read filing an
+exchange's total as Crypto under its own name. Detection was checked against the
+real signed-out `www.coinbase.com/home`, which is what named the log-on host;
+neither the path list nor the page filter has been run against a signed-in
+Coinbase session. Archive: `release/erics-sidebar-0.6.161.zip`.
