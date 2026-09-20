@@ -120,8 +120,10 @@
 /* Never split: "2026-09-" on one line and "19" on the next is not a date any
    more, and CSS treats a date's own hyphens as places to break. */
 .travel-wallet .record-meta{flex:0 1 auto;min-width:0;color:var(--wallet-muted);font-size:12px;white-space:nowrap}
-/* Set against the name, and marked as belonging to it. */
-.travel-wallet .record-head>.record-meta::before{content:'·';margin-inline-end:4px}
+/* Set against the name, and marked as belonging to it — by a separator the
+   name carries, so a qualification too long to share the line is not
+   introduced by a dot sitting alone at the start of the next one. */
+.travel-wallet .record-head>.record-name:has(+.record-meta)::after{content:'·';margin-inline-start:4px;color:var(--wallet-muted);font-weight:400}
 /* The line is two halves: the name with its qualification, and the amount with
    the record's verbs. The left half takes whatever the right half leaves, so
    the amounts stay in one column however long the names beside them are, and a

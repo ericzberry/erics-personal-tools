@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
 import {mountRewards} from '../src/rewards-tool.js';
 import {sealSecret,openSecret} from '../src/secret-vault.js';
+import {UNREAD_BALANCE} from '../src/balance-data.js';
 // Waits for the tool to reach an expected state. Sealing and opening a
 // protected value run through real WebCrypto, so a single tick is not enough
 // to observe the result reliably.
@@ -327,4 +328,31 @@ test('a host with no catalogue store has no offers section, and a failed load is
  assert.equal(status.closest('section').hidden,true);
  assert.equal(second.document.getElementById('rewards-status').textContent,'','the wallet does not report a catalogue’s failure as its own');
  tool.stop();second.restore();h.restore();
+});
+
+// A balance is read down one column of programs and one of figures, so each is
+// one line: the issuer belongs to the program's name rather than to a line of
+// its own under it, "Available" is what every row in the wallet is and so says
+// nothing, and a program never read prints no figure instead of three words
+// where the number goes.
+test('a balance reads as one line: the program, then what is in it',async()=>{
+ const h=harness();
+ const records=[
+  {id:'a',kind:'balance',name:'Bonvoy',source:'Marriott',value:'131,581 points',state:'available',card:'',cadence:'',due:'',notes:'',secret:'',secretHint:'',revision:'r1'},
+  {id:'b',kind:'balance',name:'Hilton Honors',source:'Hilton',value:'82,400 points',state:'available',card:'',cadence:'',due:'',notes:'',secret:'',secretHint:'',revision:'r2'},
+  {id:'c',kind:'balance',name:'MileagePlus',source:'United Airlines',value:UNREAD_BALANCE,state:'available',card:'',cadence:'',due:'',notes:'',secret:'',secretHint:'',revision:'r3'}
+ ];
+ const tool=mountRewards(h.document.querySelector('main'),{credentials:{get:async()=>'token'},vault:fakeVault(),
+  offline:{request:async()=>({records})}});
+ await tool.refresh();
+ const rows=[...h.document.querySelectorAll('#rewards-list .record-row')];
+ assert.deepEqual(rows.map(row=>row.querySelector('.record-name').textContent),
+  ['Marriott Bonvoy','Hilton Honors','United Airlines MileagePlus'],'the issuer joins the name only where the name does not already carry it');
+ assert.deepEqual(rows.map(row=>row.querySelector('.record-figure > strong')?.textContent??''),
+  ['131,581 points','82,400 points',''],'a program awaiting its first reading shows no figure');
+ for(const row of rows)assert.equal([...row.children].filter(node=>!node.hidden).length,1,'nothing is left to print under the line');
+ const wallet=h.document.getElementById('rewards-list').textContent;
+ assert.equal(wallet.includes('Available'),false,'the resting state of every row states nothing');
+ assert.equal(wallet.includes(UNREAD_BALANCE),false);
+ tool.stop();h.restore();
 });

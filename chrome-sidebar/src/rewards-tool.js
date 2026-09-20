@@ -315,20 +315,39 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     }
     status(`Added ${saved} program${saved===1?'':'s'}. Delete the ones you do not have, and read a balance from any program's own page.`,'success');
   }
-  // A program awaiting its first reading already says so in its value, and
-  // "Available" after it states nothing the row does not. A card carries no
-  // state either, for the same reason it carries no deadline.
-  const detailOf=e=>[e.source,e.value,
+  // A balance is one line: the program on the left, the figure at the end of
+  // it. The issuer's name is part of what the program is called rather than a
+  // line under it, and it joins the program's own name only where that name
+  // does not already carry the brand — "Hilton Honors", never "Hilton Hilton
+  // Honors", and "Choice Privileges" rather than "Choice Hotels Choice
+  // Privileges", because the word doing the naming is the first one either way.
+  // Inside a card's group the heading has just named the card, so a benefit
+  // filed there is left to its own name.
+  const firstWord=text=>text.toLowerCase().split(/\s+/)[0]||'';
+  const titleOf=(e,inGroup)=>{
+    const source=String(e.source||'').trim(),name=String(e.name||'').trim();
+    const carried=name.toLowerCase().includes(source.toLowerCase())||firstWord(name)===firstWord(source);
+    return !source||inGroup||carried?name:`${source} ${name}`;
+  };
+  // A program the owner has never read has no figure, and an empty place where
+  // the figure goes says that better than 26 rows all printing the same three
+  // words. What is counted, and what is not, is already summed above the list.
+  const figureOf=e=>e.kind==='balance'&&e.value===UNREAD_BALANCE?'':e.value;
+  // What is left once the name and the figure have their places: what is true
+  // of this row and not of every other one. "Available" is the resting state
+  // of the whole wallet — of a card, of a program never read, of every balance
+  // in it — so it states nothing.
+  const metaOf=e=>[
     // What the issuer's own tracker last said is left of it. The card's terms
     // stay in the value beside it, because "$25 per month" and "$25 left this
     // month" are different facts and only one of them changes — and when they
     // are the same figure, which is a credit read before its terms were ever
     // researched, the row says it once.
     e.remaining&&e.remaining!==e.value?`${e.remaining} left`:'',
-    e.kind==='card'||(e.kind==='balance'&&e.value===UNREAD_BALANCE)?'':STATES[e.state],CADENCE_LABELS[e.cadence]||'',
+    e.state==='available'?'':STATES[e.state],CADENCE_LABELS[e.cadence]||'',
     e.secretHint?`•••• ${e.secretHint}`:'',e.due?`Due ${e.due}`:'',e.pending?'Waiting to sync':'',
     e.conflict?'Conflict':'',e.deleting?'Pending deletion':''].filter(Boolean).join(' · ');
-  function row(e){
+  function row(e,inGroup){
     const filed=e.kind==='card'?entries.filter(other=>other.card===e.id).length:0;
     // A program awaiting its first reading holds nothing the owner would miss,
     // so pruning the directory down to the programs they actually have costs
@@ -354,7 +373,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const decide=e.conflict
       ?[ActionGroup(['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(e.id,choice))),{compact:true})]
       :[];
-    return RecordRow({title:e.name,detail:detailOf(e),notes:e.notes,actions,
+    return RecordRow({title:titleOf(e,inGroup),figure:figureOf(e),meta:metaOf(e),notes:e.notes,actions,
       extra:[shown?MaskedValue(shown):null,...decide,confirmation]});
   }
   function render(){
@@ -374,15 +393,17 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
         group.card.secretHint?`•••• ${group.card.secretHint}`:'',group.card.pending?'Waiting to sync':'',
         group.card.conflict?'Conflict':''].filter(Boolean).join(' · '),
       open:!!query,
-      children:[row(group.card),...group.visible.map(row)]
-    })),...loose.map(row)];
+      children:[row(group.card,true),...group.visible.map(e=>row(e,true))]
+    })),...loose.map(e=>row(e))];
     $('rewards-list').replaceChildren(...(rows.length?rows:emptyState()));
     const picker=$('reward-card'),chosen=picker.value;
     picker.replaceChildren(Option('Not a card benefit',''),...cards.map(card=>Option(card.name,card.id)));
     picker.value=cards.some(card=>card.id===chosen)?chosen:'';
     const next=nextActions(entries.filter(e=>!e.deleting&&!e.conflict));
-    $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,
-      detail:[e.name,e.source,e.remaining?`${e.remaining} left`:e.value].join(' · '),
+    // What to do, what it is about, and the figure it is about, on the one
+    // line the wallet below it is read in.
+    $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,meta:titleOf(e),
+      figure:e.remaining?`${e.remaining} left`:figureOf(e),
       actions:[rowAction(EDIT_GLYPH,`Review ${e.name}`,()=>edit(e))]})));
     $('rewards-actions').closest('section').hidden=!next.length;
     // What the owner came to the wallet to know: how many miles and how many

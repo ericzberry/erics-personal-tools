@@ -415,12 +415,15 @@ export function RecordRow({title,detail,meta='',figure='',notes='',actions=[],ex
   const lines=(Array.isArray(notes)?notes:[notes]).filter(Boolean);
   const verbs=ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'});
   const name=Strong(title,{className:'record-name'});
+  // What qualifies the name belongs beside it whether or not the row ends in a
+  // figure, and a row with nothing further to say prints no empty line under
+  // itself.
+  const head=meta?Stack([name,Label(meta,{className:'record-meta'})],{className:'record-head'}):name;
   return Section([
-    Stack([
-      figure?Stack([name,meta?Label(meta,{className:'record-meta'}):null],{className:'record-head'}):name,
+    Stack([head,
       figure?Stack([Strong(figure),verbs],{className:'record-figure'}):verbs],
       {className:`record-line${figure?' record-line--figure':''}`}),
-    Note(detail),...lines.map(line=>Text(line)),...extra.filter(Boolean)
+    ...(detail?[Note(detail)]:[]),...lines.map(line=>Text(line)),...extra.filter(Boolean)
   ],{className:'record-row'});
 }
 

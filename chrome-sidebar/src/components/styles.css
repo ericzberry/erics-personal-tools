@@ -404,7 +404,11 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
 .record-line > .record-name { flex: 1; min-width: 0; }
 .record-line > .record-head { flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px; }
 .record-head > .record-meta { flex: 0 1 auto; min-width: 0; color: var(--muted); font-size: 12px; }
-.record-head > .record-meta::before { content: '·'; margin-inline-end: 4px; }
+/* The separator belongs to the name it follows, not to what qualifies it: when
+   the two do not fit on one line, the line ends "Marriott Bonvoy ·" and the
+   qualification starts the next one, rather than the next line opening on a
+   dot that reads like a bullet. */
+.record-head > .record-name:has(+ .record-meta)::after { content: '·'; margin-inline-start: 4px; color: var(--muted); font-weight: 400; }
 .record-line > .record-figure { flex: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .record-line > .action-group { flex: none; margin: 0; }
 .record-line > .action-group:empty { display: none; }
