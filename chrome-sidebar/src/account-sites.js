@@ -89,6 +89,25 @@ export const FINANCE_SITES=[
     // The label is what the panel calls the site; the institution is the name
     // the ledger's own field asks for, and the one a new record should carry.
     read:{hosts:['client.schwab.com'],app:/^\/app\//i}},
+  {id:'ubs',label:'UBS',institution:'UBS',kind:'brokerage',hosts:['ubs.com'],
+    url:'https://onlineservices.ubs.com/',
+    // Online Services is one host, split down the middle by its first path
+    // segment: the signed-in application is everything under /wma/ — Wealth
+    // Management Americas, where the accounts, the balances and the trusts
+    // grouped under their titles are — and /cauth/ is everything that is not.
+    // The log-on form is /cauth/wma/signin, which is where any /wma/ path
+    // asked for without a session is sent, carrying se, status and portalNm
+    // rather than the path it refused; and the site's public furniture is
+    // under the same /cauth/ prefix, including the /cauth/wma/404.html that
+    // answers for every path outside the two. Nothing signed out sits on
+    // /wma/, so naming the application by that one segment holds the log-on
+    // form and the public pages out of it in the same stroke.
+    //
+    // Reading names the Online Services subdomain rather than the registrable
+    // domain: ubs.com is the firm's marketing site and carries no balances.
+    // An ordinary visit there is still recognized as UBS's, which costs one
+    // string comparison, and is never asked anything more.
+    read:{hosts:['onlineservices.ubs.com'],app:/^\/wma\//i}},
 
   // The rest are recognized but not read. Recognition is all the panel needs to
   // turn to Finance with its intake ready, and a statement, a page reading or a
@@ -96,8 +115,6 @@ export const FINANCE_SITES=[
   // into the group above once its signed-in application has been checked
   // against its log-on and public pages, which is the only work that separates
   // the two groups.
-  {id:'ubs',label:'UBS',institution:'UBS',kind:'brokerage',hosts:['ubs.com'],
-    url:'https://onlineservices.ubs.com/'},
   {id:'fidelity',label:'Fidelity',institution:'Fidelity',kind:'brokerage',hosts:['fidelity.com','netbenefits.com'],
     url:'https://digital.fidelity.com/ftgw/digital/portfolio/summary'},
   {id:'vanguard',label:'Vanguard',institution:'Vanguard',kind:'brokerage',hosts:['vanguard.com'],

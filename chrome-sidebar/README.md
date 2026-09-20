@@ -1051,8 +1051,11 @@ issuers, the retirement and private-holding sites a figure actually comes from â
 and recognizing one costs a single URL comparison, so every tab can be asked.
 Land on any of them and the panel is already Finance, beside the page the
 figures would come off. `ACCOUNT_SITES` is now derived from that registry: the
-four whose signed-in pages have been checked against their log-on and public
-pages, which is the only work that separates the two groups.
+five whose signed-in pages have been checked against their log-on and public
+pages, which is the only work that separates the two groups. UBS joined them on
+2026-09-20: Online Services splits one host down its first path segment, so
+`/wma/` is the whole of the application and `/cauth/` is the log-on form, the
+page a refused deep link is sent to, and every public page on it.
 
 **Arriving that way answers no question.** Being on a bank's website is not the
 same as asking what you are worth, and a net worth that appears because of which
