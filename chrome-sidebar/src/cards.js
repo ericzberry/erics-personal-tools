@@ -1,13 +1,20 @@
-import {CardsView,BonusRule,SavedCard,CardMatches,CardIngest,PurchaseConditions,PurchaseReading,ComparisonResults} from './components/cards.js';
+import {CardsView,BonusRule,SavedCard,CardMatches,CardIngest,PurchaseConditions,PurchaseReading,ComparisonResults,WalletCards} from './components/cards.js';
 import {Note,setStatus} from './components/ui.js';
 import {aiConnections} from './ai-connection.js';
-import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent} from './card-data.js';
-export function mountCards(root,{credentials,offline,remote}){
+import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent,walletCards} from './card-data.js';
+// `wallet` is the Rewards wallet's own store, read and never written. It is
+// what already knows which cards the owner holds: a card entry is the card
+// itself, and a credit read off an issuer's page carries the card that page
+// filed it under. Knowing a card exists costs nothing and is not something to
+// be typed in twice, so this tool asks the wallet rather than the owner. A host
+// that has no wallet simply has no such cards.
+export function mountCards(root,{credentials,offline,remote,wallet=null}){
   root.replaceChildren(CardsView());
   const $=key=>root.querySelector(`#cards-${key}`);
   const fields=['name','unit','base','cpp','source','checked','notes'];
   for(const input of root.querySelectorAll('input[type=number]')){input.min='0';input.step='any';}
   let token='',records=[],selected=null,newId=crypto.randomUUID(),busy=false,dirty=false,conditionKey='',generation=0,reading=null,readFrom='';
+  let held=[],downloaded=false,unrated=0;
   const connections=aiConnections({load:async current=>(await remote(current,'/v1/ai-connections')).connections,need:'to read a purchase or look up a card.'});
   const status=(message,target='status',tone='')=>setStatus($(target),message,tone);
   function controls(){
@@ -61,7 +68,26 @@ export function mountCards(root,{credentials,offline,remote}){
       ?'Found these rewards. Add your redemption value in cents per point, then save.'
       :'Found these rewards. Check them against the issuer terms, then save.','research-status');
   }
+  // A card the wallet holds and this tool has no rates for needs only its rates,
+  // so the intake is filled with the card's own name and researched as though
+  // the owner had typed it. The account digits the issuer printed beside it stay
+  // here: research is asked about a product, which is a real card anyone can
+  // look up, and never about whose card it is.
+  function findRates(row){
+    if(dirty){status('Save or cancel your current edit first.','form-status','alert');return;}
+    edit();$('editor').open=true;$('find').value=row.product;
+    // The editor is where the answer arrives, and it sits under the list the
+    // press came from, so it is brought into view rather than left below.
+    $('editor').scrollIntoView?.({block:'nearest'});
+    run(()=>ingest(row.product),'research-status');
+  }
+  function renderWallet(){
+    const rows=walletCards(held,records).filter(row=>!row.card&&!row.ambiguous);
+    unrated=rows.length;
+    $('known').replaceChildren(...WalletCards(rows,{onFind:findRates}));
+  }
   function render(){
+    renderWallet();
     $('list').replaceChildren(...(records.length?records.map(card=>SavedCard(card,{
       onEdit:()=>{if(dirty){status('Save or cancel your current edit first.','form-status','alert');return;}edit(card);$('editor').open=true;$('name').focus();},
       onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting a card.');const result=await request(`/v1/cards/${card.id}`,{method:'DELETE',value:{revision:card.revision}});records=result.records;clearResults();render();status(result.syncMessage||'Card deleted.','status',result.syncMessage?'alert':'success');}),
@@ -111,7 +137,7 @@ export function mountCards(root,{credentials,offline,remote}){
     const key=JSON.stringify([input.category,input.channel,records]);
     if(key!==conditionKey){$('conditions').replaceChildren(...PurchaseConditions(records,input));conditionKey=key;}
     const confirmed=[...$('conditions').querySelectorAll('input:checked')].map(node=>node.getAttribute('data-confirm'));
-    $('results').replaceChildren(...ComparisonResults(compareCards(records,{...input,confirmed})));controls();
+    $('results').replaceChildren(...ComparisonResults(compareCards(records,{...input,confirmed}),{unrated}));controls();
   }
   $('purchase-form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
     // A changed description invalidates the previous reading; an owner-adjusted
@@ -144,16 +170,32 @@ export function mountCards(root,{credentials,offline,remote}){
     const result=await request(`/v1/cards/${selected?.id||newId}`,{method:'PUT',value:{...card,revision:selected?.revision??null}});
     records=result.records;edit();$('editor').open=false;clearResults();render();status(result.syncMessage||'Card saved.','status',result.syncMessage?'alert':'success');
   },'form-status');});
+  // The wallet as this device already has it: no request, no sync, and nothing
+  // written back. A device that has never opened Rewards holds no copy of it,
+  // so the cards it knows are downloaded once rather than never appearing —
+  // and a wallet that cannot be read is another tool's trouble, never this
+  // tool's failure, so it leaves the cards saved here exactly as they are.
+  async function loadWallet(){
+    if(!wallet)return;
+    const current=generation;
+    try{
+      let entries=await wallet.saved(token);
+      if(!entries.length&&!downloaded&&globalThis.navigator?.onLine!==false){downloaded=true;entries=(await wallet.request(token,'/v1/rewards')).records;}
+      if(current===generation)held=entries;
+    }catch{/* Reading it failed; the cards saved here are unaffected. */}
+  }
   async function refresh(){
-    const next=await credentials.get();if(next!==token){generation++;token=next;records=[];edit();clearReading();clearResults();render();}
+    const next=await credentials.get();if(next!==token){generation++;token=next;records=[];held=[];downloaded=false;edit();clearReading();clearResults();render();}
     if(!token){status('Connect in Settings to download your cards.');return;}
-    const result=await request('/v1/cards');records=result.records;clearResults();render();status(result.syncMessage,'status','alert');await connectionList();
+    const result=await request('/v1/cards');records=result.records;clearResults();
+    await loadWallet();
+    render();status(result.syncMessage,'status','alert');await connectionList();
   }
   $('refresh').addEventListener('click',()=>run(refresh));
   const reload=()=>{if(!busy)return run(refresh);};
   window.addEventListener('online',reload);window.addEventListener('offline',()=>{controls();status('Offline · Saved cards and manual comparisons are available.');});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
-  credentials.subscribe?.(()=>{generation++;token='';records=[];edit();clearReading();clearResults();render();reload();});
-  render();const ready=run(refresh);return {ready,refresh:reload,clear:()=>{generation++;token='';records=[];edit();clearReading();clearResults();render();}};
+  credentials.subscribe?.(()=>{generation++;token='';records=[];held=[];downloaded=false;edit();clearReading();clearResults();render();reload();});
+  render();const ready=run(refresh);return {ready,refresh:reload,clear:()=>{generation++;token='';records=[];held=[];downloaded=false;edit();clearReading();clearResults();render();}};
 }

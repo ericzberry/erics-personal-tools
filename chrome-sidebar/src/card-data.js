@@ -105,10 +105,25 @@ export const key=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' 
 // card, so matching on those words matches every card the owner holds.
 const COMMON=new Set(['card','cards','american','express','from','the','and','with','credit','rewards','preferred','account']);
 const words=value=>key(value).split(' ').filter(word=>word.length>2&&!COMMON.has(word));
-// Which of the owner's cards a name is. One card sharing the most distinguishing
-// words wins; a tie names nothing, because filing a Platinum's credits under a
-// Blue Cash is worse than not filing them at all.
+// The four digits a page prints beside a card's name — "(-61007)", "•••• 72005".
+// Only a run long enough to be an account's tail counts, and only the last four
+// of it, because that is the part a card is known by wherever it is written down.
+const DIGITS=/\d{4,}/g;
+const tails=value=>[...String(value||'').matchAll(DIGITS)].map(([run])=>run.slice(-4));
+// Which of the owner's cards a name is. The page says "Morgan Stanley Platinum
+// Card® (-61007)" and the wallet holds whatever research called it, so they are
+// matched on the words that tell one card from another. One card sharing the
+// most of them wins; a tie names nothing, because filing a Platinum's credits
+// under a Blue Cash is worse than not filing them at all.
 export function matchCard(name,cards=[]){
+  // Digits decide before words do, and only when exactly one saved card
+  // carries them: an owner who put the last four in a card's name has said
+  // which card this is more precisely than any name can.
+  const digits=tails(name);
+  if(digits.length){
+    const byDigits=cards.filter(card=>tails(card.name).some(tail=>digits.includes(tail)));
+    if(byDigits.length===1)return {card:byDigits[0],ambiguous:false};
+  }
   const wanted=words(name);
   if(!wanted.length)return {card:null,ambiguous:false};
   const scored=cards.map(card=>({card,score:words(card.name).filter(word=>wanted.includes(word)).length}))

@@ -236,25 +236,25 @@ Travel wallet opens directly from Tools in the extension sidebar. Show number re
 
 Validation: 133 extension tests (including component architecture, reveal/hide, edit failure preservation, deletion confirmation, and sidebar selection), 19 mobile tests, and 31 API tests pass. Synthetic browser checks covered 280px sidebar and 390px phone layouts, inline reveal, offline reopening, queued edits surviving reload and syncing on reconnect, long record names, and connected settings. Native Chrome installation and real iPhone biometric/clipboard behavior were not directly tested.
 
-Archive: `release/erics-sidebar-0.6.46.zip`.
+Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Separate travel record editor (0.6.47)
 
 Travel wallet keeps the compact searchable record list in the sidebar. Add record and Edit open a dedicated extension tab; saved changes refresh the viewing list. The editor reloads the selected record by ID, preserves failed edits, and keeps numbers masked. Done closes the editor after changes are saved or canceled. Mobile keeps its inline editor and shares the compact rows.
 
-Archive: `release/erics-sidebar-0.6.47.zip`.
+Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Compact wallet controls (0.6.48)
 
 Makes Add record, search, and entry text smaller. Search uses only the visible placeholder “find record” with an accessible hidden label. Copy uses a small icon shown on row hover or keyboard focus; touch users can reveal it by expanding the row. Routine up-to-date messages are omitted. Wallet connection controls live in sidebar Settings and are absent from browse and editor pages; mobile retains its header Settings.
 
-Validation: 138 extension tests and 19 mobile tests pass. Synthetic 30-record UI reviewed at 280px sidebar and 390px mobile, including hover icons, keyboard access, and Settings navigation. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.48.zip`.
+Validation: 138 extension tests and 19 mobile tests pass. Synthetic 30-record UI reviewed at 280px sidebar and 390px mobile, including hover icons, keyboard access, and Settings navigation. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Shared control style guide (0.6.49)
 
 Defines control roles, sizes, typography, spacing, focus, and touch behavior in `docs/DESIGN.md`, linked from repository instructions. Shared Button supports an explicit compact size. Wallet Edit, Copy notes, and Delete use matching compact subtle actions; form and confirmation actions retain the appropriate stronger treatment. Replaces accumulated wallet overrides with one token-based stylesheet shared with mobile 0.1.11.
 
-Validation: 138 extension and 19 mobile tests pass; synthetic expanded/collapsed records reviewed at 280px and 390px. Native installed Chrome and iPhone behavior remain unverified. Archive: `release/erics-sidebar-0.6.49.zip`.
+Validation: 138 extension and 19 mobile tests pass; synthetic expanded/collapsed records reviewed at 280px and 390px. Native installed Chrome and iPhone behavior remain unverified. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ### Live wallet updates (included in 0.6.49)
 
@@ -294,7 +294,7 @@ screen, and the forced release check. The mobile home screen, an open tool with
 its collapsed and expanded menu, and the full Settings screen were reviewed in
 the unlocked mobile shell at 375px and 320px; the sidebar Tools menu was
 reviewed in the synthetic harness at 420px. Native iPhone and installed Chrome
-behavior were not directly tested. Archive: `release/erics-sidebar-0.6.73.zip`.
+behavior were not directly tested. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Tools menu sections and a mobile home screen (0.6.65 / mobile 0.1.24)
 
@@ -302,13 +302,13 @@ Both hosts read one grouped registry. Registry entries carry an optional `sectio
 
 Mobile opens on a home screen that is the icon grid itself. Choosing a tool collapses that grid behind a **Tools** dropdown holding the same icons plus Home, so a tool keeps the screen; the home screen no longer competes with it for vertical space, and no tool selection is restored across launches.
 
-Validation: 182 extension, 26 mobile tests pass. The sidebar Tools menu and Settings were reviewed in the synthetic harness at 400px and 320px; the mobile home screen, an open tool with its collapsed and expanded dropdown, and AI connections inside Settings were reviewed in the unlocked mobile shell at 375px. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.65.zip`.
+Validation: 182 extension, 26 mobile tests pass. The sidebar Tools menu and Settings were reviewed in the synthetic harness at 400px and 320px; the mobile home screen, an open tool with its collapsed and expanded dropdown, and AI connections inside Settings were reviewed in the unlocked mobile shell at 375px. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Travel wallet record list (0.6.61 / mobile 0.1.20)
 
 Rebuilds the wallet list against the revised record layout in `docs/DESIGN.md`. Disclosure markers move out of the record names into a fixed right-hand column and rotate when a record opens, so they align regardless of name length. An open record becomes one contained surface block holding its number, metadata, actions, and delete confirmation instead of loose text between two rules. The find-record field returns to its intended compact filter size — the shared `.form-field` control rules had been out-specifying it, rendering a 40px/16px control — and the list's opening hairline is dropped when there are no records. The page heading is 22px with its primary action aligned to the list's right edge.
 
-Validation: 180 extension, 26 mobile, and 44 API tests pass. Synthetic 13-record wallet reviewed at 390px and 280px in the standalone page, the sidebar, and the installed mobile shell, covering collapsed rows, an open record, delete confirmation, filtered-empty, disconnected-empty, and the editor page. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.61.zip`.
+Validation: 180 extension, 26 mobile, and 44 API tests pass. Synthetic 13-record wallet reviewed at 390px and 280px in the standalone page, the sidebar, and the installed mobile shell, covering collapsed rows, an open record, delete confirmation, filtered-empty, disconnected-empty, and the editor page. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Wallet records grouped by type (0.6.62 / mobile 0.1.21)
 
@@ -316,7 +316,7 @@ The wallet list is organized by category instead of one long alphabetical run. R
 
 An open record is tidier for it. The category line is gone, since the group label already states it, so the block is the number, that record's own detail (expiration, and the traveler where the collapsed row does not show it), a quiet rule, then the actions. The rule separates what the record is from what you can do with it and keeps a delete confirmation visibly attached; a metadata line with nothing to say is removed rather than left as a gap.
 
-Validation: 182 extension, 26 mobile, and 44 API tests pass, including new coverage for group order, retired categories, filtered groups, and the filtered-empty message. Synthetic 14-record wallet reviewed at 390px and 280px in the standalone page and the unlocked mobile shell, covering all seven groups, an open record with and without metadata, delete confirmation, and search filtering to one group. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.62.zip`.
+Validation: 182 extension, 26 mobile, and 44 API tests pass, including new coverage for group order, retired categories, filtered groups, and the filtered-empty message. Synthetic 14-record wallet reviewed at 390px and 280px in the standalone page and the unlocked mobile shell, covering all seven groups, an open record with and without metadata, delete confirmation, and search filtering to one group. Native iPhone and installed Chrome behavior were not directly tested. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## One passkey, named directly (0.6.76 / mobile 0.1.36)
 
@@ -777,7 +777,7 @@ Worker lists first, that a sure reading leaves the status line empty, and that a
 unconnected tool still offers **Connect Google Drive** and says where to save an
 AI connection. The synthetic states were driven at 400px with the panel's own
 stylesheet loaded: the empty notices collapse, the action group gaps, and the
-filed list rules. Archive: `release/erics-sidebar-0.6.108.zip`.
+filed list rules. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## The email screen asks what to say, and the reply comes back in Eric's voice (0.6.109 / mobile 0.1.67)
 
@@ -812,7 +812,7 @@ a study without that scope is refused before Gmail is touched; and that a reply
 carries his instruction and his learned voice while the email stays untrusted
 data. The synthetic states in `tests/email-preview.html` were driven at 380px
 and 280px: the field, the one action row, the progress line and the voices fit
-with no horizontal overflow. Archive: `release/erics-sidebar-0.6.109.zip`.
+with no horizontal overflow. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Writing voice reads as a section, not a button in a box (0.6.110)
 
@@ -885,7 +885,7 @@ Validation: 349 extension, 33 mobile and 88 API tests pass, including the three
 refusals told apart at the Worker, the retry after a stale token, and the repair
 replacing Resume in the panel. The synthetic states — a summary, a draft, both
 at once, and a refused study — were driven at 380px and 280px with no horizontal
-overflow. Archive: `release/erics-sidebar-0.6.113.zip`.
+overflow. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Clothing sizes, said rather than filled in (0.6.115 / mobile 0.1.70)
 
@@ -1419,7 +1419,7 @@ Reviewed at 380px and 280px in the passkey-gate harness, which now carries a
 trust holding a fund, an SPV whose paperwork disagrees with it, and an
 investment with no statement yet. An amount no longer breaks across lines, and a
 record row carries more than one note without the last reading as the next
-record's first. Archive: `release/erics-sidebar-0.6.125.zip`.
+record's first. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Read the statement the bank actually sent (0.6.126 / mobile 0.1.80)
 
@@ -1462,7 +1462,7 @@ carries the intake with a connection and without one, a wallet of saved
 services, and what a dropped file leaves behind: read, half read, and not read
 at all. The phone's own shell was not driven for this; the view is the shared
 component reviewed in the sidebar harness, and the mobile suite covers the
-capability. Archive: `release/erics-sidebar-0.6.126.zip`.
+capability. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## A statement carrying more of a name than the portfolio is somebody else (0.6.127 / mobile 0.1.81)
 
@@ -1484,7 +1484,7 @@ candidate. Anything short of that proposes instead and says so on the row.
 
 A first statement showing only the period's contributions now says nothing was
 filed before it rather than reporting that the figure was added to nothing.
-Archive: `release/erics-sidebar-0.6.127.zip`.
+Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## Report a saved statement where it was reviewed (0.6.128 / mobile 0.1.82)
 
@@ -1530,7 +1530,7 @@ the unlocked mobile shell at 390px, covering the populated list with a long fit
 note and a wrapped name, hover and keyboard reveal of the row actions, the
 delete question and its two answers, and the connected-empty and not-connected
 states. Native iPhone and installed Chrome behavior were not directly tested.
-Archive: `release/erics-sidebar-0.6.132.zip`.
+Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## The returns and the estimates, and a document that arrives locked (0.6.143 / mobile 0.1.97)
 
@@ -1572,7 +1572,7 @@ Apple's own PDF engine. The synthetic Taxes states were reviewed in the sidebar
 harness at 380px and the 280px minimum: a return named from its taxpayer and
 government, a locked document before and after its password, and a year divided
 by taxpayer. Native iPhone and installed Chrome behavior were not directly
-tested. Archive: `release/erics-sidebar-0.6.143.zip`.
+tested. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## An update is not the end of a session (0.6.146 / mobile 0.1.101)
 
@@ -1731,7 +1731,7 @@ caption not becoming the next balance's label; and an end-to-end read filing an
 exchange's total as Crypto under its own name. Detection was checked against the
 real signed-out `www.coinbase.com/home`, which is what named the log-on host;
 neither the path list nor the page filter has been run against a signed-in
-Coinbase session. Archive: `release/erics-sidebar-0.6.161.zip`.
+Coinbase session. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## A watchlist is a list of prices, not a list of holdings (0.6.162 / mobile 0.1.115)
 
@@ -1773,7 +1773,7 @@ printed under it keeps its name, its label and its balance; and a market word in
 a site's navigation not swallowing the balances below it. Validation: 482
 extension tests pass. The fix was proved against a reconstruction of the page in
 the screenshot rather than a live signed-in session, which is not reachable from
-here. Archive: `release/erics-sidebar-0.6.162.zip`.
+here. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## One password, eight holders, and none of them called Bank accounts (0.6.165 / mobile 0.1.118)
 
@@ -1896,7 +1896,7 @@ ledger was reviewed at 380px and 280px in the local fixture — the half-filled
 estate from the owner's screenshot, and a settled ledger with a stale custodial
 account, a fund position and two properties — with no horizontal page overflow.
 Installed Chrome and iPhone behavior were not directly tested.
-Archive: `release/erics-sidebar-0.6.167.zip`.
+Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## The wallet loads wherever the panel arrives on it (0.6.168)
 
@@ -1918,7 +1918,7 @@ renders as one arrival, and counts leaving and coming back as another. The test
 fails against the previous build. Nothing rendered changed: the panel's markup
 and styles are untouched, and the visible difference is a control that is live
 instead of dim, which needs a connected device to see.
-Archive: `release/erics-sidebar-0.6.168.zip`.
+Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## The store listing names the tools that are there (0.6.169)
 
@@ -1933,7 +1933,7 @@ subscriptions, gifts, sizes, restaurants, fantasy football and Gmail.
 
 Validation: 493 extension tests pass. Nothing rendered changed — the
 description appears on the extensions page and a store listing, not in the
-panel. Archive: `release/erics-sidebar-0.6.169.zip`.
+panel. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## A debt reads as a debt before it is filed (0.6.170 / mobile 0.1.121)
 
@@ -1968,7 +1968,7 @@ makes it wrong.
 
 Validation: 496 extension tests pass. Nothing rendered changed — the
 description appears on the extensions page and in a store listing, never in the
-panel. Archive: `release/erics-sidebar-0.6.172.zip`.
+panel. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## The word over a sum is not the name of an account (0.6.173 / mobile 0.1.123)
 
@@ -2109,7 +2109,7 @@ New coverage: two ARIA grids read as tables, every account travelling with its
 own number and balance, beside a summary panel of totals by kind. Validation:
 511 extension and 33 mobile tests pass.
 
-## The cards you hold are not a list to type twice (0.6.191 / mobile 0.1.141)
+## The cards you hold are not a list to type twice (0.6.192 / mobile 0.1.142)
 
 **Best card knew nothing about the cards the rest of the app had already seen.**
 The wallet holds the cards the owner has — added there by name, or named by an
@@ -2153,7 +2153,7 @@ researching the product name, and dropping the row once it is saved. Validation:
 537 extension, 33 mobile and 131 API tests pass from an archive of HEAD. The
 standalone card view was reviewed against the synthetic wallet at 380px, 280px
 and 390px: populated, nothing saved yet, the comparison caveat, and the research
-that one press starts. Archive: `release/erics-sidebar-0.6.184.zip`.
+that one press starts. Archive: `release/erics-sidebar-0.6.192.zip`.
 
 ## A wallet of programs, not one number over them (0.6.190 / mobile 0.1.140)
 
