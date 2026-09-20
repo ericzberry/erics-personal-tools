@@ -58,3 +58,37 @@ test('a tax document survives the multipart upload body in Cloudflare runtime',a
     assert.equal(result.closed,true);
   }finally{await mf.dispose();}
 });
+
+// The storage read is this Worker's only outbound request to Cloudflare's own
+// API, and its options have to be ones workerd will actually accept.
+// `redirect: 'error'` is valid in a browser and rejected outright at the edge —
+// found by the live cron an hour after deployment, which is an hour too late.
+// Constructing a real Request in the real runtime is what settles it, so the
+// options are checked here rather than against Node's more forgiving fetch.
+test('the Cloudflare storage read uses request options workerd accepts',async()=>{
+  const {outputFiles}=await build({stdin:{contents:`
+  import {measureUsage} from './src/quota.js';
+  export default {async fetch(){
+    const seen=[];
+    try{
+      const usage=await measureUsage({CLOUDFLARE_ACCOUNT_ID:'acct',CLOUDFLARE_API_TOKEN:'synthetic-read-token'},{fetcher:async(url,options)=>{
+        // Throws in workerd if any option is one the edge does not implement.
+        const request=new Request(url,options);
+        seen.push({url:String(url),redirect:request.redirect,auth:request.headers.get('Authorization')});
+        return Response.json({success:true,result:[{uuid:'u',name:'erics-personal-tools',file_size:310000,num_tables:24}]});
+      }});
+      return Response.json({usage,seen});
+    }catch(error){return Response.json({error:error?.message||String(error),seen});}
+  }};`,resolveDir:new URL('../',import.meta.url).pathname},bundle:true,format:'esm',write:false,platform:'browser'});
+  const mf=new Miniflare(convertV4MiniflareOptions({modules:true,compatibilityDate:'2026-09-08',script:outputFiles[0].text}));
+  try{
+    const result=await (await mf.dispatchFetch('http://localhost/storage')).json();
+    assert.equal(result.error,undefined);
+    assert.equal(result.usage.totalBytes,310000);
+    assert.equal(result.seen.length,1);
+    assert.match(result.seen[0].url,/\/accounts\/acct\/d1\/database/);
+    // Never followed, so the read token cannot be handed on to another host.
+    assert.equal(result.seen[0].redirect,'manual');
+    assert.equal(result.seen[0].auth,'Bearer synthetic-read-token');
+  }finally{await mf.dispose();}
+});

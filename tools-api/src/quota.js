@@ -33,7 +33,11 @@ const unconfigured = () => {
 async function cloudflare(env, path, fetcher) {
   const response = await fetcher(`${CF_API}/accounts/${env.CLOUDFLARE_ACCOUNT_ID}${path}`, {
     headers: {Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`, Accept: 'application/json'},
-    cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10000)
+    // Never follow a redirect: this request carries the read token, and a
+    // followed hop could hand it to a host that is not Cloudflare. `manual`
+    // rather than `error` because workerd rejects `error` outright — a 3xx then
+    // arrives as a non-2xx and is treated as a failed read, which is the point.
+    cache: 'no-store', redirect: 'manual', signal: AbortSignal.timeout(10000)
   });
   let body;
   try { body = await response.json(); } catch { throw {status: 502, message: 'Cloudflare did not answer with JSON.'}; }
