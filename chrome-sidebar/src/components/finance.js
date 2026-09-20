@@ -99,6 +99,11 @@ function ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard}){
 // under them already says how many were read and how many were kept.
 export function FoldReview({rows=[],editing=false,disabled=false,saveLabel='Save these figures',onSave,onEdit,onDiscard,onAmount}){
   const shared=rows.length&&rows.every(row=>row.asOf===rows[0].asOf)?rows[0].asOf:'';
+  // "new" is worth a word when it separates these figures from the ones landing
+  // in a portfolio that already exists. The first reading of an institution
+  // makes every portfolio in it new, and the word then sits on every heading
+  // saying the same thing about all of them, which is what a reader skips.
+  const some=rows.some(row=>row.isNew)&&!rows.every(row=>row.isNew);
   // The fold sorts by holder and then by class, so one pass groups them.
   const groups=[];
   for(const [index,row] of rows.entries()){
@@ -117,7 +122,7 @@ export function FoldReview({rows=[],editing=false,disabled=false,saveLabel='Save
     // the one thing about a new portfolio the owner cannot check afterwards
     // without opening it.
     ...groups.map(group=>Section([
-      Stack([GroupTitle(`${group.name}${group.isNew?' · new':''}`,{className:'record-group-title'}),
+      Stack([GroupTitle(`${group.name}${group.isNew&&some?' · new':''}`,{className:'record-group-title'}),
         group.kind?Badge(registrationLabel(group.kind),{className:'pill portfolio-kind'}):null],{className:'group-name'}),
       ...group.rows.map(({row,index})=>FoldRow(row,{index,editing,dated:!shared,onAmount}))
     ],{className:'record-group snapshot-group'})),

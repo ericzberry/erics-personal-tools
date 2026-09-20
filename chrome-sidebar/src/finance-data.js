@@ -1056,7 +1056,15 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // name: its brokerage account read as taxable, its managed account as a
     // trust, and the same name proposed twice because the kinds differed.
     const settled=stated&&['ira','roth','401k'].includes(stated.id)?stated:null;
-    const carded=!holder&&CARD.test(said)?registrationById(titledAccount(institution)?.cards?.registration||''):null;
+    // What makes it a card is that it is owed, not that the page happened to
+    // print the word. A dashboard that groups its cards under a heading says
+    // "credit cards" once and the reading carries it; one that lists them by
+    // product does not, and "Prime Visa", "Eric Freedom Card" and "J.P. Morgan
+    // Reserve" then each started a portfolio of their own. A debt read at an
+    // institution that says where its cards are titled is one of them.
+    const owed=readings.some(reading=>classSide(reading.class)==='liability')||CARD.test(said);
+    const card=!holder&&owed?titledAccount(institution)?.cards:null;
+    const carded=card?registrationById(card.registration||''):null;
     const kind=settled||(holder&&registrationById(holder.registration))||carded||stated||registrationFromName(said)||registrationById('taxable');
     // The institution settles the title, and the registration settles which
     // title: the estate holds what is taxable, a person holds the IRA.
@@ -1065,7 +1073,6 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // than each starting a portfolio under the name printed on the plastic —
     // which had put a closed card, a Freedom and a Reserve in three portfolios
     // holding one household's liabilities between them.
-    const card=!holder&&CARD.test(said)?titledAccount(institution)?.cards:null;
     const owner=holder?.owner||card?.owner||titledOwner(institution,kind.id);
     // A portfolio the account names outright. Several portfolios answering to
     // one name is not a match but a coin flip — six of these names are "Berry

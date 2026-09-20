@@ -656,6 +656,32 @@ test('a title the roster settles is not re-registered by what a page guessed',()
   assert.equal(registrationLabel(ira.marks[0].kind),'IRA');
 });
 
+// A page that lists its cards by product rather than under a heading. Nothing
+// in "Prime Visa" or "J.P. Morgan Reserve" says the word card, so a rule that
+// waited for the word gave each of them a portfolio of its own, holding one
+// household's liabilities between four headings.
+test('a debt is titled where the institution says its cards are, however the page names it',()=>{
+  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:'',class:classById('credit').code};
+  const folded=foldReadings([
+    {...base,account:'Joint Savings (...8917)',label:'Present balance',value:880033.77,class:classById('cash').code},
+    {...base,account:'CLOSED CARD (...5372)',label:'Current balance',value:0},
+    {...base,account:'ERIC FREEDOM CARD (...6106)',label:'Current balance',value:1309},
+    {...base,account:'J.P. MORGAN RESERVE (...0789)',label:'Current balance',value:11686},
+    {...base,account:'PRIME VISA (...2213)',label:'Current balance',value:430}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(folded.marks.map(row=>[row.name,classLabel(row.class),row.amount]),[
+    [ESTATE,'Cash',880033.77],
+    [ESTATE,'Credit',1309+11686+430]
+  ],'four cards, one debt, under the title the institution names');
+  assert.deepEqual(folded.portfolios.map(entry=>entry.name),[ESTATE],
+    'one portfolio proposed, and none of them named after a piece of plastic');
+
+  // A business card is still its company's: the roster is asked first.
+  const business=foldReadings([{...base,account:'CELSIE LLC INK BUSINESS (...9902)',label:'Current balance',value:2400}],
+    [],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(business.marks.map(row=>[row.name,row.amount]),[['Celsie LLC',2400]]);
+});
+
 // A card is read at a bank, behind the same password as the checking account,
 // and the site answers cash for what it holds. A balance owed is the one figure
 // where taking that answer moves net worth by twice the number.

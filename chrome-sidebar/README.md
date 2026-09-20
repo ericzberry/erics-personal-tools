@@ -2630,3 +2630,23 @@ liabilities between them. An institution now says once where its cards are
 titled, and a business card is still matched by its company's name first.
 
 Validation: 568 extension and 33 mobile tests pass.
+
+## A word that is on every heading is on none of them (0.6.210 / mobile 0.1.160)
+
+**`new` is said where it separates.** It marks figures landing in a portfolio
+that does not exist yet, which is worth a word beside figures joining one that
+does. The first reading of an institution makes every portfolio in it new, and
+the word then sat on every heading saying the same thing about all of them — a
+dozen times down one panel, next to the kind badge, wrapping the headings onto
+three lines. It is shown now only when some headings have it and others do not.
+
+**A card is recognized by being owed, not by the page printing the word.** The
+rule before this waited for "credit cards", which is what a dashboard says once
+when it groups them under a heading. A page that lists them by product says no
+such thing, and `PRIME VISA`, `ERIC FREEDOM CARD`, `J.P. MORGAN RESERVE` and a
+closed card each took a portfolio of their own, holding one household's
+liabilities between four headings. A debt read at an institution that says where
+its cards are titled is one of its cards, whatever the page calls it — and a
+business card is still matched to its company by the roster first.
+
+Validation: 571 extension and 33 mobile tests pass.

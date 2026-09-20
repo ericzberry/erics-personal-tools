@@ -429,6 +429,52 @@ test('a reading keeps what it took off the page, and what the page was made of',
   tool.stop();restore();
 });
 
+// "new" separates figures landing in a portfolio that does not exist yet from
+// figures joining one that does. The first reading of an institution makes them
+// all new, and the word then sits on every heading saying the same thing about
+// all of them.
+test('new is said where it separates two kinds of heading, and not where it is every heading',async()=>{
+  const {document,restore}=setup();
+  const panelOf=document_=>document_.getElementById('finance-snapshot-body');
+  const all=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'BERRY 2020 IRREV FAM TR (...5007)',label:'Account value',class:'liquid',value:4775770.50,asOf:'2026-09-11'},
+      {...dated,account:'BERRY AE 21 IRREV FAM TR (...7005)',label:'Account value',class:'liquid',value:1704529.20,asOf:'2026-09-11'}
+    ],unread:''},
+    readPage:async()=>({text:'x',host:'secure.chase.com',title:'',trimmed:0,tables:1})
+  });
+  await ready(document);
+  all.tool.site(CHASE);
+  panelOf(document).querySelector('button').click();
+  await settle(()=>panelOf(document).textContent.includes('Liquid securities'));
+  assert.match(panelOf(document).textContent,/BERRY 2020|Berry 2020/i);
+  assert.equal(/\bnew\b/i.test(panelOf(document).textContent),false,
+    'every portfolio is new, so the word tells the reader nothing');
+  all.tool.stop();restore();
+});
+
+test('new marks the proposed portfolio when another joins one that exists',async()=>{
+  const {document,restore}=setup();
+  const {tool}=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'Joint Savings (...8917)',label:'Present balance',class:'cash',value:880033.77,asOf:'2026-09-11'},
+      {...dated,account:'BERRY AE 21 IRREV FAM TR (...7005)',label:'Account value',class:'liquid',value:1704529.20,asOf:'2026-09-11'}
+    ],unread:''},
+    readPage:async()=>({text:'x',host:'secure.chase.com',title:'',trimmed:0,tables:1})
+  });
+  await ready(document);
+  tool.site(CHASE);
+  const panel=()=>document.getElementById('finance-snapshot-body');
+  panel().querySelector('button').click();
+  await settle(()=>panel().textContent.includes('Liquid securities'));
+  assert.match(panel().textContent,/Berry AE 21 Irrevocable Trust · new/i,'the one being made says so');
+  assert.equal(/Eric and Ariana Berry Estate · new/i.test(panel().textContent),false,
+    'and the one already in the ledger does not');
+  tool.stop();restore();
+});
+
 // An exchange states one balance for a page and never says what kind of money
 // it is, because to it there is only one kind. The site is what answers: a
 // figure read at Coinbase is coin, which is the whole reason the class exists.
