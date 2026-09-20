@@ -33,7 +33,11 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .evidence-list {margin:0;}
 .evidence-row {padding:10px 12px;display:grid;gap:5px;}
 .research-settings {margin:0;}
-.research-settings > :not(summary) {margin:0 14px 14px;}
+/* Nothing in the open panel sits against its border. `.workspace-shell
+   .form-field` zeroes a field's margin everywhere on this page, so the inset
+   has to out-specify it rather than sit beside it — a field whose label began
+   on the panel's own edge read as clipped. */
+.workspace-shell .research-settings > :not(summary) {margin:0 14px 14px;}
 .slot-list {display:flex;flex-wrap:wrap;gap:8px;}
 .workspace-shell button {cursor:pointer;white-space:normal;}
 .workspace-shell button:disabled {cursor:default;}

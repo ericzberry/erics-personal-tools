@@ -108,6 +108,13 @@ details { background: var(--surface); border: 1px solid var(--line); border-radi
 summary { font-size: 12px; font-weight: 500; padding: 15px; }
 summary::marker { color: #7c886f; }
 details[open] > summary { color: var(--forest); }
+/* An open panel wears the same band as one in the wallet: the summary that was
+   clicked heads its own region, and the box it sits in says where that region
+   ends. The disclosures that are not sections keep their own state — the Tools
+   menu's branch, the quiet text toggles inside a recommendation, and a tier of
+   players already banded in a colour of its own. */
+details[open]:where(:not(.capability-submenu, .recommendation details, .recommendation-compact details, .tier-group, .completed-tiers, .ranking-settings)) > summary { background: var(--open-band); border-bottom: 1px solid var(--line); }
+@media (hover: hover) { details[open]:where(:not(.capability-submenu, .recommendation details, .recommendation-compact details, .tier-group, .completed-tiers, .ranking-settings)) > summary:hover { background: var(--open-band-hover); } }
 .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .empty { text-align: center; padding: 27px 18px; font-size: 12px; line-height: 1.7; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
 .pick-list { list-style: none; margin: 14px 0; padding: 0; }

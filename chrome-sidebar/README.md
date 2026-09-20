@@ -2285,3 +2285,48 @@ extension and 33 mobile tests pass from an archive of this release. The
 synthetic wallet was reviewed at 380px and at 300px: four runs, their headings
 set above rows they are larger than, and no horizontal overflow. Archive:
 `release/erics-sidebar-0.6.195.zip`.
+
+## The section you opened says so (0.6.196 / mobile 0.1.146)
+
+**Nothing on the screen said which section was open.** Breakdown in the Finance
+ledger is a panel you press; under it, By liquidity, By asset class, By
+portfolio and By account type head the runs of figures inside it. All five are
+set in the same 13px uppercase, and an opened panel added no boundary of its
+own — so Breakdown read as one more heading in a run of headings, the figures
+under it belonged to nothing the eye could find, and where the section ended
+was wherever the next rule happened to fall.
+
+**An open panel is a region now.** Its summary takes the `--open-band` tint at
+the head of a bounded block on the page's surface, so the label that was
+pressed and everything that came out from under it read as one thing, and where
+the block ends is where the section ends. Closed, it stays what it was: a rule
+and a label in a run of them. The band is a step firmer than the sage a row
+takes under the pointer, so hovering a closed panel never looks like the open
+one — the settings list, where hover has always been sage, was the case that
+set the tone.
+
+The marking belongs to the disclosure rather than to a feature. `travel.css`
+gives the wallet's panels the block they have no box for, which reaches Finance,
+the travel wallet, gifts, sizes, reminders, taxes, cards, subscriptions and the
+phone; `styles.css` puts the band on every other disclosure, whose box is
+already there. Two keep the marking they already have: a record that opens into
+a block of its own is marked the way the compact rows around it are, by its
+chevron and the rail down its contents, and a panel whose summary is hidden has
+no label to head a block with. The quiet inline toggles take no band.
+
+The research settings panel on the restaurant page had its fields against the
+panel's own border — `.workspace-shell .form-field` zeroes every field's margin
+on that page and out-specified the inset meant for them. The band drew a line
+where that showed, so the inset now out-specifies it back.
+
+New coverage: the open band is a shared token, distinct from the sage a row
+takes under the pointer; a wallet panel takes a surface and a box when opened,
+with the band on its summary; the two disclosures that keep their own marking
+stay excluded; and the pages outside the wallet band their open summaries too.
+Validation: 551 extension and 33 mobile tests pass from this release's tree.
+Reviewed in `/tests/finance-ledger-preview.html` at 380px and the 280px
+minimum, in `/tests/gifts-preview.html` (a closed panel, then two open ones),
+in `/tests/settings-layout.html` (an open item beside a hovered closed one),
+in `/tests/restaurant-preview.html`, and on the phone at 390px and 320px, where
+no horizontal overflow appears. Native iPhone and installed Chrome behavior were
+not directly tested. Archive: `release/erics-sidebar-0.6.196.zip`.

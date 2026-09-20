@@ -221,3 +221,25 @@ test('settings remain open across active-tab updates and return to the latest to
  assert.equal(doc.getElementById('credential-secret'),null);
  showSettings(false);assert.equal(doc.getElementById('gmail-tool').hidden,false);assert.equal(doc.getElementById('settings-tool').hidden,true);
 });
+
+// A section you opened says so. Its summary wears the open band at the head of
+// a bounded block, and the band is a step firmer than the tint a row takes
+// under the pointer, so hovering a closed section never looks like the open
+// one. Asserted against the sheets because the marking is entirely visual and
+// both hosts read these two files.
+test('an open disclosure is marked, in the wallet and on the pages around it',()=>{
+  const read=name=>readFileSync(new URL(`../src/components/${name}`,import.meta.url),'utf8');
+  const tokens=read('tokens.css'),wallet=read('travel.css'),pages=read('styles.css');
+  const tone=name=>(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`,'i').exec(tokens)||[])[1];
+  assert.ok(tone('open-band'),'the open band is a shared token, not a colour chosen in a feature');
+  assert.notEqual(tone('open-band'),tone('open-band-hover'));
+  assert.notEqual(tone('open-band'),tone('sage'));
+  // A wallet panel has no box of its own until it is opened; then it takes one,
+  // with the band on the summary that was clicked.
+  assert.match(wallet,/\.travel-wallet details\[open\][^{]*\{[^}]*background:var\(--wallet-surface\)/);
+  assert.match(wallet,/\.travel-wallet details\[open\][^{]*>summary\{[^}]*background:var\(--wallet-open\)/);
+  // A record that opens into a block, and a panel with no label to click, keep
+  // the marking they already have.
+  assert.match(wallet,/details\[open\]:where\(:not\(\.reward-group,:has\(>summary\[hidden\]\)\)\)/);
+  assert.match(pages,/details\[open\][^{]*>\s*summary\s*\{[^}]*background:\s*var\(--open-band\)/);
+});

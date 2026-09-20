@@ -113,6 +113,29 @@ A record list is organized by type, not one long alphabetical run. Records group
 
 The group label heads its records and is never set below them: 13px uppercase sans-serif with .06em tracking, in full ink, at 600 against the rows' 500. It is told apart from them by that weight, by its hairline, and by the space around it — not by being shrunk and greyed, which would invert the hierarchy and leave the run reading as rows with a caption stuck above them. Georgia stays with the page title and the record number, so the label never competes with the program names it heads: the label and its rule open the run, a single fine separator divides one row from the next, and 18px separates one group from the next. The last row in a run closes without a rule of its own: it would land a gap above the rule that opens whatever follows — the next group's label, or the editor under the list — and the two together read as a pair of bars rather than one boundary. An empty or filtered-empty list shows only its explanation, never a stray rule.
 
+### Disclosure
+
+A closed panel is a rule and a label in a run of them. An open one is a region:
+its summary wears the `--open-band` tint at the head of a bounded block on the
+page's surface, so the label that was pressed and everything that came out from
+under it read as one thing, and where the block ends is where the section ends.
+The band is a step firmer than the sage a row takes under the pointer, so
+hovering a closed panel never looks like the open one. The marking belongs to
+the panel rather than to a feature: `travel.css` gives the wallet's panels the
+block they have no box for, and `styles.css` puts the band on every other
+disclosure, whose box is already there.
+
+Without it a panel of figures read as one more heading in a run of headings —
+Breakdown is set in the same 13px uppercase as By liquidity under it, and
+nothing on the screen said which section the figures belonged to.
+
+Two disclosures are not sections and keep the marking they already have: a
+record that opens into a block of its own is marked the way the compact rows
+around it are, by its chevron and the rail down its contents, and a panel whose
+summary is hidden has no label to head a block with. The quiet inline toggles —
+the Tools menu's branch, a draft card's reasoning, a tier already banded in a
+colour of its own — take no band either.
+
 ### Tabs
 
 Two concepts on one screen are two tabs, not one longer page. A tool that

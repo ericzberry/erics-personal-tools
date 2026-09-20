@@ -8,6 +8,7 @@
   --wallet-ink:var(--ink); --wallet-muted:var(--muted); --wallet-forest:var(--forest);
   --wallet-line:var(--line); --wallet-control-line:#aab6ad; --wallet-surface:var(--surface);
   --wallet-hover:var(--sage); --wallet-danger:#982f27; --wallet-danger-hover:#f7e9e6;
+  --wallet-open:var(--open-band); --wallet-open-hover:var(--open-band-hover);
   font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color:var(--wallet-ink); max-width:680px; margin:0 auto; padding:24px;
   display:grid; gap:16px; overflow-wrap:anywhere;
@@ -44,6 +45,22 @@
 .travel-wallet summary{cursor:pointer;font-size:12px;padding:4px 0}
 .travel-wallet summary h2{display:inline}
 .travel-wallet details[open]>:not(summary){margin-top:12px}
+/* Opened, a panel is a region rather than one more line in a run of them: its
+   summary takes a tinted band at the head of a bounded block, so the label
+   that was clicked and everything that came out from under it read as one
+   thing, and where the block ends is where the section ends. Closed, it stays
+   a rule and a label. This is what a panel of figures needed — the headings
+   inside Breakdown are set in the same type as the summary above them, so
+   without a boundary the open panel read as one more heading in the run, and
+   nothing on the screen said which section the figures belonged to.
+   Two disclosures are not sections and keep their own marking: a record that
+   opens into a block (a card in the wallet and its benefits) is marked the way
+   the compact rows around it are, by its chevron and the rail down its
+   contents, and a panel whose summary is hidden has no label to head a block
+   with. */
+.travel-wallet details[open]:where(:not(.reward-group,:has(>summary[hidden]))){background:var(--wallet-surface);border:1px solid var(--wallet-line);border-radius:8px;margin:4px 0;padding:0 8px 8px}
+.travel-wallet details[open]:where(:not(.reward-group,:has(>summary[hidden])))>summary{margin-inline:-8px;padding:6px 8px;background:var(--wallet-open);border-bottom:1px solid var(--wallet-line);border-radius:7px 7px 0 0}
+@media(hover:hover){.travel-wallet details[open]:where(:not(.reward-group,:has(>summary[hidden])))>summary:hover{background:var(--wallet-open-hover)}}
 .travel-list{display:grid;gap:18px}
 /* Tool title line: the name, whatever whole-tool actions apply, and a status
    line that takes no space while there is nothing to say. */

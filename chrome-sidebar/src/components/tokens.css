@@ -10,6 +10,11 @@
   --muted: #626f67;
   --forest: #173e37;
   --sage: #e8eee5;
+  /* The band on the summary of an open section. A step firmer than the sage a
+     row takes under the pointer, so hovering a closed one never looks like the
+     open one. */
+  --open-band: #dde6d8;
+  --open-band-hover: #d3ded0;
   --line: #dedfd5;
   --accent: #ad8050;
   --radius: 14px;
