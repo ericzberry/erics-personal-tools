@@ -1941,3 +1941,17 @@ New coverage: a card's balance reviewed as a negative figure under `Credit ·
 liability`, and still typed and filed as a positive amount under the credit
 class. Validation: 494 extension and 33 mobile tests pass; the review was
 inspected at 380px and 280px, where the label and the figure stay on one line.
+
+## A description that outlives the next tool (0.6.172)
+
+0.6.169 replaced a description that had fallen several dozen releases behind
+with a list of the eleven tools that are here now — which is a description that
+goes stale the day a twelfth arrives, and 0.6.169 had just finished
+demonstrating how far behind one gets. It now says what the extension is rather
+than what is currently inside it: personal records and reminders in the
+sidebar, and help with the page in front of you. Adding a capability no longer
+makes it wrong.
+
+Validation: 496 extension tests pass. Nothing rendered changed — the
+description appears on the extensions page and in a store listing, never in the
+panel. Archive: `release/erics-sidebar-0.6.172.zip`.
