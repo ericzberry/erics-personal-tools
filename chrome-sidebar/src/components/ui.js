@@ -470,6 +470,9 @@ export const HIDE_GLYPH='M4 4l16 16 M9.8 5.9A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.
 export const COPY_GLYPH='M9.5 8.5h9v11h-9z M14.5 8.5v-4h-9v11h4';
 export const OPEN_GLYPH='M14 4h6v6 M20 4l-8.5 8.5 M18 14.5V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10';
 export const HISTORY_GLYPH='M12 7.5V12l3.2 1.9 M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z';
+// Read it again, now: a record whose figure is published somewhere else and
+// stands until it is looked up again.
+export const REFRESH_GLYPH='M19.5 12a7.5 7.5 0 1 1-2.2-5.3 M19.5 4v5h-5';
 // A record's own action, at the end of its line. The glyph is the verb and the
 // label is what a screen reader and a paused pointer are told, so it names the
 // record it would act on rather than saying "Delete" twelve times down a list.

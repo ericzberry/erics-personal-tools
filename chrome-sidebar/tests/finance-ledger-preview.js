@@ -60,11 +60,29 @@ const SETTLED=[
     valuation({property:2,asOf,value:1185000+index*9000,debt:642000-index*4100,source:1}))
 ];
 
+// A house entered with the page its value is published on and no figure typed
+// against it: what the ledger looks like in the moment before it has read the
+// Zestimate off that page, and what the reading says while it runs.
+const AWAITING=[
+  portfolio(1,'Eric and Ariana Berry Estate',1),
+  mark(1,3,'2026-09-20',69000),
+  property(1,1,'220 Riverside Blvd, Apartment 11J, New York, NY 10069','https://www.zillow.com/homedetails/synthetic/1234_zpid/')
+];
+
 const states=[
   ['Still being filled in — one full reading, one partial',FILLING],
   ['Years of figures, liabilities, a position and a stale portfolio',SETTLED],
+  ['A house with its page saved and no figure yet',AWAITING],
   ['Nothing recorded yet',[portfolio(1,'Eric and Ariana Berry Estate',1)]]
 ];
+
+// The host's ability to read a house's own page, which only the extension
+// really has. Synthetic here: no tab is opened and no page is read, so the row
+// action and the line it puts up while it runs can be looked at.
+const readZestimate=async(link,address)=>{
+  await new Promise(resolve=>setTimeout(resolve,1200));
+  return {value:2424000,address,url:link};
+};
 
 const root=document.getElementById('ledger-states');
 for(const [label,records] of states){
@@ -79,7 +97,7 @@ for(const [label,records] of states){
   // looks no further, so each fills its own.
   mountFinance(host,{
     vault,credentials:{get:async()=>'synthetic-preview-token-at-least-32-characters'},
-    remote:async()=>({connections:[]}),
+    remote:async()=>({connections:[]}),readZestimate,
     offline:{request:async()=>({records})}
   });
 }

@@ -164,6 +164,17 @@ export const valueSourceLabel=code=>valueSource(code)?.label||'';
 // house reaches the totals through.
 export const PROPERTY_CLASS=7;
 export const PROPERTY_DEBT_CLASS=21;
+// A property's link is a page the ledger shows; a Zillow home-details page is
+// one it can also read, because the Zestimate on it is published rather than
+// stated and is the standing answer to what the house is worth. Which is which
+// is settled here, beside the record that carries the link, so the reader and
+// the hosts that offer the reading agree about it without either deciding.
+export function zillowHome(link){
+  try{
+    const url=new URL(link||'');
+    return url.protocol==='https:'&&/(^|\.)zillow\.com$/i.test(url.hostname)?url.href:'';
+  }catch{return '';}
+}
 
 // Names compared the way a person would compare them: case, punctuation and
 // spacing carry no meaning here, so "Charles Schwab", "Schwab Bank" and a bare

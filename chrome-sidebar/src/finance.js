@@ -1,9 +1,9 @@
 import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionDetail,propertyDetail} from './components/finance.js';
-import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
+import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertyRef,valuationRef,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 const today=()=>new Date().toISOString().slice(0,10);
 // How the value-over-time table is read. Quarterly leads, because a quarter is
@@ -14,7 +14,12 @@ const TREND_PERIODS=[['quarter','Quarterly'],['day','Daily']];
 // `readPage` is the host's ability to read the tab the owner is looking at.
 // The sidebar sits beside that tab and supplies it; a full tab and the phone
 // have no such page, so they pass nothing and the action never appears.
-export function mountFinance(root,{credentials,offline,remote,readPage=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false}){
+//
+// `readZestimate` is the other half of that: the host's ability to open a
+// property's own page and read what it publishes the house is worth. The
+// extension can, the phone cannot, and where it is missing a property is worth
+// whatever was typed against it.
+export function mountFinance(root,{credentials,offline,remote,readPage=null,readZestimate=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false}){
   const gate=mountVaultGate(root,{
     id:'finance-vault',title:'Finance',
     // A tool built because the tab beside the panel is a finance page raises no
@@ -259,7 +264,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       // being told apart here is what kind of account each figure sits in, and
       // that is what the tag on every portfolio underneath says too.
       BreakdownList('By account type',summary.byRegistration,currency),
-      ...(summary.properties.count?[BreakdownList('Real estate',[
+      // A house nobody has valued yet is a property and not yet a figure: the
+      // heading over it would have nothing under it but the line saying so,
+      // which is a breakdown of nothing under a title.
+      ...(summary.properties.value||summary.properties.debt?[BreakdownList('Real estate',[
         {label:'Value',total:summary.properties.value},
         // What is owed and what is left appear only when something is owed. A
         // house with no mortgage has equity equal to its value, and two more
@@ -548,6 +556,40 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     const id=valuationRef(value),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
   }
+  // What a house is worth is published rather than held, so the ledger goes and
+  // reads it instead of asking for it. The address and the page are the record;
+  // the figure under them is a reading the tool can take itself, and a property
+  // saved with a Zillow page and no figure is a question the owner has already
+  // answered by saving the page.
+  //
+  // What is owed is not published anywhere, so it comes forward from the last
+  // reading rather than being filed as zero: filing zero would pay off a
+  // mortgage silently, and nothing afterwards would show that it had.
+  const ZESTIMATE=valueSourceById('zestimate').code;
+  // One reading per property per sitting. A page that would not give up a
+  // figure must not be asked again on every refresh, and a Zestimate does not
+  // move between two glances at it.
+  const looked=new Set();
+  async function fileZestimate(entry,target='status'){
+    const property=entry.property;
+    if(!readZestimate||!zillowHome(property.link))return false;
+    looked.add(property.number);
+    status(`Reading the Zestimate for ${property.name}…`,target,'progress');
+    let reading;
+    try{reading=await readZestimate(property.link,property.name);}
+    catch(error){status(error.message,target,'alert');return false;}
+    const saved=await saveValuation({property:property.number,asOf:today(),
+      value:reading.value,debt:entry.current?.debt||0,source:ZESTIMATE},target);
+    if(saved)onChanged();
+    return saved;
+  }
+  async function readMissingValues(){
+    if(!readZestimate||!loaded)return;
+    for(const entry of propertiesOn(records)){
+      if(entry.value||looked.has(entry.property.number)||!zillowHome(entry.property.link))continue;
+      await fileZestimate(entry);
+    }
+  }
   function savePortfolio(portfolio,target='form-status'){
     const id=portfolioRef(portfolio.number),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',
@@ -643,7 +685,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // A property reads as what it is: an address, what it is worth, and
     // underneath, the two things the value alone cannot say — where the number
     // came from and what is still owed against it.
-    const estate=(portfolio,entry,against)=>{
+    const estate=(portfolio,entry,against,{unvalued=false}={})=>{
       const property=entry.property,current=entry.current;
       const confirm=Stack([Note(`Permanently delete “${property.name}” and every valuation filed for it, from all devices?`),ActionGroup([
         action('Delete property',async()=>{if(await remove(property))onChanged();},'danger'),
@@ -654,14 +696,50 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
           reading.debt?`owed ${money(reading.debt,portfolio.currency)}`:''].filter(Boolean).join(' · ')
       )),{hidden:true});
       const actions=[
+        // Only where there is a page to read it off. A Zestimate is published
+        // and stands until it is looked up again, which is a verb no other row
+        // in this list has.
+        ...(readZestimate&&zillowHome(property.link)
+          ?[rowAction(REFRESH_GLYPH,`Read the Zestimate for ${property.name}`,()=>fileZestimate(entry))]:[]),
         rowAction(EDIT_GLYPH,`Edit ${property.name}`,()=>fillProperty(entry)),
         ...(entry.history.length>1?[rowAction(HISTORY_GLYPH,`Earlier valuations for ${property.name}`,()=>{past.hidden=!past.hidden;})]:[]),
         rowAction(DELETE_GLYPH,`Delete ${property.name}`,()=>{confirm.hidden=false;},true)
       ];
-      const meta=[current?dated(current.asOf,against):'not valued yet',
+      // The line above may already have said that none of these have been
+      // valued, and a house repeating it under it is one fact written twice.
+      const meta=[current?dated(current.asOf,against):(unvalued?'':'not valued yet'),
         property.pending?'Waiting to sync':''].filter(Boolean).join(' · ');
       return RecordRow({title:property.name,figure:money(entry.value,portfolio.currency),meta,
         notes:[propertyDetail(entry,portfolio.currency)],actions,extra:[past,confirm]});
+    };
+    // Every house in one portfolio, as one line of the ledger. A portfolio is
+    // read down its asset classes — cash, securities, crypto — and an address
+    // set among them is a different kind of thing in the same column: it names
+    // one holding where its neighbours name a whole class of them, and a second
+    // house makes the portfolio's list longer rather than its real estate
+    // bigger. So the line says Real estate and what the houses come to, the way
+    // the class lines do, and the addresses are behind it for whoever wants
+    // them — which is where a property's own verbs live too, since they act on
+    // a house and not on the class.
+    const realEstate=(portfolio,owned,against)=>{
+      const value=owned.reduce((total,entry)=>total+entry.value,0);
+      const debt=owned.reduce((total,entry)=>total+entry.debt,0);
+      // Nothing valued at all is the line's own news. One house of three
+      // waiting for a figure is that house's, and it says so on its own row.
+      const unvalued=owned.every(entry=>!entry.current);
+      const houses=Stack(owned.map(entry=>estate(portfolio,entry,against,{unvalued})),{className:'estate-detail',hidden:true});
+      const asOf=owned.map(entry=>entry.current?.asOf||'').filter(Boolean).sort().at(-1)||'';
+      const meta=[unvalued?'not valued yet':dated(asOf,against),
+        owned.some(entry=>entry.property.pending)?'Waiting to sync':''].filter(Boolean).join(' · ');
+      return RecordRow({title:classLabel(PROPERTY_CLASS),figure:money(value,portfolio.currency),meta,
+        // What the figure beside it cannot say: how many houses it is, and —
+        // because value and debt reach the totals as two figures in two
+        // classes, one of them negative — what is actually the owner's.
+        notes:[[`${owned.length} propert${owned.length===1?'y':'ies'}`,
+          debt?`Mortgage ${money(debt,portfolio.currency)}`:'',
+          debt?`Equity ${money(value-debt,portfolio.currency)}`:''].filter(Boolean).join(' · ')],
+        actions:[rowAction(SHOW_GLYPH,`Show the properties in ${portfolio.name}`,()=>{houses.hidden=!houses.hidden;})],
+        extra:[houses]});
     };
     $('list').replaceChildren(...(groups.length?groups.map(group=>{
       const portfolio=group.portfolio;
@@ -692,7 +770,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
           rowAction(DELETE_GLYPH,`Delete ${portfolio.name}`,()=>{confirm.hidden=false;},true)],
         rows:[...rows.map(row=>figure(portfolio,row)),
           ...group.positions.map(position=>investment(portfolio,position,asOf)),
-          ...group.properties.map(entry=>estate(portfolio,entry,asOf)),confirm]
+          ...(group.properties.length?[realEstate(portfolio,group.properties,asOf)]:[]),confirm]
       });
     }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one below.')]));
     renderPosition();
@@ -768,6 +846,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       fillInvestmentPortfolios(open?$('inv-portfolio').value:'');
       fillPropertyPortfolios(open?$('prop-portfolio').value:'');
       connectionNote();
+      // A house whose page is saved and whose figure is not is not waiting for
+      // the owner to type anything: it is waiting to be looked up. Not awaited,
+      // because the ledger is already on the screen and the reading arrives in
+      // it when it arrives.
+      readMissingValues();
     }
   }
   function clear(){
@@ -868,17 +951,36 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       // figure says otherwise. Figures without the date they are as of are not
       // a record at all — settled before anything is written, so a refused
       // valuation does not leave a property saved behind it.
-      const asOf=$('prop-asOf').value.trim();
+      let asOf=$('prop-asOf').value.trim();
       const figures=['prop-value','prop-debt'].map(key=>$(key).value.trim());
       if(!asOf&&figures.some(Boolean)){status('Give the date these figures are as of, or clear them.','prop-status','alert');return;}
-      if(!await saveProperty({number,portfolio,name:$('prop-name').value,link:$('prop-link').value}))return;
-      if(asOf&&!await saveValuation({property:number,asOf,value:$('prop-value').value||0,
-        debt:$('prop-debt').value||0,source:Number($('prop-source').value)}))return;
+      // What the house is worth is published on the page being saved with it,
+      // so a market value left at nothing beside a Zillow page is read off that
+      // page rather than filed as a house worth nothing. A figure typed by hand
+      // is the owner overriding the Zestimate, which is the whole reason the
+      // source is a choice, so nothing is read over it.
+      const link=$('prop-link').value,name=$('prop-name').value;
+      let value=$('prop-value').value||0,source=Number($('prop-source').value),unread='';
+      if(readZestimate&&zillowHome(link)&&!Number(value)){
+        status(`Reading the Zestimate for ${name.trim()}…`,'prop-status','progress');
+        try{
+          const reading=await readZestimate(link,name);
+          value=reading.value;source=ZESTIMATE;asOf||=today();looked.add(number);
+        }catch(error){
+          // Said where the ledger's own status is, because the drawer this was
+          // typed in closes behind the save.
+          unread=error.message;
+        }
+      }
+      if(!await saveProperty({number,portfolio,name,link}))return;
+      if(asOf&&!await saveValuation({property:number,asOf,value,
+        debt:$('prop-debt').value||0,source}))return;
       // A valuation moved to another date is a different row. The one it came
       // from is removed, so an edit cannot leave two.
       const moved=housing?.valuationId&&asOf&&housing.valuationId!==valuationRef({property:number,asOf});
       if(moved)await remove(records.find(record=>record.id===housing.valuationId)||{id:housing.valuationId,revision:housing.valuationRevision},'prop-status');
       clearPropertyForm();$('entry').open=false;onChanged();
+      if(unread)status(unread,'status','alert');
     }catch(error){status(vaultReason(error),'prop-status','error');}
   });
   clearForm();clearInvestmentForm();clearPropertyForm();renderEntrySwitch();clear();

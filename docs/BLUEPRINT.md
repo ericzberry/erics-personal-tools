@@ -166,6 +166,13 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   carry a figure and the lines that name one). All five ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
+  `zestimate.js` is the other reader, and the opposite errand: a Zestimate is
+  published rather than held, so it opens the Zillow page saved against a
+  property in a tab behind whatever the owner is looking at, reads the figure
+  off it, and closes the tab. The sidebar's alone — `finance-page.js` hands it
+  to both extension hosts and the phone gets nothing — so it does not ship to
+  mobile; what a link has to be for it to be readable is `zillowHome` in
+  `finance-data.js`, beside the record that carries the link.
   `account-sites.js` holds `FINANCE_SITES`, the registry of institutions worth
   recognizing — each with the page its balances are printed on — and
   `ACCOUNT_SITES`, the five of them whose signed-in pages can be read (E*TRADE,

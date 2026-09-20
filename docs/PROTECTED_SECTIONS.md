@@ -398,6 +398,19 @@ holds the difference, which is the one arithmetic step a house needs that a
 position does not. What the class breakdown cannot say, because the two figures
 sit in two classes and one of them is negative, is shown under **Real estate**
 in the breakdown: Value, and — only when something is owed — Owed and Equity.
+That block appears once a house has a figure or a loan against it; a property
+nobody has valued yet would head it with nothing underneath.
+
+**In the ledger itself the houses are one line**, named **Real estate** like the
+class they count under, carrying what they come to and — because value and debt
+sit in two classes and one of them is negative — how many they are, what is owed
+and what is left. A portfolio is read down its asset classes, and an address set
+among them is a different kind of thing in the same column: it names one holding
+where its neighbours name a whole class of them, and a second house makes the
+list longer rather than the real estate bigger. The addresses are behind that
+line, revealed by its one verb, and a house's own verbs — edit, its earlier
+valuations, delete, and reading its Zestimate again — are on the address, since
+they act on a house and not on the class.
 
 **Recording one by hand** is the **Property** form under **Enter by hand**, and
 it stays its own form for the same reason: neither of the other two has anywhere
@@ -406,6 +419,22 @@ that is how a house bought this morning is recorded, counting as nothing until a
 figure says otherwise — while figures with no as-of date are refused before
 anything is written, so a refused valuation never leaves a property saved behind
 it.
+
+**The Zestimate is read rather than typed.** A market value left at nothing
+beside a Zillow page is not a house worth nothing: it is a figure published on a
+page the owner has already named, so the extension opens that page in a tab
+behind whatever they are looking at, reads the figure off it, and closes the tab
+again. It happens when the property is saved, and for a house already in the
+ledger with a page and no figure, once per sitting when the ledger loads — and
+by hand at any time from the property's own row. A figure typed into the form is
+the owner overriding the Zestimate, which is what the source is a choice for, so
+nothing is read over it, and what is owed comes forward from the last reading
+rather than being filed as zero. The reading is refused when the page's address
+disagrees with the property's about a street number, a postcode or a unit, which
+is the failure that matters: the neighbour's Zestimate filed against this house.
+It is read in a browser because that is the only way it can be read — Zillow
+answers a plain request with a bot check — so the phone, which has no tab to
+open, saves what is typed and nothing more.
 
 **Keeping the value current** is [`real-estate-value/`](../real-estate-value/):
 a scheduled task that runs on the 1st of each month, reads each property's

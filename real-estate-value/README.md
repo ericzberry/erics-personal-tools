@@ -44,6 +44,14 @@ node finance-intake/property.mjs save new-house.json --confirm
 Once it is there, the monthly run picks it up on its own. Nothing in this
 directory needs editing to add a second house.
 
+**Adding it in the app does not need the value.** Give the address and the
+Zillow page, leave **Market value** empty, and the extension opens that page in
+a tab behind whatever you are looking at, reads the Zestimate off it and files
+it — and does the same, once a sitting, for a house already in the ledger with a
+page and no figure. The property's own row will read it again on request. This
+run is still what keeps it current month after month; the app reads it at the
+moment a house is entered, which is the moment somebody is waiting for it.
+
 ## What the value means
 
 `source` says which kind of number it is: `zestimate`, `appraisal`, `sale` or
@@ -54,7 +62,9 @@ somebody chose and a figure Zillow published are not the same kind of claim
 about a house.
 
 To hold a value against the Zestimate, file it once with its own source and
-**pause** the property (below); otherwise the next run overwrites it.
+**pause** the property (below); otherwise the next run overwrites it. A value
+typed into the app is held the same way for the same reason: the app never reads
+a Zestimate over a figure somebody entered, only into an empty one.
 
 ## Debt
 

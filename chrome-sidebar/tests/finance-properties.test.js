@@ -35,11 +35,11 @@ const house=(number,name,link='')=>record(propertyRef(number),{row:'property',nu
 const reading=(property,asOf,value,debt=0,source=1)=>
   record(valuationRef({property,asOf}),{row:'valuation',property,asOf,value,debt,source});
 
-function financeHost(document,{saved=[]}={}){
+function financeHost(document,{saved=[],readZestimate=null}={}){
   const writes=[];
   let records=[...saved];
   const tool=mountFinance(document.querySelector('main'),{
-    vault:unlockedVault(),credentials:{get:async()=>'token'},
+    vault:unlockedVault(),credentials:{get:async()=>'token'},readZestimate,
     remote:async()=>({connections:[{id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:true}]}),
     offline:{request:async(token,path,options)=>{
       if(options?.method==='PUT'){
@@ -229,5 +229,113 @@ test('one drawer offers the three records, and a row action opens it on the righ
   cancel.dispatchEvent(new document.defaultView.Event('click'));
   assert.equal(document.getElementById('finance-prop-title').textContent,'');
   assert.equal(document.getElementById('finance-prop-title').hidden,true,'no "New property" under a pressed Property button');
+  tool.stop();restore();
+});
+
+// A portfolio is read down its asset classes, and an address set among them is
+// a different kind of thing in the same column. So the houses come to one line
+// of the ledger, and they are behind it for whoever wants them.
+test('the ledger shows one Real estate line, with the houses behind it',async()=>{
+  const {document,restore}=setup();
+  const window=document.defaultView;
+  const {tool}=financeHost(document,{saved:[estate,
+    house(1,'123 Example St, Town ST 00000'),reading(1,'2026-09-20',1240000),
+    house(2,'456 Second Ave, Town ST 00000'),reading(2,'2026-09-20',610000,320000)]});
+  await settle(()=>document.querySelector('#finance-list .estate-detail'));
+  const rows=[...document.querySelectorAll('#finance-list .record-group>.record-row')];
+  assert.deepEqual(rows.map(row=>row.querySelector('.record-name').textContent),['Real estate'],
+    'two houses are one line, named for the class and not for either address');
+  assert.match(rows[0].textContent,/\$1,850,000/,'the line carries what the houses are worth');
+  assert.match(rows[0].textContent,/2 properties/);
+  assert.match(rows[0].textContent,/Mortgage \$320,000/);
+  assert.match(rows[0].textContent,/Equity \$1,530,000/,'and what is left of them, which no class line can say');
+
+  const detail=document.querySelector('#finance-list .estate-detail');
+  assert.equal(detail.hidden,true,'the addresses wait to be asked for');
+  assert.deepEqual([...detail.querySelectorAll('.record-name')].map(node=>node.textContent),
+    ['123 Example St, Town ST 00000','456 Second Ave, Town ST 00000']);
+  const show=[...rows[0].querySelectorAll('button')]
+    .find(node=>node.getAttribute('aria-label')?.startsWith('Show the properties'));
+  show.dispatchEvent(new window.Event('click'));
+  assert.equal(detail.hidden,false);
+  // A house's own verbs act on the house, so they stay with it rather than
+  // riding on the line that adds it to the others.
+  assert.deepEqual(rows[0].querySelector('.record-line .action-group').children.length,1);
+  assert.ok([...detail.querySelectorAll('button')].some(node=>node.getAttribute('aria-label')==='Edit 123 Example St, Town ST 00000'));
+  tool.stop();restore();
+});
+
+// What a house is worth is published rather than held, so a property saved with
+// the page it is published on does not wait to be told the figure.
+test('a property saved with a Zillow page and no figure has its Zestimate read off it',async()=>{
+  const {document,restore}=setup();
+  const asked=[];
+  const {tool,writes}=financeHost(document,{saved:[estate],
+    readZestimate:async(link,address)=>{asked.push([link,address]);return {value:3985700,address,url:link};}});
+  await ready(document);
+  const set=(id,value)=>{document.getElementById(id).value=value;};
+  set('finance-prop-name','220 Riverside Blvd, Apartment 11J, NY NY 10069');
+  set('finance-prop-link','https://www.zillow.com/homedetails/220-Riverside-Blvd/1234_zpid/');
+  set('finance-prop-value','');
+  set('finance-prop-asOf','2026-09-20');
+  document.getElementById('finance-prop-form').dispatchEvent(new document.defaultView.Event('submit'));
+  await settle(()=>writes.length>=2);
+  assert.deepEqual(asked,[['https://www.zillow.com/homedetails/220-Riverside-Blvd/1234_zpid/','220 Riverside Blvd, Apartment 11J, NY NY 10069']]);
+  assert.deepEqual([writes[1].value,writes[1].source,writes[1].asOf],[3985700,1,'2026-09-20'],
+    'the figure read off the page, filed as the Zestimate it is');
+  tool.stop();restore();
+});
+
+// A figure typed by hand is the owner overriding the Zestimate, which is the
+// whole reason the source is a choice. Nothing is read over it.
+test('a market value typed by hand is not read over',async()=>{
+  const {document,restore}=setup();
+  let asked=0;
+  const {tool,writes}=financeHost(document,{saved:[estate],
+    readZestimate:async()=>{asked++;return {value:3985700,address:'',url:''};}});
+  await ready(document);
+  const set=(id,value)=>{document.getElementById(id).value=value;};
+  set('finance-prop-name','123 Example St, Town ST 00000');
+  set('finance-prop-link','https://www.zillow.com/homedetails/123-Example-St/1234_zpid/');
+  set('finance-prop-value','1240000');
+  set('finance-prop-source','3');
+  set('finance-prop-asOf','2026-09-20');
+  document.getElementById('finance-prop-form').dispatchEvent(new document.defaultView.Event('submit'));
+  await settle(()=>writes.length>=2);
+  assert.equal(asked,0,'the owner has already answered');
+  assert.deepEqual([writes[1].value,writes[1].source],[1240000,3]);
+  tool.stop();restore();
+});
+
+// The house already in the ledger with a page and no figure: nobody has to open
+// the form again for it. It is read when the ledger loads, once per sitting.
+test('a saved property with a page and no figure is read when the ledger loads',async()=>{
+  const {document,restore}=setup();
+  let asked=0;
+  const {tool,writes}=financeHost(document,{
+    saved:[estate,house(1,'123 Example St, Town ST 00000','https://www.zillow.com/homedetails/123-Example-St/1234_zpid/'),
+      house(2,'456 Second Ave, Town ST 00000'),reading(2,'2026-09-20',610000)],
+    readZestimate:async()=>{asked++;return {value:1240000,address:'123 Example St, Town ST 00000',url:''};}});
+  await settle(()=>writes.length>=1);
+  assert.equal(asked,1,'the house with a figure already is left alone, and the one with no page cannot be read');
+  assert.deepEqual([writes[0].row,writes[0].property,writes[0].value,writes[0].source],['valuation',1,1240000,1]);
+  tool.stop();restore();
+});
+
+// A page that will not give up a figure is said once, in words, where the
+// ledger's own status is — and the house is still saved.
+test('a Zestimate that cannot be read is reported, and the property is saved anyway',async()=>{
+  const {document,restore}=setup();
+  const {tool,writes}=financeHost(document,{saved:[estate],
+    readZestimate:async()=>{throw Error('No Zestimate was found on that page.');}});
+  await ready(document);
+  const set=(id,value)=>{document.getElementById(id).value=value;};
+  set('finance-prop-name','123 Example St, Town ST 00000');
+  set('finance-prop-link','https://www.zillow.com/homedetails/123-Example-St/1234_zpid/');
+  set('finance-prop-value','');
+  set('finance-prop-asOf','2026-09-20');
+  document.getElementById('finance-prop-form').dispatchEvent(new document.defaultView.Event('submit'));
+  await settle(()=>document.getElementById('finance-status').textContent.includes('No Zestimate'));
+  assert.equal(writes[0].row,'property','the address is the record, and it is saved');
   tool.stop();restore();
 });

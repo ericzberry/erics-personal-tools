@@ -57,6 +57,12 @@
 .trend-row>span:first-child{flex:0 0 auto;white-space:nowrap}
 .trend-row .footnote{margin:0;min-width:88px;text-align:end}
 .finance-ledger .record-row{gap:2px}
+/* The houses behind a Real estate line, shown only when they are asked for.
+   Set in from the line they add up to, and ruled along their edge, so a run of
+   addresses reads as what is inside that figure rather than as more figures
+   beside it. The last of them closes on the line's own rule. */
+.finance-ledger .estate-detail{margin:4px 0 0 2px;padding-inline-start:10px;border-inline-start:2px solid var(--wallet-line)}
+.finance-ledger .estate-detail>.record-row:last-child{border-bottom:0;padding-bottom:0}
 /* The reading beside a signed-in account page is a group of its own: what was
    read, and the action that reads or saves it, inside one boundary. Nothing
    sits on a rule with nothing under it. */
