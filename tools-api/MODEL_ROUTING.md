@@ -51,8 +51,8 @@ is marked `vision` only where image input is known to be supported; an unmarked
 model is simply never chosen for an image, which surfaces as a clear "no model
 available" rather than a provider error.
 
-`finance.intake` names `gpt-5.6-terra`, with 7,000 output tokens, no web tool,
-and a $0.12 estimated request ceiling. The output budget was raised from 2,500 on
+`finance.intake` names `gpt-5.6-luna`, with 7,000 output tokens, no web tool,
+and a $0.03 estimated request ceiling. The output budget was raised from 2,500 on
 2026-09-20: a wealth manager listing a household's joint account and its trusts
 puts twenty-eight accounts on one page, each of which comes back named,
 classified and dated, and that answer weighs some 2,800 output tokens. Against
@@ -81,19 +81,23 @@ up first and can say why.
 The model is named rather than left to whichever is cheapest, because the two
 things this reading needs are the two things cheapest does not choose for. It
 has to be current: selection by price landed on `gpt-4.1-mini`, a generation
-behind everything else the app calls. And it has to be quick: the alternative at
-that tier reasons before every answer, and thinking first and then writing
+behind everything else the app calls. And it has to be quick: the models at the
+tier above reason before every answer, and thinking first and then writing
 twenty-eight accounts is what made one press sit for the better part of two
-minutes. `gpt-5.6-terra` is the same tier as the reasoning model it replaces, a
-generation newer, takes image input, and answers at `reasoning.effort: none`.
+minutes. `gpt-5.6-luna` is the current family's small model, takes image input,
+and answers at `reasoning.effort: none`.
 
-It is dearer per token — about four cents for a page the size of a wealth
-manager's account list, against one — so the ceiling is raised to $0.12 to clear
-the largest page the reading accepts rather than the usual one, which is the
-right trade for the ledger a net worth is kept in at the rate one household
-reads its accounts. A connection that cannot reach the named model is refused in
-words rather than sent quietly to another, and Settings still pins this one task
-to any reviewed model.
+The argument for the tier above it — `gpt-5.6-terra`, which this briefly used —
+was that a smaller model once read E*TRADE's page by filing every figure under
+the institution's name and calling a column of gains the holdings. That is a
+rule-following failure rather than a reading one, and this prompt is rule-dense,
+so it is the fair worry about a small model. Against it: that model was two
+generations older, the snapshot no longer hands over bare figures with no row
+around them, and nothing reaches the ledger until the owner has read the drafts,
+so a bad reading costs a press rather than a wrong net worth. Terra costs about
+ten times as much for the same page. A connection that cannot reach the named
+model is refused in words rather than sent quietly to another, and Settings pins
+this one task to a larger model without a deploy.
 
 It reads one block of pasted text, or an image of a statement, into draft
 figures and nothing else: the owner's saved records are never sent, so it
