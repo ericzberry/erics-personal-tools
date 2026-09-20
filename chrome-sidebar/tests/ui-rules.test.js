@@ -35,7 +35,7 @@ const RULES={
   'UI-6 colour comes from a token':{
     // capabilities.css keeps one: the forest-at-12% shadow under the open Tools
     // menu, which has no token because it is the only elevation in the product.
-    budget:{'styles.css':92,'select.css':16,'upload.css':7,'travel.css':5,
+    budget:{'styles.css':91,'select.css':16,'upload.css':7,'travel.css':5,
       'workspace.css':4,'cards.css':2,'capabilities.css':1,'home.css':1,'reminders.css':1},
     fix:'use a token from tokens.css, or add one there if the tone is genuinely new',
     count:name=>PALETTE.includes(name)?0:(sheet(name).match(/#[0-9a-fA-F]{3,8}\b/g)||[]).length

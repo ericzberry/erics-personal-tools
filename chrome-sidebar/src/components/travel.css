@@ -66,6 +66,14 @@
    danger ink here. Unscoped, because an amount is an amount on every screen
    either host draws. */
 .amount--negative{color:var(--danger)}
+/* `Badge` is a shared component, so its tag is drawn here rather than in
+   styles.css, which only the extension loads. Outside a wallet the phone was
+   getting a bare span: the restaurant results' status and every one of its
+   available-time chips had no border, no radius, no size and no muted ink.
+   The narrowest widths buy their width back from the padding — shrinking the
+   type instead is the loss the 10px floor exists to stop. */
+.pill{display:inline-block;flex-shrink:0;font-size:10px;line-height:1.3;letter-spacing:.2px;border:1px solid var(--line);border-radius:4px;padding:2px 5px;color:var(--muted)}
+@media(max-width:330px){.pill{padding:2px 4px}}
 .travel-list{display:grid;gap:18px}
 /* Tool title line: the name, whatever whole-tool actions apply, and a status
    line that takes no space while there is nothing to say. */
@@ -268,9 +276,9 @@
 .protected-field{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--wallet-line);border-radius:8px;background:var(--wallet-surface);}
 .protected-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 /* One tag in both hosts: the kind beside a portfolio name, and what a sealed
-   value is protected by. At the 10px floor it gives the width back from its
-   tracking and its padding, so a heading that already wrapped wraps the same. */
-.travel-wallet .pill{flex-shrink:0;font-size:10px;line-height:1.3;letter-spacing:.2px;padding:2px 5px;border:1px solid var(--wallet-line);border-radius:4px;color:var(--wallet-muted);}
+   value is protected by. It takes the shared `.pill` above and adds nothing:
+   the wallet tokens it used to name resolve to the same line and the same
+   muted ink, so the override was one tag drawn twice. */
 .protected-title{font:500 11px/1.4 var(--sans);color:var(--wallet-ink);}
 .protected-state{margin:0;font-size:11px;color:var(--wallet-muted);}
 .protected-field .form-field{margin:0;}

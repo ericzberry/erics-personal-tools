@@ -2862,3 +2862,42 @@ proposed for them, and Carta read on every application path and on none of the
 way in. Not directly checked: the live Carta page, which is behind a sign-on —
 the figures above came off the owner's own reading of it.
 Archive: `release/erics-sidebar-0.6.216.zip`.
+
+## One tag, drawn once, in the sheet both hosts load (0.6.218 / mobile 0.1.168)
+
+**The phone was drawing a shared component as a bare span.** `Badge` lives in
+`ui.js`, which both hosts ship, but its `.pill` was defined in `styles.css`,
+which only the extension loads. Inside a wallet or a vault gate the phone was
+saved by a second copy of the rule, `.travel-wallet .pill`; outside one it got
+nothing. Measured in the live phone document, a tag in the restaurant
+workspace came out as a 14px inline span with no border, no radius and no
+muted ink — that is the status on every reservation result and every
+available-time chip under it.
+
+`.pill` now lives in `travel.css`, which both hosts load, beside the note that
+already explains why a rule has to be there rather than in `styles.css`. The
+wallet's own override turned out to be the same seven declarations written
+under the wallet token names — `--wallet-line` and `--wallet-muted` resolve to
+`--line` and `--muted` — so it was one tag drawn twice, and it is deleted. The
+narrow-width rule that buys a tag's width back from its padding moved with it,
+so the phone gets that at 320px too. Outside the wallet the tag's ink moves
+from a hex of its own to `--muted`, which is what it already was inside one.
+
+**The rule behind it is still open, deliberately.** A static scan says 67 of
+the 129 classes `ui.js` emits are styled only in the extension's sheet, but
+`ui.js` ships whole to the phone, so that number cannot tell a component the
+phone renders from one it merely carries — `ranked-player` and
+`connection-card` will never appear there. Answering UI-Q4 properly means
+walking the phone's screens and scanning the rendered DOM for classes no
+loaded sheet matches. Until that is done, a component both hosts render is
+styled in a sheet both hosts load by precedent rather than by rule.
+
+Validation: 585 extension and 33 mobile tests pass from an archive of this
+release. Verified in the running phone at 390px, inside
+`/app/unlocked.html`'s workspace shell: with the shared rule neutralised the
+tag measures 14px / 0px border / 0px radius / inline, and with it 10px / 1px /
+4px / inline-block. The extension's own tag is unchanged — "Taxable" beside a
+portfolio name still measures 50.2 × 19px with the same border, radius,
+padding and ink. UI-6's budget for `styles.css` drops 92 → 91. Native iPhone
+and installed Chrome behavior were not directly tested. Archive:
+`release/erics-sidebar-0.6.218.zip`.

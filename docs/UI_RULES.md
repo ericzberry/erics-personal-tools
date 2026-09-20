@@ -208,13 +208,22 @@ a host's own shell is exempt.
 taking the surface, a `.reward-group` taking a rail — are now one: UI-22, the
 same inset block a panel opens into.
 
-**UI-Q4 — which sheet owns a shared component's look?** `Badge` is shared, but
-`.pill` is defined in `styles.css`, which only the extension loads, as well as
-in `travel.css`, which both hosts load. Inside a wallet or a vault gate the
-phone gets the tag; outside one it gets a bare span — `ReservationResult`'s
-status badge and its time-slot chips render unstyled on the phone today.
-Decide whether a component used by both hosts must be styled in a shared
-sheet, then add the rule.
+**UI-Q4 — which sheet owns a shared component's look?** The instance that
+raised this is fixed: `.pill` moved out of `styles.css`, which only the
+extension loads, into `travel.css`, which both hosts do — measured in the live
+phone document, a tag inside the restaurant workspace went from a bare 14px
+inline span with no border to 10px, `--line`, 4px. The wallet's own `.pill`
+override turned out to be the same declarations under the wallet token names
+and was deleted, so one tag is drawn once.
+
+The rule behind it is still open, because the size of the problem is not
+known. A static scan says 67 of the 129 classes `ui.js` emits are styled only
+in the extension's sheet — but `ui.js` ships whole to the phone, so that count
+cannot tell a component the phone renders from one it merely carries
+(`ranked-player` and `connection-card` will never appear there). Answering it
+means walking the phone's screens and scanning the rendered DOM for classes no
+loaded sheet matches. Until then, a component that both hosts render is styled
+in a sheet both hosts load, by precedent rather than by rule.
 
 ## Iterating
 

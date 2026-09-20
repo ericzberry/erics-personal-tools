@@ -87,7 +87,6 @@ input::placeholder { color: #72786f; }
 /* A tag, not a button. 10px is the floor for metadata; the tracking and the
    padding come down with the size, so the box is the width it was and a name
    beside it keeps the line it had. */
-.pill { display: inline-block; flex-shrink: 0; font-size: 10px; line-height: 1.3; letter-spacing: .2px; border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; color: #5b6855; }
 .quiet { border: 0; background: transparent; font-size: 11px; color: var(--forest); padding: 7px 0 7px 8px; }
 .quiet:disabled { color: #7b8077; cursor: default; }
 .footnote { color: var(--muted); font-size: 11px; line-height: 1.6; margin: 13px 0; }
@@ -136,9 +135,7 @@ td:first-child { width: 60%; }
 .button-link { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-radius: 8px; background: var(--forest); color: #fffefa; font-size: 12px; text-decoration: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 @media (min-width: 650px) { body { max-width: 440px; margin: auto; border-inline: 1px solid var(--line); min-height: 100vh; } }
-/* The narrowest sidebar buys its width back from the tag’s padding. Shrinking
-   the type instead is the loss the floor exists to stop. */
-@media (max-width: 330px) { .app-header, .tool-heading, main, .tool-page { padding-left: 16px; padding-right: 16px; } .pill { padding: 2px 4px; } }
+@media (max-width: 330px) { .app-header, .tool-heading, main, .tool-page { padding-left: 16px; padding-right: 16px; } }
 @media (prefers-reduced-motion: no-preference) { button, a { transition: background-color .15s, color .15s; } }
 @media (hover: hover) { .quiet:hover { color: var(--accent); } summary:hover { background: #173e3705; } }
 
