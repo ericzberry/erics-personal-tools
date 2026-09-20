@@ -2533,3 +2533,21 @@ width — populated with three categories, a name long enough to wrap, a record
 with notes and one without — and in the phone shell: open and closed rows,
 hover, keyboard focus and tab order, the delete confirmation, and the touch
 size of every glyph. Archive: `release/erics-sidebar-0.6.203.zip`.
+
+## A reading that finds nothing says what it was given (0.6.204 / mobile 0.1.154)
+
+`No account figures were found on secure.chase.com` is true and useless. From
+the panel, a page that states its accounts in a grid the reader cannot parse and
+a page holding those accounts behind a closed disclosure look exactly alike —
+and they are not the same problem. One is a reader to fix; the other is a
+section to open, which only the owner can do and only if something tells them
+so.
+
+So the line that says nothing was found now says what arrived: how many account
+tables the page gave, and how many lines. Zero tables and a handful of lines is
+a page whose accounts are not rendered yet. Several tables and nothing filed is
+a reading to fix. It is said only on that failure — a reading that worked has
+the figures on screen to speak for it, and this ledger does not narrate its
+successes.
+
+Validation: 565 extension tests pass.

@@ -455,7 +455,16 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       snapshot={rows:result.marks,notes:result.notes};snapshotEditing=false;renderSnapshot();
       showCapital(result,'page');
       const any=found(result);
-      const say=[any?'':`No account figures were found on ${page.host}.`,
+      // When a reading finds nothing, what the page gave it is the whole of the
+      // diagnosis and the owner is the only one who can see both. A page that
+      // states its accounts in a grid and a page that is holding them behind a
+      // disclosure look identical from here and are not the same problem: one
+      // is a reader to fix, the other is a section to open. So the line that
+      // says nothing was found says what arrived — how many account tables, how
+      // many lines — and it is said only then, because a reading that worked
+      // has the figures on the screen to speak for it.
+      const gave=any?'':`The page gave ${page.tables} account table${page.tables===1?'':'s'} and ${page.text.split('\n').filter(Boolean).length} lines.`;
+      const say=[any?'':`No account figures were found on ${page.host}.`,gave,
         page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
         ...result.notes,result.unread].filter(Boolean).join(' ');
       status(say,'snapshot-status',say?'alert':'');

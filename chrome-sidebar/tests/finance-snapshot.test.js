@@ -378,6 +378,28 @@ test('an account the roster keeps out of the ledger is left out by name',async()
   tool.stop();restore();
 });
 
+// A reading that finds nothing has to say what it was given, because from the
+// panel a page that states its accounts in a grid and a page holding them
+// behind a disclosure look the same and are not the same problem.
+test('a reading that finds nothing says what the page gave it',async()=>{
+  const {document,restore}=setup();
+  const {tool}=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'Chase accounts',label:'Total investments',class:'liquid',value:14268036.59,asOf:'2026-09-11'}
+    ],unread:''},
+    readPage:async()=>({text:'Overview\n$16,369,841.07\nAssets',host:'secure.chase.com',title:'Overview',trimmed:0,tables:0})
+  });
+  await ready(document);
+  tool.site(CHASE);
+  const panel=()=>document.getElementById('finance-snapshot-body');
+  const said=()=>document.getElementById('finance-snapshot-status').textContent;
+  panel().querySelector('button').click();
+  await settle(()=>said().includes('No account figures'));
+  assert.match(said(),/gave 0 account tables and 3 lines/,'what arrived, so the owner can tell which problem it is');
+  tool.stop();restore();
+});
+
 // An exchange states one balance for a page and never says what kind of money
 // it is, because to it there is only one kind. The site is what answers: a
 // figure read at Coinbase is coin, which is the whole reason the class exists.
