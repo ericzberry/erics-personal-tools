@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCreditReading,parseBenefitReading,matchCredits,matchCard,creditRecord,benefitRecord,creditAmount,CREDIT_LIMIT} from '../src/credit-data.js';
+import {parseCreditReading,matchCredits,matchCard,creditRecord,creditAmount,CREDIT_LIMIT} from '../src/credit-data.js';
 import {nextActions,validateReward} from '../src/rewards-data.js';
 
 const now=new Date().toISOString();
@@ -99,78 +99,4 @@ test('a credit reading never overwrites a balance or a card',()=>{
   const [row]=matchCredits(parseCreditReading({credits:[{credit:'Membership Rewards',card:'Membership Rewards Card',amount:100,remaining:100}]}),entries);
   assert.equal(row.match,null,'a balance of the same name is not a credit');
   assert.equal(creditRecord(row,null,row.holder).kind,'benefit');
-});
-
-// A tracker is only one kind of thing a card's benefits page lists. A lounge
-// program, elite status, a Global Entry credit, an included subscription — none
-// of them has a "left this period", and for an invitation-only card they are
-// exactly what research against public pages is worst at finding.
-test('a benefit with no tracker is read and created rather than dropped for having no figure',()=>{
-  const cardId='11111111-1111-4111-8111-111111111111';
-  const entries=[held(cardId,'The Platinum Card® from American Express (Morgan Stanley)')];
-  const rows=parseBenefitReading({benefits:[
-    {benefit:'Priority Pass Select',card:'Morgan Stanley Platinum Card (-61007)',kind:'membership',
-      value:'Priority Pass Select membership',state:'activation',url:'https://amex.example/lounge',notes:'Enroll once.'},
-    {benefit:'Global Entry credit',card:'Morgan Stanley Platinum Card (-61007)',kind:'benefit',
-      value:'$120 every four years',cadence:'nonsense',due:'not a date',url:'http://insecure.example'},
-    {benefit:'Nothing stated',card:'Morgan Stanley Platinum Card (-61007)',kind:'benefit',value:''}
-  ]},'American Express');
-  assert.deepEqual(rows.map(row=>[row.name,row.kind,row.value,row.state]),[
-    ['Priority Pass Select','membership','Priority Pass Select membership','activation'],
-    ['Global Entry credit','benefit','$120 every four years','available']
-  ],'a benefit with nothing stated for what it is worth is left out; the rest keep their kind');
-  assert.equal(rows[1].cadence,'','a reset period the wallet does not know is dropped, not stored');
-  assert.equal(rows[1].due,'');
-  assert.equal(rows[1].url,'','and a link that is not HTTPS never reaches a record');
-
-  const matched=matchCredits(rows,entries);
-  const lounge=benefitRecord(matched[0],null,matched[0].holder);
-  assert.equal(lounge.kind,'membership');
-  assert.equal(lounge.card,cardId,'it is filed under the card the page names');
-  assert.equal(lounge.state,'activation','a benefit that still needs enrolling says so');
-  assert.equal(lounge.remaining,'','and a membership is never given a remaining of zero, which would mark it spent');
-  assert.equal(lounge.url,'https://amex.example/lounge');
-  assert.equal(nextActions([lounge],new Date()).some(entry=>entry.reason==='Activate before using'),true);
-});
-
-test('a benefit already in the wallet is filled in rather than duplicated or overwritten',()=>{
-  const cardId='11111111-1111-4111-8111-111111111111';
-  const saved=benefit('lounge-id','Priority Pass Select',cardId,{kind:'membership',value:'Lounge access',
-    notes:'Mine, typed by hand.',url:'https://mine.example/lounge',cadence:'',state:'available'});
-  const entries=[held(cardId,'The Platinum Card® from American Express (Morgan Stanley)'),saved];
-  const [row]=matchCredits(parseBenefitReading({benefits:[
-    {benefit:'Priority Pass Select',card:'Morgan Stanley Platinum Card (-61007)',kind:'membership',
-      value:'Priority Pass Select membership',state:'activation',url:'https://amex.example/lounge',notes:'Enroll once.'}
-  ]},'American Express'),entries);
-  assert.equal(row.match?.id,'lounge-id');
-  const record=benefitRecord(row,row.match,row.holder);
-  assert.equal(record.id,'lounge-id','one entry, not two');
-  assert.equal(record.value,'Lounge access','what the owner wrote stands');
-  assert.equal(record.notes,'Mine, typed by hand.');
-  assert.equal(record.url,'https://mine.example/lounge');
-  assert.equal(record.state,'available','and the page does not decide a status the owner already set');
-});
-
-// One press, two lists, one wallet. A saved entry may be claimed by a credit or
-// by an untracked benefit, never by both.
-test('a credit and a benefit never claim the same saved entry',()=>{
-  const cardId='11111111-1111-4111-8111-111111111111';
-  const entries=[held(cardId,'The Platinum Card® from American Express (Morgan Stanley)'),
-    benefit('airline-id','Airline Fee Credit',cardId)];
-  const claimed=new Set();
-  const [credit]=matchCredits(parseCreditReading({credits:[
-    {credit:'$200 Airline Fee Credit',card:'Morgan Stanley Platinum',amount:200,remaining:75,cadence:'annual'}]}),entries,claimed);
-  const [extra]=matchCredits(parseBenefitReading({benefits:[
-    {benefit:'Airline Fee Credit',card:'Morgan Stanley Platinum',kind:'benefit',value:'$200 per calendar year'}]}),entries,claimed);
-  assert.equal(credit.match?.id,'airline-id');
-  assert.equal(extra.match,null,'the second list finds the entry already claimed and proposes a new record instead');
-});
-
-test('a page stating benefits but no rates still gives up its benefits',()=>{
-  const rows=parseBenefitReading({balances:[],credits:[],rates:[],benefits:[
-    {benefit:'Hyatt Discoverist',kind:'membership',value:'Discoverist status',card:'J.P. Morgan Reserve'}
-  ]},'Chase');
-  assert.deepEqual(rows.map(row=>[row.name,row.kind]),[['Hyatt Discoverist','membership']]);
-  assert.equal(rows[0].source,'Chase');
-  assert.deepEqual(parseBenefitReading({rates:[]},'Chase'),[],'and a page stating none returns none');
 });

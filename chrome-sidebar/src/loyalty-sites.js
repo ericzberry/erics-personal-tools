@@ -104,3 +104,20 @@ export const loyaltyProgramById=id=>LOYALTY_PROGRAMS.find(program=>program.id===
 export const loyaltySitePrograms=program=>program
   ?LOYALTY_PROGRAMS.filter(other=>other.hosts.some(host=>program.hosts.includes(host)))
   :[];
+
+// The program a saved entry is about, found by what the entry calls itself
+// rather than by a page it was read from. A balance names its program —
+// "Bonvoy", or "Marriott Bonvoy" where the owner wrote the brand into it — and
+// only a name nothing here recognizes falls back to the provider. The provider
+// answers alone where it runs one program, or where the ones it runs are
+// printed on the same page: an issuer's two currencies share one rewards page,
+// so either of them reaches it, while two programs on two pages settle nothing.
+const nameKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const programNames=program=>[nameKey(program.label),nameKey(`${program.source} ${program.label}`)];
+export function loyaltyProgramNamed(name,source=''){
+  const asked=[nameKey(name),nameKey(`${source} ${name}`)].filter(Boolean);
+  const named=LOYALTY_PROGRAMS.find(program=>programNames(program).some(title=>asked.includes(title)));
+  if(named)return named;
+  const provider=LOYALTY_PROGRAMS.filter(program=>nameKey(program.source)===nameKey(source));
+  return provider.length&&new Set(provider.map(program=>program.url)).size===1?provider[0]:null;
+}

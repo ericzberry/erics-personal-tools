@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {loyaltySite,loyaltySitePrograms,LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
+import {loyaltySite,loyaltySitePrograms,loyaltyProgramNamed,LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
 import {balanceTotals,readBalance,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,BALANCE_UNITS,directoryBalances,programName,UNREAD_BALANCE} from '../src/balance-data.js';
 import {nextActions} from '../src/rewards-data.js';
 import {pageOffers} from '../src/page-offers.js';
@@ -247,4 +247,26 @@ test('a program is named once: the issuer joins its name only where the name lac
     const first=name.toLowerCase().split(/\s+/)[0];
     assert.equal(name.toLowerCase().split(/\s+/).filter(word=>word===first).length,1,`${name} repeats its own first word`);
   }
+});
+
+// A balance saved before the registry carried a page — typed by hand, or read
+// when nothing was stored beside the figure — is still a balance in a program
+// this tool knows, so the program is found by the name the entry carries.
+test('a saved balance finds its program by the name it carries',()=>{
+  assert.equal(loyaltyProgramNamed('MileagePlus','United Airlines')?.id,'united');
+  assert.equal(loyaltyProgramNamed('Bonvoy','Marriott')?.id,'marriott');
+  assert.equal(loyaltyProgramNamed('IHG One Rewards','IHG')?.id,'ihg');
+  // The owner writes the brand into the name as often as not, and spells the
+  // provider their own way; the program's own name settles both.
+  assert.equal(loyaltyProgramNamed('Marriott Bonvoy','Marriott')?.id,'marriott');
+  assert.equal(loyaltyProgramNamed('MileagePlus','United')?.id,'united');
+  // A name nothing recognizes falls back to the provider, and an issuer that
+  // runs two currencies prints both on one page, so either of them reaches it.
+  assert.equal(loyaltyProgramNamed('World of Hyatt — Globalist through February','Hyatt')?.id,'hyatt');
+  assert.equal(loyaltyProgramNamed('Amex points','American Express')?.url,
+    'https://global.americanexpress.com/rewards/summary');
+  // Two programs on two pages settle nothing: Chase runs Ultimate Rewards, and
+  // a Chase entry naming neither has no page of its own to go to.
+  assert.equal(loyaltyProgramNamed('Priority Pass Select','Amex Platinum'),null);
+  assert.equal(loyaltyProgramNamed('',''),null);
 });

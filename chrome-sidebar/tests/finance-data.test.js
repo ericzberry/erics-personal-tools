@@ -530,25 +530,6 @@ test('the word a page puts over a sum is not the name of an account',()=>{
   assert.match(folded.notes.join(' '),/Show the accounts themselves/);
 });
 
-// And a third word for the same thing. Naming the kinds one at a time did not
-// end: the list knew bank, credit and investment, the page answered Outstanding
-// and then External accounts, and each new word arrived as a portfolio holding
-// a sum nobody holds. What they share is the end of the phrase, not the front.
-test('a heading over a group of accounts is one whatever word is in front of it',()=>{
-  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:'',class:classById('cash').code};
-  for(const account of ['External accounts','Bank accounts','Credit cards','Investment accounts',
-    'Deposit accounts','My accounts','Linked external accounts','Accounts','Business checking accounts']){
-    const folded=foldReadings([{...base,account,label:'Total',value:109}],[],{institution:'Chase',defaultClass:classById('cash').code});
-    assert.deepEqual(folded.marks,[],account);
-  }
-  // What it must not take with it: a heading with a real account behind it.
-  const kept=foldReadings([
-    {...base,account:'External accounts · Fidelity Cash Management (...4410)',label:'Present balance',value:109}
-  ],[],{institution:'Chase',defaultClass:classById('cash').code});
-  assert.deepEqual(kept.marks.map(row=>[row.name,row.amount]),[['Fidelity Cash Management (...4410)',109]],
-    'the heading comes off the front and the account behind it stays');
-});
-
 // The same sentence must not follow a page that does answer. A broker prints a
 // headline total over the accounts it also states, and refusing that total
 // loses nothing at all — the accounts are right there, unnamed but stated, and

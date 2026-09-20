@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {accountSite,financeSite,signedIn,readSignInState,combineSignInState,accountSiteWatcher,ACCOUNT_SITES,FINANCE_SITES} from '../src/account-sites.js';
+import {accountSite,financeSite,institutionNamed,signedIn,readSignInState,combineSignInState,accountSiteWatcher,ACCOUNT_SITES,FINANCE_SITES} from '../src/account-sites.js';
 
 const etrade=ACCOUNT_SITES.find(site=>site.id==='etrade');
 const chase=ACCOUNT_SITES.find(site=>site.id==='chase');
@@ -234,4 +234,21 @@ test('every institution carries the page its balances are printed on',()=>{
 test('a readable site keeps its page through the narrowing that makes it readable',()=>{
   for(const site of ACCOUNT_SITES)assert.ok(site.url,`${site.id} keeps its page`);
   assert.equal(ACCOUNT_SITES.find(site=>site.id==='schwab')?.url,'https://client.schwab.com/app/accounts/summary/');
+});
+
+// A wallet holds the institution's name on a card, never the host it was
+// issued from, so the registry answers to the name as well as to the URL.
+test('an institution is found by the name a record carries',()=>{
+  assert.equal(institutionNamed('Chase')?.id,'chase');
+  assert.equal(institutionNamed('American Express')?.id,'american-express');
+  assert.equal(institutionNamed('U.S. Bank')?.id,'us-bank');
+  // A card names its issuer before it names itself, and a bank names its own
+  // longer legal name; both open with the institution.
+  assert.equal(institutionNamed('Chase Sapphire Reserve')?.id,'chase');
+  assert.equal(institutionNamed('American Express National Bank')?.id,'american-express');
+  // The word has to end where the institution's does: a longer word that
+  // merely starts with the same letters is a different company.
+  assert.equal(institutionNamed('Citizens Bank'),null);
+  assert.equal(institutionNamed('Discovery Benefits'),null);
+  assert.equal(institutionNamed(''),null);
 });

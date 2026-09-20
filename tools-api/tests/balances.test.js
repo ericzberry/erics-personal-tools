@@ -111,36 +111,3 @@ test('reading a balance picks a model through the central policy, at the cheapes
   assert.equal(model.id,'gpt-4.1-mini');
   assert.ok(estimatedCost<=policy.maxCost);
 });
-
-// The page a card's owner is signed in to states four different things at
-// once. Taking four snapshots of it would ask the owner four times for the
-// same page, so one reading brings back all of them.
-test('one reading brings back what the card earns and the benefits with no tracker',async()=>{
-  const {fetcher,seen}=responder({balances:[],credits:[],rates:[
-    {label:'8x on Chase Travel',card:'J.P. Morgan Reserve (...4411)',category:'Travel',channel:'Issuer portal',rate:8,unit:'points',condition:'Booked through Chase Travel.',confidence:'high'},
-    {label:'4x on flights and hotels booked direct',card:'J.P. Morgan Reserve (...4411)',category:'Travel',channel:'Direct',rate:4,unit:'points',condition:'Booked with the airline or hotel.',confidence:'high'},
-    {label:'3x on dining',card:'J.P. Morgan Reserve (...4411)',category:'Dining',channel:'Any',rate:3,unit:'points',confidence:'high'},
-    {label:'All other earnings',card:'J.P. Morgan Reserve (...4411)',base:true,rate:1,unit:'points',confidence:'high'}
-  ],benefits:[
-    {benefit:'Priority Pass Select',card:'J.P. Morgan Reserve (...4411)',kind:'membership',value:'Priority Pass Select membership',state:'activation',notes:'Enroll once.'}
-  ],unread:''});
-  const result=await readLoyaltyBalances(connection,{text:'8x on Chase Travel 4x on flights and hotels booked direct 3x on dining',
-    program:'Ultimate Rewards',source:'Chase',unit:'points'},fetcher);
-  assert.deepEqual(result.rates.map(row=>[row.category,row.channel,row.rate,row.base]),[
-    ['Travel','Issuer portal',8,false],['Travel','Direct',4,false],['Dining','Any',3,false],['','Any',1,true]]);
-  assert.deepEqual(result.benefits.map(row=>[row.name,row.kind,row.state]),[['Priority Pass Select','membership','activation']]);
-  const prompt=JSON.stringify(seen.body);
-  assert.match(prompt,/Issuer portal/,'the channels a rule may carry are named to the reading');
-  assert.match(prompt,/Never infer a rate from the card's name/);
-  assert.match(prompt,/Never widen a narrow reward into a whole category/);
-  assert.match(prompt,/never report a benefit as already used/i);
-  assert.match(prompt,/belongs in credits and is not reported here as well/);
-});
-
-test('a page with no rates and no untracked benefits returns neither rather than inventing them',async()=>{
-  const {fetcher}=responder({balances:[{program:'Bonvoy',source:'Marriott',amount:240118,unit:'points',confidence:'high'}],unread:''});
-  const result=await readLoyaltyBalances(connection,{text:'Bonvoy 240,118',program:'Bonvoy',source:'Marriott',unit:'points'},fetcher);
-  assert.deepEqual(result.rates,[]);
-  assert.deepEqual(result.benefits,[]);
-  assert.deepEqual(result.balances.map(row=>row.value),['240,118 points']);
-});

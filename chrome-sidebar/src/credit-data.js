@@ -12,10 +12,10 @@
 // their own — over the other thing that page states. Nothing here is a new
 // record: a credit is the benefit entry the wallet already holds, and the
 // reading fills in `remaining` and, when there is nothing left, marks it used.
-import {validateReward,CADENCES,BENEFIT_LIMIT,calendarDate,httpsOnly} from './rewards-data.js';
-// Which card a name is, and the digits an issuer prints beside it, belong to
-// the cards themselves: Best card reads the same wallet to find the cards it
-// has no rates for, and both have to tell one card from another the same way.
+import {validateReward,CADENCES} from './rewards-data.js';
+// Which card a name is, and what an issuer prints beside it, belong to the
+// cards themselves: Best card reads the same wallet to find the cards it has no
+// rates for, and both have to tell one card from another the same way.
 import {key,matchCard} from './card-data.js';
 export {key,matchCard};
 
@@ -24,7 +24,6 @@ export {key,matchCard};
 export const CREDIT_LIMIT=40;
 const text=(value,max)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
 const CONFIDENCE=['high','medium','low'];
-
 // An amount as the page prints it, kept as money and nothing else. A tracker
 // says "$25 To Go"; what is stored is the figure, because the words around it
 // are the page's and change with it.
@@ -86,13 +85,10 @@ const same=(a,b)=>{
   const [one,two]=[key(a),key(b)];
   return !!one&&!!two&&(one===two||one.includes(two)||two.includes(one));
 };
-// `taken` is shared on purpose. One press reads a card's page for two kinds of
-// row — the credits with a tracker and the benefits without one — and a saved
-// entry may only be claimed by one of them, or the same benefit would be
-// proposed twice and saved over itself.
-export function matchCredits(rows=[],entries=[],taken=new Set()){
+export function matchCredits(rows=[],entries=[]){
   const cards=entries.filter(entry=>entry?.kind==='card'&&!entry.deleting);
   const benefits=entries.filter(entry=>['benefit','membership'].includes(entry?.kind)&&!entry.deleting);
+  const taken=new Set();
   return rows.map(row=>{
     const {card,ambiguous}=matchCard(row.card,cards);
     const candidates=benefits.filter(entry=>!taken.has(entry.id)&&same(entry.name,row.name)
@@ -118,70 +114,5 @@ export function creditRecord(row,match=null,holder=null,now=new Date().toISOStri
     cadence:base.cadence||row.cadence,
     remaining:row.left,
     state:row.remaining===0?'used':base.state==='used'?'available':base.state||'available'
-  },now);
-}
-
-// The rest of what a card's page states: the benefits that carry no tracker at
-// all.
-//
-// A tracker is only one kind of thing a benefits page lists. A lounge program,
-// hotel elite status, a Global Entry credit, an included subscription, a travel
-// or purchase protection — none of them has a "left this period", and the
-// credit reading above drops every one of them for lacking the figure that
-// makes a credit a credit. They are ordinary wallet entries all the same, and
-// for an invitation-only card they are exactly where research is weakest and
-// the owner's own page is strongest, so the same press reads them too.
-//
-// Nothing new is stored: `kind` is the wallet's own `benefit` or `membership`,
-// every field passes `validateReward`, and `remaining` is simply absent —
-// never invented as zero, which would mark a membership spent.
-export function parseBenefitReading(input,source='',now=new Date().toISOString()){
-  if(!input||typeof input!=='object')throw Error('Reading that page returned nothing to review.');
-  const found=Array.isArray(input.benefits)?input.benefits:[];
-  if(found.length>BENEFIT_LIMIT)throw Error(`A page reading returns at most ${BENEFIT_LIMIT} benefits.`);
-  const seen=new Set();
-  return found.map(row=>{
-    const name=text(row?.benefit??row?.name,200);
-    // An entry has to say what it is worth, and the page is the only thing
-    // that knows: "Priority Pass Select membership", "$120 every four years".
-    // A benefit with no value is a name with nothing behind it.
-    const value=text(row?.value,200);
-    if(!name||!value)return null;
-    const already=key(name);
-    if(seen.has(already))return null;
-    seen.add(already);
-    return {name,
-      kind:['benefit','membership'].includes(row?.kind)?row.kind:'benefit',
-      card:text(row?.card,200),
-      source:text(row?.source,200)||text(source,200),
-      value,
-      // A page can say a benefit still needs enrolling. It cannot say one has
-      // been used — that is what a tracker is for — so "used" never arrives
-      // from a reading.
-      state:row?.state==='activation'?'activation':'available',
-      cadence:CADENCES.includes(row?.cadence)?row.cadence:'',
-      due:calendarDate(row?.due),url:httpsOnly(row?.url),
-      notes:text(row?.notes,400),
-      confidence:CONFIDENCE.includes(row?.confidence)?row.confidence:'medium',
-      readAt:now};
-  }).filter(Boolean);
-}
-
-// A read benefit in the shape the wallet stores, through the same validator a
-// typed one passes. A benefit the owner already has keeps everything that is
-// theirs — its terms, its notes, its link, its status and the card it is filed
-// under — and the page fills in only what the entry has not got. One that
-// matches nothing is created, which is the whole point of reading a page for
-// the benefits research could not find.
-export function benefitRecord(row,match=null,holder=null,now=new Date().toISOString()){
-  const base=match||{kind:row.kind,name:row.name,source:holder?.name||row.card||row.source||'',
-    value:row.value,card:holder?.id||'',cadence:'',due:'',url:'',notes:'',state:row.state,secret:'',secretHint:''};
-  return validateReward({...base,
-    value:base.value||row.value,
-    cadence:base.cadence||row.cadence,
-    due:base.due||row.due,
-    url:base.url||row.url,
-    notes:base.notes||row.notes,
-    state:base.state||row.state
   },now);
 }

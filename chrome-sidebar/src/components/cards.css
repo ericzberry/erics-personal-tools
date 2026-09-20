@@ -11,9 +11,6 @@
 .card-tool .comparison-why {color:var(--wallet-ink)}
 .card-tool .comparison-result {padding:12px 0;border-top:1px solid var(--wallet-line);display:grid;gap:4px}
 .card-tool .comparison-best {background:var(--wallet-hover);padding:12px;border-radius:6px}
-.card-tool .wallet-cards:not(:empty) {display:grid;gap:4px;margin:10px 0 2px}
-.card-tool .wallet-cards .record-row {padding:6px 0;gap:2px}
-.card-tool .wallet-cards .record-row p {margin:0}
 .card-tool input[type=checkbox] {width:20px;min-height:20px;justify-self:start;accent-color:var(--wallet-forest)}
 .card-tool .card-ingest-rule {color:var(--wallet-ink)}
 .card-tool #cards-details {margin:8px 0}

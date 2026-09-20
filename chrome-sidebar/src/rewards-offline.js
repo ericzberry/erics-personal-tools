@@ -3,7 +3,7 @@ import {encryptedDeviceStore} from './offline-storage.js';
 import {cloudRequest} from './cloud-storage.js';
 // Every field the wallet stores. A field missing here is silently dropped on its
 // way to the cloud, so it has to match the validator in rewards-data.js.
-const fields=['id','kind','name','source','value','due','state','url','notes','secret','secretHint','card','cadence','remaining','updatedAt'];
+const fields=['id','kind','name','source','value','due','state','url','notes','secret','secretHint','card','cadence','updatedAt'];
 const normalize=value=>Object.fromEntries(fields.map(key=>[key,value[key]||'']));
 const record=value=>({...normalize(value),revision:JSON.stringify(normalize(value))});
 // The existing API revisions the wallet as a whole. Merge one queued record into

@@ -1,4 +1,4 @@
-import {Stack,Section,Heading,Note,Notice,Form,FormField,Button,ActionGroup,Disclosure,Link,Strong,RecordRow,RowAction,SEARCH_GLYPH} from './ui.js';
+import {Stack,Section,Heading,Note,Notice,Form,FormField,Button,ActionGroup,Disclosure,Link,Strong} from './ui.js';
 import {PURCHASE_CATEGORIES,PURCHASE_CHANNELS,rewardRules} from '../card-data.js';
 const options=values=>values.map(value=>({value,text:value}));
 const field=(key,label,kind='text',values,extra={})=>FormField({id:`cards-${key}`,label,kind,options:values,...extra});
@@ -20,8 +20,7 @@ export function CardsView(){
       Stack([],{id:'cards-conditions'}),Stack([],{id:'cards-results',className:'comparison-results'}),
       Notice('',{id:'cards-ai-status'})
     ],{id:'cards-purchase-form',className:'form-stack'})],{className:'settings-group'}),
-    Section([Heading('Your cards',2),Stack([],{id:'cards-list'}),Stack([],{id:'cards-known',className:'wallet-cards'}),
-      ActionGroup([button('Add card','add','primary',{size:'compact'}),button('Refresh cards','refresh','secondary',{size:'compact'})])],{className:'settings-group'}),
+    Section([Heading('Your cards',2),Stack([],{id:'cards-list'}),ActionGroup([button('Add card','add','primary',{size:'compact'}),button('Refresh cards','refresh','secondary',{size:'compact'})])],{className:'settings-group'}),
     Disclosure('Add or edit a card',[
       Form([
         field('find','Which card do you have?','text',undefined,{placeholder:'chase sapphire, amex gold, my citi 2% card'}),
@@ -45,19 +44,6 @@ export function CardsView(){
       ],{id:'cards-form',className:'form-stack'})
     ],{id:'cards-editor'})
   ],{className:'travel-wallet card-tool'});
-}
-// The cards the wallet already says the owner holds, which this tool has no
-// rates for yet. A card is not something to be told about twice: the issuer's
-// own page named it, the wallet kept it, and all that is missing here is what
-// it earns — so the row is the card, the account it was seen under, and the one
-// verb that goes and finds its rates.
-export function WalletCards(rows,{onFind}={}){
-  if(!rows.length)return [];
-  return [Heading('In your wallet',3),...rows.map(row=>RecordRow({
-    title:row.product,
-    detail:row.digits?`Card ending ${row.digits}`:'',
-    actions:[RowAction(SEARCH_GLYPH,`Find the rewards ${row.product} earns`,()=>onFind(row))]
-  }))];
 }
 // A rough name can name more than one real card, so research answers with the
 // products it could be. Choosing one is the only way a card gets researched.
@@ -141,12 +127,8 @@ const near=(a,b)=>Math.abs(a-b)<0.000001;
 // The winning program is always computed from saved terms, never chosen by AI.
 // Each row therefore names the reward program that applied and how far apart the
 // cards actually are.
-export function ComparisonResults(rows,{unrated=0}={}){
-  // A recommendation made without a card the owner holds is the one thing this
-  // screen can get wrong while looking right, so a card with no rates yet says
-  // so beside the result rather than only in the list below it.
-  const missing=unrated?`${unrated} card${unrated===1?'':'s'} in your wallet ${unrated===1?'has':'have'} no rates yet, so ${unrated===1?'it was':'they were'} not compared.`:'';
-  if(!rows.length)return [Note(missing||'Add a card with reward rates to compare.')];
+export function ComparisonResults(rows){
+  if(!rows.length)return [Note('Add a card with reward rates to compare.')];
   const top=rows[0].dollars,tied=rows.filter(row=>near(row.dollars,top)).length>1,runnerUp=rows.find(row=>!near(row.dollars,top));
   const estimated=rows[0].estimated;
   const program=row=>row.matched
@@ -160,7 +142,6 @@ export function ComparisonResults(rows,{unrated=0}={}){
   };
   return [Heading('Recommended card',2),
     Note(estimated?'From your saved terms. No interest, fees, signup bonuses or caps.':'From your saved terms. Add an amount for dollar estimates.'),
-    ...(missing?[Note(missing)]:[]),
     ...rows.map(row=>Section([
       Strong(`${near(row.dollars,top)?(tied?'Tied best · ':'Best return · '):''}${row.name}`),
       Heading(estimated?`${money(row.dollars)} · ${percent(row.rate)}`:percent(row.rate),3),

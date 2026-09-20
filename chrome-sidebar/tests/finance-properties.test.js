@@ -243,12 +243,15 @@ test('the ledger shows one Real estate line, with the houses behind it',async()=
     house(2,'456 Second Ave, Town ST 00000'),reading(2,'2026-09-20',610000,320000)]});
   await settle(()=>document.querySelector('#finance-list .estate-detail'));
   const rows=[...document.querySelectorAll('#finance-list .record-group>.record-row')];
-  assert.deepEqual(rows.map(row=>row.querySelector('.record-name').textContent),['Real estate'],
+  assert.deepEqual(rows.map(row=>row.querySelector('.record-name').textContent),['Real estate','Mortgage'],
     'two houses are one line, named for the class and not for either address');
   assert.match(rows[0].textContent,/\$1,850,000/,'the line carries what the houses are worth');
-  assert.match(rows[0].textContent,/2 properties/);
-  assert.match(rows[0].textContent,/Mortgage \$320,000/);
-  assert.match(rows[0].textContent,/Equity \$1,530,000/,'and what is left of them, which no class line can say');
+  // A line and nothing under it: no count, and what is owed is a line of its
+  // own rather than a sentence hung beneath the figure.
+  assert.deepEqual([...rows[0].children].filter(node=>node.tagName==='P'&&node.textContent.trim()),[]);
+  assert.doesNotMatch(rows[0].querySelector('.record-line').textContent,/propert/);
+  assert.match(rows[1].textContent,/-\$320,000/,'what is owed, in the shape every liability on the card has');
+  assert.match(rows[1].textContent,/liability/);
 
   const detail=document.querySelector('#finance-list .estate-detail');
   assert.equal(detail.hidden,true,'the addresses wait to be asked for');

@@ -3,7 +3,7 @@ import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GL
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 const today=()=>new Date().toISOString().slice(0,10);
 // How the value-over-time table is read. Quarterly leads, because a quarter is
@@ -729,15 +729,26 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       const asOf=owned.map(entry=>entry.current?.asOf||'').filter(Boolean).sort().at(-1)||'';
       const meta=[unvalued?'not valued yet':dated(asOf,against),
         owned.some(entry=>entry.property.pending)?'Waiting to sync':''].filter(Boolean).join(' · ');
-      return RecordRow({title:classLabel(PROPERTY_CLASS),figure:money(value,portfolio.currency),meta,
-        // What the figure beside it cannot say: how many houses it is, and —
-        // because value and debt reach the totals as two figures in two
-        // classes, one of them negative — what is actually the owner's.
-        notes:[[`${owned.length} propert${owned.length===1?'y':'ies'}`,
-          debt?`Mortgage ${money(debt,portfolio.currency)}`:'',
-          debt?`Equity ${money(value-debt,portfolio.currency)}`:''].filter(Boolean).join(' · ')],
-        actions:[rowAction(SHOW_GLYPH,`Show the properties in ${portfolio.name}`,()=>{houses.hidden=!houses.hidden;})],
-        extra:[houses]});
+      // A line and nothing under it. A portfolio is read down one column of
+      // names and one of amounts, and a sentence hung beneath one of them —
+      // how many houses, what is owed, what is left — stops the column at that
+      // row and is the loudest thing on the card. How many houses there are is
+      // answered by opening them; what is owed is a figure, so it is a line.
+      // What is owed against them, under the class its figure counts in and in
+      // the shape every liability on this card has. Without it a portfolio
+      // holding the equity would show a house at its full value and a total
+      // that is smaller, with nothing on the card saying why.
+      const owing=debt?[RecordRow({title:classLabel(PROPERTY_DEBT_CLASS),
+        figure:money(-debt,portfolio.currency),meta:'liability'})]:[];
+      // The addresses open under the block rather than inside it, so a debt
+      // line is never separated from the value it is against.
+      (owing[0]||null)?.append(houses);
+      return [
+        RecordRow({title:classLabel(PROPERTY_CLASS),figure:money(value,portfolio.currency),meta,
+          actions:[rowAction(SHOW_GLYPH,`Show the properties in ${portfolio.name}`,()=>{houses.hidden=!houses.hidden;})],
+          extra:debt?[]:[houses]}),
+        ...owing
+      ];
     };
     $('list').replaceChildren(...(groups.length?groups.map(group=>{
       const portfolio=group.portfolio;
@@ -768,7 +779,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
           rowAction(DELETE_GLYPH,`Delete ${portfolio.name}`,()=>{confirm.hidden=false;},true)],
         rows:[...rows.map(row=>figure(portfolio,row)),
           ...group.positions.map(position=>investment(portfolio,position,asOf)),
-          ...(group.properties.length?[realEstate(portfolio,group.properties,asOf)]:[]),confirm]
+          ...(group.properties.length?realEstate(portfolio,group.properties,asOf):[]),confirm]
       });
     }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one by hand.')]));
     renderPosition();

@@ -213,6 +213,22 @@ export const financeSite=url=>match(url,FINANCE_SITES);
 // that from what the page itself reports.
 export const accountSite=url=>match(url,ACCOUNT_SITES);
 
+// The institution a record names, asked by name rather than by host: a wallet
+// holds "Chase" or "American Express" on a card, never the URL it was issued
+// from, and the institution's published account page is the page that card is
+// on. A name that opens with an institution's own is that institution —
+// "Chase Sapphire Reserve" is Chase, "American Express National Bank" is
+// American Express — and the word has to end there, so Citizens is never Citi.
+const institutionKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+export function institutionNamed(name){
+  const asked=institutionKey(name);
+  if(!asked)return null;
+  return FINANCE_SITES.find(site=>[site.institution,site.label].some(known=>{
+    const key=institutionKey(known);
+    return !!key&&(asked===key||asked.startsWith(`${key} `));
+  }))||null;
+}
+
 // Runs inside the page, once per frame. Self-contained: an injected function
 // carries no closure from this module, and it returns no page content.
 export function readSignInState(){
