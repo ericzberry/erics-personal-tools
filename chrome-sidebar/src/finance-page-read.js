@@ -149,6 +149,19 @@ export function readAccountPage() {
     for (let step = index - 1; step >= 0 && previous.length < count; step--) if (lines[step] && !quotes[step]) previous.push(lines[step]);
     return previous;
   };
+  // A figure with no words of its own: the large number on a tile, which says
+  // nothing about what it counts. Only these are read for the name under them.
+  const BARE = /^[^\p{L}]*$/u;
+  // The nearest line under a figure. A card of tiles is laid out the other way
+  // round from a table: the figure is the large thing and what it is sits under
+  // it, which is how an issuer's own home page prints every one of its cards
+  // and both of its reward balances. Read for the line above only, that page
+  // gave up "13,674" with no program against it and lost "Reward Dollars"
+  // altogether, because nothing follows the last figure on a page.
+  const beneath = index => {
+    for (let step = index + 1; step < lines.length; step++) if (lines[step] && !quotes[step]) return lines[step];
+    return '';
+  };
   // The nearest line above a figure is usually the name it belongs to — but a
   // page that groups accounts by who holds them puts the holder on the line
   // above that one, and at a bank holding a family's trusts, an LLC and a
@@ -185,6 +198,15 @@ export function readAccountPage() {
     if (outer && fresh(outer)) push(outer, true);
     if (inner && !repeats(inner)) push(inner, true);
     push(line);
+    // And the name printed under it — but only for a line that is nothing but
+    // a number, because a line carrying its own words has already said what it
+    // is and what follows it is the next thing on the page rather than its
+    // name. "IRA $412,880.17" names itself; "13,674" cannot. The name is taken
+    // under the same test the lines above it pass, and not when it is one of
+    // them said twice.
+    const under = BARE.test(line) ? beneath(index) : '';
+    if (under && under.length <= 80 && !MONEY.test(under) && !blocked(under)
+      && !CHROME.test(under) && !CHANGE_LABEL.test(under) && fresh(under)) push(under, true);
   });
 
   const focused = kept.join('\n');

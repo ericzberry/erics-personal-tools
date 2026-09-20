@@ -254,6 +254,36 @@ test('a dashboard is narrowed to the accounts, their numbers and their dates', (
   assert.ok(page.text.length < 300, `narrowed to ${page.text.length} characters`);
 });
 
+// A card issuer lays its home page out the other way round from a table: the
+// figure is the large thing on the tile and what it counts sits under it. Read
+// for the line above only, that page gave up "13,674" with no program against
+// it and lost "Reward Dollars" altogether, because nothing follows the last
+// figure on a page.
+test('a tile that prints its figure over its name keeps the name under it', () => {
+  const page = inPage(pageOf({text: [
+    'Accounts',
+    'Total Balance', '$4,403.54', 'Morgan Stanley Platinum Card®', '••••61007', 'Payment not required at this time',
+    'Total Balance', '$242.03', 'Blue Cash Preferred® ••••72005', 'Payment not required at this time',
+    '13,674', 'Membership Rewards® Points', '2 Accounts',
+    '$125.49', 'Reward Dollars', 'Blue Cash Preferred® ••••72005'
+  ].join('\n')}), HERE);
+  assert.match(page.text, /\$4,403\.54\nMorgan Stanley Platinum Card®/, 'the card is named under its own balance');
+  assert.match(page.text, /\$242\.03\nBlue Cash Preferred® ••••72005/);
+  assert.match(page.text, /13,674\nMembership Rewards® Points/, 'the points balance carries its program');
+  assert.match(page.text, /\$125\.49\nReward Dollars/, 'and the last figure on the page is not left nameless');
+});
+
+// The name under a figure is only ever read for a figure that cannot name
+// itself. A row carrying its own words has already said what it is, and what
+// follows it is the next thing on the page.
+test('a figure with words of its own takes no name from the line under it', () => {
+  const page = inPage(pageOf({text: [
+    'IRA', 'IRA $412,880.17', 'Checking', 'Checking $8,420.11'
+  ].join('\n')}), HERE);
+  assert.equal(/IRA \$412,880\.17\nChecking\nChecking/.test(page.text), false,
+    'the next account is not read as this one’s name');
+});
+
 // A bank that holds a family's whole structure lists the accounts under the
 // title that holds each one. The nickname on the tile is not the answer —
 // "Total Checking" belongs to somebody — so the heading has to travel with the
