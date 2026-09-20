@@ -2944,3 +2944,61 @@ said nothing, and one save filing each benefit under its own card. Validation:
 sweep was reviewed at 380px against a synthetic wallet of two cards: the press
 beside the intake, the progress it names, the review a block per card, and the
 one action across them. Archive: `release/erics-sidebar-0.6.220.zip`.
+
+## Nine accounts, three trusts (0.6.221 / mobile 0.1.171)
+
+Morgan Stanley Online was read with the trusts in it, and every one of them
+arrived as somebody new: nine accounts, nine proposed portfolios, an account
+number in each name — *BERRY 2020 DES IRR TR -0607*, *-0639*, *-0640* — standing
+beside the three trusts the ledger has held all along.
+
+**The page abbreviates a title, and abbreviates it differently on the next row.**
+The family trust is "BERRY 2020 IRR FAMILY TR" on two accounts and "BERRY 2020
+IRRV FAMILY TR" on the third; the 2021 trust answers to both "IRR" and "IRREV";
+the descendants' trust is "BERRY 2020 DES IRR TR" and is written out in full
+everywhere else. None of those is what the trust is called on its own paperwork,
+and none carries a fragment Chase or UBS are recognized by — which is the same
+sentence UBS earned a roster with, and the same nine-portfolio result. So
+`ACCOUNT_TITLES` gains a Morgan Stanley roster, and its fragments stop before the
+abbreviated word, because that word is the one that varies: `berry2020irr` is the
+family trust under either spelling and cannot be the descendants' trust, whose
+name puts "des" exactly where "irr" would have to be.
+
+**Two accounts name a product rather than a holder.** The Platinum CashPlus and
+the Active Assets Account say nothing about who holds them, and both are the
+estate's — so they are named in the roster rather than left to fall into it,
+because a place holding several titles starts a portfolio of its own for an
+account it does not recognize, and that is the right answer for a title nobody
+has confirmed and the wrong one for these two. The fragments are short, and short
+is safe only because the longest match wins: a trust's own Active Assets Account
+says both "aaa" and the trust's name, and the trust's name is four times the
+length.
+
+**The second money column is inside the first.** Morgan Stanley prints Total
+Assets and Available Cash against every account, and the cash is a part of the
+total rather than a second statement of it — so counted as its own figure it put
+**$21,200** of the estate's cash on top of the estate's own balance. Worse, at a
+broker "available" is not even cash: the column is cash plus what could be
+borrowed against the securities, which is money the account does not hold at all.
+The rule that already refused a bank's available balance looked for the word the
+account's own total used — "present", which is what the one bank looked at
+happened to print, and what no broker prints. It now asks the question the other
+way round: an available figure standing beside any other figure of the same
+account is a part of that one, and an available figure standing alone is all the
+account said.
+
+Nothing about the reading changed, and no class was invented. The nine accounts
+fold into the three trusts and the estate as one Liquid securities figure each,
+which is what the ledger asks for — per class, per holder, per date, never per
+account.
+
+Validation: 588 extension, 33 mobile and 134 API tests pass from an archive of
+HEAD, and both apps build. New coverage: the page's twelve accounts folded into
+four portfolios with nothing proposed, each abbreviation resolved to its trust,
+the two product accounts titled to the estate, a trust's own "AAA" account going
+to the trust rather than the estate on the longer match, the cash column refused
+and named in the line under the figures, the parts adding to the page's own
+headline total of $31,732,021.04 after that headline is refused, and an available
+figure standing alone still counted. Not directly checked: the live Morgan
+Stanley page, which is behind a sign-on — the figures above came off the owner's
+own reading of it.

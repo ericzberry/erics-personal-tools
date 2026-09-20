@@ -289,6 +289,38 @@ export const ACCOUNT_TITLES=[
     {owner:'Berry AE 21 Irrevocable Trust',registration:'trust',
       match:['ae2021trust']}
   ]},
+  // Morgan Stanley prints the title and then abbreviates it to fit the column,
+  // and abbreviates it differently on adjacent rows: the family trust is
+  // "BERRY 2020 IRR FAMILY TR" on two accounts and "BERRY 2020 IRRV FAMILY TR"
+  // on the third, the 2021 trust answers to both "IRR" and "IRREV", and the
+  // descendants' trust is "BERRY 2020 DES IRR TR". Nine accounts, three trusts,
+  // no two spellings alike — so without this the page arrived as nine new
+  // portfolios with an account number in each name, standing beside the three
+  // trusts the ledger already held.
+  //
+  // The fragments stop before the word that is abbreviated, because that word
+  // is the one that varies. "berry2020irr" is the family trust under either
+  // spelling and cannot be the descendants' trust, whose name puts "des"
+  // exactly where "irr" would have to be.
+  //
+  // Two accounts here name a Morgan Stanley product rather than a holder — the
+  // Platinum CashPlus and the Active Assets Account — and both are the estate's.
+  // They are named rather than left unclaimed because a place holding several
+  // titles starts a portfolio of its own for an account it does not recognize,
+  // which is the right answer for a title nobody has confirmed and the wrong
+  // one for these two. The fragments are short, and short is safe only because
+  // the longest match wins: a trust's own Active Assets Account would say both
+  // "aaa" and the trust's name, and the trust's name is four times the length.
+  {institution:'Morgan Stanley',match:['morganstanley'],holders:[
+    {owner:'Eric and Ariana Berry Estate',registration:'taxable',
+      match:['ericandariana','cashplus','aaa']},
+    {owner:'Berry 2020 Irrevocable Family Trust',registration:'trust',
+      match:['berry2020irr']},
+    {owner:'Berry 2020 Descendants’ Irrevocable Trust',registration:'trust',
+      match:['berry2020des']},
+    {owner:'Berry AE 21 Irrevocable Trust',registration:'trust',
+      match:['berryae2021']}
+  ]},
   // Carta signs one person in to everything he has anything to do with: the
   // funds he put money into, the general partner of the fund he runs, and the
   // management company behind that. The investor account is in his own name,
@@ -861,17 +893,31 @@ const balances=(totals,dropped)=>{
   // account holds, and what of it has cleared — and because the two differ by
   // whatever is pending, nothing above catches them: they are two balances, and
   // added together they file a checking account at twice what is in it. The
-  // present balance is the ledger's answer, because the ledger is asking what
-  // the account holds rather than what could be spent today.
+  // ledger is asking what the account holds rather than what could be spent
+  // today, so the available figure is the one that goes.
+  //
+  // A broker states the same relation in words a bank never uses, which is what
+  // this missed. Morgan Stanley prints Total Assets and Available Cash against
+  // every account, and the cash is a part of the total, not a second statement
+  // of it: counted as its own figure it filed a trust's spare cash on top of the
+  // trust's own balance, and the estate's $21,200 of it arrived as cash the
+  // estate held twice. Worse, at a broker "available" is not even cash — the
+  // column is cash plus what could be borrowed against the securities, which is
+  // money the account does not hold at all.
+  //
+  // So the test is not what the account's own total happens to call itself,
+  // which was "present" at the one bank that had been looked at and is a
+  // different word everywhere else. An available figure standing beside any
+  // other figure of the same account is a part of that one; an available figure
+  // standing alone is all the account said, and is kept.
   const kept=[...byValue.values()];
-  const settled=kept.filter(total=>PRESENT.test(total.label||''));
-  const pending=settled.length?kept.filter(total=>!PRESENT.test(total.label||'')&&AVAILABLE.test(total.label||'')):[];
-  if(!pending.length)return kept;
-  dropped.push(`${pending.length} available balance${pending.length===1?'':'s'}`);
-  return kept.filter(total=>!pending.includes(total));
+  const available=kept.filter(total=>AVAILABLE.test(total.label||''));
+  const whole=kept.filter(total=>!AVAILABLE.test(total.label||''));
+  if(!available.length||!whole.length)return kept;
+  dropped.push(`${available.length} available balance${available.length===1?'':'s'}`);
+  return whole;
 };
-// What an account holds, and what of it has cleared.
-const PRESENT=/\b(present|current|posted|statement|ledger)\b/i;
+// What of an account can be spent today, which is never the whole of it.
 const AVAILABLE=/\bavailable\b/i;
 // Read at a bank, but not a bank balance. One sign-on at Chase covers the
 // checking account and the managed portfolio beside it, and only one of those

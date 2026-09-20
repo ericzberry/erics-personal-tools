@@ -1062,6 +1062,94 @@ test('a UBS Brokerage account is fund investments, and every other one is not',(
   }
 });
 
+// Morgan Stanley as it actually reads: twelve accounts on one Total Wealth View,
+// nine of them titled to three trusts and abbreviated differently on adjacent
+// rows — "BERRY 2020 IRR FAMILY TR" on two accounts and "BERRY 2020 IRRV FAMILY
+// TR" on the next, "IRR" and "IRREV" on the 2021 trust, "DES" where the
+// descendants' trust writes out its name everywhere else. None of it matched a
+// trust already in the ledger, so the page arrived as nine new portfolios with
+// an account number in each name, standing beside the three trusts they belong
+// to. The two accounts named after a Morgan Stanley product rather than a
+// holder are the estate's, and the page's second money column is inside its
+// first.
+test('Morgan Stanley abbreviates its titles, and its accounts join the trusts already there',()=>{
+  const family={row:'portfolio',number:2,name:'Berry 2020 Irrevocable Family Trust',kind:5,currency:'USD'};
+  const descendants={row:'portfolio',number:3,name:'Berry 2020 Descendants’ Irrevocable Trust',kind:5,currency:'USD'};
+  const ae={row:'portfolio',number:4,name:'Berry AE 21 Irrevocable Trust',kind:5,currency:'USD'};
+  const portfolios=[estate,family,descendants,ae];
+
+  for(const [said,owner] of [
+    ['BERRY 2020 DES IRR TR -0607',descendants.name],
+    ['BERRY 2020 IRR FAMILY TR -0643',family.name],
+    // The same trust, abbreviated one letter longer on the account beside it.
+    ['BERRY 2020 IRRV FAMILY TR -0612',family.name],
+    ['BERRY AE 2021 IRR FAMILY TR -0641',ae.name],
+    ['BERRY AE 2021 IRREV FAMILY TR -0618',ae.name],
+    ['ERIC AND ARIANA BERRY ESTATE -0155',ESTATE],
+    // A product name is not a holder, and these two are the estate's.
+    ['Platinum CashPlus -6792',ESTATE],
+    ['AAA -1785',ESTATE]
+  ]) assert.equal(titledHolder('Morgan Stanley',said)?.owner,owner,said);
+  // The trust's own Active Assets Account says both "aaa" and its trust's name,
+  // and the longer of the two is what it is.
+  assert.equal(titledHolder('Morgan Stanley','BERRY 2020 DES IRR TR AAA -0607')?.owner,descendants.name);
+  assert.equal(holdsManyTitles('Morgan Stanley'),true,'an unrecognized account must not fall into the estate');
+
+  const reading=(account,label,cls,value,registration='')=>({account,label,class:classById(cls).code,
+    registration,scope:'account',value,asOf:'2026-09-20',confidence:'high',reason:''});
+  const held=(account,value)=>reading(account,'Total Assets','liquid',value,/\bTR\b/.test(account)?'trust':'');
+  const folded=foldReadings([
+    held('Platinum CashPlus -6792',895.11),
+    // The page prints the cash column against every account. On this one it is
+    // the same number as the total, and the rule above already had that.
+    reading('Platinum CashPlus -6792','Available Cash','cash',895.11),
+    held('AAA -1785',558.94),
+    // On this one it is a few cents short of the total, which is two balances
+    // by every test that looks at the numbers alone.
+    reading('AAA -1785','Available Cash','cash',558.93),
+    held('BERRY 2020 DES IRR TR -0607',1054631.22),
+    held('BERRY 2020 DES IRR TR -0639',2192933.41),
+    held('BERRY 2020 DES IRR TR -0640',869683.07),
+    held('BERRY 2020 IRR FAMILY TR -0643',2173508.19),
+    // Two accounts of two different trusts, to the cent. Identical figures are
+    // one balance read twice only within one account.
+    held('BERRY 2020 IRR FAMILY TR -0644',869683.07),
+    held('BERRY 2020 IRRV FAMILY TR -0612',1055712.66),
+    held('BERRY AE 2021 IRR FAMILY TR -0641',2542096.44),
+    held('BERRY AE 2021 IRR FAMILY TR -0642',427894.20),
+    held('BERRY AE 2021 IRREV FAMILY TR -0618',2293693.55),
+    held('ERIC AND ARIANA BERRY ESTATE -0155',18250731.18),
+    reading('ERIC AND ARIANA BERRY ESTATE -0155','Available Cash','cash',21200),
+    // What the page prints above the list, which is every line of it added up.
+    {...reading('','Total Assets','unclassified',31732021.04),scope:'all'}
+  ],portfolios,{institution:'Morgan Stanley',today:'2026-09-20'});
+
+  assert.deepEqual(folded.portfolios,[],'nine accounts, and not one portfolio the ledger did not already hold');
+  const filed=Object.fromEntries(folded.marks.map(mark=>[mark.portfolio,mark.amount]));
+  assert.equal(filed[descendants.number],4117247.70);
+  assert.equal(filed[family.number],4098903.92);
+  assert.equal(filed[ae.number],5263684.19);
+  // The estate's own account, and the two accounts named after a product.
+  assert.equal(filed[estate.number],18252185.23);
+  assert.notEqual(filed[family.number],filed[descendants.number]);
+  // Available Cash is a part of Total Assets, not a second balance: counted as
+  // its own figure it put the estate's spare cash on top of the estate's own
+  // total, and at a broker that column is not even cash — it is cash plus what
+  // could be borrowed against the securities.
+  assert.equal(folded.marks.some(mark=>classLabel(mark.class)==='Cash'),false);
+  assert.match(folded.notes[0],/available balance/);
+  // The headline is refused and its parts reach it exactly, which is the whole
+  // arithmetic this ledger does.
+  assert.equal(folded.marks.reduce((total,mark)=>total+mark.amount,0),31732021.04);
+  assert.match(folded.notes[0],/a total across accounts/);
+
+  // An available figure standing alone is all the account said, so it is the
+  // account's figure rather than nothing.
+  const alone=foldReadings([reading('BERRY 2020 DES IRR TR -0607','Available Cash','cash',12000)],
+    portfolios,{institution:'Morgan Stanley',today:'2026-09-20'});
+  assert.deepEqual(alone.marks.map(mark=>[mark.name,mark.amount]),[[descendants.name,12000]]);
+});
+
 // Carta is the one site in the registry that states no account balance at all.
 // Read as a brokerage page it offered $191,519,164 under the name of the entity
 // the owner signs in as — a fund's own assets, not his — while the $150,000 he
