@@ -581,6 +581,54 @@ test('a credit score is not a balance, wherever the page files it',()=>{
   assert.deepEqual(named.marks,[]);
 });
 
+// The worst figure this ledger has offered, and it came from a guard meant to
+// protect it. A card's balance is forced to Credit so that a bank's default of
+// cash cannot file a debt as money held — but the test was put to everything
+// the group said rather than to the figure's own name. A page whose accounts
+// could not be told apart arrived as one group holding the whole overview, the
+// words "credit cards" were somewhere in it, and $16.4M of assets was offered
+// for saving as -$18,537,244 owed.
+test('one card in a group does not make a debt of everything beside it',()=>{
+  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:'',class:9};
+  const folded=foldReadings([
+    {...base,account:'J.P. Morgan Wealth (...5007)',label:'Total investments',value:14268036.59},
+    {...base,account:'J.P. Morgan Wealth (...5007)',label:'Total cash',value:2151568.27},
+    {...base,account:'J.P. Morgan Wealth (...5007)',label:'Credit cards',value:15834.80}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  const byClass=Object.fromEntries(folded.marks.map(row=>[classLabel(row.class),row.amount]));
+  assert.equal(byClass.Credit,15834.80,'the card is the debt');
+  assert.ok(!('Credit' in byClass)||folded.marks.length>1,'and it is not the only row');
+  assert.equal(folded.marks.some(row=>row.amount<0),false,'no figure is stored negative');
+  assert.equal(folded.marks.filter(row=>classLabel(row.class)==='Credit').length,1,
+    'exactly one row is a liability, not every row in the group');
+  // The two beside it keep what the site says they are.
+  assert.ok(byClass.Cash||byClass['Liquid securities'],'the assets are still assets');
+});
+
+// A summary panel is a page-level total per label, under a heading that names a
+// kind of account. Nothing on it says whose money any of it is, and its labels
+// name what a figure covers rather than who holds it — so taken as account
+// names they made one portfolio called Liabilities holding $16.4M, which is
+// three of the page's own totals added together.
+test('a summary panel of page totals names no account and files nothing',()=>{
+  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:'',class:9};
+  const folded=foldReadings([
+    {...base,account:'Chase accounts',label:'Assets',value:16369841.07},
+    {...base,account:'Chase accounts',label:'Liabilities',value:15834.80},
+    {...base,account:'Chase accounts',label:'Total investments',value:14268036.59},
+    {...base,account:'Chase accounts',label:'Total cash',value:2151568.27},
+    {...base,account:'Chase accounts',label:'Bank accounts',value:2101804.48}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(folded.marks,[],'not one of them is an account');
+  assert.deepEqual(folded.portfolios,[]);
+  assert.match(folded.notes.join(' '),/Show the accounts themselves/);
+  // And a product whose name happens to contain one of those words is still an
+  // account: Chase sells one called Total Checking.
+  const real=foldReadings([{...base,account:'Bank accounts · Chase Total Checking (...4421)',label:'Present balance',value:8420.11}],
+    [],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(real.marks.map(row=>[row.name,row.amount]),[['Chase Total Checking (...4421)',8420.11]]);
+});
+
 // A card is read at a bank, behind the same password as the checking account,
 // and the site answers cash for what it holds. A balance owed is the one figure
 // where taking that answer moves net worth by twice the number.

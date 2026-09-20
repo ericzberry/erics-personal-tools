@@ -2374,3 +2374,32 @@ from an archive of this release. The synthetic preview was reviewed at 380px:
 five rates and three benefits under one reading, each saying where it lands,
 including the one with no saved card to land on. Archive:
 `release/erics-sidebar-0.6.197.zip`.
+
+## A card does not make a debt of everything beside it (0.6.198 / mobile 0.1.148)
+
+The Chase overview was offered for saving as a single figure: **-$18,537,244**,
+filed as credit. That is $16.4M of assets and a $15,834 card balance added
+together and called a debt — the worst thing this ledger has put on a screen,
+and it came out of a guard written to protect it.
+
+A card's balance is forced to the Credit class so that a bank site's default of
+cash cannot file a debt as money held; getting that wrong moves net worth by
+twice the figure. But the test was put to everything the group said rather than
+to the figure's own name. On a page whose accounts cannot be told apart, the
+whole overview arrives as one group, the words "credit cards" are somewhere in
+it, and every figure in the group turns into a liability. It asks the figure's
+own name now.
+
+Underneath it was a second mistake of the same kind. A summary panel's labels —
+**Total investments**, **Total cash**, **Liabilities** — name what a figure
+covers, not whose it is. Read as account names under a group heading they made a
+portfolio called Liabilities holding $16.4M: three of the page's own totals
+added together, which is the one thing this ledger exists never to do. They are
+column words like Present balance and Net Account Value, and are read as such.
+A product whose name contains one of them is still an account: Chase sells one
+called Total Checking, and it files at its own balance.
+
+That page now files nothing and says why, which is the honest answer to a panel
+that states five totals and names no account.
+
+Validation: 560 extension and 33 mobile tests pass.

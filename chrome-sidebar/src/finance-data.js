@@ -823,6 +823,13 @@ const CATEGORY=/^(?:[A-Za-z][\w'&-]*[ -]){0,2}(?:accounts|cards)\b[\s·•|–�
 // the words left over when a page names a figure but not the account it belongs
 // to: Present balance, Net Account Value, Total.
 //
+// A summary panel's labels are the same kind of word and have to be read the
+// same way. "Total investments", "Total cash" and "Liabilities" name what a
+// figure covers, not whose it is, and taken for account names under a group
+// heading they made one portfolio called Liabilities holding $16.4M — three
+// page-level totals added together, which is the one thing this ledger is
+// built never to do.
+//
 // "Outstanding" is one of them, and it is the word that cost a whole reading.
 // A bank's dashboard sums its cards under Credit cards and labels the sum
 // Outstanding; the heading came off the front as it should, "Outstanding" was
@@ -830,7 +837,7 @@ const CATEGORY=/^(?:[A-Za-z][\w'&-]*[ -]){0,2}(?:accounts|cards)\b[\s·•|–�
 // offered holding the sum of every card — the one figure on a page whose other
 // two were correctly refused, which left nothing saying the page could not
 // answer.
-const BALANCE_WORD=/^(?:my |your |net |gross |available |present |current |total |outstanding |account |ledger |posted |statement |market |cash |owed )*(?:balance|value|amount|assets?|accounts?|cards?|total|equity|outstanding|owed|due)$/i;
+const BALANCE_WORD=/^(?:my |your |net |gross |available |present |current |total |outstanding |account |ledger |posted |statement |market |cash |owed )*(?:balance|value|amount|assets?|accounts?|cards?|total|equity|outstanding|owed|due|investments?|cash|liabilit(?:y|ies)|deposits?)$/i;
 // What this figure says about which account it is, once the heading and the
 // column name are off: a name of the account's own, or nothing.
 const ownName=name=>{
@@ -946,7 +953,12 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     const own=reading.label||'';
     if(UNVESTED.test(own))return classById('unvested').code;
     if(VESTED.test(own)||STOCK_PLAN.test(said))return LIQUID;
-    if(CARD.test(said)&&classSide(reading.class)!=='liability')return classById('credit').code;
+    // On this figure's own name, never on the group's. Asked of everything the
+    // group says, one card in it made every figure beside it a debt: a page
+    // whose accounts could not be told apart put a bank's whole overview into
+    // one group, the words "credit cards" were somewhere in it, and $16.4M of
+    // assets was offered as -$18,537,244 owed. A card says so on its own row.
+    if(CARD.test(`${reading.account||''} ${own}`)&&classSide(reading.class)!=='liability')return classById('credit').code;
     if(reading.class!==UNCLASSIFIED)return reading.class;
     if(INVESTED.test(said))return defaultClass===CASH||!defaultClass?LIQUID:defaultClass;
     return defaultClass??reading.class;
