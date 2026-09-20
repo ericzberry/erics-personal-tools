@@ -185,10 +185,11 @@ test('images are routed by extension, and only formats a provider accepts', () =
   assert.ok(!ACCEPTED.includes('.heic'));
 });
 
-const inPage = (document, location) =>
+const inPage = (document, location, options) =>
   // Injected into the page by Chrome, so it must work from its source text
-  // alone with no closure over this module.
-  Function('document', 'location', `return (${readAccountPage.toString()})()`)(document, location);
+  // alone with no closure over this module, and its options arrive as an
+  // argument for the same reason.
+  Function('document', 'location', 'options', `return (${readAccountPage.toString()})(options)`)(document, location, options);
 const pageOf = ({text, tables = []}) => ({
   querySelectorAll: selector => /table|grid/.test(selector) ? tables : [],
   title: '  Positions  ',
@@ -723,4 +724,54 @@ test('a rate test does not widen what a finance page sends', () => {
   // its line, so only the second is kept.
   assert.equal(page.text.includes('10x more research'), false, 'a sentence with a multiplier in it is still prose');
   assert.ok(page.text.length < 300, `narrowed to ${page.text.length} characters`);
+});
+
+// A card issuer's own page, where most of what matters states no figure.
+const CARD_PAGE = [
+  'Skip to content',
+  'The Platinum Card® from American Express',
+  'Membership Rewards® Points', '1,234,567', 'Available points',
+  'Rewards',
+  '5X Membership Rewards® Points', 'on flights booked directly with airlines, on up to $500,000 per calendar year',
+  '5X Membership Rewards® Points', 'on prepaid hotels booked with American Express Travel',
+  '1X Membership Rewards® Points', 'on other eligible purchases',
+  'Benefits you can enroll in',
+  'Digital Entertainment Credit', 'Enroll', 'Up to $20 back each month',
+  'Centurion® Lounge Access', 'Enroll', 'Complimentary access for you',
+  'Priority Pass™ Select Membership', 'Enroll', 'Complimentary membership after enrollment',
+  'Global Entry or TSA PreCheck® Credit', 'Enrolled', 'Up to $120 every 4 years',
+  'Your credits', '$200 Airline Fee Credit', '$0 Earned', '$200 To Go',
+  'Privacy Policy'
+].join('\n');
+const AMEX = {href: 'https://global.americanexpress.com/benefits', host: 'global.americanexpress.com'};
+
+test("a card's own page is read whole, because what it says about the card is mostly not a figure", () => {
+  const page = inPage(pageOf({text: CARD_PAGE}), AMEX, {figures: false});
+  // Every rate, including the two the balance reading could not see: one with
+  // no figure anywhere near it, and the base rate at the end of the run.
+  assert.equal(page.text.match(/Membership Rewards® Points/g).length, 4);
+  assert.match(page.text, /on prepaid hotels booked with American Express Travel/);
+  assert.match(page.text, /1X Membership Rewards® Points\non other eligible purchases/);
+  // The section that names them, and the benefits that count nothing at all.
+  assert.match(page.text, /Benefits you can enroll in/);
+  for (const benefit of ['Centurion® Lounge Access', 'Priority Pass™ Select Membership', 'Complimentary access for you'])
+    assert.ok(page.text.includes(benefit), benefit);
+  // What enrolling costs a reading to know: the word beside each benefit.
+  assert.equal(page.text.match(/^Enroll$/gm).length, 3);
+  assert.match(page.text, /^Enrolled$/m);
+  // The tracker still reads in order, and the legal furniture still goes.
+  assert.match(page.text, /\$200 Airline Fee Credit\n\$0 Earned\n\$200 To Go/);
+  assert.equal(page.text.includes('Privacy Policy'), false);
+});
+
+test('the same page read for figures keeps the balance rules, and loses what has none', () => {
+  const page = inPage(pageOf({text: CARD_PAGE}), AMEX, {figures: true});
+  assert.match(page.text, /1,234,567/);
+  // This is the reading that sent a card's page in gutted: no lounge, no
+  // Priority Pass, and only the one rate that happened to sit over a figure.
+  for (const lost of ['Centurion® Lounge Access', 'Priority Pass™ Select Membership', 'on other eligible purchases'])
+    assert.equal(page.text.includes(lost), false, lost);
+  // A missing option is the balance reading, so no caller has to ask for it.
+  assert.equal(inPage(pageOf({text: CARD_PAGE}), AMEX).text, page.text);
+  assert.equal(inPage(pageOf({text: CARD_PAGE}), AMEX, {}).text, page.text);
 });

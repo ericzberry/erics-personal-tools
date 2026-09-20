@@ -173,9 +173,11 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   unlocked copy Taxes files, rebuilding the document without its lock and
   checking the copy reads back before offering it),
   `finance-page-read.js` (one
-  text snapshot of the tab the owner is looking at, narrowed to the lines that
-  carry a figure — money, or the earning rate a card's own page states instead
-  of money — and the lines that name one). All five ship to mobile
+  text snapshot of the tab the owner is looking at, taken one of two ways: a
+  balance page is narrowed to the lines that carry a figure and the lines that
+  name one, and a card issuer's own page — `figures: false` — is read whole
+  with the legal furniture removed, because what it states about the card is
+  mostly not a figure). All five ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
   `account-sites.js` holds `FINANCE_SITES`, the registry of institutions worth

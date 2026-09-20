@@ -152,7 +152,7 @@ The page lists one more thing: what the card gives that has no tracker and no fi
 - card: the card the page files it under, as the page names it. Use "" when the page names no card.
 - kind: "membership" for access, elite status, a lounge program or an included subscription; "benefit" for a credit, discount, offer or protection.
 - value: the amount or what it gets you, such as "$120 every four years" or "Priority Pass Select membership". Required.
-- state: "activation" when the holder must enroll, opt in or activate before using it, otherwise "available". Never report a benefit as already used.
+- state: "activation" when the holder must enroll, opt in or activate before using it, otherwise "available". An issuer's own page says which: a benefit offering "Enroll" or "Activate" is "activation", and one marked "Enrolled", "Active" or "Included" is "available" because the holder has already done it. Never report a benefit as already used.
 - cadence: how often it resets on the calendar: one of ${CADENCES.join(', ')}, or "" when it does not reset. Use "" for a period that follows the account anniversary rather than the calendar, and say so in notes, because only the holder knows their anniversary date.
 - due: a real fixed end date as YYYY-MM-DD when the benefit is known to end on one, otherwise ""; a period reset is never a due date.
 - url: an official HTTPS page for that benefit, or "".

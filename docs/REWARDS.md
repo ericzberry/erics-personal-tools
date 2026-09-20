@@ -114,8 +114,16 @@ one text snapshot of the page you are already looking at, turns it into a
 figure per program, and shows it. Nothing is saved by reading: each balance
 names the entry it would land on, and a press of yours saves it.
 
-The rule is the one Finance already follows for an account page. The extension
-never signs in, never navigates, and never opens a tab of its own; no session,
+What the snapshot keeps depends on whose page it is. An airline's or a hotel's
+page is a balance page, and is narrowed to the lines that carry a figure and the
+lines that name one, the way Finance reads an account page. A card issuer's own
+page is not: what it says about the card is mostly not a figure — `5X Membership
+Rewards® Points`, `Centurion® Lounge Access`, `Enroll` — so that page is read
+whole, with the legal furniture taken out and nothing else. Read for figures it
+gave up what the card earns and every benefit with nothing to count.
+
+The rest of the rule is the one Finance already follows for an account page. The
+extension never signs in, never navigates, and never opens a tab of its own; no session,
 cookie or credential leaves the browser, and none of your wallet is sent for
 the reading. A balance read for a program you already hold updates that entry
 instead of adding a second one beside it, and keeps everything else about it —

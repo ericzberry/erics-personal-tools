@@ -16,7 +16,16 @@ export const MAX_PAGE_TEXT = 24000;
 // that matter in text nobody asked to have read. So the snapshot keeps the
 // lines that state a figure, the lines that say which account or which date a
 // figure belongs to, and nothing else.
-export function readAccountPage() {
+// `figures` is what the page is being read for. A brokerage or a bank states
+// its accounts in money and prints furniture around them, so the snapshot keeps
+// the lines that state a figure and the lines that name one. A card issuer's
+// own page is the other kind of page: what it says about the card is mostly not
+// a figure at all — "5X Membership Rewards® Points", "Centurion® Lounge
+// Access", "Enroll" — and asking it for figures threw away what the card earns
+// and every benefit with nothing to count. So that page is read whole, with the
+// legal furniture taken out and nothing else.
+export function readAccountPage(options) {
+  const figures = (options || {}).figures !== false;
   const clean = value => (value || '').replace(/[ \t ]+/g, ' ').trim();
   const body = document.body;
   if (!body) return null;
@@ -176,6 +185,20 @@ export function readAccountPage() {
   // A figure often sits on its own line under the name it belongs to, so a
   // kept figure brings the short line above it along as its label.
   const lines = (body.innerText || body.textContent || '').split('\n').map(clean);
+  // A card's page, read whole. Nothing here is hunting for a figure, so none of
+  // the balance page's rules apply: no market runs, no labels taken from above
+  // and below a number, and no line dropped for being only a percentage —
+  // on this page "3%" is what the card earns.
+  if (!figures) {
+    const page = [];
+    for (const line of lines) {
+      if (!line || line.length > 200 || NOISE.test(line) || page.length >= 400) continue;
+      if (page.length && page[page.length - 1].toLowerCase() === line.toLowerCase()) continue;
+      page.push(line);
+    }
+    return {url: location.href, host: location.host, title: clean(document.title),
+      text: page.join('\n'), filtered: page.length < lines.filter(Boolean).length, tables};
+  }
   // Which lines are market data, settled once for the page: a run opens at a
   // heading naming a list of prices and closes at the first line that gives
   // the page back. The names inside a run go with the figures — a coin's name
@@ -330,11 +353,14 @@ export async function activeAccountTab(api = globalThis.chrome) {
   return elsewhere[0];
 }
 
-export async function readOpenAccountPage(api = globalThis.chrome) {
+// `options` reaches the injected function as an argument rather than a closure,
+// which is the only way anything reaches it. `figures: false` asks for a card's
+// own page, read whole.
+export async function readOpenAccountPage(api = globalThis.chrome, options = {}) {
   const tab = await activeAccountTab(api);
   let results;
   try {
-    results = await api.scripting.executeScript({target: {tabId: tab.id}, func: readAccountPage});
+    results = await api.scripting.executeScript({target: {tabId: tab.id}, func: readAccountPage, args: [{figures: options.figures !== false}]});
   } catch {
     throw Error(`Chrome would not let this read ${new URL(tab.url).host}. Some pages, such as the Chrome Web Store, are closed to extensions.`);
   }
