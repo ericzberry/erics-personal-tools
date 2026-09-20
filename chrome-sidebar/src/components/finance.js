@@ -1,7 +1,27 @@
 import * as UI from './ui.js';
-import {UNCLASSIFIED,ASSET_CLASSES,REGISTRATIONS,VEHICLES,classLabel,registrationLabel,vehicleLabel,vehicleShort,classSide} from '../finance-data.js';
+import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,classLabel,registrationLabel,vehicleLabel,vehicleShort,classSide} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
-const {Stack,Section,GroupTitle,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle}=UI;
+import {FINANCE_SITES} from '../account-sites.js';
+const {Stack,Section,GroupTitle,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link}=UI;
+
+// Where each institution prints its balances. Reaching the figures is its own
+// small errand — a bank's own front page is marketing, and the account summary
+// is several presses past it — so the page is held here and opened directly.
+// These are links and nothing more: no session is held, nothing is signed in
+// to, and an institution the owner does not bank with costs a line in a list
+// that is closed until they open it.
+const KINDS=[['brokerage','Brokerages'],['bank','Banks'],['credit','Credit cards'],
+  ['retirement','Retirement'],['private','Private'],['crypto','Crypto'],['other-asset','Other']];
+export function AccountPages(sites=[]){
+  return KINDS.flatMap(([kind,label])=>{
+    const group=sites.filter(site=>site.kind===kind&&site.url);
+    return group.length?[Stack([
+      Label(label,{className:'account-pages-kind'}),
+      Stack(group.map(site=>Link(site.label,site.url,{className:'account-pages-link'})),
+        {className:'account-pages-row'})
+    ],{className:'account-pages-group'})]:[];
+  });
+}
 
 export function money(value,currency='USD'){
   try{return new Intl.NumberFormat('en-US',{style:'currency',currency,maximumFractionDigits:Math.abs(value)>=1000?0:2}).format(value);}
@@ -50,12 +70,30 @@ function ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard}){
 // is what would be saved: one amount per portfolio and asset class, every one
 // of them editable, because the owner is the only one who can see whether a
 // figure is right. Nothing is written by reading.
-export function FoldReview({rows=[],notes=[],editing=false,disabled=false,saveLabel='Save these figures',onSave,onEdit,onDiscard,onAmount}){
+//
+// Whose money it is, then what it is in, then how much: a heading per holder
+// and a line per asset class under it, which is the shape the ledger itself is
+// read in. It was a flat run of figures, each carrying a line naming the
+// portfolio again and the labels it was read off, and an IRA beside a taxable
+// brokerage looked the same as two figures in one place.
+//
+// Nothing explains itself here. The figures are the review, and the status line
+// under them already says how many were read and how many were kept.
+export function FoldReview({rows=[],editing=false,disabled=false,saveLabel='Save these figures',onSave,onEdit,onDiscard,onAmount}){
   const shared=rows.length&&rows.every(row=>row.asOf===rows[0].asOf)?rows[0].asOf:'';
+  // The fold sorts by holder and then by class, so one pass groups them.
+  const groups=[];
+  for(const [index,row] of rows.entries()){
+    const open=groups.at(-1);
+    if(open&&open.portfolio===row.portfolio)open.rows.push({row,index});
+    else groups.push({portfolio:row.portfolio,name:row.name,isNew:row.isNew,rows:[{row,index}]});
+  }
   return Stack([
     rows.length?Label([`${rows.length} figure${rows.length===1?'':'s'}`,shared?`as of ${shared}`:''].filter(Boolean).join(' · '),{className:'snapshot-meta'}):null,
-    ...rows.map((row,index)=>FoldRow(row,{index,editing,dated:!shared,onAmount})),
-    ...notes.map(note=>Note(note)),
+    ...groups.map(group=>Section([
+      GroupTitle(`${group.name}${group.isNew?' · new':''}`,{className:'record-group-title'}),
+      ...group.rows.map(({row,index})=>FoldRow(row,{index,editing,dated:!shared,onAmount}))
+    ],{className:'record-group snapshot-group'})),
     ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard})
   ]);
 }
@@ -117,39 +155,32 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
     claimed?Note(claimed):null
   ],{className:'snapshot-row'});
 }
-// One figure as it would be saved: where it lands, what it is, and what it came
-// off. A portfolio that does not exist yet says so before it is made.
+// One figure as it would be saved: what it is in, and how much. The holder is
+// the heading over it, so the row does not name it again.
+//
+// A date only when the figures disagree about one: a reading off one page is
+// one day's, and that day is stated once above the whole review.
 function FoldRow(row,{index,editing,dated,onAmount}){
-  // Unclassified is the one class whose name does not say what it means, and a
-  // figure filed under it is the one a reader is most likely to want to correct
-  // before saving. The row says why it is there, in four words, rather than
-  // leaving the owner to guess what the ledger did with the money.
-  const target=[
-    `${row.name}${row.isNew?' · new portfolio':''}`,
-    row.class===UNCLASSIFIED?'kind of account not stated':'',
-    dated?`as of ${row.asOf}`:'',
-    row.from?.length?`from ${row.from.slice(0,3).join(', ')}${row.from.length>3?` and ${row.from.length-3} more`:''}`:''
-  ].filter(Boolean).join(' · ');
+  const what=[classLabel(row.class),dated?`as of ${row.asOf}`:''].filter(Boolean).join(' · ');
   if(!editing)return Stack([
-    Stack([Label(classLabel(row.class)),Strong(money(row.amount,row.currency))],{className:'snapshot-figure'}),
-    Note(target)
+    Stack([Label(what),Strong(money(row.amount,row.currency))],{className:'snapshot-figure'})
   ],{className:'snapshot-row'});
-  const field=FormField({id:`finance-fold-value-${index}`,label:classLabel(row.class),kind:'text'});
+  const field=FormField({id:`finance-fold-value-${index}`,label:what,kind:'text'});
   const input=field.querySelector('input');
   input.value=String(row.amount);
   input.addEventListener('input',()=>onAmount(index,input.value));
-  return Stack([field,Note(target)],{className:'snapshot-row'});
+  return Stack([field],{className:'snapshot-row'});
 }
 
 // The page in front of you, whatever it is. A recognized account site names
 // itself and reads under its own name; any other page the host can read is
 // offered the same errand. The heading above this says which, so nothing in
 // here repeats it.
-export function PagePanel({site,rows=[],notes=[],editing=false,disabled=false,onRead,onSave,onEdit,onDiscard,onAmount}){
+export function PagePanel({site,rows=[],editing=false,disabled=false,onRead,onSave,onEdit,onDiscard,onAmount}){
   const read=Button(site?`Read my ${site.label} accounts`:'Read the accounts on this page',{id:'finance-page-read',variant:'primary',size:'compact',disabled});
   read.addEventListener('click',onRead);
   return Stack([
-    ...(rows.length?[FoldReview({rows,notes,editing,disabled,onSave,onEdit,onDiscard,onAmount})]:[
+    ...(rows.length?[FoldReview({rows,editing,disabled,onSave,onEdit,onDiscard,onAmount})]:[
       // The button says what it does and the heading says which page. A
       // sentence underneath repeating both is a paragraph nobody reads twice.
       ActionGroup([read],{compact:true})
@@ -235,6 +266,11 @@ export function FinanceView(){
         ActionGroup([Button('Save investment',{id:'finance-inv-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-inv-cancel',variant:'secondary'})])
       ],{id:'finance-inv-form',className:'form-stack'})
       ],{id:'finance-investment'})
+      ,
+      // Closed until it is wanted. Getting to the figures is a way of putting
+      // one in the ledger, which is the scope this block already has, so it
+      // belongs here rather than as a fourth heading of its own.
+      Disclosure('Open an account page',AccountPages(FINANCE_SITES),{id:'finance-account-pages'})
     ]})
   ],{className:'finance-ledger'});
 }

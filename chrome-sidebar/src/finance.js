@@ -235,7 +235,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   }
   function renderFold(){
     $('drafts').replaceChildren(...(fold?.rows.length?[FoldReview({
-      rows:fold.rows,notes:fold.notes,editing:foldEditing,disabled:busy||!loaded,
+      rows:fold.rows,editing:foldEditing,disabled:busy||!loaded,
       onSave:()=>saveReview('fold'),
       onEdit:()=>{foldEditing=true;renderFold();},
       onDiscard:()=>{fold=null;foldEditing=false;renderFold();status('','intake-status');},
@@ -316,7 +316,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('page-block').querySelector('.settings-group-title').textContent=label;
     $('page-block').setAttribute('aria-label',label);
     $('snapshot-body').replaceChildren(PagePanel({
-      site,rows:snapshot?.rows||[],notes:snapshot?.notes||[],editing:snapshotEditing,disabled:busy||!loaded,
+      site,rows:snapshot?.rows||[],editing:snapshotEditing,disabled:busy||!loaded,
       onRead:readOpenPage,onSave:()=>saveReview('snapshot'),
       onEdit:()=>{snapshotEditing=true;renderSnapshot();},
       onDiscard:()=>{snapshot=null;snapshotEditing=false;renderSnapshot();status('','snapshot-status');},

@@ -1212,6 +1212,14 @@ nothing says which, and counting them adds a figure the page already counted. A
 broker's top-movers table arrives exactly that way, and a last price is no more a
 holding's value than a day's gain is.
 
+**A reading is read the way the ledger is:** a heading per holder, and under it
+a line per asset class with its amount. It was a flat run of figures, each
+carrying a line that named the portfolio again and listed the labels it had been
+read off, so an IRA beside a taxable brokerage looked like two figures in one
+place rather than two holders. Nothing explains itself in the panel now — the
+figures are the review, and the status line under them already says how many
+were read and how many were kept.
+
 **Read in the order it is read back:** whose money it is, then what it is in.
 Sorting by portfolio number put the figures in whatever order the portfolios
 happened to be created in.

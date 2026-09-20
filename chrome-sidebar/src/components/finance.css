@@ -30,6 +30,12 @@
 .snapshot-heading{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px}
 .snapshot-meta{color:var(--muted);font-size:.8rem}
 .snapshot-row{display:flex;flex-direction:column;gap:2px}
+/* A holder and the figures under it read as one block: the name close over its
+   own rows, and a clear gap before the next holder's. The gap belongs between
+   two groups rather than above every one, so the first sits under the date
+   line where it was. */
+.snapshot-group>.record-group-title{padding:0 0 2px}
+.snapshot-group+.snapshot-group{margin-block-start:10px}
 .snapshot-figure{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
 /* A long account name wraps; the figure beside it never splits across lines. */
 .snapshot-figure span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}

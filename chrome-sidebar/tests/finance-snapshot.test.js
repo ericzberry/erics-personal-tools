@@ -149,7 +149,7 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   const panel=document.getElementById('finance-snapshot-body');
   assert.match(panel.textContent,/\$124,501|\$124,500\.50/,'each figure shows what was read for it');
   assert.match(panel.textContent,new RegExp(ESTATE),'a taxable account joins the portfolio it is titled to');
-  assert.match(panel.textContent,/new portfolio/,'and the IRA says it would make one');
+  assert.match(panel.textContent,/Rollover IRA · new/,'the IRA heads its own group and says it would be made');
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save these figures','Edit','Discard']);
   assert.match(panel.textContent,/2 figures · as of 2026-09-11/,'one shared date is stated once, not on every row');
   assert.equal(writes.length,0,'reading saves nothing');
@@ -271,7 +271,7 @@ test('a second account site reads under its own name, its own default class and 
   await settle(()=>panel().textContent.includes('Cash'));
   assert.equal(sent.institution,'Chase','the site names the institution the page belongs to');
   assert.equal(sent.live,true);
-  assert.match(panel().textContent,/Berry AE 21 Irrevocable Trust · new portfolio/,'the trust is named before anything is saved');
+  assert.match(panel().textContent,/Berry AE 21 Irrevocable Trust · new/,'the trust is named before anything is saved');
 
   panel().querySelector('button').click();
   await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 figures.'));
@@ -309,8 +309,9 @@ test('a partial list of holdings does not replace the account total it sits unde
   await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'));
   const panel=document.getElementById('finance-snapshot-body');
   assert.match(panel.textContent,/1 figure · as of 2026-09-11/,'four lines read, one figure kept');
-  assert.match(panel.textContent,/do not add up to the total/);
-  assert.match(panel.textContent,/Left out: a total across accounts/);
+  // The review is the figures. What the fold declined to count is not written
+  // out beside them; the status line says how many were read and how many kept.
+  assert.equal(/do not add up|Left out:/.test(panel.textContent),false);
   panel.querySelector('button').click();
   await settle(()=>writes.length===1);
   assert.deepEqual([writes[0].class,writes[0].amount],[classById('liquid').code,1668403]);
