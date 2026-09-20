@@ -1,5 +1,5 @@
 import * as UI from './ui.js';
-import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,classLabel,registrationLabel,vehicleLabel,vehicleShort,valueSourceLabel,classSide} from '../finance-data.js';
+import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,classLabel,registrationLabel,vehicleLabel,vehicleShort,valueSourceLabel,classSide,signed} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
 import {FINANCE_SITES} from '../account-sites.js';
 const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link}=UI;
@@ -180,11 +180,22 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
 //
 // A date only when the figures disagree about one: a reading off one page is
 // one day's, and that day is stated once above the whole review.
+//
+// A liability is shown as what it does to the total, the way the ledger already
+// shows one. An amount is stored positive and its class carries the sign, so a
+// review printing the stored figure put a card's balance on the screen in the
+// shape of money held — beside the cash it is owed against, in the same column,
+// reading as $15,835 more rather than $15,835 less. The word rides beside it as
+// well, because a minus sign is a shape and some readers will not see it.
 function FoldRow(row,{index,editing,dated,onAmount}){
-  const what=[classLabel(row.class),dated?`as of ${row.asOf}`:''].filter(Boolean).join(' · ');
+  const owed=classSide(row.class)==='liability';
+  const what=[classLabel(row.class),owed?'liability':'',dated?`as of ${row.asOf}`:''].filter(Boolean).join(' · ');
   if(!editing)return Stack([
-    Stack([Label(what),Strong(money(row.amount,row.currency))],{className:'snapshot-figure'})
+    Stack([Label(what),Strong(money(signed(row),row.currency))],{className:'snapshot-figure'})
   ],{className:'snapshot-row'});
+  // The field holds the figure the way it is stored and saved: a positive
+  // amount under a liability class. Its label is what says which that is, so
+  // correcting a debt is typing what is owed rather than negating it.
   const field=FormField({id:`finance-fold-value-${index}`,label:what,kind:'text'});
   const input=field.querySelector('input');
   input.value=String(row.amount);

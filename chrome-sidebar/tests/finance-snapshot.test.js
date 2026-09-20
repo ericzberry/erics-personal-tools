@@ -316,6 +316,40 @@ test('what the fold left out is said, and a page that only totals its kinds says
   tool.stop();restore();
 });
 
+// A card's balance is owed, and the review is the screen where it sits closest
+// to the cash it is owed against. Printed the way it is stored — positive, with
+// the class carrying the sign — it reads as one more thing held.
+test('a debt is reviewed as what it does to the total, and is still typed as what is owed',async()=>{
+  const {document,restore}=setup();
+  const {tool,writes}=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'Credit cards · SYNTHETIC REWARDS CARD (...1739)',label:'Current balance',class:'credit',value:15835,asOf:'2026-09-11'}
+    ],unread:''},
+    readPage:async()=>({text:'Current balance  |  $15,835.00',host:'secure.chase.com',title:'Chase Online',trimmed:0,tables:1})
+  });
+  await ready(document);
+  tool.site(CHASE);
+  const panel=()=>document.getElementById('finance-snapshot-body');
+  panel().querySelector('button').click();
+  await settle(()=>panel().textContent.includes('Credit'));
+  assert.match(panel().textContent,/-\$15,835/,'the figure is what it does to net worth');
+  assert.match(panel().textContent,/Credit · liability/,'and the word says so as well, for a reader who misses the sign');
+
+  // Correcting it is typing what is owed. The sign belongs to the class, and a
+  // negative amount is not a figure this ledger can hold.
+  const buttons=()=>[...panel().querySelectorAll('button')];
+  buttons().find(node=>node.textContent==='Edit').click();
+  await settle(()=>!!panel().querySelector('input'));
+  assert.equal(panel().querySelector('input').value,'15835');
+  buttons().find(node=>node.textContent==='Save these figures').click();
+  await settle(()=>writes.some(write=>write.row==='mark'));
+  const filed=writes.find(write=>write.row==='mark');
+  assert.equal(filed.amount,15835,'stored positive, under the class that carries the sign');
+  assert.equal(filed.class,classById('credit').code);
+  tool.stop();restore();
+});
+
 test('an account the roster keeps out of the ledger is left out by name',async()=>{
   const {document,restore}=setup();
   const {tool}=financeHost(document,{

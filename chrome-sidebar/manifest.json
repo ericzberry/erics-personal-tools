@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Eric's Personal Tools",
-  "version": "0.6.169",
+  "version": "0.6.170",
   "description": "Travel wallet, rewards and cards, finance, taxes, reminders, subscriptions, gifts, sizes, restaurants, fantasy football, and Gmail.",
   "minimum_chrome_version": "116",
   "permissions": [

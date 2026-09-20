@@ -1920,3 +1920,24 @@ subscriptions, gifts, sizes, restaurants, fantasy football and Gmail.
 Validation: 493 extension tests pass. Nothing rendered changed — the
 description appears on the extensions page and a store listing, not in the
 panel. Archive: `release/erics-sidebar-0.6.169.zip`.
+
+## A debt reads as a debt before it is filed (0.6.170 / mobile 0.1.121)
+
+A card's balance is stored positive and its class carries the sign, which is how
+the ledger holds every liability and why the saved rows already print a mortgage
+as `-$642,000 · liability`. The review panel — the screen where a reading is
+checked before anything is written — printed the stored figure instead. So a
+Chase read showed `Credit $15,835` in the same column, in the same shape, one
+line under `Cash $2,101,804`: a debt reading as $15,835 more rather than
+$15,835 less, at the one moment the figure is there to be judged.
+
+The review now shows a liability as what it does to the total, and says the word
+beside it as the ledger does, because a minus sign is a shape and some readers
+will not see it. The field that corrects it is unchanged: an amount is typed as
+what is owed, under the class that carries the sign, because a negative amount
+is not a figure this ledger can hold.
+
+New coverage: a card's balance reviewed as a negative figure under `Credit ·
+liability`, and still typed and filed as a positive amount under the credit
+class. Validation: 494 extension and 33 mobile tests pass; the review was
+inspected at 380px and 280px, where the label and the figure stay on one line.
