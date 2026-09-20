@@ -799,7 +799,14 @@ const accountDigits=said=>[...String(said).matchAll(ACCOUNT_DIGITS)].map(found=>
 // a reading told to put the heading in front of the account's own name does
 // exactly that: "Investment accounts · BERRY 2020 IRREV FAM TR (...5007)" is one
 // trust's account and must stay one.
-const CATEGORY=/^(?:my |your |all |total )*(?:bank|deposit|checking|savings|credit|debit|card|investment|brokerage|retirement|trust|loan|mortgage|business|personal)[\s-]*(?:card|account)s\b[\s·•|–—>›:]*/i;
+// Naming the kinds one at a time does not end. The list held bank, credit and
+// investment, and the page answered with Outstanding, then with External
+// accounts — each a heading over a sum, each read as the name of an account
+// nobody holds. What they have in common is not the word in front but the word
+// at the end: a heading over a group of accounts says "accounts", and an
+// account of one's own almost never does. So the shape is the rule — up to two
+// words and then the plural — and a new kind of heading needs no new word here.
+const CATEGORY=/^(?:[A-Za-z][\w'&-]*[ -]){0,2}(?:accounts|cards)\b[\s·•|–—>›:]*/i;
 // What a column is called, which is never what an account is called. These are
 // the words left over when a page names a figure but not the account it belongs
 // to: Present balance, Net Account Value, Total.

@@ -2058,3 +2058,23 @@ saying where it came from; and the API returning both halves of one reading.
 Validation: 505 extension, 33 mobile and 128 API tests pass. The panel and the
 saved rows were reviewed against a synthetic reading of the Amex benefits page
 at 420px and 280px with no horizontal overflow.
+
+## A heading over accounts says "accounts" (0.6.180 / mobile 0.1.130)
+
+Naming the kinds one at a time does not end. The rule knew bank, credit and
+investment; the page answered **Outstanding**, and then **External accounts**,
+and each new word arrived as a portfolio holding a sum nobody holds — while the
+sentence saying the page had named no account stayed quiet, because something
+had been filed.
+
+What those headings share is not the word in front but the word at the end. A
+heading over a group of accounts says *accounts*, or *cards*; an account of
+one's own almost never does. So the shape is the rule now — up to two words and
+then the plural — and the next bank to invent a kind needs no new word here. A
+heading with a real account behind it still comes off the front and leaves the
+account: `External accounts · Fidelity Cash Management (...4410)` is that
+account, at that balance.
+
+New coverage: nine spellings of a group heading refused, and a heading stripped
+off an account that survives it. Validation: 509 extension and 33 mobile tests
+pass.
