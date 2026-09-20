@@ -2108,3 +2108,67 @@ keeping, and the same limits bound how many.
 New coverage: two ARIA grids read as tables, every account travelling with its
 own number and balance, beside a summary panel of totals by kind. Validation:
 511 extension and 33 mobile tests pass.
+## The card's own page says what it earns, and what else it carries (0.6.184 / mobile 0.1.134)
+
+`rewardRules` has always held what a card earns — `8x on Chase Travel`,
+`4x on flights and hotels booked direct`, `3x on dining` — and the only way to
+fill it in was research against the issuer's public pages. That is the wrong
+source for a product nobody can apply for: the J.P. Morgan Reserve's public
+pages are thin, and the page that states its rates plainly is the one the owner
+is signed in to and looking at.
+
+**The same press, two more lists.** The reading that already returns balances
+and credit trackers now also returns `rates` — what the card earns — and
+`benefits`, everything the page states that carries no tracker at all: a lounge
+program, elite status, a Global Entry credit, an included subscription, a
+protection. One snapshot, one review, one press. Nothing about the errand
+changed: no session, cookie or credential leaves the browser, none of the wallet
+is sent, and nothing is written by reading.
+
+**A rate is a bonus rule, not a wallet entry.** Each one carries the page's own
+wording plus the rule it implies — Chase Travel is Travel through an Issuer
+portal, booked direct is Travel, Direct, dining is Dining through any method,
+and "All other earnings" is the base rate rather than a bonus on a category the
+page never named. They are folded into the terms of the card saved in **Best
+card**: a rule that card already holds for the same category and purchase
+method is that rule at a new rate, and the review says which are changes and
+which are new. The remaining cap, the end date, the activation and the
+redemption value stay the owner's.
+
+**Never invented, never widened.** A rate with no category, no figure or an
+impossible number is left out rather than guessed at; what narrows a reward
+travels with it as its condition, so a narrow reward is never quietly turned
+into a whole category. A rate whose card is not saved, or cannot be told from
+another of the owner's, or arrives in points for a card kept in cash back, is
+reported and not saved.
+
+**The snapshot had to learn what a rate is.** `finance-page-read.js` narrows a
+page to the lines that state a figure, and its money test wants a currency
+symbol, cents or a grouped thousand. `8x on Chase Travel   0 pts` has none of
+them and was dropped before the reading saw it; `4x on flights and hotels
+booked direct   204,812 pts` survived only by the accident of a comma in the
+points beside it. A rate now has its own test — a small number against a
+multiplier, against points per dollar, or against a percent back — held to the
+same short, few-words bound the account names are held to, so a broker's "Up to
+10x more research than the last platform you used" is still prose and every
+finance page sends exactly what it sent before.
+
+New coverage: the three Reserve rates read into the right categories and
+channels; a rate updating the rule a card already holds rather than duplicating
+it; a rate matching no saved card reported rather than invented; a page stating
+no rates leaving the terms untouched; the digits a page prints deciding between
+two cards of one family; points refused onto a cash-back card; the folded rates
+deciding a comparison; a membership with no tracker created rather than dropped;
+a benefit needing enrollment read as activation; one already in the wallet
+filled in rather than duplicated; a credit and a benefit never claiming the same
+entry; and the page reader keeping `8x on Chase Travel` while fifteen synthetic
+finance pages come back byte for byte unchanged.
+
+Also fixed: `remaining` was missing from the field list `rewards-offline.js`
+writes, so the figure a credit tracker was read for never reached the device
+copy or the cloud.
+
+Validation: 527 extension, 33 mobile and 132 API tests pass. The panel was
+reviewed against a synthetic reading of the Reserve's rewards page at 380px and
+280px, with and without a saved card for the rates to land on, with no
+horizontal overflow. Archive: `release/erics-sidebar-0.6.184.zip`.

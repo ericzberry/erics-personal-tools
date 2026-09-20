@@ -143,6 +143,35 @@ brings back what the card gives, and the tracker says how much of it is left.
 A credit read before it has ever been researched is saved with the amount the
 page states.
 
+### Reading the benefits that carry no tracker
+
+A tracker is only one kind of thing a card's page lists. A lounge program,
+hotel elite status, a Global Entry credit, an included subscription, a travel
+or purchase protection — none of them has a figure left to count, and none of
+them is a credit. The same press reads them too, and they arrive as ordinary
+wallet entries: a membership for access, status or a subscription, a benefit
+for a credit, discount, offer or protection.
+
+A benefit that still needs enrolling says so; nothing read off a page is ever
+reported as already used, because only a tracker knows that. One already in
+your wallet keeps what is yours — its terms, its notes, its link, its status
+and the card it is filed under — and the reading fills in only what the entry
+has not got. A benefit and a credit never claim the same entry, so one press
+cannot propose the same thing twice.
+
+This matters most for an invitation-only card. Research reads the issuer's
+public pages, which is where a product nobody can apply for is described least
+and the owner's own signed-in page describes it best.
+
+### Reading what the card earns
+
+The same page states what the card earns: `8x on Chase Travel`, `4x on flights
+and hotels booked direct`, `3x on dining`, `All other earnings`. Those are
+**Best card**'s bonus rules, not wallet entries, so they are proposed against
+the terms of the card you already saved there and written to it — one card
+record at a time, through the same validator and queue as a card edited by
+hand. See [BEST_CARD.md](BEST_CARD.md).
+
 ## Resets and Next actions
 
 Most card credits are not one-time offers — they come back, and the unused part
@@ -167,8 +196,10 @@ and enrollment, eligibility, caps, tiers and merchant exclusions are yours to
 confirm against the linked terms. It returns at most 40 benefits per card, omits
 welcome offers and introductory rates, and knows nothing about how much of a
 credit you have used — that comes from reading the card's own tracker, which the
-issuer itself says may not reflect recent activity. Earning rates stay on the card entry; **Best card**
-is where rates are compared (see [BEST_CARD.md](BEST_CARD.md)).
+issuer itself says may not reflect recent activity. Earning rates are compared
+in **Best card** (see [BEST_CARD.md](BEST_CARD.md)); reading one off a card's own
+page writes it to that card's saved terms, and a rate with no saved card to land
+on is reported rather than given one.
 
 ## Private data and offline behavior
 
@@ -194,11 +225,13 @@ its model through the central task policy
 - `GET /v1/rewards`, `PUT /v1/rewards` — the whole wallet, revisioned. See
   [tools-api/README.md](../tools-api/README.md).
 - `POST /v1/ai-connections/:uuid/balance-intake` — `{text, program, source, unit,
-  programs}` in; `{balances, credits, unread}` out. `programs` is every currency
-  that site states, so an issuer running two of them is read for both; a device
-  that sends only the single `program` is read the way it always was. `credits`
-  is what the card's own trackers say is left of each recurring credit. The page
-  text and nothing else: matching and every total stay on the device.
+  programs}` in; `{balances, credits, rates, benefits, unread}` out. `programs`
+  is every currency that site states, so an issuer running two of them is read
+  for both; a device that sends only the single `program` is read the way it
+  always was. `credits` is what the card's own trackers say is left of each
+  recurring credit, `rates` is what the card earns, and `benefits` is everything
+  the page states that carries no tracker. The page text and nothing else:
+  matching, every total and which card a row lands on stay on the device.
 - `POST /v1/ai-connections/:uuid/card-benefits` — `{name}` in; `{card, benefits}`
   or `{matches:[{name,note}]}` out. Requires an OpenAI connection and web-search
   evidence including the issuer page it cites.

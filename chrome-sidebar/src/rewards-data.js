@@ -65,8 +65,12 @@ export function nextActions(entries,now=new Date()){
     return reason?[{...e,deadline,reason,priority:days!==null&&days<=limit?days:e.state==='activation'?31:32}]:[];
   }).sort((a,b)=>a.priority-b.priority||a.name.localeCompare(b.name));
 }
-const httpsOnly=value=>{try{const url=new URL(String(value||''));return url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch{return '';}};
-const calendarDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value?String(value):'';
+// A link and a date, kept only when they are the real thing. Exported because
+// a benefit read off the owner's own page passes through exactly the same two
+// gates a researched one does, and a second copy of either would be a second
+// answer to what a valid URL is.
+export const httpsOnly=value=>{try{const url=new URL(String(value||''));return url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch{return '';}};
+export const calendarDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value?String(value):'';
 // Research answers one card name with the card itself plus the benefits it
 // carries, each in the shape the wallet already stores. A field AI got wrong is
 // dropped rather than failing the whole card, but every entry still passes the

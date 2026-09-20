@@ -23,6 +23,16 @@ export function readAccountPage() {
   // A figure worth reading: a currency symbol against a digit, an amount with
   // cents, or a grouped thousand.
   const MONEY = /[$€£¥]\s?-?\d|-?\d[\d,]*\.\d{2}(?!\d)|-?\d{1,3}(?:,\d{3})+/;
+  // The other thing a card's own page states, and none of it is money. A
+  // reward multiplier carries no currency symbol, no cents and no grouped
+  // thousand, so "8x on Chase Travel   0 pts" was dropped before the reading
+  // saw it, and "4x on flights and hotels booked direct   204,812 pts"
+  // survived only by the accident of a comma in the points beside it — which
+  // is to say the line that states what the card earns reached the reading by
+  // luck or not at all. A rate is a small number against a multiplier, against
+  // points per dollar, or against a percent back, and nothing wider: it earns
+  // its place in the snapshot on the same terms a figure does.
+  const RATE = /(?:^|[\s(])\d{1,2}(?:\.\d)?\s?[xX×](?!\w)|\b\d{1,2}(?:\.\d)?\s?(?:points?|pts?|miles?)\s?(?:per|\/)\s?(?:\$|dollar)|\b\d{1,2}(?:\.\d)?\s?%\s?(?:cash\s)?back\b/;
   // Figures that are never the owner's: the legal furniture every broker
   // prints beside the accounts, and the market data it prints above them.
   const NOISE = /\b(disclosure|disclaimer|terms of use|privacy policy|member sipc|prospectus|advertisement)\b/i;
@@ -93,8 +103,16 @@ export function readAccountPage() {
   // past a broker's movers table and take the account's own balance with it.
   const MINE = /^((your|my|total|net|current|account|available|portfolio) )*(assets|accounts?|balances?|holdings|positions|portfolio|wallets?|cash|crypto|value|worth)\b/i;
   const blocked = line => NOISE.test(line) || INDEX.test(line) || STATUS.test(line) || TICK.test(line) || CHANGE.test(line) || PERCENT.test(line);
+  // A rate earns its place on the same terms a name does: it has to be the
+  // line's subject rather than a word inside a sentence. A broker's "Up to 10x
+  // more research than the last platform you used" states the same shape of
+  // figure as "4x on flights and hotels booked direct" and is prose, so the
+  // same short-and-few-words bound the account names are held to settles it,
+  // and a finance page sends exactly what it sent before.
+  const rates = line => line.length <= 80 && line.split(/\s+/).length <= 9 && RATE.test(line);
+  const figure = line => MONEY.test(line) || rates(line);
   const wanted = line => !!line && line.length <= 200 && !blocked(line)
-    && (MONEY.test(line) || CONTEXT.test(line) || (!MONEY.test(line) && names(line)));
+    && (figure(line) || CONTEXT.test(line) || (!MONEY.test(line) && names(line)));
 
   // Tables carry the balances on most account pages, and innerText alone
   // collapses their columns into an unreadable run. Rendering them row by row
@@ -148,7 +166,7 @@ export function readAccountPage() {
   for (let index = 0; index < found.length && index < WALK && tables.length < KEEP; index++) {
     const cells = gridRows(found[index]);
     const rows = cells.map(row => row.join('  |  ')).filter(Boolean);
-    const figures = rows.filter(row => row.length <= 400 && !blocked(row) && (MONEY.test(row) || CONTEXT.test(row)));
+    const figures = rows.filter(row => row.length <= 400 && !blocked(row) && (figure(row) || CONTEXT.test(row)));
     const kept = new Set(figures);
     cells.forEach(row => {if (kept.has(row.join('  |  '))) row.forEach(cell => celled.add(cell.toLowerCase()));});
     // The header row states what the columns mean, so it travels with them.
@@ -253,6 +271,14 @@ export function readAccountPage() {
     // disclosure between the name and the number. Market data is still judged
     // on the three nearest lines, because an index named five lines up is on
     // the other side of the page, not over this figure.
+    // A rate names what it applies to. "8x on Chase Travel" is its own label,
+    // and a rewards page prints one program name over a run of them, so the
+    // heading is said once rather than once per rate — and a rate already kept
+    // as the name under a balance is not kept a second time as itself. A money
+    // figure keeps the looser rule above it, because "Net Account Value" over
+    // every card on a broker page belongs to a different account each time.
+    const rate = rates(line);
+    if (rate && !fresh(line)) return;
     const previous = above(index, 5);
     if (previous.slice(0, 3).some(entry => INDEX.test(entry))) return;
     const labels = previous.filter(entry => entry.length <= 80 && !MONEY.test(entry) && !blocked(entry)
@@ -260,7 +286,7 @@ export function readAccountPage() {
       .slice(0, 2).reverse();
     const [outer, inner] = labels.length > 1 ? labels : [null, labels[0]];
     if (outer && fresh(outer)) push(outer, true);
-    if (inner && !repeats(inner)) push(inner, true);
+    if (inner && (rate ? fresh(inner) : !repeats(inner))) push(inner, true);
     push(line);
     // And the name printed under it — but only for a line that is nothing but
     // a number, because a line carrying its own words has already said what it
@@ -278,7 +304,7 @@ export function readAccountPage() {
   // A page that states its balances in some way this filter does not recognize
   // must not be sent with its figures cut out, so narrowing applies only when
   // it actually found figures.
-  const filtered = MONEY.test([tables.join('\n'), focused].join('\n'));
+  const filtered = figure([tables.join('\n'), focused].join('\n'));
   return {
     url: location.href,
     host: location.host,

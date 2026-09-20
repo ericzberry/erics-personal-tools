@@ -117,9 +117,14 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `rewards-sync.js`, `balance-data.js` (points and miles: what a page reading
   may become, which saved balance it updates, and the per-unit totals the
   wallet opens with — shared with mobile and the Worker),
-  `credit-data.js` (the other half of that reading: what an issuer's own
-  tracker says is left of each recurring credit, which of the owner's cards it
-  belongs to, and which saved benefit it fills in — shared the same way),
+  `credit-data.js` (the other halves of that reading: what an issuer's own
+  tracker says is left of each recurring credit, the benefits the page states
+  that carry no tracker at all, which of the owner's cards each belongs to, and
+  which saved entry it fills in — shared the same way),
+  `rate-data.js` (the last of them: what the card earns, read off the card's
+  own page and folded into that card's saved `rewardRules` in Best card rather
+  than into the wallet — the category, the channel, the rule it replaces and
+  the card it lands on; shared with mobile and the Worker),
   `program-data.js`/`program-offline.js` (the offer
   catalogues reward programs publish, read-only on every host),
   `finance-data.js`/`finance-offline.js` (the ledger: the asset-class and
@@ -163,7 +168,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   checking the copy reads back before offering it),
   `finance-page-read.js` (one
   text snapshot of the tab the owner is looking at, narrowed to the lines that
-  carry a figure and the lines that name one). All five ship to mobile
+  carry a figure — money, or the earning rate a card's own page states instead
+  of money — and the lines that name one). All five ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
   `account-sites.js` holds `FINANCE_SITES`, the registry of institutions worth
