@@ -57,6 +57,23 @@
 .trend-row>span:first-child{flex:0 0 auto;white-space:nowrap}
 .trend-row .footnote{margin:0;min-width:88px;text-align:end}
 .finance-ledger .record-row{gap:2px}
+/* One column for the amounts, whatever verbs a row carries. A row's verbs sit
+   in a slot of their own at the end of the line — three wide in the ledger,
+   four where a property's page can also be read again — so a figure is never
+   pushed left by how many things can be done to its row. Without it every line
+   ended in a different place: cash with two verbs sat one glyph right of the
+   securities under it, and the eye had no column to read down, which is the
+   one thing a column of money is for. The slot is as wide as the verbs are, so
+   the touch sizes underneath keep it honest. */
+.finance-ledger{--verb:26px;--verbs:3}
+@media(hover:none){.finance-ledger{--verb:32px}}
+.finance-ledger .record-line>.record-figure>.action-group,
+.finance-ledger .group-line>.group-figure>.action-group{flex:none;min-width:calc(var(--verbs)*var(--verb));justify-content:flex-end}
+/* A row with no verbs at all — what is owed on the houses — still keeps the
+   slot, or its figure would run out to the edge past every figure above it. */
+.finance-ledger .record-line>.record-figure>.action-group:empty,
+.finance-ledger .group-line>.group-figure>.action-group:empty{display:flex}
+.finance-ledger .estate-detail{--verbs:4}
 /* The houses behind a Real estate line, shown only when they are asked for.
    Set in from the line they add up to, and ruled along their edge, so a run of
    addresses reads as what is inside that figure rather than as more figures
