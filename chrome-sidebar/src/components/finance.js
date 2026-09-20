@@ -1,5 +1,5 @@
 import * as UI from './ui.js';
-import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,classLabel,registrationLabel,vehicleLabel,vehicleShort,classSide} from '../finance-data.js';
+import {UNCLASSIFIED,ASSET_CLASSES,REGISTRATIONS,VEHICLES,classLabel,registrationLabel,vehicleLabel,vehicleShort,classSide} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
 const {Stack,Section,GroupTitle,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle}=UI;
 
@@ -120,8 +120,13 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
 // One figure as it would be saved: where it lands, what it is, and what it came
 // off. A portfolio that does not exist yet says so before it is made.
 function FoldRow(row,{index,editing,dated,onAmount}){
+  // Unclassified is the one class whose name does not say what it means, and a
+  // figure filed under it is the one a reader is most likely to want to correct
+  // before saving. The row says why it is there, in four words, rather than
+  // leaving the owner to guess what the ledger did with the money.
   const target=[
     `${row.name}${row.isNew?' · new portfolio':''}`,
+    row.class===UNCLASSIFIED?'kind of account not stated':'',
     dated?`as of ${row.asOf}`:'',
     row.from?.length?`from ${row.from.slice(0,3).join(', ')}${row.from.length>3?` and ${row.from.length-3} more`:''}`:''
   ].filter(Boolean).join(' · ');

@@ -150,9 +150,9 @@ test('the record-per-account ledger is migrated by an explicit, re-runnable back
   assert.equal(plan.marks,4);
   assert.deepEqual(plan.portfolios.map(entry=>entry.name),['Eric and Ariana Berry Estate','Eric Berry']);
   assert.deepEqual(plan.moved.map(entry=>[entry.from,entry.portfolio,entry.class]),[
-    ['Brokerage','Eric and Ariana Berry Estate','Unclassified'],
+    ['Brokerage','Eric and Ariana Berry Estate','Liquid securities'],
     ['Checking','Eric and Ariana Berry Estate','Cash'],
-    ['IRA','Eric Berry','Unclassified']
+    ['IRA','Eric Berry','Liquid securities']
   ]);
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_marks').get().n,0,'the plan writes nothing');
 
@@ -163,7 +163,7 @@ test('the record-per-account ledger is migrated by an explicit, re-runnable back
     [['Eric and Ariana Berry Estate',1],['Eric Berry',2]]);
   // Every dated figure came across, not only the newest one.
   assert.deepEqual(records.filter(record=>record.row==='mark').map(record=>[record.portfolio,record.class,record.asOf,record.amount]),
-    [[1,3,'2026-09-19',0.54],[1,9,'2026-09-19',412000],[1,9,'2026-06-30',390000],[2,9,'2026-09-19',122667]]);
+    [[1,3,'2026-09-19',0.54],[1,10,'2026-09-19',412000],[1,10,'2026-06-30',390000],[2,10,'2026-09-19',122667]]);
   // The old table is left alone: dropping it is a separate decision.
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_records').get().n,3);
 
@@ -265,10 +265,12 @@ test('a live account page dates its own balances, and its furniture is left out'
   // A figure covering more than one account is reported as such rather than
   // dropped, so the device can leave it out and count the accounts instead.
   assert.match(prompt,/covers more than one account at once/);
-  // A dashboard's own furniture is not the owner's: the day's change, the
-  // index quotes beside it, a stock plan's unvested value, and the figures in
-  // whatever the site is promoting that week.
-  assert.match(prompt,/unvested or potential value of a stock plan/);
+  // A dashboard's own furniture is not the owner's: the day's change, the index
+  // quotes beside it, and the figures in whatever the site is promoting that
+  // week. A stock plan's unvested value is not furniture — it is $248,422 of
+  // Eric's on one E*TRADE card — so it is classified rather than discarded.
+  assert.match(prompt,/what it calls a potential, projected or unvested benefit is not yet/);
+  assert.match(prompt,/marketable securities whether or not the page breaks it down/);
   assert.match(prompt,/market or index quote/);
   assert.match(prompt,/news, education or promotional panel/);
   assert.match(prompt,/asOf 2026-09-11/,'an undated balance on a live page is today, not a dropped update');

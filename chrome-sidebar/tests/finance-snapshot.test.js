@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
 import {mountFinance} from '../src/finance.js';
 import {openSecret} from '../src/secret-vault.js';
+import {classById} from '../src/finance-data.js';
 
 const settle=async(check,attempts=500)=>{
   for(let i=0;i<attempts;i++){await new Promise(resolve=>setTimeout(resolve,1));if(check())return;}
@@ -135,7 +136,7 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'));
 
   // The page text is sent as a live reading, so today's balances are not dropped
   // for want of a date printed on the page.
@@ -158,15 +159,15 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   // filed into one that does not exist.
   assert.deepEqual(writes.map(write=>write.row),['mark','portfolio','mark']);
   assert.deepEqual(writes.filter(write=>write.row==='mark').map(write=>[write.portfolio,write.class,write.amount,write.asOf]),
-    [[1,9,124500.5,'2026-09-11'],[2,9,88000,'2026-09-11']]);
-  assert.equal(writes[0].id,'1-9-20260911','a figure is identified by where, what and when — nothing else');
+    [[1,10,124500.5,'2026-09-11'],[2,10,88000,'2026-09-11']]);
+  assert.equal(writes[0].id,'1-10-20260911','a figure is identified by where, what and when — nothing else');
   assert.equal(writes[0].revision,null,'a date with no figure yet is an append');
   // E*TRADE settles no titling of its own, so the IRA is named after the
   // account rather than guessed at — but it is registered as an IRA, which is
   // what keeps it out of the joint estate. A second IRA reading joins it.
   assert.deepEqual([writes[1].name,writes[1].kind],['Rollover IRA',2]);
   assert.equal(writes[1].number,2,'and it is numbered around the portfolio already there');
-  assert.equal(document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'),false,'saved figures leave the panel');
+  assert.equal(document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'),false,'saved figures leave the panel');
   tool.stop();restore();
 });
 
@@ -179,7 +180,7 @@ test('figures read with different dates each state their own',async()=>{
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'));
   const panel=document.getElementById('finance-snapshot-body');
   assert.equal(panel.textContent.includes('figures · as of'),false,'no single date can stand for both');
   assert.match(panel.textContent,/as of 2026-09-11/);
@@ -193,13 +194,13 @@ test('Edit puts the folded amounts in fields, and Save writes what the owner lef
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'));
 
   const buttons=()=>[...document.querySelectorAll('#finance-snapshot-body button')];
   buttons().find(node=>node.textContent==='Edit').click();
   const first=document.getElementById('finance-fold-value-0');
   assert.equal(first.value,'124500.5','an amount is offered as read, not as a blank field');
-  assert.equal(document.querySelector('label[for=finance-fold-value-0]').textContent,'Unclassified');
+  assert.equal(document.querySelector('label[for=finance-fold-value-0]').textContent,'Liquid securities');
   assert.deepEqual(buttons().map(node=>node.textContent),['Save these figures','Discard']);
   first.value='124600';
   first.dispatchEvent(new document.defaultView.Event('input'));
@@ -230,7 +231,7 @@ test('a reading needs a saved connection, and a bad amount is reported without l
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'));
   [...document.querySelectorAll('#finance-snapshot-body button')].find(node=>node.textContent==='Edit').click();
   const first=document.getElementById('finance-fold-value-0');
   first.value='not a number';
@@ -238,7 +239,7 @@ test('a reading needs a saved connection, and a bad amount is reported without l
   document.querySelector('#finance-snapshot-body button').click();
   await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('valid amount'));
   assert.equal(writes.length,0,'nothing is saved past the row that could not be read');
-  assert.match(document.getElementById('finance-snapshot-body').textContent,/Unclassified/,'the rows stay put to be corrected');
+  assert.match(document.getElementById('finance-snapshot-body').textContent,/Liquid securities/,'the rows stay put to be corrected');
   tool.stop();restore();
 });
 
@@ -303,13 +304,13 @@ test('a partial list of holdings does not replace the account total it sits unde
   await ready(document);
   tool.site(ETRADE);
   document.querySelector('#finance-snapshot-body button').click();
-  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Unclassified'));
+  await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'));
   const panel=document.getElementById('finance-snapshot-body');
   assert.match(panel.textContent,/1 figure · as of 2026-09-11/,'four lines read, one figure kept');
-  assert.match(panel.textContent,/do not add up to the account total/);
-  assert.match(panel.textContent,/total across accounts was left out/);
+  assert.match(panel.textContent,/do not add up to the total/);
+  assert.match(panel.textContent,/Left out: a total across accounts/);
   panel.querySelector('button').click();
   await settle(()=>writes.length===1);
-  assert.deepEqual([writes[0].class,writes[0].amount],[9,1668403]);
+  assert.deepEqual([writes[0].class,writes[0].amount],[classById('liquid').code,1668403]);
   tool.stop();restore();
 });

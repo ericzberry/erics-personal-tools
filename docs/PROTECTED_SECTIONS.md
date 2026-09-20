@@ -146,8 +146,11 @@ A ledger of what is held, by asset class, in each portfolio, on a date.
 date, and the amount in whole cents — and nothing else. The words live in two
 registries in `finance-data.js` and are written once rather than copied onto
 every entry: `ASSET_CLASSES` (stocks, bonds, cash, private equity, venture
-capital, hedge funds, real estate, other, unclassified; mortgage, loan, credit)
-and `REGISTRATIONS` (taxable, IRA, Roth IRA, 401(k), trust, entity, custodial).
+capital, hedge funds, real estate, other, unclassified, liquid securities,
+vested stock, unvested stock; mortgage, loan, credit) and `REGISTRATIONS`
+(taxable, IRA, Roth IRA, 401(k), trust, entity, custodial). Each asset class
+names the group it rolls up to — liquid or illiquid — and only unclassified
+belongs to neither.
 A code is what is stored, a label is what is shown, and a code is never reused.
 
 This is a deliberate reduction. The ledger this replaced kept a record per

@@ -167,6 +167,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('stale').hidden=!summary.stale.length;
     $('stale').textContent=summary.stale.length?`${summary.stale.length} portfolio${summary.stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${summary.stale[0].name}${summary.stale[0].asOf?` from ${summary.stale[0].asOf}`:''}. Totals still count ${summary.stale.length===1?'it':'them'} at ${summary.stale.length===1?'its':'their'} last known figure.`:'';
     $('breakdown').replaceChildren(
+      // Liquid against illiquid first: it is the question the class list cannot
+      // answer on its own, and the one the classes underneath it explain.
+      BreakdownList('By liquidity',summary.byGroup,currency),
       BreakdownList('By asset class',summary.byClass,currency),
       BreakdownList('By portfolio',summary.byPortfolio,currency),
       BreakdownList('By registration',summary.byRegistration,currency),

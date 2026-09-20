@@ -35,22 +35,45 @@ const fail=message=>{throw Object.assign(Error(message),{status:400});};
 // The categorizations. A code is what is stored; the label is what is shown.
 // Codes are permanent — renaming a label is free, reusing a code is not.
 export const UNCLASSIFIED=9;
+//
+// Every asset class belongs to one of two groups, and the groups are the
+// question actually being asked of the ledger: how much of this could be sold
+// this week, and how much is locked up. Cash, stocks and bonds are liquid
+// together — cash is not a security, but it answers the same question, and
+// splitting it off would leave the heading meaning less than it says. Anything
+// held through a vehicle, a property or a vesting schedule is illiquid. Only
+// Unclassified belongs to neither, because value nobody has placed cannot be
+// called either one; that is the whole of what the name means.
 export const ASSET_CLASSES=[
-  {code:1,id:'stocks',label:'Stocks',side:'asset'},
-  {code:2,id:'bonds',label:'Bonds',side:'asset'},
-  {code:3,id:'cash',label:'Cash',side:'asset'},
-  {code:4,id:'pe',label:'Private equity',side:'asset'},
-  {code:5,id:'vc',label:'Venture capital',side:'asset'},
-  {code:6,id:'hedge',label:'Hedge funds',side:'asset'},
-  {code:7,id:'property',label:'Real estate',side:'asset'},
-  {code:8,id:'other',label:'Other',side:'asset'},
-  // Value that is here but not yet split by class — an account total read off a
-  // page that never said how it is invested. It is a class like any other and
-  // adds up like any other; the name is what asks to be corrected.
-  {code:UNCLASSIFIED,id:'unclassified',label:'Unclassified',side:'asset'},
-  {code:21,id:'mortgage',label:'Mortgage',side:'liability'},
-  {code:22,id:'loan',label:'Loan',side:'liability'},
-  {code:23,id:'credit',label:'Credit',side:'liability'}
+  {code:1,id:'stocks',label:'Stocks',side:'asset',group:'liquid'},
+  {code:2,id:'bonds',label:'Bonds',side:'asset',group:'liquid'},
+  {code:3,id:'cash',label:'Cash',side:'asset',group:'liquid'},
+  {code:4,id:'pe',label:'Private equity',side:'asset',group:'illiquid'},
+  {code:5,id:'vc',label:'Venture capital',side:'asset',group:'illiquid'},
+  {code:6,id:'hedge',label:'Hedge funds',side:'asset',group:'illiquid'},
+  {code:7,id:'property',label:'Real estate',side:'asset',group:'illiquid'},
+  {code:8,id:'other',label:'Other',side:'asset',group:'illiquid'},
+  // Value that is here but not yet placed at all — an account total read off a
+  // page that never said what kind of account it is. It is a class like any
+  // other and adds up like any other; the name is what asks to be corrected.
+  // A securities account total is no longer one of these: it is marketable
+  // securities whether or not the page split them, and Liquid securities says
+  // that much truthfully without inventing a stocks-and-bonds split.
+  {code:UNCLASSIFIED,id:'unclassified',label:'Unclassified',side:'asset',group:''},
+  {code:10,id:'liquid',label:'Liquid securities',side:'asset',group:'liquid'},
+  // A stock plan holds two different things under one account number, and the
+  // difference is the only thing worth knowing about it: what has vested is
+  // ordinary marketable stock, and what has not is a schedule. Both count, and
+  // the class is what says which is which.
+  {code:11,id:'vested',label:'Vested stock',side:'asset',group:'liquid'},
+  {code:12,id:'unvested',label:'Unvested stock',side:'asset',group:'illiquid'},
+  {code:21,id:'mortgage',label:'Mortgage',side:'liability',group:''},
+  {code:22,id:'loan',label:'Loan',side:'liability',group:''},
+  {code:23,id:'credit',label:'Credit',side:'liability',group:''}
+];
+export const CLASS_GROUPS=[
+  {id:'liquid',label:'Liquid securities'},
+  {id:'illiquid',label:'Illiquid securities'}
 ];
 // How a portfolio is registered — the other thing worth knowing about a figure
 // and the other thing not worth retyping. It is one code, not a sentence.
@@ -90,6 +113,8 @@ export const assetClass=code=>ASSET_CLASSES.find(entry=>entry.code===Number(code
 export const classById=id=>ASSET_CLASSES.find(entry=>entry.id===id)||null;
 export const classLabel=code=>assetClass(code)?.label||`Class ${code}`;
 export const classSide=code=>assetClass(code)?.side||'asset';
+export const classGroup=code=>assetClass(code)?.group||'';
+export const classGroupLabel=id=>CLASS_GROUPS.find(entry=>entry.id===id)?.label||'Unclassified';
 export const registration=code=>REGISTRATIONS.find(entry=>entry.code===Number(code))||null;
 export const registrationById=id=>REGISTRATIONS.find(entry=>entry.id===id)||null;
 export const registrationLabel=code=>registration(code)?.label||'';
@@ -382,6 +407,10 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
     liabilities:sum(liabilities.map(mark=>mark.amount)),
     net:sum(live.map(signed)),
     byClass:group(live,mark=>mark.class,classLabel),
+    // The question the class list cannot answer on its own: how much of this
+    // could be sold this week. Liabilities have no liquidity to speak of and
+    // are left out of it rather than given a heading of their own.
+    byGroup:group(live.filter(mark=>classSide(mark.class)==='asset'),mark=>classGroup(mark.class),classGroupLabel),
     byPortfolio:group(live,mark=>mark.portfolio,id=>mine.get(id)?.name||'—'),
     byRegistration:group(live,mark=>mine.get(mark.portfolio)?.kind,registrationLabel),
     // What the class breakdown cannot say about a private position: how much of
@@ -512,7 +541,34 @@ export function parseFinanceUpdates(value){
 // holds $300. When they do not reconcile, the account total is kept whole, as
 // an unsplit figure, and the split is left for a page that shows all of it.
 const RECONCILE=0.01;
-const accountKey=reading=>matchKey(reading.account)||matchKey(reading.label);
+// Which group of figures a reading belongs to. An account it names answers on
+// its own; one it does not name joins the single group of unnamed figures,
+// rather than each label starting an account of its own. Two things depend on
+// that: an account total and the holdings under it are only ever compared
+// inside one group, and figures that name no account are told apart by what
+// they state rather than by what they are called.
+const UNNAMED='\u0000unnamed';
+const accountKey=reading=>matchKey(reading.account)||UNNAMED;
+// A note about one group of figures names it, when the page gave it a name to
+// use. The unnamed group is the institution's, and saying "Net Account Value:"
+// in front of a sentence about it named a column rather than an account.
+const about=(name,text)=>name?`${name}: ${text}`:text[0].toUpperCase()+text.slice(1);
+
+// One account states one balance, and a page printing the same number under two
+// names — a current value and a net value — has stated it twice. The number is
+// what says so. Deciding it by name instead, and keeping whichever figure said
+// "net" or "total", is how a $122,667 IRA listed beside a $1.6M brokerage
+// disappeared: two balances that differ are two balances.
+const balances=(totals,dropped)=>{
+  const named=/net|total/i,byValue=new Map();
+  for(const total of totals){
+    const key=total.value.toFixed(2),kept=byValue.get(key);
+    if(!kept||(!named.test(kept.label)&&named.test(total.label)))byValue.set(key,total);
+  }
+  const repeats=totals.length-byValue.size;
+  if(repeats)dropped.push(`${repeats} repeated balance${repeats===1?'':'s'}`);
+  return [...byValue.values()];
+};
 // Read at a bank, but not a bank balance. One sign-on at Chase covers the
 // checking account and the managed portfolio beside it, and only one of those
 // is cash, so an account that names itself an investment keeps the class the
@@ -552,7 +608,7 @@ const accountMark=reading=>
 // Holdings cannot follow. A group that lost the account names has nothing left
 // saying which account a position sits in, so a separated group keeps each
 // total whole and says so.
-function separate(account,notes){
+function separate(account,notes,dropped){
   if(account.totals.length<2)return [account];
   const covers=account.totals.filter(total=>{
     const rest=account.totals.filter(other=>other!==total);
@@ -561,10 +617,9 @@ function separate(account,notes){
   const totals=covers.length===1?account.totals.filter(total=>total!==covers[0]):account.totals;
   const marks=[...new Set(totals.map(accountMark))];
   if(marks.length<2)return [account];
-  if(covers.length===1)notes.push(`${account.name}: ${covers[0].label} is the other figures under this name added up, so it was left out.`);
-  notes.push(`${account.name}: ${marks.length} accounts were read under this one name and were counted separately.`);
-  const held=account.holdings.length;
-  if(held)notes.push(`${account.name}: the ${held} holding${held===1?'':'s'} read under this name could not be placed in one of them, so each account total was kept whole.`);
+  if(covers.length===1)dropped.push('a total across accounts');
+  notes.push(about(account.name,`${marks.length} accounts were read under one name and counted separately.`));
+  if(account.holdings.length)notes.push(about(account.name,'the holdings could not be placed in one of them, so each total was kept whole.'));
   return marks.map(mark=>({...account,totals:totals.filter(total=>accountMark(total)===mark),holdings:[]}));
 }
 // A change is not a value. A day's gain, a return, a cost basis and an
@@ -578,20 +633,45 @@ function separate(account,notes){
 // account, and nobody reading the ledger a year later could tell. So the device
 // refuses a figure that names itself a change, whatever scope it was given.
 const NOT_A_VALUE=/\b(gains?|loss|losses|change|returns?|performance|cost basis|unrealized|realized|yield)\b/i;
+// A stock plan's two halves, named by the page rather than by the reading: the
+// potential, projected or unvested benefit is a schedule, and everything else
+// in the account is stock that is held. The class is forced here because it is
+// the one thing about a stock plan worth getting right, and a reading that
+// called $248,422 of unvested stock an ordinary holding would bury it.
+const UNVESTED=/\b(unvested|potential|projected|unexercis\w*)\b/i;
+const VESTED=/\bvested\b/i;
 export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
-  // A site says what it is: a bank's account total is cash whether or not the
-  // page uses the word. A reading that did classify itself is never overridden,
-  // and neither is an account whose own name says it holds investments.
-  const classify=(reading,said='')=>reading.class===UNCLASSIFIED&&defaultClass&&!INVESTED.test(said)?defaultClass:reading.class;
-  const notes=[],counted=readings.filter(reading=>!NOT_A_VALUE.test(reading.label||''));
+  const CASH=classById('cash').code,LIQUID=classById('liquid').code;
+  // What a figure is in, when the reading did not say. A site answers for its
+  // own totals — a bank's balance is cash, a broker's is marketable securities
+  // — but the account's own name outranks the site, because one sign-on at a
+  // bank covers the checking account and the managed portfolio beside it, and
+  // one of those is not cash. A stock plan's wording outranks both.
+  const classify=(reading,said='')=>{
+    // The stock-plan test reads the figure's own label and nothing around it:
+    // the group's text holds every other label too, and one potential benefit
+    // value in it would turn the vested balance beside it into a schedule.
+    const own=reading.label||'';
+    if(UNVESTED.test(own))return classById('unvested').code;
+    if(VESTED.test(own))return classById('vested').code;
+    if(reading.class!==UNCLASSIFIED)return reading.class;
+    if(INVESTED.test(said))return defaultClass===CASH||!defaultClass?LIQUID:defaultClass;
+    return defaultClass??reading.class;
+  };
+  // Everything the fold declined to count, gathered as it goes and said once at
+  // the end. Three sentences explaining three omissions is three times the
+  // reading it deserves: the figures are on the screen, and the note is only
+  // there to say what is not.
+  const dropped=[],notes=[];
+  const counted=readings.filter(reading=>!NOT_A_VALUE.test(reading.label||''));
   const changes=readings.length-counted.length;
-  if(changes)notes.push(`${changes} figure${changes===1?'':'s'} naming a gain, a loss or a return rather than what something is worth ${changes===1?'was':'were'} left out.`);
+  if(changes)dropped.push(`${changes} gain${changes===1?'':'s'} or return${changes===1?'':'s'}`);
   const usable=counted.filter(reading=>reading.scope!=='all');
-  if(usable.length<counted.length)notes.push('A total across accounts was left out; the accounts it covers are counted individually.');
+  if(usable.length<counted.length)dropped.push('a total across accounts');
   const accounts=new Map();
   for(const reading of usable){
     const key=accountKey(reading);
-    if(!accounts.has(key))accounts.set(key,{name:reading.account||reading.label,totals:[],holdings:[]});
+    if(!accounts.has(key))accounts.set(key,{name:reading.account||institutionName(institution),totals:[],holdings:[]});
     accounts.get(key)[reading.scope==='holding'?'holdings':'totals'].push(reading);
   }
   // A portfolio is chosen, never invented on a hunch: an account says how it is
@@ -646,27 +726,31 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
       name:portfolio.name,kind:portfolio.kind,currency:portfolio.currency||'USD',isNew:!!portfolio.isNew};
     figures.set(key,{...current,amount:Math.round((current.amount+value)*100)/100,from:[...current.from,...from]});
   };
-  for(const account of [...accounts.values()].flatMap(entry=>separate(entry,notes))){
+  for(const account of [...accounts.values()].flatMap(entry=>separate(entry,notes,dropped))){
     const inside=[...account.totals,...account.holdings];
     // Everything the page called this account, in one string: the name it was
     // grouped under and the labels of the figures inside it. That is what says
     // whose account it is and what it holds.
     const said=[account.name,...inside.map(reading=>reading.label)].filter(Boolean).join(' ');
     const portfolio=resolve(inside,said);
-    // One account states one balance. A page that prints several account-level
-    // figures for the same account — a current value and a net value — is
-    // describing one balance twice, so the one that says it is the total wins.
-    const stated=account.totals.sort((a,b)=>Number(/net|total/i.test(b.label))-Number(/net|total/i.test(a.label))||b.value-a.value)[0]||null;
-    if(account.totals.length>1)notes.push(`${account.name}: ${account.totals.length} account-level figures were read and ${stated.label} was used.`);
+    const totals=balances(account.totals,dropped);
     const holdings=account.holdings,held=sum(holdings.map(reading=>reading.value));
-    const reconciles=holdings.length&&stated&&stated.value>0&&Math.abs(held-stated.value)<=stated.value*RECONCILE;
-    if(holdings.length&&(reconciles||!stated)){
+    // Holdings replace the balances they sit under only when they add up to
+    // them. The comparison is against everything the group states, because a
+    // group holding two accounts states two balances and the positions listed
+    // under it are the positions of both.
+    const stated=sum(totals.map(total=>total.value));
+    const reconciles=holdings.length&&stated>0&&Math.abs(held-stated)<=stated*RECONCILE;
+    if(holdings.length&&(reconciles||!totals.length)){
       for(const reading of holdings)add(portfolio,classify(reading,`${account.name} ${reading.label}`),reading.asOf,reading.value,[reading.label]);
       continue;
     }
-    if(holdings.length&&stated)notes.push(`${account.name}: the ${holdings.length} holdings shown do not add up to the account total, so the total was kept whole rather than split by them.`);
-    if(stated)add(portfolio,classify(stated,said),stated.asOf,stated.value,[stated.label]);
+    if(holdings.length)notes.push(about(account.name,`the ${holdings.length} holding${holdings.length===1?'':'s'} shown ${holdings.length===1?'does':'do'} not add up to the total, so it was kept whole.`));
+    for(const total of totals)add(portfolio,classify(total,said),total.asOf,total.value,[total.label]);
   }
+  // Said once, at the front, in the order a reader would ask it: what did you
+  // not count, and why is a figure not split.
+  if(dropped.length)notes.unshift(`Left out: ${[...new Set(dropped)].join(', ')}.`);
   const marks=[...figures.values()].sort((a,b)=>a.portfolio-b.portfolio||a.class-b.class);
   return {marks,portfolios:proposed,notes,today};
 }
@@ -801,7 +885,7 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
 // tags, notes and a JSON array of every figure ever filed for it. All of that
 // reduces to a portfolio and a class — two codes — and the record's whole
 // history comes across rather than only its newest figure.
-export const LEGACY_CLASSES={bank:'cash',brokerage:'unclassified',retirement:'unclassified',
+export const LEGACY_CLASSES={bank:'cash',brokerage:'liquid',retirement:'liquid',
   private:'pe',business:'pe',realestate:'property',crypto:'other',vehicle:'other','other-asset':'other',
   mortgage:'mortgage',loan:'loan',credit:'credit','other-liability':'loan'};
 // A brokerage or retirement account states a total and not what is inside it,

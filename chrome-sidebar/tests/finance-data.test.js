@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,
   parseFinanceUpdates,foldReadings,financeAttention,legacyLedger,titledOwner,titledHolder,holdsManyTitles,
   institutionName,registrationLabel,
-  markRef,portfolioRef,parseRef,dateNumber,dateText,classById,heldOn,MAX_PORTFOLIOS,
+  markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,
   holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel} from '../src/finance-data.js';
 
 const ESTATE='Eric and Ariana Berry Estate';
@@ -136,7 +136,8 @@ test('holdings split an account only when they add up to it',()=>{
     {...dated,account:'Brokerage',label:'WSTRN ALLIANCE CD',class:2,value:99.97},
     {...dated,account:'Brokerage',label:'MS BANK CD',class:2,value:99.96}
   ],[estate],{institution:'Schwab'});
-  assert.deepEqual(partial.marks.map(row=>[row.class,row.amount]),[[9,1668403]],'the total is kept whole');
+  assert.deepEqual(partial.marks.map(row=>[row.class,row.amount]),[[classById('liquid').code,1668403]],
+    'the total is kept whole, as the marketable securities the account name says it is');
   assert.match(partial.notes.join(' '),/do not add up/);
 });
 
@@ -147,9 +148,10 @@ test('a total across accounts is left out, and one account stating two totals st
     {...dated,account:'Brokerage',label:'Current Account Value',class:9,scope:'account',value:0},
     {...dated,account:'Brokerage',label:'Net Account Value',class:9,scope:'account',value:1668403}
   ],[estate],{institution:'Schwab'});
+  // The two account-level figures state the same balance under two names, and
+  // the number is what says so. A zero beside a balance is not a second one.
   assert.deepEqual(folded.marks.map(row=>row.amount),[1668403]);
-  assert.match(folded.notes.join(' '),/total across accounts was left out/);
-  assert.match(folded.notes.join(' '),/Net Account Value was used/);
+  assert.match(folded.notes.join(' '),/Left out: a total across accounts/);
 });
 
 // The E*TRADE complete view, read for real on 2026-09-20: the reading called
@@ -166,9 +168,9 @@ test('several accounts read under one name are counted separately, not folded in
   ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
   assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[1,1668402.54],[2,122666.62]],
     'both balances are kept, and the IRA is registered as one');
-  assert.match(folded.notes.join(' '),/Total Assets is the other figures under this name added up/);
-  assert.match(folded.notes.join(' '),/2 accounts were read under this one name/);
-  assert.match(folded.notes.join(' '),/1 holding read under this name could not be placed/);
+  assert.match(folded.notes.join(' '),/Left out: a total across accounts/);
+  assert.match(folded.notes.join(' '),/2 accounts were read under one name and counted separately/);
+  assert.match(folded.notes.join(' '),/holdings could not be placed in one of them/);
 
   // The same page with nothing separating the two: no registration, no account
   // number. Guessing that two figures are two accounts would count a balance
@@ -178,8 +180,10 @@ test('several accounts read under one name are counted separately, not folded in
     {...dated,account:'E*TRADE',label:'Net Account Value',registration:'',value:1668402.54},
     {...dated,account:'E*TRADE',label:'Net Account Value',registration:'',value:122666.62}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
-  assert.deepEqual(alike.marks.map(row=>row.amount),[1791069.16]);
-  assert.match(alike.notes.join(' '),/3 account-level figures were read/);
+  // Nothing separates them, so all three are counted — and the page's own total
+  // among them is what makes the sum come out at twice what it should. The
+  // covering figure is only left out where its parts can be told apart.
+  assert.deepEqual(alike.marks.map(row=>row.amount),[3582138.32]);
 });
 
 // What a level-3 model actually returned for that same E*TRADE page on
@@ -196,14 +200,60 @@ test('a figure naming a gain, a loss or a return is refused however it is scoped
     {...dated,account:'Traditional IRA -4144',label:"Day's Gain",registration:'ira',scope:'account',value:4.68}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
   assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[1,1668402.54],[2,122666.62]]);
-  assert.match(folded.notes.join(' '),/3 figures naming a gain, a loss or a return/);
+  assert.match(folded.notes.join(' '),/Left out: 3 gains or returns/);
 
   // An account whose only figure is a gain states no balance at all, rather
   // than a $7,036 balance for a $1.6M account.
   const only=foldReadings([{...dated,account:'Individual Brokerage -4049',label:"Day's Gain",scope:'account',value:7036.71}],
     [{...estate,id:'p1'}],{institution:'E*TRADE'});
   assert.deepEqual(only.marks,[]);
-  assert.match(only.notes.join(' '),/1 figure naming a gain, a loss or a return rather than what something is worth was left out/);
+  assert.match(only.notes.join(' '),/Left out: 1 gain or return\./);
+});
+
+// The E*TRADE complete view as it actually read on 2026-09-20, with the reading
+// naming no account at all: two brokerage-shaped balances, a stock plan's two
+// halves, the page's own total over them, and a top-movers table. It came out
+// as one $1,916,825 Unclassified figure — the brokerage plus the unvested stock
+// plan, with the IRA gone — which is neither a balance nor anything the page
+// says.
+test('a page that names no account still states every balance on it, each as what it is',()=>{
+  const dated={asOf:'2026-09-20',confidence:'high',reason:'',class:9,registration:'',account:''};
+  const folded=foldReadings([
+    {...dated,label:'Total Assets',scope:'all',value:1791069.16},
+    {...dated,label:'Net Account Value',scope:'account',value:1668402.54},
+    {...dated,label:'Net Account Value',scope:'account',value:122666.62},
+    {...dated,label:'Current Account Value',scope:'account',value:0},
+    {...dated,label:'Potential Benefit Value',scope:'account',value:248422.68},
+    {...dated,label:"Day's Gain",scope:'account',value:7036.71},
+    {...dated,label:"DIS Day's Gain $",class:1,scope:'holding',value:1318.56},
+    {...dated,label:'DIS Last Price $',class:1,scope:'holding',value:102.67}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
+  // The two balances add up to the total the page prints over them, which is
+  // the only check there is that nothing was lost or counted twice.
+  assert.deepEqual(folded.marks.map(row=>[classLabel(row.class),row.amount]),
+    [['Liquid securities',1791069.16],['Unvested stock',248422.68]]);
+  // Two lines, not four: what was left out, and why a figure was not split.
+  assert.equal(folded.notes.length,2);
+  assert.match(folded.notes[0],/Left out: 2 gains or returns, a total across accounts\./);
+  assert.match(folded.notes[1],/^E\*TRADE: the 1 holding shown does not add up/);
+});
+
+// Liquid against illiquid is the question the class list cannot answer on its
+// own, and the reason the classes have a group at all.
+test('every asset class rolls up to liquid or illiquid, and only unplaced value to neither',()=>{
+  const records=[
+    {row:'portfolio',id:'p1',number:1,name:ESTATE,kind:1,currency:'USD'},
+    ...['cash','stocks','bonds','liquid','vested','pe','property','unvested','unclassified']
+      .map((id,index)=>({row:'mark',id:`1-${classById(id).code}-20260919`,portfolio:1,
+        class:classById(id).code,asOf:'2026-09-19',amount:(index+1)*1000}))
+  ];
+  const {byGroup}=financeSummary(records,{today:'2026-09-19'});
+  // Largest first, like every other breakdown in the panel.
+  assert.deepEqual(byGroup.map(row=>[row.label,row.total]),[
+    ['Illiquid securities',21000],
+    ['Liquid securities',15000],
+    ['Unclassified',9000]
+  ]);
 });
 
 test('a reading lands in the portfolio its registration and institution settle, and proposes one only when it must',()=>{
@@ -275,7 +325,8 @@ test('a bank holding several titles files each account under the one that holds 
   // And the investment accounts behind the same sign-on are not cash for having
   // been read at a bank.
   const invested=foldReadings([{...dated,account:'Berry AE 21 Irrevocable Trust · J.P. Morgan Managed Portfolio',value:612000}],[],chase);
-  assert.equal(invested.marks[0].class,9,'unsplit, and asking to be split — not filed as cash');
+  assert.equal(invested.marks[0].class,classById('liquid').code,
+    'marketable securities, unsplit — not cash for having been read at a bank');
   assert.equal(invested.marks[0].name,'Berry AE 21 Irrevocable Trust');
 });
 
@@ -317,15 +368,15 @@ test('the record-per-account ledger migrates to portfolios and classes, keeping 
   assert.deepEqual(portfolios.map(entry=>[entry.name,entry.kind]),[[ESTATE,1],['Eric Berry',2],['Berry Family Trust',5]]);
   assert.deepEqual(marks.map(row=>[row.portfolio,row.class,row.asOf,row.amount]),[
     [1,3,'2026-09-19',0.54],
-    [1,9,'2026-06-30',390000],
-    [1,9,'2026-09-19',412000],
-    [2,9,'2026-09-19',122667],
+    [1,10,'2026-06-30',390000],
+    [1,10,'2026-09-19',412000],
+    [2,10,'2026-09-19',122667],
     [3,4,'2026-09-19',200]
   ]);
   assert.deepEqual(moved.map(entry=>[entry.from,entry.portfolio,entry.class,entry.dates]),[
-    ['Brokerage',ESTATE,'Unclassified',2],
+    ['Brokerage',ESTATE,'Liquid securities',2],
     ['Checking',ESTATE,'Cash',1],
-    ['IRA','Eric Berry','Unclassified',1],
+    ['IRA','Eric Berry','Liquid securities',1],
     ['Fund II','Berry Family Trust','Private equity',1]
   ]);
 });

@@ -65,11 +65,14 @@ const reading={readings:[
 // brokerage, the IRA and the total over both. This is what the fold has to
 // separate, and the three lines it writes about doing so are reviewed here.
 const merged={readings:[
-  {account:'E*TRADE',label:'Total Assets',class:'unclassified',registration:'',scope:'account',value:1791069.16,asOf:'2026-09-18',confidence:'high',reason:'Total assets.'},
-  {account:'E*TRADE',label:'Individual Brokerage -4049 Net Account Value',class:'unclassified',registration:'',scope:'account',value:1668402.54,asOf:'2026-09-18',confidence:'high',reason:'Net account value.'},
-  {account:'E*TRADE',label:'Traditional IRA -4144 Net Account Value',class:'unclassified',registration:'ira',scope:'account',value:122666.62,asOf:'2026-09-18',confidence:'high',reason:'Net account value.'},
-  {account:'E*TRADE',label:'DIS',class:'stocks',registration:'',scope:'holding',value:102.67,asOf:'2026-09-18',confidence:'low',reason:'Listed among the top movers.'},
-  {account:'E*TRADE',label:"DIS Day's Gain $",class:'stocks',registration:'',scope:'holding',value:1318.56,asOf:'2026-09-18',confidence:'low',reason:"The top movers table states a day's gain."}
+  {account:'',label:'Total Assets',class:'unclassified',registration:'',scope:'all',value:1791069.16,asOf:'2026-09-18',confidence:'high',reason:'Total assets.'},
+  {account:'',label:'Net Account Value',class:'unclassified',registration:'',scope:'account',value:1668402.54,asOf:'2026-09-18',confidence:'high',reason:'Net account value.'},
+  {account:'',label:'Net Account Value',class:'unclassified',registration:'',scope:'account',value:122666.62,asOf:'2026-09-18',confidence:'high',reason:'Net account value.'},
+  {account:'',label:'Current Account Value',class:'unclassified',registration:'',scope:'account',value:0,asOf:'2026-09-18',confidence:'high',reason:'Stock plan current value.'},
+  {account:'',label:'Potential Benefit Value',class:'unclassified',registration:'',scope:'account',value:248422.68,asOf:'2026-09-18',confidence:'high',reason:'Stock plan potential benefit.'},
+  {account:'',label:"Day's Gain",class:'unclassified',registration:'',scope:'account',value:7036.71,asOf:'2026-09-18',confidence:'high',reason:"The card states a day's gain."},
+  {account:'',label:'DIS Last Price $',class:'stocks',registration:'',scope:'holding',value:102.67,asOf:'2026-09-18',confidence:'low',reason:'Listed among the top movers.'},
+  {account:'',label:"DIS Day's Gain $",class:'stocks',registration:'',scope:'holding',value:1318.56,asOf:'2026-09-18',confidence:'low',reason:"The top movers table states a day's gain."}
 ],capital:[],unread:''};
 const credentials={get:async()=>'synthetic-preview-token-at-least-32-characters'};
 // Each state is one vault, so the three can sit side by side on one page.
@@ -99,7 +102,7 @@ const states=[
   // offered by the one action in Read an update rather than a panel of its own.
   ['Open · beside a page that is not an account site','open',null,false],
   ...ACCOUNT_SITES.map(site=>[`Open · beside a signed-in ${site.label} page`,'open',site,false]),
-  ['Open · beside an E*TRADE page read under one name','open',ACCOUNT_SITES.find(site=>site.id==='etrade'),false,merged],
+  ['Open · beside an E*TRADE page that named no account','open',ACCOUNT_SITES.find(site=>site.id==='etrade'),false,merged],
   ['Quiet · beside a signed-in Schwab page','open',ACCOUNT_SITES.find(site=>site.id==='schwab'),true],
   ['Quiet · beside a finance page with no reader','open',null,true]
 ];

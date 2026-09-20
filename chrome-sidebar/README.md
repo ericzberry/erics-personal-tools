@@ -1191,6 +1191,15 @@ add up to it, so three CDs beside a $1.6M net account value no longer claim the
 account holds $300: the total is kept whole as **Unclassified**, which counts in
 full and whose name asks to be corrected. The panel says which of these it did.
 
+**Two balances that differ are two balances.** A page printing the same number
+under two names — a current value and a net value — has stated one balance
+twice, and the number is what says so. Deciding it by name instead, and keeping
+whichever figure said "net" or "total", is how a $122,667 IRA listed beside a
+$1.6M brokerage disappeared. A figure that names no account joins the one group
+of unnamed figures rather than starting an account per label, so a total and the
+holdings under it are still compared, and the balances inside it are told apart
+by what they state.
+
 **One name is not one account.** A reading that names the institution rather
 than the account — "E*TRADE" against the brokerage and the IRA both — used to
 lose the smaller balance to the rule that an account states one balance. Before
@@ -1202,6 +1211,23 @@ is left out, but only where the parts can be told apart — where nothing
 separates them, the covering figure is still the one kept, because guessing that
 two figures are two accounts would count a balance twice. A separated group
 drops its holdings: nothing is left saying which account a position sits in.
+
+**Liquid against illiquid is the question the classes answer together.** Every
+asset class names its group, and the Breakdown leads with the two of them: cash,
+stocks, bonds, vested stock and an unsplit securities total are liquid; private
+equity, venture capital, hedge funds, real estate, other and unvested stock are
+not. Only Unclassified belongs to neither, because value nobody has placed
+cannot be called either one — that is the whole of what the name means, and the
+review row now says so in four words rather than leaving it to be guessed.
+
+**A securities total is not unplaced value.** A brokerage, IRA or 401(k) total
+that the page never split is marketable securities whether or not it says so, so
+it is filed as **Liquid securities** rather than Unclassified. Unclassified is
+left for a figure whose kind of account is genuinely unstated. A stock plan is
+the one account holding two different things at once, and both count: what the
+page calls a current or vested value is **Vested stock**, and what it calls a
+potential, projected or unvested benefit is **Unvested stock**. Figures saved
+before this stay Unclassified; nothing rewrites a figure already filed.
 
 **A change is not a value.** A day's gain, a return, a cost basis and an
 unrealized figure are printed in the same column shape as a balance, and the
