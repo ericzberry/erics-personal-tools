@@ -1,6 +1,6 @@
 import * as UI from './ui.js';
 import {CADENCE_LABELS} from '../rewards-data.js';
-import {formatTotal,unitLabel} from '../balance-data.js';
+import {formatTotal,programName,unitLabel} from '../balance-data.js';
 const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label}=UI;
 const CADENCE_OPTIONS=[{text:'Does not reset',value:''},...Object.entries(CADENCE_LABELS).map(([value,text])=>({text,value}))];
 export function RewardsView(){
@@ -122,15 +122,28 @@ export function BalancePanel({site,programs=[],rows=[],credits=[],disabled=false
   // One press reads every currency the site states, so the heading names them
   // all: an issuer running two of them is the case where naming only the first
   // would promise half the page.
+  // The issuer leads that heading only where the programs' own names do not
+  // already carry it: reading IHG One Rewards is not reading IHG IHG One
+  // Rewards.
   const currencies=(programs.length?programs:[site]).map(program=>program.label);
+  const named=currencies.map(label=>programName(site.source,label));
+  const title=named.every((label,i)=>label===currencies[i])
+    ?currencies.join(' and '):`${site.source} ${currencies.join(' and ')}`;
   const found=[rows.length?`${rows.length} balance${rows.length===1?'':'s'}`:'',
     credits.length?`${credits.length} credit${credits.length===1?'':'s'}`:''].filter(Boolean);
   const heading=Stack([
-    Strong(`${site.source} ${currencies.join(' and ')}`),
+    Strong(title),
     found.length?Label(`${found.join(' and ')} read · nothing saved yet`,{className:'snapshot-meta'}):null
   ],{className:'snapshot-heading'});
   if(!found.length)return Section([heading,ActionGroup([action(`Read my balance${currencies.length>1?'s':''}`,'primary',onRead)],{compact:true})],{className:'record-row'});
-  return Section([heading,...rows.map(BalanceRow),...credits.map(CreditRow),ActionGroup([
+  // The heading has just named what was read, so a row says only what tells it
+  // from its siblings: nothing at all where there is one program, and its own
+  // currency where an issuer runs two. A reading from somewhere else than the
+  // page's own issuer still names itself in full.
+  const rowLabel=row=>programName(row.source,row.name)===title?''
+    :row.source===site.source?row.name:programName(row.source,row.name);
+  return Section([heading,...rows.map(row=>BalanceRow(row,rowLabel(row))),
+    ...credits.map(CreditRow),ActionGroup([
     action(`Save ${found.join(' and ')}`,'primary',onSave),
     action('Discard','subtle',onDiscard)
   ],{compact:true})],{className:'record-row'});
@@ -153,12 +166,12 @@ function CreditRow(row){
 }
 // A read balance names the entry it would land on, and nothing more is implied
 // until it is saved.
-function BalanceRow(row){
+function BalanceRow(row,label=''){
   const target=[row.match?`Updates ${row.match.name}`:row.ambiguous?'Several balances match — saves as a new entry':'New balance',
     row.confidence==='high'?'':`${row.confidence} confidence`].filter(Boolean).join(' · ');
   return Stack([
-    Stack([Label(`${row.source} ${row.name}`),Strong(row.value)],{className:'snapshot-figure'}),
-    Note(target),
+    Stack([label?Label(label):Note(target),Strong(row.value)],{className:'snapshot-figure'}),
+    ...(label?[Note(target)]:[]),
     ...(row.notes?[Note(row.notes)]:[])
   ],{className:'snapshot-row'});
 }

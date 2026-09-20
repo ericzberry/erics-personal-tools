@@ -4,7 +4,7 @@ import {RecordRow,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SH
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl} from './program-data.js';
-import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord,directoryBalances,UNREAD_BALANCE} from './balance-data.js';
+import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,UNREAD_BALANCE} from './balance-data.js';
 import {parseCreditReading,matchCredits,creditRecord} from './credit-data.js';
 import {LOYALTY_PROGRAMS,loyaltySitePrograms} from './loyalty-sites.js';
 import {aiConnections} from './ai-connection.js';
@@ -323,12 +323,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // Privileges", because the word doing the naming is the first one either way.
   // Inside a card's group the heading has just named the card, so a benefit
   // filed there is left to its own name.
-  const firstWord=text=>text.toLowerCase().split(/\s+/)[0]||'';
-  const titleOf=(e,inGroup)=>{
-    const source=String(e.source||'').trim(),name=String(e.name||'').trim();
-    const carried=name.toLowerCase().includes(source.toLowerCase())||firstWord(name)===firstWord(source);
-    return !source||inGroup||carried?name:`${source} ${name}`;
-  };
+  const titleOf=(e,inGroup)=>inGroup?e.name:programName(e.source,e.name);
   // A program the owner has never read has no figure, and an empty place where
   // the figure goes says that better than 26 rows all printing the same three
   // words. What is counted, and what is not, is already summed above the list.

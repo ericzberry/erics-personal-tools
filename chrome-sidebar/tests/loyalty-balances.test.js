@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loyaltySite,loyaltySitePrograms,LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
-import {balanceTotals,readBalance,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,BALANCE_UNITS,directoryBalances,UNREAD_BALANCE} from '../src/balance-data.js';
+import {balanceTotals,readBalance,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,BALANCE_UNITS,directoryBalances,programName,UNREAD_BALANCE} from '../src/balance-data.js';
 import {nextActions} from '../src/rewards-data.js';
 import {pageOffers} from '../src/page-offers.js';
 
@@ -190,6 +190,28 @@ test('a program awaiting its first reading is counted as unread, never as a tota
   // A balance that does state a figure is still raised once it goes out of date.
   const read=[{...balance('Bonvoy','Marriott','42,000 points'),updatedAt:new Date('2020-01-01').toISOString()}];
   assert.equal(nextActions(read,new Date())[0]?.reason,'Update this balance');
+});
+
+// Every program in the catalogue is named the way its owner would say it, in
+// the wallet and in the panel that reads it — which for half of them means the
+// issuer is already in the name and must not be said again.
+test('a program is named once: the issuer joins its name only where the name lacks it',()=>{
+  assert.equal(programName('IHG','IHG One Rewards'),'IHG One Rewards');
+  assert.equal(programName('Marriott','Bonvoy'),'Marriott Bonvoy');
+  assert.equal(programName('United Airlines','MileagePlus'),'United Airlines MileagePlus');
+  assert.equal(programName('Hilton','Hilton Honors'),'Hilton Honors');
+  assert.equal(programName('Hyatt','World of Hyatt'),'World of Hyatt');
+  // The brand is the word that names the program, so a longer issuer saying
+  // the same word adds nothing.
+  assert.equal(programName('Choice Hotels','Choice Privileges'),'Choice Privileges');
+  assert.equal(programName('','Bonvoy'),'Bonvoy');
+  assert.equal(programName('Marriott',''),'Marriott');
+  // Nothing in the catalogue comes out saying its brand twice.
+  for(const program of LOYALTY_PROGRAMS){
+    const name=programName(program.source,program.label);
+    const first=name.toLowerCase().split(/\s+/)[0];
+    assert.equal(name.toLowerCase().split(/\s+/).filter(word=>word===first).length,1,`${name} repeats its own first word`);
+  }
 });
 
 test('a reading fills in the directory entry and leaves the owner’s own link alone',()=>{
