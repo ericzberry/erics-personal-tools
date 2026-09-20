@@ -30,13 +30,6 @@ export const TASK_POLICIES = {
   'rewards.balances':{label:'Card and program page reading',level:2,outputTokens:7600,web:false,maxCost:0.03},
   'subscriptions.intake':{label:'Recurring charge reading',level:2,outputTokens:7000,web:false,maxCost:0.05},
   'subscriptions.research':{label:'Subscription alternatives',level:3,outputTokens:4000,web:true,maxCost:0.10},
-  // A broker dashboard is not a simple extraction. It states several accounts
-  // at once, prints a total over them, and puts a table of day's gains and
-  // last prices beside balances that look just like them. A level‑2 model read
-  // that page by filing every figure under the institution's name and calling
-  // a column of gains the holdings — both of which the instructions rule out
-  // in as many words. This is the ledger Eric's net worth is kept in, and the
-  // reasoning model that follows those rules costs a tenth of a cent more.
   // The budget is the list of accounts, not a figure or two. A wealth manager
   // holding a family's joint account and its trusts prints twenty-eight of them
   // on one page, and each one comes back as a named, classified, dated reading:
@@ -44,7 +37,26 @@ export const TASK_POLICIES = {
   // mid-account and the whole reading was thrown away as unreadable. A ledger
   // may not be read in part, so the ceiling is set where a page of that size
   // fits whole.
-  'finance.intake':{label:'Finance reading',level:3,outputTokens:7000,web:false,maxCost:0.03},
+  //
+  // Level 2, and back to a model that does not think first. This was raised to
+  // 3 because a level‑2 model read E*TRADE's page by filing every figure under
+  // the institution's name and calling a column of gains the holdings. Both of
+  // those are what a snapshot looks like when the page reader hands over a run
+  // of bare figures with no row around them — and it no longer does. The
+  // accounts arrive as table rows naming the account, the column and the
+  // figure together, a figure the row already stated is not repeated loose, and
+  // a change printed above its own percentage never reaches the model at all.
+  // The two mistakes that bought level 3 are the two the snapshot stopped
+  // inviting.
+  //
+  // What level 3 costs is the wait. It selects a reasoning model, which thinks
+  // before it writes and then still has twenty-eight accounts to write, and the
+  // press sat for the better part of two minutes. Reading figures off a page
+  // that has already been narrowed to figures is not work that needs a model to
+  // reason its way in. If a reading does come back wrong, Settings pins this
+  // one task to whichever model the owner wants, which is the whole point of
+  // that screen.
+  'finance.intake':{label:'Finance reading',level:2,outputTokens:7000,web:false,maxCost:0.03},
   'capture.note':{label:'Quick note reading',level:1,outputTokens:500,web:false,maxCost:0.01},
   'email.summary':{label:'Email summary',model:'gpt-5.6-terra',level:3,outputTokens:700,web:false,maxCost:0.04},
   // A reply goes out over Eric's name in Eric's voice, so it uses the model he

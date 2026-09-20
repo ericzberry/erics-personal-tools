@@ -2375,7 +2375,35 @@ five rates and three benefits under one reading, each saying where it lands,
 including the one with no saved card to land on. Archive:
 `release/erics-sidebar-0.6.197.zip`.
 
-## A card does not make a debt of everything beside it (0.6.198 / mobile 0.1.148)
+## A card's own page is not a page of figures (0.6.199 / mobile 0.1.149)
+
+**Rewards read an issuer's page the way it reads a broker's.** One snapshot,
+narrowed to the lines that carry a figure and the lines that name one — which is
+right for a bank, where everything else is furniture, and wrong for the page a
+card states itself on. Amex prints `5X Membership Rewards® Points` over the
+thing it applies to, `Centurion® Lounge Access` with nothing to count at all,
+and `Enroll` beside every benefit waiting to be turned on. None of it carries a
+figure, so none of it reached the reading: what came back was the credits with
+trackers and a single rate that happened to sit over a dollar amount.
+
+**An issuer's page is now read whole.** The legal furniture goes and nothing
+else does, so the rates arrive with the lines that qualify them, the base rate
+at the end of the run arrives, `Benefits you can enroll in` arrives as a section
+with its benefits under it, and `Enroll` and `Enrolled` arrive beside them —
+which is how the reading now tells a benefit still to be activated from one
+already on. An airline's or a hotel's page is still a balance page and is still
+read for its figures; the site's own kind decides, and nothing else about the
+errand changed.
+
+New coverage: a card's page read whole against a synthetic Amex benefits page —
+every rate including the one with no figure near it, the enrollable benefits
+that count nothing, the words that say which are on, the tracker still in order
+and the legal furniture still gone — and the same page read for figures, losing
+exactly those, with a missing option still meaning the balance reading.
+Validation: 560 extension, 33 mobile and 134 API tests pass from an archive of
+HEAD. Archive: `release/erics-sidebar-0.6.199.zip`.
+
+## A card does not make a debt of everything beside it (0.6.200 / mobile 0.1.150)
 
 The Chase overview was offered for saving as a single figure: **-$18,537,244**,
 filed as credit. That is $16.4M of assets and a $15,834 card balance added
