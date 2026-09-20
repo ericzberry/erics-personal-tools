@@ -70,18 +70,28 @@ test('a figure zeroed out by a correction is no longer a holding',async()=>{
   tool.stop();
 });
 
-test('the ledger states its date once, and a line repeats it only when it is behind',async()=>{
+test('the ledger states its date once, and a class line never repeats it',async()=>{
   const document=setup();
   const tool=ledger(document,AMENDED);
   await settle(()=>document.getElementById('finance-list').textContent.includes('Liquid securities'));
   // Once, at the top, beside the totals it qualifies.
   assert.match(document.getElementById('finance-totals').textContent,/As of2026-09-20/);
-  // Only the cash figure is behind the rest, so only it says so. (A delete
-  // confirmation names its figure's date too, but it is out of sight until the
-  // row raises it, so the visible qualifications are what is counted.)
+  // The cash figure is a day behind the securities beside it and says nothing
+  // about it: a class line is a figure, not a document. (A delete confirmation
+  // names its figure's date, but it is out of sight until the row raises it.)
   const dates=[...document.querySelectorAll('#finance-list .record-meta')].map(node=>node.textContent);
-  assert.deepEqual(dates,['2026-09-19']);
-  assert.match(document.getElementById('finance-list').textContent,/Cash2026-09-19\$0\.54/);
+  assert.deepEqual(dates,[]);
+  assert.match(document.getElementById('finance-list').textContent,/Cash\$0\.54/);
+  tool.stop();
+});
+
+test('a portfolio behind the rest of the ledger still says its own date',async()=>{
+  const document=setup();
+  const tool=ledger(document,[portfolio(1,'Eric and Ariana Berry Estate',1),portfolio(2,'Eric Berry',2),
+    mark(1,10,'2026-09-20',1668402.54),mark(2,10,'2026-09-18',122666.62)]);
+  await settle(()=>document.getElementById('finance-list').textContent.includes('Liquid securities'));
+  const said=[...document.querySelectorAll('#finance-list .record-group > .footnote')].map(node=>node.textContent);
+  assert.deepEqual(said,['as of 2026-09-18'],'the date cascades to the group that is behind, and stops there');
   tool.stop();
 });
 

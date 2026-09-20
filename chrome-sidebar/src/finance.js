@@ -577,9 +577,15 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // figure means, and the two extra words were what pushed it into breaking
     // at its own hyphens in a narrow panel. Under a heading it has a line to
     // itself and reads as the fragment it is.
+    //
+    // A marked balance is exempt: a class line is a figure, not a document,
+    // and cash a day behind the securities beside it was carrying a date that
+    // meant nothing to read. Its date is still on the form that edits it and
+    // in the history behind it. A position and a property keep theirs, because
+    // there the date is the statement's or the valuation's own.
     const dated=(asOf,against)=>asOf&&asOf!==against?asOf:'';
     const since=(asOf,against)=>dated(asOf,against)?`as of ${asOf}`:'';
-    const figure=(portfolio,row,against)=>{
+    const figure=(portfolio,row)=>{
       const mark=row.current;
       const confirm=Stack([Note(`Delete the ${row.label} figure for ${portfolio.name} as of ${mark.asOf}?`),ActionGroup([
         action('Delete from all devices',async()=>{if(await remove(mark))onChanged();},'danger'),
@@ -601,7 +607,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       // mortgage reads like another asset, and only the portfolio's own figure
       // further down would say otherwise — so the word rides beside it as well,
       // because a minus sign is a shape and some readers will not see it.
-      const meta=[dated(mark.asOf,against),row.side==='liability'?'liability':'',
+      const meta=[row.side==='liability'?'liability':'',
         mark.pending?(mark.conflict?'Conflict':mark.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
       return RecordRow({title:row.label,figure:money(signed(mark),portfolio.currency),meta,
         actions,extra:[past,...decide,confirm]});
@@ -684,7 +690,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         meta:[since(asOf,newest),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
         actions:[rowAction(EDIT_GLYPH,`Rename ${portfolio.name}`,()=>fillPortfolio(portfolio)),
           rowAction(DELETE_GLYPH,`Delete ${portfolio.name}`,()=>{confirm.hidden=false;},true)],
-        rows:[...rows.map(row=>figure(portfolio,row,asOf)),
+        rows:[...rows.map(row=>figure(portfolio,row)),
           ...group.positions.map(position=>investment(portfolio,position,asOf)),
           ...group.properties.map(entry=>estate(portfolio,entry,asOf)),confirm]
       });

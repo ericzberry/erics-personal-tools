@@ -1861,7 +1861,7 @@ totals were reviewed against a synthetic reading of the Amex page at 420px and
 280px with no horizontal overflow, and the button's restored border measured in
 the rendered sidebar rather than judged by eye.
 
-## A class line is a figure, not a document (0.6.166 / mobile 0.1.119)
+## A class line is a figure, not a document (0.6.167 / mobile 0.1.120)
 
 In Net worth, a class inside a portfolio repeated its own date whenever it was
 behind the rest of that portfolio. Cash read a day before the securities beside
@@ -1882,4 +1882,4 @@ ledger was reviewed at 380px and 280px in the local fixture — the half-filled
 estate from the owner's screenshot, and a settled ledger with a stale custodial
 account, a fund position and two properties — with no horizontal page overflow.
 Installed Chrome and iPhone behavior were not directly tested.
-Archive: `release/erics-sidebar-0.6.166.zip`.
+Archive: `release/erics-sidebar-0.6.167.zip`.
