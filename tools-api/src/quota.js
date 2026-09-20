@@ -1,4 +1,4 @@
-import {planFor, bandFor, usageAlert} from '../../chrome-sidebar/src/quota-data.js';
+import {against, bandFor, usageAlert} from '../../chrome-sidebar/src/quota-data.js';
 import {notifyDevices} from './push.js';
 
 // How much of Cloudflare's storage this account has used, and the one
@@ -50,12 +50,12 @@ async function cloudflare(env, path, fetcher) {
   return body.result;
 }
 
-// One reading: every D1 database, largest first, against both of the plan's
-// limits. `fraction` is the worse of the two, because either one reached is the
-// same problem.
+// One reading: every D1 database, largest first. Sizes and a timestamp and
+// nothing else — what the plan allows is applied by `against` when the reading
+// is served, so a plan change is reflected at once instead of at the next
+// sweep.
 export async function measureUsage(env, {fetcher = fetch, now = new Date()} = {}) {
   if (!configured(env)) unconfigured();
-  const plan = planFor(env.CLOUDFLARE_PLAN);
   const listed = (await cloudflare(env, '/d1/database?per_page=100', fetcher) || []).slice(0, MAX_DATABASES);
   const databases = [];
   for (const entry of listed) {
@@ -71,14 +71,8 @@ export async function measureUsage(env, {fetcher = fetch, now = new Date()} = {}
     });
   }
   databases.sort((a, b) => b.bytes - a.bytes);
-  const totalBytes = databases.reduce((sum, database) => sum + database.bytes, 0);
-  const perDatabase = (databases[0]?.bytes || 0) / plan.database;
-  const perAccount = totalBytes / plan.account;
-  return {
-    plan: plan.label, checkedAt: now.toISOString(), databases, totalBytes,
-    databaseLimitBytes: plan.database, accountLimitBytes: plan.account, databaseLimit: plan.databases,
-    fraction: Math.max(perDatabase, perAccount), worst: perDatabase >= perAccount ? 'database' : 'account'
-  };
+  return {checkedAt: now.toISOString(), databases,
+    totalBytes: databases.reduce((sum, database) => sum + database.bytes, 0)};
 }
 
 const load = async env => {
@@ -109,8 +103,8 @@ export async function readUsage(env, {fetcher = fetch, now = new Date(), refresh
 
 export async function storageUsage(request, env, json) {
   if (request.method !== 'GET') return json({error: 'Method not allowed.'}, 405);
-  const {notified, ...usage} = await readUsage(env, {refresh: new URL(request.url).searchParams.get('refresh') === '1'});
-  return json(usage);
+  const {notified, ...measurement} = await readUsage(env, {refresh: new URL(request.url).searchParams.get('refresh') === '1'});
+  return json(against(measurement, env.CLOUDFLARE_PLAN));
 }
 
 // Hourly, on the trigger that already exists. It sends nothing until a band is
@@ -120,17 +114,18 @@ export async function storageUsage(request, env, json) {
 // again is reported both times.
 export async function sweepStorage(env, {fetcher = fetch, now = new Date(), log = () => {}, notify = notifyDevices} = {}) {
   if (!configured(env)) { log('storage reporting is not configured'); return {checked: false}; }
-  let usage;
-  try { usage = await readUsage(env, {fetcher, now, refresh: true}); }
+  let measurement;
+  try { measurement = await readUsage(env, {fetcher, now, refresh: true}); }
   catch (error) { log(`storage read failed: ${error?.message || error}`); return {checked: false}; }
-  if (usage.stale) { log(`storage read failed: ${usage.error}`); return {checked: false}; }
+  if (measurement.stale) { log(`storage read failed: ${measurement.error}`); return {checked: false}; }
+  const usage = against(measurement, env.CLOUDFLARE_PLAN);
   const band = bandFor(usage.fraction);
-  if (band === null || (usage.notified != null && band <= usage.notified)) {
-    if (band !== usage.notified) await save(env, {...usage, notified: band});
+  if (band === null || (measurement.notified != null && band <= measurement.notified)) {
+    if (band !== measurement.notified) await save(env, {...measurement, notified: band});
     return {checked: true, notified: false, band};
   }
   try { await notify(env, {...usageAlert(usage), tag: 'storage'}, {fetcher, log}); }
   catch (error) { log(`storage notification failed: ${error?.message || error}`); return {checked: true, notified: false, band}; }
-  await save(env, {...usage, notified: band});
+  await save(env, {...measurement, notified: band});
   return {checked: true, notified: true, band};
 }

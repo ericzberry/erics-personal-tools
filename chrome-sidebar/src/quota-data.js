@@ -29,6 +29,25 @@ export function formatBytes(bytes) {
   return `${Math.round(bytes)} bytes`;
 }
 
+// A measurement is what Cloudflare said: sizes, and when. What those sizes mean
+// is a separate question, answered by the plan in force at the moment of
+// asking — so the limits are applied here, on the way out, and never stored
+// beside the reading. Freezing them means a plan changed today is still
+// measured against yesterday's limit until the next reading replaces it, which
+// is exactly the hour someone would be looking.
+export function against(measurement, planName) {
+  const plan = planFor(planName);
+  const databases = measurement?.databases ?? [];
+  const totalBytes = Number(measurement?.totalBytes) || 0;
+  const perDatabase = (databases[0]?.bytes || 0) / plan.database;
+  const perAccount = totalBytes / plan.account;
+  return {
+    ...measurement, plan: plan.label,
+    databaseLimitBytes: plan.database, accountLimitBytes: plan.account, databaseLimit: plan.databases,
+    fraction: Math.max(perDatabase, perAccount), worst: perDatabase >= perAccount ? 'database' : 'account'
+  };
+}
+
 // The one line the figure is worth, and the tone it earns. Below the first band
 // there is nothing to decide, so it takes no tone at all — a bar the owner
 // glanced at is not news.

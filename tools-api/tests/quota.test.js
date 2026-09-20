@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import worker from '../src/index.js';
 import {measureUsage, readUsage, sweepStorage, USAGE_ID} from '../src/quota.js';
+import {against} from '../../chrome-sidebar/src/quota-data.js';
 
 const MB = 1024 * 1024, GB = 1024 * MB;
 const token = 'test-token-with-at-least-32-characters';
@@ -43,50 +44,62 @@ const db = (name, file_size, num_tables = 24) => ({uuid: `${name}-uuid`, name, f
 const call = (env, url, method = 'GET', auth = token) => worker.fetch(
   new Request(`https://example.com${url}`, {method, headers: auth ? {Authorization: `Bearer ${auth}`} : {}}), env);
 
-test('a reading names every database, sorts by size, and measures the worse of the two limits', async () => {
+test('a reading is sizes and a timestamp, largest first, and no interpretation', async () => {
   const calls = [];
-  const usage = await measureUsage(environment(), {fetcher: cloudflare([db('small', 1024), db('erics-personal-tools', 310000)], {calls}), now: new Date('2026-09-20T12:00:00Z')});
-  assert.deepEqual(usage.databases.map(database => database.name), ['erics-personal-tools', 'small']);
-  assert.equal(usage.totalBytes, 311024);
-  assert.equal(usage.databaseLimitBytes, 500 * MB);
-  assert.equal(usage.accountLimitBytes, 5 * GB);
-  assert.equal(usage.plan, 'Free');
-  assert.equal(usage.worst, 'database');
-  assert.equal(usage.checkedAt, '2026-09-20T12:00:00.000Z');
+  const measurement = await measureUsage(environment(), {fetcher: cloudflare([db('small', 1024), db('erics-personal-tools', 310000)], {calls}), now: new Date('2026-09-20T12:00:00Z')});
+  assert.deepEqual(measurement.databases.map(database => database.name), ['erics-personal-tools', 'small']);
+  assert.equal(measurement.totalBytes, 311024);
+  assert.equal(measurement.checkedAt, '2026-09-20T12:00:00.000Z');
+  // What the plan allows is applied on the way out, so none of it is in here.
+  assert.deepEqual(Object.keys(measurement).sort(), ['checkedAt', 'databases', 'totalBytes']);
   // One listing, then one call per database it named.
   assert.equal(calls.length, 3);
   for (const made of calls) assert.equal(made.auth, 'Bearer cf-read-token');
 });
 
+// The limits are not stored beside the reading, so changing plans is reflected
+// the moment the change is made rather than after the next hourly sweep — which
+// is the hour someone who just changed plans would be looking at this.
+test('a plan change is answered by the reading already in hand', async () => {
+  const env = environment();
+  globalThis.fetch = cloudflare([db('erics-personal-tools', 400 * MB)]);
+  const free = await (await call(env, '/v1/storage')).json();
+  assert.equal(free.plan, 'Free');
+  assert.equal(free.databaseLimitBytes, 500 * MB);
+  assert.equal(free.fraction, 0.8);
+  // Nothing is re-read: the same saved reading, measured against the new plan.
+  globalThis.fetch = async () => { throw Error('Cloudflare must not be asked again'); };
+  const paid = await (await call({...env, CLOUDFLARE_PLAN: 'paid'}, '/v1/storage')).json();
+  assert.equal(paid.plan, 'Paid');
+  assert.equal(paid.databaseLimitBytes, 10 * GB);
+  assert.equal(paid.checkedAt, free.checkedAt);
+  assert.equal(paid.totalBytes, free.totalBytes);
+  assert.ok(paid.fraction < 0.05, `expected room on the paid plan, got ${paid.fraction}`);
+});
+
 // The listing says every database has no tables. Believing it put
 // "erics-personal-tools · 0 tables" on the screen for one deployment.
 test('the table count in the listing is never believed', async () => {
-  const usage = await measureUsage(environment(), {fetcher: cloudflare([db('erics-personal-tools', 311296, 25)])});
-  assert.deepEqual(usage.databases, [{name: 'erics-personal-tools', bytes: 311296, tables: 25}]);
+  const measurement = await measureUsage(environment(), {fetcher: cloudflare([db('erics-personal-tools', 311296, 25)])});
+  assert.deepEqual(measurement.databases, [{name: 'erics-personal-tools', bytes: 311296, tables: 25}]);
 });
 
 test('nothing beyond the cap is asked about at all', async () => {
   const calls = [];
   const many = Array.from({length: 40}, (_, index) => db(`d${index}`, 1024));
-  const usage = await measureUsage(environment(), {fetcher: cloudflare(many, {calls})});
-  assert.equal(usage.databases.length, 25);
+  const measurement = await measureUsage(environment(), {fetcher: cloudflare(many, {calls})});
+  assert.equal(measurement.databases.length, 25);
   assert.equal(calls.length, 26);
 });
 
 // On the free plan the account limit is ten times the per-database one, so it
 // only becomes the nearer of the two once there are more than ten databases.
 test('the account limit takes over when it is the nearer one', async () => {
-  const usage = await measureUsage(environment(), {fetcher: cloudflare(Array.from({length: 12}, (_, index) => db(`d${index}`, 380 * MB)))});
+  const measurement = await measureUsage(environment(), {fetcher: cloudflare(Array.from({length: 12}, (_, index) => db(`d${index}`, 380 * MB)))});
+  const usage = against(measurement, 'free');
   assert.equal(usage.worst, 'account');
   assert.equal(usage.totalBytes, 4560 * MB);
   assert.ok(usage.fraction > 380 * MB / (500 * MB));
-});
-
-test('the paid plan changes the limits without changing anything else', async () => {
-  const usage = await measureUsage(environment({CLOUDFLARE_PLAN: 'paid'}), {fetcher: cloudflare([db('a', 600 * MB)])});
-  assert.equal(usage.plan, 'Paid');
-  assert.equal(usage.databaseLimitBytes, 10 * GB);
-  assert.ok(usage.fraction < 0.1);
 });
 
 test('an unconfigured Worker says which secret is missing instead of guessing a size', async () => {

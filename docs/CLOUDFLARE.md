@@ -132,7 +132,11 @@ hourly sweep logs that it is unconfigured. Neither is a failure of anything
 else, and no size is ever guessed from the rows the Worker can see.
 
 Apply `storage-usage-schema.sql`. Its one `storage_usage` row holds the last
-reading and the threshold band it was last announced at; it is account
+reading and the threshold band it was last announced at. The reading is sizes
+and a timestamp only: what the plan allows is applied when the row is served,
+never stored beside it, so changing `CLOUDFLARE_PLAN` is answered by the reading
+already in hand rather than at the next sweep — which is the hour someone who
+just changed plans would be looking. The row is account
 telemetry, so it is not encrypted, no device queues edits to it, and it may be
 deleted at the cost of one repeated notification.
 
