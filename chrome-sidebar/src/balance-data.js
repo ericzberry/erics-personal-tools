@@ -182,6 +182,19 @@ export function balanceRecord(row,match=null,now=new Date().toISOString()){
 // no change to what a reward is allowed to be. It says plainly that there is no
 // figure yet rather than showing a zero that would be a lie.
 export const UNREAD_BALANCE='Not read yet';
+// What a program is actually called, wherever one is named: the issuer's name
+// joins the program's only where the program's own name does not already carry
+// the brand. "IHG One Rewards" is already an IHG name and "IHG IHG One
+// Rewards" is nobody's, while "Bonvoy" needs its Marriott. The first word is
+// what decides it, because that is the word doing the naming — which keeps
+// "Choice Privileges" from becoming "Choice Hotels Choice Privileges".
+const firstWord=text=>String(text||'').trim().toLowerCase().split(/\s+/)[0]||'';
+export function programName(source,name){
+  const issuer=String(source||'').trim(),program=String(name||'').trim();
+  if(!issuer||!program)return program||issuer;
+  return program.toLowerCase().includes(issuer.toLowerCase())||firstWord(program)===firstWord(issuer)
+    ?program:`${issuer} ${program}`;
+}
 const dirKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 export function directoryBalances(programs=[],entries=[],now=new Date().toISOString()){
   const held=entries.filter(entry=>entry?.kind==='balance'&&!entry.deleting);

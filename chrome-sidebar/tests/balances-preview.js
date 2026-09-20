@@ -56,10 +56,16 @@ const amexFound=[
   {program:'Reward Dollars',source:'American Express',amount:125.49,unit:'dollars',confidence:'high',notes:'Earned on Blue Cash Preferred.'}
 ];
 
+// A program whose own name already carries its issuer: the panel that reads it
+// says "IHG One Rewards" once, not "IHG IHG One Rewards".
+const ihgPage=async()=>({text:'IHG One Rewards\nPoints balance 28,550',host:'ihg.com',title:'IHG One Rewards',trimmed:0,tables:1});
+const ihgFound=[{program:'IHG One Rewards',source:'IHG',amount:28550,unit:'points',confidence:'high',notes:''}];
+
 const root=document.getElementById('balance-states');
 for(const [label,url,remote,read] of [
   ['Beside a program page · nothing read yet','https://www.united.com/en/us/myunited',reading(found),page],
   ['Beside a program page · read, nothing saved yet','https://www.united.com/en/us/myunited',reading(found),page],
+  ['Beside a program named after its own issuer · read, nothing saved yet','https://www.ihg.com/onerewards/content/us/en/account/dashboard',reading(ihgFound),ihgPage],
   ['Beside a program page · the page shows no balance','https://www.marriott.com/loyalty/myAccount.mi',reading([]),page],
   ['Beside an issuer running two currencies · nothing read yet','https://global.americanexpress.com/rewards/summary',reading(amexFound),amexPage],
   ['Beside an issuer running two currencies · read, nothing saved yet','https://global.americanexpress.com/rewards/summary',reading(amexFound),amexPage],
