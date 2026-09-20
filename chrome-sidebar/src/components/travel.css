@@ -220,7 +220,7 @@
 .travel-wallet .connection-surface>details:has(>summary[hidden]){padding:0}
 .travel-wallet .connection-surface>details:has(>summary[hidden])>.connection-content{margin-top:0}
 
-.rewards-wallet{padding:0;gap:12px;max-width:none;}.rewards-wallet .record-row{padding:8px 0;border-bottom:1px solid var(--wallet-line);}.rewards-wallet .record-row p{margin:3px 0;}.rewards-wallet .record-row .action-group{margin-top:4px;}.rewards-wallet .form-stack{display:grid;gap:10px;}.rewards-wallet .form-field{gap:4px;}.rewards-wallet textarea{font:inherit;width:100%;min-width:0;padding:8px;border:1px solid var(--wallet-control-line);border-radius:6px;background:var(--wallet-surface);color:var(--wallet-ink);}.rewards-wallet .notice:empty,.rewards-wallet .footnote:empty{display:none;}.rewards-wallet .settings-group{gap:8px;}
+.rewards-wallet{padding:0;gap:12px;max-width:none;}.rewards-wallet .record-row{padding:4px 0;border-bottom:1px solid var(--wallet-line);}.rewards-wallet .record-row p{margin:3px 0;}.rewards-wallet .record-row>.action-group{margin-top:4px;}.rewards-wallet .form-stack{display:grid;gap:10px;}.rewards-wallet .form-field{gap:4px;}.rewards-wallet textarea{font:inherit;width:100%;min-width:0;padding:8px;border:1px solid var(--wallet-control-line);border-radius:6px;background:var(--wallet-surface);color:var(--wallet-ink);}.rewards-wallet .notice:empty,.rewards-wallet .footnote:empty{display:none;}.rewards-wallet .settings-group{gap:8px;}
 
 /* Values sealed on the device. The masked form is the resting state; a revealed
    number is monospaced and grouped so digits can be read back without
@@ -243,16 +243,16 @@
 /* A card you hold, with the benefits filed under it. The group is closed by
    default so a dozen credits stay out of the way until they are wanted. */
 .rewards-wallet .reward-group{border-top:1px solid var(--wallet-line);border-bottom:0;padding:0;}
-.rewards-wallet .reward-group>summary{position:relative;display:grid;gap:1px;padding:8px 18px 8px 0;min-height:40px;align-content:center;list-style:none;}
+.rewards-wallet .reward-group>summary{position:relative;display:grid;gap:1px;padding:5px 18px 5px 0;min-height:32px;align-content:center;list-style:none;}
 .rewards-wallet .reward-group>summary::-webkit-details-marker{display:none;}
 /* display:grid drops the native marker, so the group carries the same chevron a
    compact record row does rather than reading as an inert heading. */
 .rewards-wallet .reward-group>summary::after{content:'';position:absolute;right:4px;top:50%;width:5px;height:5px;border-right:1.5px solid var(--wallet-control-line);border-bottom:1.5px solid var(--wallet-control-line);transform:translateY(-50%) rotate(-45deg);transition:transform .15s ease;}
 .rewards-wallet .reward-group[open]>summary::after{transform:translateY(-65%) rotate(45deg);}
 @media(prefers-reduced-motion:reduce){.rewards-wallet .reward-group>summary::after{transition:none;}}
-.rewards-wallet .reward-group>summary strong{font-size:13px;font-weight:500;}
+.rewards-wallet .reward-group>summary strong{font-size:12px;font-weight:500;}
 .rewards-wallet .reward-group[open]>:not(summary){margin-top:0;}
-.rewards-wallet .reward-group .record-row{padding:8px 0 8px 12px;border-left:2px solid var(--wallet-line);}
+.rewards-wallet .reward-group .record-row{padding:4px 0 4px 12px;border-left:2px solid var(--wallet-line);}
 .rewards-wallet .reward-group>div:first-of-type .record-row{padding-left:0;border-left:0;}
 /* What research found, before any of it is saved. */
 .rewards-wallet .reward-ingest{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--wallet-line);border-radius:8px;background:var(--wallet-surface);}
@@ -263,15 +263,19 @@
    card and most of its benefits carry one, so they read as the wallet's own. */
 .rewards-wallet a{color:var(--wallet-forest);overflow-wrap:anywhere;}
 
-/* Points and miles. The totals sit at the head of the wallet, because "how
-   many miles do I have" is the question the wallet is opened with; the panel
-   above them is the reading offered beside a program's own page. */
-.rewards-wallet .reward-totals{display:grid;gap:2px;padding-bottom:8px;}
-.rewards-wallet .balance-total-row{display:flex;flex-wrap:wrap;gap:4px 16px;}
-.rewards-wallet .balance-total{display:grid;gap:1px;}
-.rewards-wallet .balance-total-value{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;}
-.rewards-wallet .balance-total-unit{color:var(--wallet-muted);font-size:11px;}
-.rewards-wallet .reward-totals .footnote{margin:0;}
+/* Points and miles. The wallet is a list of programs and what each one holds,
+   so it is read down a column of figures: the rows are set close and a step
+   smaller than the wallet's body text, and nothing is stacked above them. A
+   summed figure is not one of them — a hotel's points and an airline's miles
+   answer different questions, and one number over the pair answers neither. */
+.rewards-wallet .record-line{min-height:24px;}
+.rewards-wallet .record-name,.rewards-wallet .record-figure>strong{font-size:12px;}
+.rewards-wallet .record-meta{font-size:11px;}
+/* The glyphs a row carries set its height once they are taller than its text,
+   so in a list read for its figures they are drawn to the line rather than the
+   line to them. Only where a pointer does the aiming: a finger still gets the
+   target the touch rule gives it. */
+@media(hover:hover){.rewards-wallet .row-action{width:24px;min-height:24px;padding:4px;}}
 .rewards-wallet .balance-panel{display:flex;flex-direction:column;gap:4px;}
 .rewards-wallet .balance-panel .snapshot-heading{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px;}
 .rewards-wallet .balance-panel .snapshot-meta{color:var(--wallet-muted);font-size:11px;}

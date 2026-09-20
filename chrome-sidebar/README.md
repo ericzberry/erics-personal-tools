@@ -2109,7 +2109,7 @@ New coverage: two ARIA grids read as tables, every account travelling with its
 own number and balance, beside a summary panel of totals by kind. Validation:
 511 extension and 33 mobile tests pass.
 
-## The cards you hold are not a list to type twice (0.6.184 / mobile 0.1.134)
+## The cards you hold are not a list to type twice (0.6.191 / mobile 0.1.141)
 
 **Best card knew nothing about the cards the rest of the app had already seen.**
 The wallet holds the cards the owner has — added there by name, or named by an
@@ -2150,7 +2150,38 @@ digits kept out of the product name and shown as the card's own, one card named
 twice kept once, a near-miss family name left unlinked while the card itself
 links, and the tool mounted over a synthetic wallet — listing the card,
 researching the product name, and dropping the row once it is saved. Validation:
-529 extension, 33 mobile and 130 API tests pass from an archive of HEAD. The
+537 extension, 33 mobile and 131 API tests pass from an archive of HEAD. The
 standalone card view was reviewed against the synthetic wallet at 380px, 280px
 and 390px: populated, nothing saved yet, the comparison caveat, and the research
 that one press starts. Archive: `release/erics-sidebar-0.6.184.zip`.
+
+## A wallet of programs, not one number over them (0.6.190 / mobile 0.1.140)
+
+**Two figures sat at the head of the wallet: every mile added together, every
+point added together, each under the count of programs it covered.** Neither is
+something anybody holds. 608,082 miles is United's and Delta's in one number,
+and no seat is ever booked out of it; 160,131 points is a hotel night added to
+an airline award. The wallet is opened to see what a program holds, and the sum
+stood between the reader and the rows that answer that.
+
+**The rows are the answer.** The totals are gone, and so is the note beneath
+them that counted balances as stale or unread — a balance that has gone out of
+date is already raised by name in Next actions, which is where something to do
+about it belongs, and a program awaiting its first reading says as much in its
+own row. `balanceTotals`, `readBalance`, `formatTotal` and `unitLabel` go with
+them; a unit is still read out of a value where a reading needs one, and cash
+back is still money rather than points rounded to the dollar.
+
+**And what is left reads as a column.** The rows are set close — 4px above and
+below, the glyphs drawn to the line rather than the line to them — and a step
+smaller than the wallet's body text, so a run of programs is read down one
+column of names and one of figures. A finger still gets the target the touch
+rule gives it; only a pointer sees the smaller glyph. A wallet of six programs
+that ran 290px now runs 200px.
+
+New coverage: the tests that asserted the sums are gone with them, and cash
+back keeps its own check — `$125.49` as the wallet's own value, never 125
+points. Validation: 533 extension and 33 mobile tests pass. The synthetic
+wallet was reviewed at 380px in the standalone harness: no totals block, the
+rows at 33px each, and the two-line and metadata rows still legible. Archive:
+`release/erics-sidebar-0.6.190.zip`.

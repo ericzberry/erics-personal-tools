@@ -53,18 +53,17 @@ Benefits entered by hand work the same way; pick the card in the editor.
 
 ## Points and miles
 
-The wallet opens with what your balances come to: one figure per unit, because
-miles, points and cash back are different things and are never added together.
-Cash back a card keeps in money — Blue Cash's Reward Dollars — is a balance like
-any other and is counted as money, so it reads `$125.49 · cash back` rather than
-being rounded into points. Each line says how many programs it covers, and the
-note under them says how many balances have not been updated in a month — a
-total is only as current as its oldest figure. A balance whose value states no
-number is counted in neither line rather than read as zero.
+The wallet opens with the programs themselves: one row each, the program on the
+left and what it holds on the right, read down a single column of figures.
+Nothing is summed over them. A hotel's points, an airline's miles and the cash
+back a card keeps in money are different things, and one number over the pair
+answers no question anybody has; a balance that has gone out of date is raised
+by name in Next actions, which is where something to do about it belongs.
 
-Nothing about the record shape changed to do this. A balance is the same entry
-it always was, and the unit is read back out of it: "82,431 miles" is miles,
-and so is "82,431" under a program called MileagePlus.
+Cash back — Blue Cash's Reward Dollars — is a balance like any other and stays
+money, so it reads `$125.49` rather than being rounded into points. The unit is
+read back out of the entry itself: "82,431 miles" is miles, and so is "82,431"
+under a program called MileagePlus.
 
 ### The programs themselves
 
@@ -79,10 +78,10 @@ miss, so deleting one takes a single press and asks nothing. Everything with
 something in it still asks before it goes. The offer appears only while the
 wallet holds no program at all, because once they are in, pruning is the work.
 
-A program with no figure yet is counted in no total and is never raised in Next
-actions — it has never been read, so there is nothing about it to update. It is
-counted among the balances the totals line calls unread. Once a reading fills
-one in, the ordinary 30-day rule applies to it like any other balance.
+A program with no figure yet is never raised in Next actions — it has never
+been read, so there is nothing about it to update. Its row says as much on its
+own. Once a reading fills one in, the ordinary 30-day rule applies to it like
+any other balance.
 
 The programs are in
 [`chrome-sidebar/src/loyalty-sites.js`](../chrome-sidebar/src/loyalty-sites.js),

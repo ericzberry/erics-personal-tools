@@ -1,10 +1,10 @@
-import {RewardsView,RewardGroup,CardBenefits,BalancePanel,BalanceTotals} from './components/rewards.js';
+import {RewardsView,RewardGroup,CardBenefits,BalancePanel} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
 import {RecordRow,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl} from './program-data.js';
-import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,UNREAD_BALANCE} from './balance-data.js';
+import {parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,UNREAD_BALANCE} from './balance-data.js';
 import {parseCreditReading,matchCredits,creditRecord} from './credit-data.js';
 import {LOYALTY_PROGRAMS,loyaltySitePrograms,loyaltyProgramNamed} from './loyalty-sites.js';
 import {institutionNamed} from './account-sites.js';
@@ -421,11 +421,6 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       actions:[rowAction(EDIT_GLYPH,`Review ${e.name}`,()=>edit(e)),
         ...(siteOf(e)?[RowLink(OPEN_GLYPH,`Open the site for ${e.name}`,siteOf(e))]:[])]})));
     $('rewards-actions').closest('section').hidden=!next.length;
-    // What the owner came to the wallet to know: how many miles and how many
-    // points they hold, counted separately and never added together.
-    const totals=balanceTotals(entries.filter(e=>!e.deleting));
-    $('rewards-totals').hidden=!totals.totals.length;
-    $('rewards-totals').replaceChildren(...BalanceTotals(totals));
     for(const key of fields)$(`reward-${key}`).disabled=busy||!loaded;
     for(const key of ['number','expiry'])$(`reward-secret-${key}`).disabled=busy||!loaded||vaultBusy;
     $('reward-save').disabled=busy||!loaded;$('reward-cancel').disabled=busy;

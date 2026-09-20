@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loyaltySite,loyaltySitePrograms,loyaltyProgramNamed,LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
-import {balanceTotals,readBalance,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,BALANCE_UNITS,directoryBalances,programName,UNREAD_BALANCE} from '../src/balance-data.js';
+import {parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,BALANCE_UNITS,directoryBalances,programName,UNREAD_BALANCE} from '../src/balance-data.js';
 import {nextActions} from '../src/rewards-data.js';
 import {pageOffers} from '../src/page-offers.js';
 
@@ -51,9 +51,8 @@ test('cash back is kept as money, on a line of its own and never folded into poi
     ['Membership Rewards','points','13,674 points'],
     ['Reward Dollars','dollars','$125.49']
   ]);
-  const {totals}=balanceTotals(rows.map(row=>balanceRecord(row,null)));
-  assert.deepEqual(totals.map(total=>[total.unit,total.amount]),[['points',13674],['dollars',125.49]],
-    'money and points are counted apart');
+  assert.deepEqual(rows.map(row=>balanceRecord(row,null).value),['13,674 points','$125.49'],
+    'and it is money in the wallet too, not points rounded to the dollar');
 });
 
 test('a second currency at one issuer never lands on the first one’s entry',()=>{
@@ -66,37 +65,6 @@ test('a second currency at one issuer never lands on the first one’s entry',()
   assert.equal(rows[0].match,null,'cash back is a new balance, not an overwrite of the points one');
   assert.equal(rows[0].ambiguous,false,'and it is not ambiguous either — the page named it');
   assert.equal(rows[1].match?.id,'Membership Rewards-id','the points figure still updates the points entry');
-});
-
-test('the wallet totals miles and points separately, and never adds them together',()=>{
-  const {totals}=balanceTotals([
-    balance('MileagePlus','United Airlines','82,431 miles'),
-    balance('Mileage Plan','Alaska Airlines','12,000 miles'),
-    balance('Bonvoy','Marriott','240,000 points'),
-    {kind:'benefit',name:'Dining credit',source:'Amex',value:'$15 per month',updatedAt:new Date().toISOString()}
-  ]);
-  assert.deepEqual(totals.map(total=>[total.unit,total.amount,total.programs]),
-    [['points',240000,1],['miles',94431,2]],'largest first, one line per unit, benefits left out');
-});
-
-test('a balance with no figure in it is counted in neither total rather than as zero',()=>{
-  const summary=balanceTotals([balance('Gold','Hyatt','Globalist status'),balance('Bonvoy','Marriott','240,000 points')]);
-  assert.equal(summary.unread,1);
-  assert.deepEqual(summary.totals.map(total=>total.amount),[240000]);
-});
-
-test('an entry whose value states no unit takes it from the program name',()=>{
-  assert.deepEqual(readBalance(balance('Membership Rewards','American Express','512,000')),{amount:512000,unit:'points'});
-  assert.deepEqual(readBalance(balance('MileagePlus','United Airlines','82,431')),{amount:82431,unit:'miles'});
-  assert.equal(readBalance({kind:'card',name:'Platinum',source:'Amex',value:'5x flights'}),null);
-});
-
-test('a total says how much of it is a month old, because a total is only as current as its oldest figure',()=>{
-  const summary=balanceTotals([
-    balance('Bonvoy','Marriott','240,000 points','2020-01-01T00:00:00.000Z'),
-    balance('MileagePlus','United Airlines','1,000 miles')
-  ]);
-  assert.equal(summary.stale,1);
 });
 
 test('a reading keeps only the figures it can check',()=>{
@@ -177,14 +145,10 @@ test('the directory seeds one entry per program, and never a second time',()=>{
     'the issuer’s other currency is still offered');
 });
 
-test('a program awaiting its first reading is counted as unread, never as a total or a stale figure',()=>{
+test('a program awaiting its first reading is never raised as something to update',()=>{
   const seeded=directoryBalances(LOYALTY_PROGRAMS,[]);
-  const totals=balanceTotals(seeded);
-  assert.equal(totals.totals.length,0,'nothing with no figure lands in a total');
-  assert.equal(totals.unread,LOYALTY_PROGRAMS.length);
-  assert.equal(totals.stale,0);
-  // And it never becomes a Next action, however long it sits there: a directory
-  // of programs would otherwise arrive as a list of nags a month after it was added.
+  // However long it sits there: a directory of programs would otherwise arrive
+  // as a list of nags a month after it was added.
   const old=seeded.map(entry=>({...entry,updatedAt:new Date('2020-01-01').toISOString()}));
   assert.equal(nextActions(old,new Date()).length,0);
   // A balance that does state a figure is still raised once it goes out of date.

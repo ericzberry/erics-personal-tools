@@ -1,23 +1,23 @@
-// Points and miles: the shape one balance is stored in, what a reading of an
-// account page may turn into, and how the wallet's balances add up.
+// Points and miles: the shape one balance is stored in, and what a reading of
+// an account page may turn into.
 //
 // A balance is an ordinary wallet entry — kind `balance`, with the program as
 // its name and the airline, hotel or issuer as its source — so nothing here
 // introduces a second record shape, and every balance saved by hand before
 // this existed counts the same as one that was read off a page.
 //
-// The unit is the part that matters for a total: miles and points are not the
-// same thing and are never added together. It is not a stored field. It is
-// read back out of the entry's own value, which is what keeps older entries
-// counting and leaves the record shape alone.
+// The unit is not a stored field. It is read back out of the entry's own
+// value, which is what keeps older entries readable and leaves the record
+// shape alone. Miles, points and cash back are different things: a figure
+// keeps the unit it was read in and is never restated in another.
 import {validateReward} from './rewards-data.js';
 
-// The units a total is kept in. Anything else a program calls its currency is
-// counted under the closest of these, because a wallet that answered "how many
-// points do I have" in nine currencies would not be answering.
+// The units a balance is kept in. Anything else a program calls its currency
+// is read as the closest of these, because a wallet that named nine
+// currencies would be nine vocabularies to learn rather than one.
 // `dollars` is cash back a card states in money — Blue Cash's Reward Dollars —
-// which is a reward balance like any other and is still not points: it is
-// counted on its own line and never added to one.
+// which is a reward balance like any other and is still not points: it stays
+// money wherever it is shown.
 export const BALANCE_UNITS=['miles','points','Avios','dollars'];
 export const BALANCE_LIMIT=25;
 // Loose on purpose: the unit is as often inside the program's own name —
@@ -25,10 +25,6 @@ export const BALANCE_LIMIT=25;
 // asked last, so "125,000 points ($1,250 value)" is points, and only a figure
 // that names no other currency is read as cash.
 const UNIT_PATTERNS=[[/avios/i,'Avios'],[/mile/i,'miles'],[/point/i,'points'],[/\$|dollar/i,'dollars']];
-// What a unit is called where a total names it. Only money needs one: "points"
-// and "miles" already read as the thing they count.
-const UNIT_LABELS={dollars:'cash back'};
-export const unitLabel=unit=>UNIT_LABELS[unit]||unit;
 
 export const balanceUnit=text=>UNIT_PATTERNS.find(([pattern])=>pattern.test(String(text||'')))?.[1]||'';
 // One balance as the wallet's value field holds it: the figure, then the unit —
@@ -37,47 +33,6 @@ export const balanceUnit=text=>UNIT_PATTERNS.find(([pattern])=>pattern.test(Stri
 export const formatBalance=(amount,unit)=>unit==='dollars'
   ?amount.toLocaleString('en-US',{style:'currency',currency:'USD'})
   :`${Math.round(amount).toLocaleString('en-US')} ${unit||'points'}`;
-// One line of a total, said the way its unit is said.
-export const formatTotal=(amount,unit)=>unit==='dollars'
-  ?amount.toLocaleString('en-US',{style:'currency',currency:'USD'})
-  :Math.round(amount).toLocaleString('en-US');
-
-// The figure and unit inside a stored entry. A balance whose value names no
-// number — "Gold status", "Member offers" — has no figure to add up and is
-// left out of every total rather than counted as zero.
-export function readBalance(entry){
-  if(!entry||entry.kind!=='balance')return null;
-  const value=String(entry.value||'');
-  const [,digits]=/(\d[\d,.\s]*)/.exec(value)||[];
-  if(!digits)return null;
-  const amount=Number(digits.replace(/[,\s]/g,'').replace(/\.$/,''));
-  if(!Number.isFinite(amount)||amount<0)return null;
-  // The unit is usually in the value beside the figure; when it is not, the
-  // program's own name carries it — "United MileagePlus" is miles.
-  const unit=balanceUnit(value)||balanceUnit(`${entry.name} ${entry.source}`)||'points';
-  return {amount,unit};
-}
-
-// What the owner asked for: the total number of miles and points they hold,
-// one line per unit, largest first. `stale` counts the balances that have not
-// been updated in a month, because a total is only as current as its oldest
-// figure and saying so is cheaper than being wrong quietly.
-export function balanceTotals(entries=[],{now=new Date(),staleDays=30}={}){
-  const cutoff=now.getTime()-staleDays*86400000;
-  const units=new Map();
-  let stale=0,unread=0;
-  for(const entry of entries){
-    if(entry?.kind!=='balance'||entry.deleting)continue;
-    const figure=readBalance(entry);
-    if(!figure){unread++;continue;}
-    const total=units.get(figure.unit)||{unit:figure.unit,amount:0,programs:0};
-    total.amount+=figure.amount;total.programs++;
-    units.set(figure.unit,total);
-    const at=Date.parse(entry.updatedAt);
-    if(!Number.isFinite(at)||at<cutoff)stale++;
-  }
-  return {totals:[...units.values()].sort((a,b)=>b.amount-a.amount||a.unit.localeCompare(b.unit)),stale,unread};
-}
 
 const text=(value,max)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
 const CONFIDENCE=['high','medium','low'];

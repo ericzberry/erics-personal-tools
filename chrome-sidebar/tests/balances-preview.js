@@ -1,4 +1,4 @@
-// Local synthetic fixture for the wallet's points and miles: the totals it
+// Local synthetic fixture for the wallet's points and miles: the programs it
 // opens with, and the panel offered beside a program's own page in each of its
 // states. Not copied into release builds. The controller, components and
 // styles are the real modules; only the wallet, the page and the reading of it

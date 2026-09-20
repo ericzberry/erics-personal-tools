@@ -1,6 +1,6 @@
 import * as UI from './ui.js';
 import {CADENCE_LABELS} from '../rewards-data.js';
-import {formatTotal,programName,unitLabel} from '../balance-data.js';
+import {programName} from '../balance-data.js';
 const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label,Tabs}=UI;
 const CADENCE_OPTIONS=[{text:'Does not reset',value:''},...Object.entries(CADENCE_LABELS).map(([value,text])=>({text,value}))];
 export function RewardsView(){
@@ -17,7 +17,6 @@ export function RewardsView(){
       {key:'wallet',label:'Wallet',content:[
         UI.SettingsGroup({title:'Next actions',level:2,children:[Stack([],{id:'rewards-actions'})]}),
         UI.SettingsGroup({actionsId:'wallet-actions',children:[
-          Stack([],{id:'rewards-totals',className:'reward-totals',hidden:true}),
           UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
           Stack([],{id:'rewards-list'})]}),
         UI.SettingsGroup({title:'Protected values',level:2,children:[
@@ -107,20 +106,6 @@ export function CardBenefits(result,{onSave,onDiscard}){
     ...(card.url?[Link('Issuer page used',card.url)]:[]),
     ActionGroup([save,discard],{compact:true})
   ],{className:'reward-ingest'})];
-}
-
-// What the whole wallet comes to, one line per unit: miles, points and the
-// cash back a card keeps in money are different things and are never added
-// together. A balance whose value states no figure is counted in neither, and
-// says so rather than being read as zero.
-export function BalanceTotals({totals=[],stale=0,unread=0}={}){
-  if(!totals.length)return [];
-  return [Stack(totals.map(total=>Stack([
-    Strong(formatTotal(total.amount,total.unit),{className:'balance-total-value'}),
-    Label(`${unitLabel(total.unit)} · ${total.programs} program${total.programs===1?'':'s'}`,{className:'balance-total-unit'})
-  ],{className:'balance-total'})),{className:'balance-total-row'}),
-    ...(stale||unread?[Note([stale?`${stale} balance${stale===1?'':'s'} not updated in a month`:'',
-      unread?`${unread} without a figure to count`:''].filter(Boolean).join(' · '))]:[])];
 }
 
 // Offered when the tab beside the panel is a loyalty program's own site.
