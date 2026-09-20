@@ -73,20 +73,20 @@ calendar first, the owner's own next — because a subscription to every nationa
 holiday is enough to push the one that matters past the cap. A sweep that runs
 out of budget says so instead of reporting a short answer as a complete one.
 
-**The year is the only judgement, and it turns on who wrote the event.** Google's
-own contact birthdays carry `eventType: "birthday"` and start on the date of
-birth, so that year is a year somebody was born in. An event made by hand does
-not: its series starts the day it was created, so "every October 3rd from 2024"
-says the event is two years old, not the person. Only Google's own are trusted
-with a year; everything else keeps the day and gets no `since`, which is the
-rule above applied to an import — a birthday with no year has no age rather
-than an invented one.
+**An import never brings an age.** A calendar knows the day and nothing else
+worth having. A yearly event made by hand starts the year somebody got round to
+making it, so "every October 3rd from 2024" says the event is two years old and
+says nothing about the person; even Google's own contact birthdays carry a year
+only when the contact happens to have one. So `since` is left empty and the
+record simply has no age, which is what a birthday typed in without a year
+already does. A year on an imported record can therefore only have been put
+there by somebody who knew it — which is why nothing in the sweep ever writes
+that field.
 
-This was got wrong once, and the first real sweep gave forty-five people an age
-counted from the day their reminder was created. *Look again from the start* is
-the repair: a sweep that starts over brings `since` back into line with what the
-calendar says, and touches nothing else on the record, because a name tidied up
-or a note added since the import is the owner's and not the calendar's.
+This was got wrong once. The first real sweep read every entry's creation year
+as a birth year and gave forty-five people an age counted from the day their
+reminder was written down; those ages were cleared and the rule replaced with
+this one.
 
 **A title that names nobody** — one that is nothing but the word birthday — is
 still saved, because the day is real, but the sweep reports it so somebody can

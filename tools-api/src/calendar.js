@@ -20,7 +20,7 @@
 //     calendar also holds is recognized and left exactly as it is.
 import {encryptSettings,decryptSettings} from './ai-settings.js';
 import {accessToken,storedAccount,noteCalendarRefused,forgetAccessToken,CALENDAR_SCOPE} from './drive.js';
-import {calendarBirthday,sameBirthday,birthdayName,normalizeReminder,localDate,CALENDAR_SOURCE} from '../../chrome-sidebar/src/reminder-data.js';
+import {calendarBirthday,sameBirthday,birthdayName,localDate,CALENDAR_SOURCE} from '../../chrome-sidebar/src/reminder-data.js';
 
 const fail=(status,message)=>{throw {status,message};};
 const now=()=>new Date().toISOString();
@@ -158,19 +158,6 @@ const reminderRows=async env=>{
   const {results}=await env.DB.prepare('SELECT id, value FROM reminder_records').all();
   return Promise.all(results.map(async row=>({...await decryptSettings(row.value,`reminders:${row.id}`,env),id:row.id})));
 };
-// The age, brought back into line with what the calendar actually says.
-//
-// Only `since`, and only on a sweep that starts over. Everything else on the
-// record may have been changed by hand since it was written — a name tidied up,
-// a note added, a day corrected — and a routine monthly sweep that overwrote
-// any of that would make editing an imported birthday pointless. The year is
-// the one field the calendar owns outright, and the one an earlier reading of
-// it got wrong.
-async function correctSince(env,record,since){
-  const value=normalizeReminder({...record,since});
-  await env.DB.prepare('UPDATE reminder_records SET value = ?, revision = ?, updated_at = ? WHERE id = ?')
-    .bind(await encryptSettings(value,`reminders:${record.id}`,env),crypto.randomUUID(),now(),record.id).run();
-}
 async function addReminder(env,record){
   const id=crypto.randomUUID();
   await env.DB.prepare('INSERT INTO reminder_records (id, value, revision, updated_at) VALUES (?, ?, ?, ?)')
@@ -191,7 +178,7 @@ export async function scanBirthdays(env,{request,fetcher=fetch,now:when=new Date
   const spend=budget();
   const list=await calendars(env,request,fetcher,spend);
   const records=await reminderRows(env);
-  const added=[],matched=[],saved=[],corrected=[],flagged=[];
+  const added=[],matched=[],saved=[],flagged=[];
   let scanned=0,short=spend.exhausted;
   for(const calendar of list){
     const result=await calendarBirthdays(env,request,fetcher,spend,calendar);
@@ -206,14 +193,11 @@ export async function scanBirthdays(env,{request,fetcher=fetch,now:when=new Date
       if(!candidate)continue;
       handled.add(event.id);
       const already=records.find(record=>record.source===CALENDAR_SOURCE&&record.sourceId===event.id);
-      if(already){
-        if(restart&&(already.since||'')!==candidate.since){
-          await correctSince(env,already,candidate.since);
-          already.since=candidate.since;
-          corrected.push(already.title);
-        }else saved.push(already.title);
-        continue;
-      }
+      // A record this app already wrote is never rewritten. Everything on it
+      // may have been changed since — a name tidied up, a note added, an age
+      // supplied by somebody who actually knew it — and none of that is the
+      // calendar's to take back.
+      if(already){saved.push(already.title);continue;}
       const byHand=records.find(record=>sameBirthday(record,candidate));
       if(byHand){matched.push(byHand.title);continue;}
       if(added.length>=MAX_ADDED){short=true;handled.delete(event.id);continue;}
@@ -227,16 +211,16 @@ export async function scanBirthdays(env,{request,fetcher=fetch,now:when=new Date
     if(spend.exhausted){short=true;break;}
   }
   const scan={ranAt:now(),ranOn:today,added:added.length,matched:matched.length,saved:saved.length,
-    corrected:corrected.length,flagged,scanned,calendars:list.length,short,
+    flagged,scanned,calendars:list.length,short,
     handled:[...handled].slice(-MAX_HANDLED)};
   await storeScan(env,scan);
-  return {...report(scan),addedTitles:added.slice(0,20),correctedTitles:corrected.slice(0,20)};
+  return {...report(scan),addedTitles:added.slice(0,20)};
 }
 
 // What the app is told. The remembered event ids stay here: they are this
 // module's bookkeeping and say nothing a person needs.
 const report=scan=>scan?{ranAt:scan.ranAt,ranOn:scan.ranOn,added:scan.added,matched:scan.matched,
-  saved:scan.saved,corrected:scan.corrected||0,flagged:scan.flagged||[],
+  saved:scan.saved,flagged:scan.flagged||[],
   scanned:scan.scanned,calendars:scan.calendars,short:!!scan.short}:null;
 
 export const dueForScan=(scan,when=new Date())=>!scan?.ranAt

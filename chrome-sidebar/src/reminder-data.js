@@ -32,12 +32,6 @@ export const REMINDER_NOTES_MAX=2000;
 export const CALENDAR_SOURCE='google-calendar';
 export const REMINDER_SOURCES=['',CALENDAR_SOURCE];
 export const MAX_SOURCE_ID=200;
-// Nobody in a calendar was born more than this long ago, and a start year
-// outside that range is a placeholder rather than a date of birth.
-export const MAX_AGE_YEARS=120;
-// What Google calls an event it made from a contact's date of birth. It is the
-// only kind whose start year is a birth year rather than a creation date.
-export const GOOGLE_BIRTHDAY='birthday';
 
 // The device's own day, not UTC: "today is Derek's birthday" is said in the
 // owner's timezone, and a UTC date would move it by one for half of each day.
@@ -105,34 +99,33 @@ export function normalizeReminder(input,previous={}){
 
 // A birthday as a calendar keeps it, turned into the record this app keeps.
 //
-// The one judgement here is the year, and it turns on who wrote the event.
-// Google's own contact birthdays carry `eventType: "birthday"` and take their
-// start date from the contact's date of birth, so that year is a year somebody
-// was born in. An event somebody made by hand does not: its series starts the
-// day it was created, so "every October 3rd from 2024" means the event is two
-// years old, not the person. Reading that as a birth year is how a grown adult
-// ends up turning two, so it is never read as one.
+// A calendar knows the day and nothing else worth having. It does not know how
+// old anyone is: a yearly event made by hand starts the year somebody got round
+// to making it, so "every October 3rd from 2024" says the event is two years
+// old and says nothing at all about the person. Even Google's own contact
+// birthdays only carry a year when the contact happens to have one.
 //
-// What is left is the day, which is the part a calendar always knows — and a
-// birthday with no year simply has no age, which is the same rule the form
-// follows for one typed in without one.
+// So an import never brings an age. `since` stays empty and the record simply
+// has no age to show, which is what a birthday typed in without a year already
+// does. A year on an imported record can therefore only have been put there by
+// somebody who knew it, which is why nothing here ever writes that field again.
 export function calendarBirthday(event,{today=localDate()}={}){
   const title=String(event?.summary??'').trim().slice(0,120);
   const start=String(event?.start??'');
   const sourceId=String(event?.id??'').slice(0,MAX_SOURCE_ID);
   if(!title||!isDate(start)||!sourceId)return null;
-  const thisYear=Number(today.slice(0,4)),startYear=Number(start.slice(0,4));
-  const born=event?.eventType===GOOGLE_BIRTHDAY&&startYear<thisYear&&startYear>=thisYear-MAX_AGE_YEARS;
   return normalizeReminder({
     kind:'Birthday',title,subject:'',
-    date:born?start:thisYearsDate(start,thisYear),
-    every:12,since:born?String(startYear):'',
+    date:thisYearsDate(start,Number(today.slice(0,4))),
+    every:12,since:'',
     notice:DEFAULT_NOTICE_DAYS,completed:'',notes:'',
     source:CALENDAR_SOURCE,sourceId
   });
 }
-// The same month and day, in a year that has one. February 29th only exists
-// every fourth year, and moving it to the 28th would be recording a different
+// The same month and day, in a year that has one. The year the calendar's own
+// series starts in is discarded with the age, because it means nothing here —
+// `nextDue` works from the month and day. February 29th only exists every
+// fourth year, and moving it to the 28th would be recording a different
 // birthday; stepping back to a year that has the day keeps the date itself
 // intact and lets `nextDue` clamp it the way it clamps every other 29th.
 function thisYearsDate(start,thisYear){
