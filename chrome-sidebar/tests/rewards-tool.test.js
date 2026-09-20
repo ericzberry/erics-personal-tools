@@ -272,16 +272,21 @@ test('a program’s offers are shown beside the wallet, searched with it, and fi
  assert.deepEqual(groups(),['Home','Travel']);
  assert.equal($('programs-status').textContent,'Morgan Stanley Reserved · 2 offers · read 2026-09-11');
  assert.equal($('programs-status').closest('section').hidden,false);
- const row=[...h.document.querySelectorAll('#programs-list section')].find(node=>node.textContent.includes('SIXT'));
- assert.match(row.textContent,/Limited-Time Offer · Travel/);
- assert.match(row.textContent,/Save up to 20% off car rentals\./);
- assert.equal(row.querySelector('a').getAttribute('href'),'https://msreserved.com/offer/sixt');
+ const row=()=>[...h.document.querySelectorAll('#programs-list section')].find(node=>node.textContent.includes('SIXT'));
+ // Under the heading that names the category, the row qualifies itself with
+ // what the heading does not already say.
+ assert.match(row().textContent,/Limited-Time Offer/);
+ assert.doesNotMatch(row().textContent,/Travel/,'the group is already called Travel');
+ assert.match(row().textContent,/Save up to 20% off car rentals\./);
+ assert.equal(row().querySelector('a').getAttribute('href'),'https://msreserved.com/offer/sixt');
 
  // The wallet's own search box is the one search: it filters both lists.
  $('rewards-search').value='appliances';
  $('rewards-search').dispatchEvent(new h.window.Event('input',{bubbles:true}));
  assert.deepEqual(names(),['LG']);
  assert.deepEqual(groups(),[],'a search has already narrowed the list, so there is nothing to open through');
+ // Results span categories, so here the category is what tells them apart.
+ assert.match([...h.document.querySelectorAll('#programs-list section')][0].textContent,/New · Home/);
  assert.equal($('programs-status').textContent,'Morgan Stanley Reserved · 1 of 2 offers · read 2026-09-11');
  $('rewards-search').value='';
  $('rewards-search').dispatchEvent(new h.window.Event('input',{bubbles:true}));
@@ -292,6 +297,7 @@ test('a program’s offers are shown beside the wallet, searched with it, and fi
  picker.dispatchEvent(new h.window.Event('change',{bubbles:true}));
  assert.deepEqual(names(),['SIXT']);
  assert.deepEqual(groups(),[],'and neither has a chosen category');
+ assert.doesNotMatch(row().textContent,/Travel/,'the picker above the list already says Travel');
 
  // Nothing read yet means no section at all, rather than an empty one.
  tool.clear();

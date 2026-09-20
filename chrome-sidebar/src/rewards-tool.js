@@ -202,21 +202,25 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     // those rows live inside a group per category with what is new on top, so a
     // catalogue of a hundred offers costs a handful of closed lines instead of
     // a screen the wallet below it never gets past.
-    const offerRow=(catalog,offer)=>{
+    // Under a heading that already names the category, a row that repeats it
+    // says nothing — the same word down twenty rows. `New` spans categories and
+    // a search does too, so there the category is what tells the rows apart and
+    // it stays.
+    const offerRow=(catalog,offer,heading='')=>{
       const url=offerUrl(catalog.programId,offer.key);
       return RecordRow({title:offer.name,
-        detail:[offer.badge,offer.category,offer.dates].filter(Boolean).join(' · '),
+        detail:[offer.badge,offer.category===heading?'':offer.category,offer.dates].filter(Boolean).join(' · '),
         notes:offer.summary,
         actions:url?[RowLink(OPEN_GLYPH,`Open the ${offer.name} offer`,url)]:[]});
     };
     $('programs-list').replaceChildren(...(shown?groups.flatMap(({catalog})=>[
       live.length>1?Note(catalog.label):null,
       ...catalogGroups(catalog,{query,category:programCategory}).flatMap(group=>group.flat
-        ? group.offers.map(offer=>offerRow(catalog,offer))
+        ? group.offers.map(offer=>offerRow(catalog,offer,programCategory))
         : [RewardGroup({title:group.label,
             detail:`${group.offers.length} offer${group.offers.length===1?'':'s'}`,
             open:group.open,
-            children:group.offers.map(offer=>offerRow(catalog,offer))})])
+            children:group.offers.map(offer=>offerRow(catalog,offer,group.label))})])
     ].filter(Boolean)):[Note('No matching offers. Clear the search to see all of them.')]));
   }
   // Offered only where all three hold: a program's own page beside the panel, a
