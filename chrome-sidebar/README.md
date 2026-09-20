@@ -1220,6 +1220,14 @@ not. Only Unclassified belongs to neither, because value nobody has placed
 cannot be called either one — that is the whole of what the name means, and the
 review row now says so in four words rather than leaving it to be guessed.
 
+**Reading a reading twice must not change it.** The Worker reads the model's
+JSON into figures on its way through, and the device reads the response again.
+A class arrives as an id the first time and as a code the second, and taking
+only the id turned every class the model had placed back into Unclassified —
+which is why a page of stocks, cash and a stock plan arrived as one Unclassified
+total, and why the only classes that ever reached the ledger were the ones the
+device filled in afterwards. Both forms are accepted now.
+
 **A securities total is not unplaced value.** A brokerage, IRA or 401(k) total
 that the page never split is marketable securities whether or not it says so, so
 it is filed as **Liquid securities** rather than Unclassified. Unclassified is

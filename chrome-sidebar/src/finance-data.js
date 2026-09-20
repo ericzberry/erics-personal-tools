@@ -479,6 +479,13 @@ const optional=(value,label)=>value===null||value===undefined||value===''?null:a
 // the ledger, never picks the portfolio a figure belongs to, and never adds two
 // numbers together. A malformed reading is dropped so one bad row cannot
 // discard the rest.
+// A reading's class arrives as an id from the model and as a code from the
+// Worker, which has already read the reading once on its way through. Taking
+// only the id quietly unclassified every figure the model had placed, so a page
+// of stocks, cash and a stock plan arrived as one Unclassified total and the
+// only classes that ever reached the ledger were the ones the device filled in
+// afterwards. Reading a reading twice must not change it.
+const readClass=value=>classById(value)?.code??assetClass(value)?.code??UNCLASSIFIED;
 export function parseFinanceUpdates(value){
   if(!value||typeof value!=='object')throw Error('AI did not return any readable figures. Add more detail, or enter the figure by hand.');
   const list=Array.isArray(value.readings)?value.readings.slice(0,120):[];
@@ -491,7 +498,7 @@ export function parseFinanceUpdates(value){
       return [{
         label:text(draft.label??'',120,'a label',true),
         account:text(draft.account??'',120,'an account'),
-        class:classById(draft.class)?.code??UNCLASSIFIED,
+        class:readClass(draft.class),
         registration:registrationById(draft.registration)?.id||'',
         scope,value:amount(draft.value,'value'),asOf,
         confidence:['low','medium','high'].includes(draft.confidence)?draft.confidence:'low',

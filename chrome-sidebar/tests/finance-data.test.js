@@ -115,6 +115,12 @@ test('a reading is labelled, never totalled, and a malformed one is dropped rath
   assert.match(parsed.unread,/transfer/);
   // A class the model invented falls back to Unclassified rather than failing.
   assert.equal(parseFinanceUpdates({readings:[{label:'x',class:'moon rocks',scope:'account',value:1,asOf:'2026-04-01'}]}).readings[0].class,9);
+  // The Worker reads a reading on its way through and the device reads it
+  // again, so a class arrives as an id once and as a code the second time.
+  // Taking only the id unclassified everything the model had placed.
+  const placed=parseFinanceUpdates({readings:[{label:'Net Account Value',class:'liquid',scope:'account',value:10,asOf:'2026-04-01'}]});
+  assert.equal(placed.readings[0].class,classById('liquid').code);
+  assert.equal(parseFinanceUpdates(placed).readings[0].class,classById('liquid').code,'reading a reading twice does not change it');
   assert.throws(()=>parseFinanceUpdates({readings:[]}),/did not find any figures/);
 });
 
