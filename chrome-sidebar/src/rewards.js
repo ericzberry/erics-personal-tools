@@ -4,7 +4,7 @@ import {rewardsOffline} from './rewards-offline.js';
 import {programsOffline} from './program-offline.js';
 import {loadRewards} from './rewards-sync.js';
 import {cloudRequest,CONNECTION_KEY} from './cloud-storage.js';
-import {showRewards} from './navigation.js';
+import {showRewards,onNavigate} from './navigation.js';
 import {readOpenAccountPage} from './finance-page-read.js';
 const storage=globalThis.chrome?.storage?.local;
 const credentials={get:async()=>storage?(await storage.get(CONNECTION_KEY))[CONNECTION_KEY]?.token||'':''};
@@ -23,7 +23,20 @@ export const rewardsTool=mountRewards(root,{credentials,offline,programs,readPag
 // The sidebar owns the page heading and return navigation.
 root.querySelector('h1').hidden=!!document.getElementById('close-rewards');
 document.getElementById('close-rewards')?.addEventListener('click',()=>showRewards(false));
-document.getElementById('navigate-rewards')?.addEventListener('click',()=>rewardsTool.refresh({quiet:true}));
+// The wallet loads when the panel arrives on it, by whichever route brought it
+// there. Its own menu row used to be the only one that loaded it, and it is not
+// the only way in: the strip under the header offers "Read your Bonvoy balance"
+// beside a program's own site, and lands here — where a wallet that never
+// loaded has every control in it disabled, so the reading the strip had just
+// offered did nothing when it was pressed, and said nothing either. Only the
+// arrival loads it: the panel renders again on every poll of the tab beside it,
+// and loading on each of those would be a request a second.
+let onScreen=false;
+onNavigate(capability=>{
+  const arrived=capability==='rewards'&&!onScreen;
+  onScreen=capability==='rewards';
+  if(arrived)rewardsTool.refresh({quiet:true});
+});
 if(storage)chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes[CONNECTION_KEY]){rewardsTool.clear();rewardsTool.refresh();}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.getElementById('rewards-tool')?.hidden)rewardsTool.refresh({quiet:true});});
 

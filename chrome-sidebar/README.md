@@ -1883,3 +1883,25 @@ estate from the owner's screenshot, and a settled ledger with a stale custodial
 account, a fund position and two properties — with no horizontal page overflow.
 Installed Chrome and iPhone behavior were not directly tested.
 Archive: `release/erics-sidebar-0.6.167.zip`.
+
+## The wallet loads wherever the panel arrives on it (0.6.168)
+
+Beside marriott.com the strip under the header offers **Read your Bonvoy
+balance**. Pressing it landed on Rewards & benefits with **Read my balance**
+disabled and the wallet saying it was waiting to be connected — so the reading
+that had just been offered did nothing when it was pressed, and said nothing
+about why. The wallet loaded only when its own row in the Tools menu was
+pressed, and the strip is not that row: it selects the capability, as Needs
+attention does when it opens a record.
+
+The wallet now loads when the panel arrives on it, by whichever route brought it
+there. Only the arrival loads it — the panel renders again on every poll of the
+tab beside it, and loading on each of those would be a request a second.
+
+Validation: 493 extension tests pass, including a new one that walks the strip's
+own offer to the wallet and watches it reach for its records, counts a run of
+renders as one arrival, and counts leaving and coming back as another. The test
+fails against the previous build. Nothing rendered changed: the panel's markup
+and styles are untouched, and the visible difference is a control that is live
+instead of dim, which needs a connected device to see.
+Archive: `release/erics-sidebar-0.6.168.zip`.
