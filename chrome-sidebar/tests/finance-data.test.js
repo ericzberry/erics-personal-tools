@@ -509,7 +509,7 @@ test('a figure printed against a kind of account is a total over accounts, not a
   assert.match(folded.notes.join(' '),/total across accounts/);
   // Nothing was filed and the page is why, so the note says where the figures
   // are instead of only what was refused.
-  assert.match(folded.notes.join(' '),/Open the list of accounts/);
+  assert.match(folded.notes.join(' '),/Show the accounts themselves/);
 });
 
 // The dashboard again, read a second time, with the reading labelling the
@@ -527,7 +527,7 @@ test('the word a page puts over a sum is not the name of an account',()=>{
   ],[],{institution:'Chase',defaultClass:classById('cash').code});
   assert.deepEqual(folded.marks,[],'all three are one total per kind, and none of them is an account');
   assert.deepEqual(folded.portfolios,[]);
-  assert.match(folded.notes.join(' '),/Open the list of accounts/);
+  assert.match(folded.notes.join(' '),/Show the accounts themselves/);
 });
 
 // The same sentence must not follow a page that does answer. A broker prints a
@@ -543,7 +543,7 @@ test('a headline total over accounts the page states does not send the owner els
     {...base,label:'Net Account Value',scope:'account',value:122666.62}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
   assert.equal(folded.marks.length,1);
-  assert.equal(folded.notes.some(note=>/Open the list of accounts/.test(note)),false);
+  assert.equal(folded.notes.some(note=>/Show the accounts themselves/.test(note)),false);
 });
 
 // A card is read at a bank, behind the same password as the checking account,

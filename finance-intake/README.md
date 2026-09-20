@@ -154,10 +154,17 @@ A bank sorts what it holds under **Bank accounts**, **Credit cards** and
 **Investment accounts**, and the figure printed against one of those headings is
 every account under it added up — at Chase, a joint estate, four trusts, an LLC
 and two children's money in a single number. Those are refused the way any other
-total across accounts is, and if a page states nothing else, the reading says to
-open the list of accounts instead. The accounts listed there each carry their
-own name and the last four digits of their number, which is what the roster
-matches and what tells two accounts of one trust apart.
+total across accounts is, and when nothing on the page named an account the
+reading says so: show the accounts themselves, then read again. Where they are
+is not knowable from the reading — another page, or this one with a group shut,
+since a closed group prints the sum of its kind on its own heading. Once they
+are showing, each carries its own name and the last four digits of its number,
+which is what the roster matches and what tells two accounts of one trust apart.
+
+Chase lists them on the overview, which is a hash route of its own:
+`secure.chase.com/web/auth/dashboard#/dashboard/overview`. That is the link the
+tool offers under **Open an account page**, rather than wherever the dashboard
+happens to land.
 
 ## Properties
 

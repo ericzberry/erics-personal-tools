@@ -1982,3 +1982,24 @@ from the page that has what he came for.
 New coverage: the dashboard's three kind totals refused with the card's own word
 among them, and a headline total over stated accounts leaving the guidance
 unsaid. Validation: 498 extension and 33 mobile tests pass.
+
+## The accounts are on the overview, and the note stops guessing where (0.6.175 / mobile 0.1.125)
+
+Chase lists what one password reaches on a hash route of its own,
+`#/dashboard/overview`. The link under **Open an account page** pointed at the
+dashboard without it, which lands on a view stating one figure per kind of
+account and no accounts at all — the page that produced a ledger of three piles
+called Bank accounts, Credit cards and Investment accounts. It points at the
+overview now.
+
+The sentence said when nothing on a page named an account said to open the list
+of accounts and read that instead. That is advice this code cannot give: the
+accounts may be on another page, or on this one inside a group that is shut,
+because a closed group prints the sum of its kind on its own heading — so a page
+can hold every account and state none of them. Being told to go elsewhere would
+have sent the owner off the page he wanted. It now says what is missing and
+leaves where to it: *Only one total per kind of account reached the reading.
+Show the accounts themselves on the page, then read again.*
+
+Validation: 61 finance and account-site tests pass; the whole extension and
+mobile suites pass from an archive of HEAD.

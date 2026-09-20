@@ -32,7 +32,11 @@ export const FINANCE_SITES=[
     // account pages) and the older /e/t/ paths; the marketing site does not.
     read:{app:/^\/(etx|e\/t)\//i}},
   {id:'chase',label:'Chase',institution:'Chase',kind:'bank',hosts:['chase.com','jpmorganonline.com'],
-    url:'https://secure.chase.com/web/auth/dashboard',
+    // The overview, by its own hash route, rather than wherever the dashboard
+    // happens to open. The accounts are listed there under their kinds; the
+    // dashboard's own landing states the kinds and their sums and nothing else,
+    // which is a page that cannot answer what this tool is for.
+    url:'https://secure.chase.com/web/auth/dashboard#/dashboard/overview',
     // Banking, cards and the J.P. Morgan investment accounts all sit behind the
     // same sign-on: jpmorganonline.com redirects to secure.chase.com, so one
     // entry covers both names. The signed-in application lives under /web/auth/

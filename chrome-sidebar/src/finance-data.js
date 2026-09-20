@@ -1054,12 +1054,17 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   // The page is the reason, and the evidence is that nothing on it named an
   // account — not that nothing came of it. One stray figure getting through
   // used to take this sentence away with it, which left the owner holding a
-  // single card balance and no idea the other twenty accounts were a page
-  // away. Saying only what was left out would leave him on the page that
-  // cannot answer.
+  // single card balance and no idea the twenty accounts were missing at all.
+  //
+  // It says what is missing rather than where to go, because where to go is
+  // not knowable from here. The accounts may be on another page, or on this
+  // one inside a group that is shut — a bank's overview prints the sum of a
+  // kind on the closed group's own heading, so the page can hold every account
+  // and state none of them. Both answer to the same instruction, and telling
+  // the owner to go elsewhere would have sent him off the page he wanted.
   const anyAccount=usable.some(reading=>ownName(reading.account)
     ||accountDigits(`${reading.account||''} ${reading.label||''}`).length);
-  if(kinds&&!anyAccount)notes.push('This page totals its accounts by kind, and names none of them. Open the list of accounts and read that instead.');
+  if(kinds&&!anyAccount)notes.push('Only one total per kind of account reached the reading. Show the accounts themselves on the page, then read again.');
   // Read in the order it will be read back: whose money it is, then what it is
   // in. Sorting by portfolio number put the figures in the order the portfolios
   // happened to be created in, which is no order at all to anyone looking at

@@ -309,7 +309,7 @@ test('what the fold left out is said, and a page that only totals its kinds says
   const panel=()=>document.getElementById('finance-snapshot-body');
   const said=()=>document.getElementById('finance-snapshot-status').textContent;
   panel().querySelector('button').click();
-  await settle(()=>said().includes('Open the list of accounts'));
+  await settle(()=>said().includes('Show the accounts themselves'));
   assert.match(said(),/total across accounts/,'the figures were refused, and the line says so');
   assert.equal(panel().textContent.includes('Save these figures'),false,'nothing was filed to review');
   assert.equal(writes.length,0);
