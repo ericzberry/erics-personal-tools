@@ -387,6 +387,17 @@ export function CopyIconButton(label){
   return button;
 }
 
+// What a saved record's own actions look like when the record is one line: the
+// verb is carried by a glyph rather than by a word under every row, and the
+// label names it for a screen reader and for the pointer that pauses on it.
+export const EDIT_GLYPH='M4 20h4L18.4 9.6a2.26 2.26 0 0 0-3.2-3.2L4.8 16.8V20Z M14.4 7.2l2.4 2.4';
+export const DELETE_GLYPH='M4 7h16 M10 4h4 M9 11v6 M15 11v6 M6 7l.9 12a2 2 0 0 0 2 1.9h6.2a2 2 0 0 0 2-1.9L18 7';
+export function IconButton(path,label,{className='',...props}={}){
+  const button=Button('',{className:`icon-button ${className}`.trim(),'aria-label':label,title:label,...props});
+  button.append(Glyph(path,{size:16}));
+  return button;
+}
+
 // Values that stay sealed until the device vault is unlocked. The masked form
 // carries only the last four digits, which are safe to render at any time.
 export const MaskedValue=(text,props={})=>Label(text,{className:'masked-value',...props});

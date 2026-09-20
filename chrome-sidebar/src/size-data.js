@@ -44,8 +44,13 @@ export function normalizeSize(input,previous={}){
 // edited. A part is looked for inside the garment it belongs to, so "pants
 // length" is an inseam while a sleeve stays with shirts.
 const GARMENTS=[
-  {label:'Shirts',words:['shirt','shirts','tee','tees','polo','polos','blouse','top','tops','sweater','sweaters','jumper','hoodie','sweatshirt','knit','fleece','pullover','cardigan','flannel','henley'],
+  {label:'Shirts',words:['shirt','shirts','tee','tees','polo','polos','blouse','top','tops','flannel','henley'],
     parts:[{name:'Neck',words:['neck','collar']},{name:'Sleeve',words:['sleeve','sleeves','arm','arms']},{name:'Chest',words:['chest','bust']},{name:'Shoulder',words:['shoulder','shoulders']}]},
+  // Knitwear is its own run rather than a shirt: a sweater is cut to a
+  // different size in the same shop, and filing the two together answers the
+  // question in a shop with the wrong number.
+  {label:'Sweaters',words:['sweater','sweaters','jumper','jumpers','hoodie','hoodies','hoody','sweatshirt','sweatshirts','knit','knits','knitwear','fleece','fleeces','pullover','pullovers','cardigan','cardigans','turtleneck','turtlenecks'],
+    parts:[{name:'Chest',words:['chest','bust']},{name:'Sleeve',words:['sleeve','sleeves','arm','arms']},{name:'Shoulder',words:['shoulder','shoulders']}]},
   {label:'Pants',words:['pant','pants','trouser','trousers','jean','jeans','chino','chinos','jogger','joggers','short','shorts','legging','leggings','slacks','trunk','trunks','swimsuit','boardshorts'],
     parts:[{name:'Waist',words:['waist']},{name:'Inseam',words:['inseam','inleg','leg','length']},{name:'Hip',words:['hip','hips','seat']},{name:'Thigh',words:['thigh','thighs']}]},
   {label:'Shoes',words:['shoe','shoes','sneaker','sneakers','trainer','trainers','boot','boots','runner','runners','loafer','loafers','sandal','sandals','cleat','cleats','foot','feet'],
@@ -94,13 +99,20 @@ const distinguishing=(record,found)=>{
   const known=new Set([...garment.words,...garment.parts.flatMap(part=>part.words)]);
   return [...wordsIn(record.item)].every(word=>known.has(word))?'':record.item.trim();
 };
-// One row inside a garment: who says so — a brand, or the measurement's own
-// name, or the general size the brands are read against — and then the size.
-export function sizeLine(record,names){
+// One row inside a garment, in its two halves: who says so — a brand, or the
+// measurement's own name, or the general size the brands are read against —
+// and the size itself, which is the answer the list was opened for. The list
+// sets them in two columns, so they are returned apart rather than joined.
+export function sizeParts(record,names){
   const found=classifySize(record);
   const brand=names?.get(brandKey(record))||record.brand.trim();
   const detail=distinguishing(record,found)||found.part;
-  return [...(brand?[brand,detail]:[detail||GENERAL_BRAND]),record.size].filter(Boolean).join(' · ');
+  return {name:(brand?[brand,detail]:[detail||GENERAL_BRAND]).filter(Boolean).join(' · '),size:record.size};
+}
+// The same row as one line, wherever a size is read back as plain text.
+export function sizeLine(record,names){
+  const {name,size}=sizeParts(record,names);
+  return [name,size].filter(Boolean).join(' · ');
 }
 // Inside a garment the general size leads, then the measurements in the order
 // the body is usually taken, then the brands alphabetically: the answer that

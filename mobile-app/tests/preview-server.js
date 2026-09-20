@@ -37,7 +37,8 @@ let sizes=[
   {id:'51111111-1111-4111-8111-111111111111',brand:'',item:'Waist',size:'33 in',fit:'Measured in March',revision:'first',updatedAt:new Date().toISOString()},
   {id:'51111111-1111-4111-8111-111111111112',brand:'',item:'Inseam',size:'32 in',fit:'',revision:'first',updatedAt:new Date().toISOString()},
   {id:'51111111-1111-4111-8111-111111111113',brand:'Lululemon',item:'ABC joggers',size:'M',fit:'Runs slim through the thigh',revision:'first',updatedAt:new Date().toISOString()},
-  {id:'51111111-1111-4111-8111-111111111114',brand:'Brooks Brothers',item:'Dress shirt',size:'15.5 / 34',fit:'Regent fit',revision:'first',updatedAt:new Date().toISOString()}
+  {id:'51111111-1111-4111-8111-111111111114',brand:'Brooks Brothers',item:'Dress shirt',size:'15.5 / 34',fit:'Regent fit',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'51111111-1111-4111-8111-111111111115',brand:'Loro Piana',item:'Sweaters',size:'S',fit:'',revision:'first',updatedAt:new Date().toISOString()}
 ];
 let apiCalls = 0;
 // A throwaway application-server identity, so the preview can subscribe to the

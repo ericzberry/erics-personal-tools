@@ -28,14 +28,17 @@ test('a garment heads its run, the general size leads it, brands follow',()=>{
   const groups=groupSizes(records);
   // The garment is read off what the record is for: a chest is a shirt, a waist
   // is a pair of trousers, and a word the registry does not know waits at the end.
-  assert.deepEqual(groups.map(group=>group.garment),['Shirts','Pants',OTHER_GARMENT]);
+  assert.deepEqual(groups.map(group=>group.garment),['Shirts','Sweaters','Pants',OTHER_GARMENT]);
   assert.deepEqual(groups[0].records.map(record=>sizeLine(record)),
-    ['General · M','Chest · 40 in','Banana Republic · M','Patagonia · L']);
+    ['General · M','Chest · 40 in','Banana Republic · M']);
+  // Knitwear is cut to its own size in the same shop, so a fleece heads a run of
+  // its own instead of answering for a shirt.
+  assert.deepEqual(groups[1].records.map(record=>sizeLine(record)),['Patagonia · L']);
   // "Pants length" is the inseam, "joggers" adds nothing the heading has not said,
   // and both records of one brand read with the spelling first seen.
-  assert.deepEqual(groups[1].records.map(record=>sizeLine(record,brandNames(records))),
+  assert.deepEqual(groups[2].records.map(record=>sizeLine(record,brandNames(records))),
     ['Waist · 33 in','Inseam · 32 in','lululemon · ABC pant · 32x32','lululemon · M']);
-  assert.deepEqual(groups[2].records.map(record=>sizeLine(record)),['Hammock · Double']);
+  assert.deepEqual(groups[3].records.map(record=>sizeLine(record)),['Hammock · Double']);
   assert.deepEqual(sizeBrands(records),['Banana Republic','lululemon','Patagonia'],'General is not a brand');
 });
 

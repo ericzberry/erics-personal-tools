@@ -60,6 +60,16 @@ const reading={readings:[
     asOf:'2026-09-30',value:96000,commitment:100000,periodContributed:100000,
     confidence:'medium',reason:'First capital account; contributions shown for the period only.'}
 ],unread:''};
+// The same page read badly: E*TRADE's complete view, with the reading naming
+// the institution instead of each account, so one name arrives holding the
+// brokerage, the IRA and the total over both. This is what the fold has to
+// separate, and the three lines it writes about doing so are reviewed here.
+const merged={readings:[
+  {account:'E*TRADE',label:'Total Assets',class:'unclassified',registration:'',scope:'account',value:1791069.16,asOf:'2026-09-18',confidence:'high',reason:'Total assets.'},
+  {account:'E*TRADE',label:'Individual Brokerage -4049 Net Account Value',class:'unclassified',registration:'',scope:'account',value:1668402.54,asOf:'2026-09-18',confidence:'high',reason:'Net account value.'},
+  {account:'E*TRADE',label:'Traditional IRA -4144 Net Account Value',class:'unclassified',registration:'ira',scope:'account',value:122666.62,asOf:'2026-09-18',confidence:'high',reason:'Net account value.'},
+  {account:'E*TRADE',label:'DIS',class:'stocks',registration:'',scope:'holding',value:102.67,asOf:'2026-09-18',confidence:'low',reason:'Listed among the top movers.'}
+],capital:[],unread:''};
 const credentials={get:async()=>'synthetic-preview-token-at-least-32-characters'};
 // Each state is one vault, so the three can sit side by side on one page.
 const vault=({answer='open'}={})=>{
@@ -88,10 +98,11 @@ const states=[
   // offered by the one action in Read an update rather than a panel of its own.
   ['Open · beside a page that is not an account site','open',null,false],
   ...ACCOUNT_SITES.map(site=>[`Open · beside a signed-in ${site.label} page`,'open',site,false]),
+  ['Open · beside an E*TRADE page read under one name','open',ACCOUNT_SITES.find(site=>site.id==='etrade'),false,merged],
   ['Quiet · beside a signed-in Schwab page','open',ACCOUNT_SITES.find(site=>site.id==='schwab'),true],
   ['Quiet · beside a finance page with no reader','open',null,true]
 ];
-for(const [label,answer,site,quiet] of states){
+for(const [label,answer,site,quiet,read=reading] of states){
   const heading=document.createElement('h2');
   heading.textContent=`Synthetic state · ${label}`;
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:16px 0 8px;color:#666';
@@ -101,7 +112,7 @@ for(const [label,answer,site,quiet] of states){
     // The open state stands in for the sidebar, the one host that sits beside a
     // logged-in account page, so the page action can be reviewed too.
     ...(answer==='open'?{readPage:async()=>({text:'Synthetic balances from the open page',host:'accounts.example',title:'',trimmed:0,tables:1})}:{}),
-    remote:async(token,path)=>path.endsWith('/finance-intake')?reading:({connections:[{id:'c1',name:'Synthetic',provider:'openai',hasApiKey:true}]})});
+    remote:async(token,path)=>path.endsWith('/finance-intake')?read:({connections:[{id:'c1',name:'Synthetic',provider:'openai',hasApiKey:true}]})});
   // The open state also stands in for arriving at Finance because the tab beside
   // the panel is an account site the owner is already signed in to.
   if(site)tool.site(site);

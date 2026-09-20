@@ -1,9 +1,37 @@
 @import url('./travel.css');
 @import url('./capture.css');
-/* One brand's sizes read as a short run of lines under its name. */
-.size-list .record-row{padding:6px 0;gap:2px}
+/* A garment's sizes read as a short run of lines under its name. The heading
+   is the question the run answers, so it carries more weight than the rows
+   beneath it rather than less: it is set in the wallet's uppercase label, but
+   at the rows' own size and in the same ink, and ruled across the list. */
+.size-list .record-group-title{font-size:13px;color:var(--wallet-ink);padding:0 0 4px}
+.size-list .travel-list{gap:14px}
+/* One size is one line: who says so on the left, the size itself down a column
+   on the right, and the row's own actions at the end of it. */
+.size-list .record-row{padding:0}
 .size-list .record-row p{margin:0}
+.size-list .size-line{display:flex;align-items:center;gap:8px;min-height:30px}
+.size-list .size-name{flex:1;min-width:0;font-size:13px;font-weight:500}
+/* The size is the answer, so it keeps the weight of the line and the figures
+   line up under one another. */
+.size-list .size-value{flex:none;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.size-list .record-row>.footnote{padding:0 0 4px;font-size:11px}
+.size-list .record-row>.action-group{padding:0 0 6px}
+/* The question a Delete asks, and the two answers to it, belong to the row
+   that raised them. */
+.size-list .size-confirm{display:grid;gap:4px;padding:0 0 8px}
 .size-list .footnote:empty,.size-list .notice:empty{display:none}
-.size-list .travel-list{gap:12px}
-/* The size itself is the answer, so it carries the weight of the line. */
-.size-list .record-row strong{font-variant-numeric:tabular-nums}
+/* Edit and Delete belong to the row, not under it: they wait at the end of the
+   line and appear when the row is pointed at or reached by keyboard. Where
+   there is no pointer to hover with, they are simply there. */
+.size-list .size-actions{flex:none;gap:0}
+.size-list .size-action{width:26px;min-height:26px;padding:5px;opacity:0;transition:opacity .12s ease;color:var(--wallet-muted)}
+.size-list .size-action--danger{color:var(--wallet-danger)}
+.size-list .record-row:hover .size-action,.size-list .record-row:focus-within .size-action,.size-list .size-action:focus-visible{opacity:1}
+.size-list .size-action:disabled{opacity:0}
+@media(prefers-reduced-motion:reduce){.size-list .size-action{transition:none}}
+@media(hover:none){
+  .size-list .size-action{opacity:1;width:32px;min-height:32px}
+  .size-list .size-action:disabled{opacity:.4}
+  .size-list .size-line{min-height:36px}
+}

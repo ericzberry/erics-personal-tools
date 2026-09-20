@@ -152,6 +152,36 @@ test('a total across accounts is left out, and one account stating two totals st
   assert.match(folded.notes.join(' '),/Net Account Value was used/);
 });
 
+// The E*TRADE complete view, read for real on 2026-09-20: the reading called
+// every figure's account "E*TRADE", so the brokerage, the IRA and the total
+// over both arrived under one name. One account states one balance, and the
+// $122k IRA was thrown away to honour that.
+test('several accounts read under one name are counted separately, not folded into one balance',()=>{
+  const dated={asOf:'2026-09-20',confidence:'high',reason:'',class:9,scope:'account'};
+  const folded=foldReadings([
+    {...dated,account:'E*TRADE',label:'Total Assets',registration:'',value:1791069.16},
+    {...dated,account:'E*TRADE',label:'Individual Brokerage -4049 Net Account Value',registration:'',value:1668402.54},
+    {...dated,account:'E*TRADE',label:'Traditional IRA -4144 Net Account Value',registration:'ira',value:122666.62},
+    {...dated,account:'E*TRADE',label:'DIS',class:1,scope:'holding',registration:'',value:102.67}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
+  assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[1,1668402.54],[2,122666.62]],
+    'both balances are kept, and the IRA is registered as one');
+  assert.match(folded.notes.join(' '),/Total Assets is the other figures under this name added up/);
+  assert.match(folded.notes.join(' '),/2 accounts were read under this one name/);
+  assert.match(folded.notes.join(' '),/1 holding read under this name could not be placed/);
+
+  // The same page with nothing separating the two: no registration, no account
+  // number. Guessing that two figures are two accounts would count a balance
+  // twice, so the figure covering them is still the one kept.
+  const alike=foldReadings([
+    {...dated,account:'E*TRADE',label:'Total Assets',registration:'',value:1791069.16},
+    {...dated,account:'E*TRADE',label:'Net Account Value',registration:'',value:1668402.54},
+    {...dated,account:'E*TRADE',label:'Net Account Value',registration:'',value:122666.62}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
+  assert.deepEqual(alike.marks.map(row=>row.amount),[1791069.16]);
+  assert.match(alike.notes.join(' '),/3 account-level figures were read/);
+});
+
 test('a reading lands in the portfolio its registration and institution settle, and proposes one only when it must',()=>{
   const dated={label:'Net Account Value',class:9,scope:'account',asOf:'2026-09-19',confidence:'high',reason:''};
   const folded=foldReadings([

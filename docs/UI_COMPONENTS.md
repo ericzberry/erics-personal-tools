@@ -28,12 +28,12 @@ The catalogue below describes existing exports, not a promise that each componen
 | Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceFlow`, `FieldGrid` | Compose layout before introducing new wrappers; a full-tab workspace runs down the page rather than into a side column |
 | Text and supporting detail | `Title`, `Text`, `Note`, `Strong`, `Label` | `Heading` aliases `Title`; `Label` is a text span, not an input label |
 | Form and labeled inputs | `Form`, `FormStack`, `FormField`, `Field` | `Field` supplies an associated label and control |
-| Actions and links | `Button`, `Link`, `CopyIconButton` | Choose role and density explicitly; use real links for navigation |
+| Actions and links | `Button`, `Link`, `CopyIconButton`, `IconButton` | Choose role and density explicitly; use real links for navigation. `IconButton` is a record row's own action where the row is one line: the glyph carries the verb, and the label it is given names the record it acts on |
 | Select or editable suggestions | `Select`, `Field` with `kind: 'select'` or `list` | Shared formatted trigger and open menu; keep custom text for suggestions |
 | Choice of two or three | `SegmentedField` | Show the options side by side instead of behind a menu; it is a radio group exposing `value` like a select |
 | Boolean choice | `Toggle`, `ChoiceRow` | Keep the explanation and click target together |
 | Secondary detail | `Disclosure`, `ExpandableRecord` | Current status and frequent actions remain discoverable |
-| Compact saved records | `RecordRow`, `ExpandableRecord` | Avoid a card for every line of metadata |
+| Compact saved records | `RecordRow`, `ExpandableRecord`, `SizeRow` | Avoid a card for every line of metadata, and a row of word-wide actions under every record |
 | Settings | `SettingsList`, `SettingsItem`, `SettingsLink`, `SettingsGroup` | Flat navigation; named groups for status, fields, and maintenance |
 | Feedback and facts | `Notice`, `Badge`, `StatusCard`, `SourceNote` | Use truthful text; `Notice` provides status semantics, not an entire error workflow |
 | Data comparison | `DataTable`, `List` | Keep headers meaningful; choose records over a table when columns add no value |

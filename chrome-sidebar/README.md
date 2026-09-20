@@ -1191,6 +1191,18 @@ add up to it, so three CDs beside a $1.6M net account value no longer claim the
 account holds $300: the total is kept whole as **Unclassified**, which counts in
 full and whose name asks to be corrected. The panel says which of these it did.
 
+**One name is not one account.** A reading that names the institution rather
+than the account — "E*TRADE" against the brokerage and the IRA both — used to
+lose the smaller balance to the rule that an account states one balance. Before
+that rule runs, a group is separated into the accounts it actually holds, on the
+two things a page says that are never true of one account: a registration one
+figure states and another does not share, and a different account number. A
+figure equal to the rest added up is the institution's own total over them and
+is left out, but only where the parts can be told apart — where nothing
+separates them, the covering figure is still the one kept, because guessing that
+two figures are two accounts would count a balance twice. A separated group
+drops its holdings: nothing is left saying which account a position sits in.
+
 Unclassified is an ordinary class that sums like any other. Letting a split
 supersede it would have quietly dropped a brokerage total out of a portfolio
 that also held a checking balance.
@@ -1339,3 +1351,41 @@ but saving it reported into the intake block below — a confirmation under a
 heading about something else, which is the alternating scope the Finance layout
 exists to stop. The save now reports where its review is. Archive:
 `release/erics-sidebar-0.6.128.zip`.
+
+## A size list you can read down (0.6.132 / mobile 0.1.86)
+
+Clothing sizes read upside down: the garment heading was a small grey label and
+every size under it was heavier and darker than the heading that filed it, so a
+list of answers had no question over it. The heading now carries the rows' own
+size and ink, uppercase and ruled across the run, and a row is set in two
+columns — who says so on the left, the size itself down the right, where an eye
+running the list finds every answer in the same place.
+
+Edit and Delete left the row beneath each size. A word-wide row of actions under
+every record doubled the list's length and made **Delete** the loudest thing on
+the screen. They are now the row's own, at the end of its line, as quiet glyphs
+that appear when the row is hovered or reached by keyboard and stay put where
+there is no pointer to hover with. Each is labelled with the size it would act
+on — "Edit Banana Republic · M" — so a screen reader hears the record rather
+than one word repeated twelve times, and the delete question names the row as
+the list reads it instead of the word it happens to be stored under.
+
+Knitwear left the shirts. The same shop cuts a sweater to a different size, and
+a list that answers "what am I in a shirt here" with a jumper's number is worse
+than no answer, so sweaters, hoodies, fleeces and cardigans head a run of their
+own.
+
+A said size keeps an unfamiliar brand. "Isaia shirt is M" was saving as a plain
+shirt, the maker dropped on the way in — which loses exactly the sizes worth
+writing down, since the brands worth recording are the ones whose sizing is not
+obvious. The reading is now told that a name in front of a garment is a brand
+whether or not it recognises the shop, and that an empty brand means the note
+named no maker at all.
+
+Validation: 401 extension and 33 mobile tests pass. The synthetic size list was
+reviewed in the sidebar harness at 820px, 380px and the 280px minimum, and in
+the unlocked mobile shell at 390px, covering the populated list with a long fit
+note and a wrapped name, hover and keyboard reveal of the row actions, the
+delete question and its two answers, and the connected-empty and not-connected
+states. Native iPhone and installed Chrome behavior were not directly tested.
+Archive: `release/erics-sidebar-0.6.132.zip`.

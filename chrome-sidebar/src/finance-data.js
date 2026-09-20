@@ -518,6 +518,55 @@ const accountKey=reading=>matchKey(reading.account)||matchKey(reading.label);
 // is cash, so an account that names itself an investment keeps the class the
 // reading gave it.
 const INVESTED=/\b(invest\w*|brokerage|securities|managed|advisory|portfolio|ira|roth|401\s*\(?k|529|annuity|wealth)\b/i;
+
+// The digits a page prints in place of an account number — "-4049", "…4144",
+// "ending in 8820". They count only behind a marker saying that is what they
+// are: a bare run of digits inside a name is a year, and the Berry 2020
+// Descendants’ Irrevocable Trust is not account 2020.
+const ACCOUNT_DIGITS=/(?:ending in|account(?: number| no\.?| ?#)?|[-–—#]|\bx|\*+|\.{2,}|…)\s*(\d{3,})(?!\d)/gi;
+// What a page says about which account a figure belongs to, beyond the name it
+// was filed under: the registration it states, and the account number it shows.
+const accountMark=reading=>
+  `${reading.registration||''}#${[...`${reading.account||''} ${reading.label||''}`.matchAll(ACCOUNT_DIGITS)].map(found=>found[1]).join(',')}`;
+
+// One name, several accounts.
+//
+// A reading that named the institution rather than the account — "E*TRADE"
+// against the brokerage and the IRA both — files two balances under one name,
+// and the rule that one account states one balance then throws the smaller of
+// them away. Nothing on the page went wrong; the name did. So a group is
+// separated into the accounts it actually holds before that rule runs.
+//
+// Two things a page says are never true of one account. A registration one
+// figure states and another does not share: an IRA is registered to one person
+// by law and cannot also be the taxable brokerage beside it. And a different
+// account number: four digits behind a dash are the only thing most broker
+// dashboards give you to tell two accounts apart.
+//
+// A figure equal to everything else added up is the institution’s own total
+// over them, whatever scope the reading gave it. It is left out and its parts
+// are kept, which reaches the same sum with none of the loss — but only when
+// the parts can be told apart. Where nothing separates them, the figure that
+// covers them all is the one worth keeping, and the group is left as it was.
+//
+// Holdings cannot follow. A group that lost the account names has nothing left
+// saying which account a position sits in, so a separated group keeps each
+// total whole and says so.
+function separate(account,notes){
+  if(account.totals.length<2)return [account];
+  const covers=account.totals.filter(total=>{
+    const rest=account.totals.filter(other=>other!==total);
+    return rest.length>1&&total.value>0&&Math.abs(sum(rest.map(other=>other.value))-total.value)<=total.value*RECONCILE;
+  });
+  const totals=covers.length===1?account.totals.filter(total=>total!==covers[0]):account.totals;
+  const marks=[...new Set(totals.map(accountMark))];
+  if(marks.length<2)return [account];
+  if(covers.length===1)notes.push(`${account.name}: ${covers[0].label} is the other figures under this name added up, so it was left out.`);
+  notes.push(`${account.name}: ${marks.length} accounts were read under this one name and were counted separately.`);
+  const held=account.holdings.length;
+  if(held)notes.push(`${account.name}: the ${held} holding${held===1?'':'s'} read under this name could not be placed in one of them, so each account total was kept whole.`);
+  return marks.map(mark=>({...account,totals:totals.filter(total=>accountMark(total)===mark),holdings:[]}));
+}
 export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
   // A site says what it is: a bank's account total is cash whether or not the
   // page uses the word. A reading that did classify itself is never overridden,
@@ -583,7 +632,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
       name:portfolio.name,kind:portfolio.kind,currency:portfolio.currency||'USD',isNew:!!portfolio.isNew};
     figures.set(key,{...current,amount:Math.round((current.amount+value)*100)/100,from:[...current.from,...from]});
   };
-  for(const account of accounts.values()){
+  for(const account of [...accounts.values()].flatMap(entry=>separate(entry,notes))){
     const inside=[...account.totals,...account.holdings];
     // Everything the page called this account, in one string: the name it was
     // grouped under and the labels of the figures inside it. That is what says

@@ -199,7 +199,7 @@ test('the intake model labels what it reads and is never asked to total, match o
     {account:'Undated account',label:'Balance',class:'cash',scope:'account',value:50,confidence:'low',reason:'No date given.'}
   ],unread:'One line mentioned a wire with no amount.'});
   const fetcher=async(url,options)=>url.endsWith('/models')
-    ?Response.json({data:[{id:'gpt-4.1-mini'}]})
+    ?Response.json({data:[{id:'gpt-5-mini'}]})
     :(body=JSON.parse(options.body),Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:reply}]}]}));
   const result=await readFinanceUpdates(connection,{text:'Brokerage was 1300 on April 1.',today:'2026-04-02'},fetcher);
   assert.equal(result.readings.length,1,'a reading without a usable date is dropped rather than dated today');
@@ -228,7 +228,7 @@ test('an image is read under the same rules as text and never sent to a model th
     ?Response.json({data:list.map(id=>({id}))})
     :(body=JSON.parse(options.body),Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:reply}]}]}));
 
-  const result=await readFinanceUpdates(connection,{images:[PIXEL],today:'2026-07-01'},models(['gpt-4.1-mini']));
+  const result=await readFinanceUpdates(connection,{images:[PIXEL],today:'2026-07-01'},models(['gpt-5-mini']));
   assert.equal(result.readings[0].value,900);
   const parts=body.input.find(message=>message.role==='user').content;
   assert.ok(parts.some(part=>part.type==='input_image'),'the picture reaches the provider as an image part');
@@ -238,11 +238,14 @@ test('an image is read under the same rules as text and never sent to a model th
 
   // A connection with no vision-capable model must refuse rather than send.
   await assert.rejects(readFinanceUpdates(connection,{images:[PIXEL]},models(['gpt-5-nano'])),error=>error.status===400&&/vision-capable|read an image/.test(error.message));
+  // Reading a broker page is a level-3 errand, so a connection offering only
+  // the cheaper reader is refused rather than quietly given the weaker one.
+  await assert.rejects(readFinanceUpdates(connection,{images:[PIXEL]},models(['gpt-4o-mini'])),error=>error.status===400);
   // Neither text nor image is nothing to read; too many images is refused.
-  await assert.rejects(readFinanceUpdates(connection,{},models(['gpt-4.1-mini'])),error=>error.status===400);
-  await assert.rejects(readFinanceUpdates(connection,{images:Array(MAX_INTAKE_IMAGES+1).fill(PIXEL)},models(['gpt-4.1-mini'])),error=>error.status===400);
+  await assert.rejects(readFinanceUpdates(connection,{},models(['gpt-5-mini'])),error=>error.status===400);
+  await assert.rejects(readFinanceUpdates(connection,{images:Array(MAX_INTAKE_IMAGES+1).fill(PIXEL)},models(['gpt-5-mini'])),error=>error.status===400);
   // A malformed data URL never reaches the provider.
-  await assert.rejects(readFinanceUpdates(connection,{images:['https://example.com/x.png']},models(['gpt-4.1-mini'])),error=>error.status===400);
+  await assert.rejects(readFinanceUpdates(connection,{images:['https://example.com/x.png']},models(['gpt-5-mini'])),error=>error.status===400);
 });
 
 test('a live account page dates its own balances, and its furniture is left out',async()=>{
@@ -251,7 +254,7 @@ test('a live account page dates its own balances, and its furniture is left out'
     {account:'Individual Brokerage',label:'Net Account Value',class:'unclassified',registration:'',scope:'account',value:124500.5,asOf:'2026-09-11',confidence:'high',reason:'Net account value.'}
   ],unread:''});
   const fetcher=async(url,options)=>url.endsWith('/models')
-    ?Response.json({data:[{id:'gpt-4.1-mini'}]})
+    ?Response.json({data:[{id:'gpt-5-mini'}]})
     :(body=JSON.parse(options.body),Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:reply}]}]}));
 
   const page={text:'Individual Brokerage  |  $124,500.50',today:'2026-09-11',live:true,institution:'E*TRADE'};

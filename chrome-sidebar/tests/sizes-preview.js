@@ -16,7 +16,11 @@ const records=[
   {brand:'Brooks Brothers',item:'Dress shirt',size:'15.5 / 34',fit:'Regent fit'},
   {brand:'Lululemon',item:'ABC joggers',size:'M',fit:'Runs slim through the thigh — the large in the warpstreme fabric'},
   {brand:'lululemon',item:'Metal Vent tech shirt',size:'M'},
-  {brand:'Allbirds',item:'Wool Runners',size:'10.5'}
+  {brand:'Allbirds',item:'Wool Runners',size:'10.5'},
+  // Knitwear heads a run of its own, and an unfamiliar maker is the case the
+  // tool exists for.
+  {brand:'Loro Piana',item:'Sweaters',size:'S'},
+  {brand:'Patagonia',item:'Better Sweater',size:'M',fit:'Waiting to sync'}
 ].map((record,index)=>({...normalizeSize(record),id:`40000000-0000-4000-8000-${String(index).padStart(12,'0')}`,revision:'first'}));
 const store=list=>{
   let saved=[...list];

@@ -24,17 +24,37 @@ taken, then what each brand calls the same body.
 
 ```
 SHIRTS
-  General · M
-  Neck · 15.5 in
-  Sleeve · 34 in
-  Chest · 40 in
-  Banana Republic · M
-  Brooks Brothers · Dress shirt · 15.5 / 34
+  General                              M
+  Neck                           15.5 in
+  Sleeve                           34 in
+  Chest                            40 in
+  Banana Republic                      M
+  Brooks Brothers · Dress shirt  15.5/34
+SWEATERS
+  Loro Piana                           S
 PANTS
-  Waist · 33 in
-  Inseam · 32 in
-  Lululemon · ABC joggers · M
+  Waist                            33 in
+  Inseam                           32 in
+  Lululemon · ABC joggers              M
 ```
+
+A row is one line, in two columns: who says so on the left, and the size itself
+down the right, where an eye running the list finds every answer in the same
+place. The garment heading is set above its run in the wallet's uppercase label
+at the rows' own size — the heading is the question, and it should not read as
+an afterthought under the answers.
+
+Edit and Delete are the row's own and live at the end of its line as quiet
+glyphs, appearing when the row is hovered or reached by keyboard and always
+shown where there is no pointer to hover with. A row of words under every size
+would double the list's length and make Delete the loudest thing in it. Each
+glyph is labelled with the size it would act on, so what a screen reader reads
+is "Edit Banana Republic · M" rather than one word repeated down the list.
+Deleting still asks first, in words, under the row it would remove.
+
+Knitwear is its own run rather than a shirt: the same shop cuts a sweater to a
+different size, and a list that answers "what am I in a shirt here" with a
+jumper's number is worse than no answer.
 
 The garment is read off `item` rather than stored beside it, so every record
 already saved files itself and there is no third field to fill in. A measurement
@@ -65,3 +85,9 @@ Quick add can create a size from a typed note: see [quick add](QUICK_ADD.md). It
 is the way in that matches the subject, because a size is usually said rather
 than filled in — *"Lululemon joggers are a medium"* — and the form below the list
 is what it falls back to.
+
+A note of the form *"<name> shirt is M"* names a brand, and the reading keeps
+that name whether or not the model has heard of the shop: an unrecognised maker
+is the case the tool exists for, since the brands worth writing down are the
+ones whose sizing is not obvious. An empty brand means the note named no maker
+at all, which is what a measurement looks like.

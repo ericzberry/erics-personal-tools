@@ -42,7 +42,7 @@ There is nowhere to put an occasion, a price or a comment: anything worth keepin
   {
     capability:'sizes',label:'clothing sizes',path:'/v1/sizes',normalize:normalizeSize,
     when:'the note is about what size the owner wears, or a measurement of their own body',
-    fields:()=>`- brand: the brand or shop the size belongs to, as the note names it. "" when the note gives a body measurement, or a size no brand decided.
+    fields:()=>`- brand: the brand or shop the size belongs to, spelled as the note spells it, including a name you do not recognise — a note of the form "<name> <garment> is <size>" names a brand, so "Isaia shirt is M" is brand Isaia and "Loro Piana sweaters are S" is brand Loro Piana. Use "" only when the note names no maker at all, which is what a body measurement or a plain garment size looks like.
 - item: what the size is for — a garment or shoe ("Dress shirt", "Jeans", "Running shoes"), or the measurement itself ("Chest", "Waist", "Inseam", "Neck", "Sleeve", "Shoe"). Required.
 - size: what the label says or what the tape said, with its unit when it has one — "M", "32x34", "15.5/34", "10.5 wide", "33 in". Required.
 - fit: how it runs, or when it was measured, in the owner's own words — "runs small, size up", "measured in March". "" when the note says nothing about it.

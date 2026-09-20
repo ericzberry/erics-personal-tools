@@ -29,6 +29,9 @@ function fakeStore(resource,initial=[]){
     }};
 }
 const click=(document,node)=>node.dispatchEvent(new document.defaultView.Event('click',{bubbles:true}));
+// A row's Edit and Delete are glyphs at the end of its line, so they are found
+// by the name a screen reader is given rather than by a word on the row.
+const rowAction=(node,verb)=>[...node.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')?.startsWith(`${verb} `));
 
 test('each garment leads with the general size, then what the brands call it',async()=>{
   const {document}=setup();
@@ -41,8 +44,16 @@ test('each garment leads with the general size, then what the brands call it',as
   await settle(()=>document.querySelectorAll('#sizes-list .record-row').length===3);
   assert.deepEqual([...document.querySelectorAll('#sizes-list .record-group-title')].map(node=>node.textContent),['Shirts','Pants']);
   const rows=[...document.querySelectorAll('#sizes-list .record-row')];
-  assert.deepEqual(rows.map(node=>node.querySelector('strong').textContent),
-    ['Banana Republic · M','Waist · 33 in','Lululemon · ABC joggers · M']);
+  // The row is two columns: who says so, and the size itself down the right.
+  assert.deepEqual(rows.map(node=>node.querySelector('.size-name').textContent),
+    ['Banana Republic','Waist','Lululemon · ABC joggers']);
+  assert.deepEqual(rows.map(node=>node.querySelector('.size-value').textContent),
+    ['M','33 in','M']);
+  // Edit and Delete are the row's own, and each names the size it would act on
+  // instead of repeating one word down the list.
+  assert.equal(rowAction(rows[0],'Edit').getAttribute('aria-label'),'Edit Banana Republic · M');
+  assert.equal(rowAction(rows[0],'Delete').getAttribute('aria-label'),'Delete Banana Republic · M');
+  assert.ok(rowAction(rows[0],'Edit').querySelector('svg'),'the verb is carried by a glyph');
   // How it runs is the thing that makes a bare size usable months later.
   assert.match(rows[2].textContent,/Runs slim/);
 
@@ -59,9 +70,9 @@ test('each garment leads with the general size, then what the brands call it',as
 
   // Deleting asks first, and the question names the record it would remove.
   const row=[...document.querySelectorAll('#sizes-list .record-row')].find(node=>/Waist/.test(node.textContent));
-  click(document,[...row.querySelectorAll('button')].find(button=>button.textContent==='Delete'));
-  assert.match(row.parentElement.textContent,/Permanently delete “Waist” from all devices\?/);
-  click(document,[...row.parentElement.querySelectorAll('button')].find(button=>button.textContent==='Delete from all devices'));
+  click(document,rowAction(row,'Delete'));
+  assert.match(row.textContent,/Permanently delete “Waist · 33 in” from all devices\?/);
+  click(document,[...row.querySelectorAll('button')].find(button=>button.textContent==='Delete from all devices'));
   await settle(()=>store.writes.length>0);
   assert.equal(store.writes[0].method,'DELETE');
   await settle(()=>document.querySelectorAll('#sizes-list .record-row').length===2);
@@ -73,7 +84,7 @@ test('editing loads the record into the form and saves over the same size',async
   const store=fakeStore('sizes',[normalizeSize({brand:'Allbirds',item:'Runners',size:'10'})]);
   mountSizes(document.querySelector('main'),{credentials:{get:async()=>'token'},offline:store});
   await settle(()=>document.querySelectorAll('#sizes-list .record-row').length===1);
-  click(document,[...document.querySelectorAll('#sizes-list button')].find(button=>button.textContent==='Edit'));
+  click(document,rowAction(document.getElementById('sizes-list'),'Edit'));
   assert.equal(document.getElementById('sizes-brand').value,'Allbirds');
   assert.equal(document.getElementById('sizes-editor-title').textContent,'Editing Runners');
   document.getElementById('sizes-size').value='10.5';

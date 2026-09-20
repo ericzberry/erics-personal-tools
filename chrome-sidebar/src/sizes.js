@@ -1,6 +1,6 @@
-import {SizesView,SizeGroup} from './components/sizes.js';
-import {RecordRow,Button,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
-import {normalizeSize,groupSizes,classifySize,sizeLine,brandNames} from './size-data.js';
+import {SizesView,SizeGroup,SizeRow} from './components/sizes.js';
+import {Button,IconButton,EDIT_GLYPH,DELETE_GLYPH,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
+import {normalizeSize,groupSizes,classifySize,sizeParts,brandNames} from './size-data.js';
 const fields=['brand','item','size','fit'];
 
 export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged=()=>{}}){
@@ -10,6 +10,14 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
   const status=(text,tone='')=>setStatus($('status'),text,tone);
   const action=(label,handler,variant='secondary',{enabled=false}={})=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||(!loaded&&!enabled)});
+    button.addEventListener('click',handler);
+    return button;
+  };
+  // A row's own action. The glyph is the verb and the label is what a screen
+  // reader and a paused pointer are told, so it names the size it would act on
+  // rather than saying "Edit" twelve times down the list.
+  const rowAction=(glyph,label,handler,className='')=>{
+    const button=IconButton(glyph,label,{className:`size-action ${className}`.trim(),disabled:busy||!loaded});
     button.addEventListener('click',handler);
     return button;
   };
@@ -26,14 +34,22 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
     $('editor').open=true;$('item').focus();
   }
   function row(record,names){
-    const remove=action('Delete',()=>{confirmation.hidden=false;yes.focus();},'danger-subtle');
+    const {name,size}=sizeParts(record,names);
+    const line=[name,size].filter(Boolean).join(' · ');
+    const remove=rowAction(DELETE_GLYPH,`Delete ${line}`,()=>{confirmation.hidden=false;yes.focus();},'size-action--danger');
     const yes=action('Delete from all devices',()=>save(record,'DELETE'),'danger');
     const no=action('Keep size',()=>{confirmation.hidden=true;remove.focus();});
-    const confirmation=Stack([Note(`Permanently delete “${record.item}” from all devices?`),ActionGroup([yes,no],{compact:true})],{hidden:true});
-    const actions=[action('Edit',()=>edit(record),'subtle'),remove];
-    if(record.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))));
-    const detail=[record.fit,record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
-    return Stack([RecordRow({title:sizeLine(record,names),detail,actions}),confirmation]);
+    // The question names the row as the list reads it, not the word the record
+    // happens to be stored under: “Loro Piana · S”, not “Sweaters”.
+    const confirmation=Stack([Note(`Permanently delete “${line}” from all devices?`),ActionGroup([yes,no],{compact:true})],{className:'size-confirm',hidden:true});
+    const actions=[rowAction(EDIT_GLYPH,`Edit ${line}`,()=>edit(record)),remove];
+    // A conflict is not a quiet row action: it is a question, and it stays in
+    // words under the line until it is answered.
+    const extra=record.conflict
+      ?[ActionGroup(['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))),{compact:true})]
+      :[];
+    const note=[record.fit,record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
+    return SizeRow({name,size,note,actions,extra,confirmation});
   }
   function render(){
     const query=$('search').value.trim().toLowerCase();

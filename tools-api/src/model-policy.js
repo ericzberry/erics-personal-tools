@@ -21,7 +21,14 @@ export const TASK_POLICIES = {
   'rewards.balances':{label:'Points balance reading',level:2,outputTokens:1200,web:false,maxCost:0.02},
   'subscriptions.intake':{label:'Recurring charge reading',level:2,outputTokens:7000,web:false,maxCost:0.05},
   'subscriptions.research':{label:'Subscription alternatives',level:3,outputTokens:4000,web:true,maxCost:0.10},
-  'finance.intake':{label:'Finance reading',level:2,outputTokens:2500,web:false,maxCost:0.03},
+  // A broker dashboard is not a simple extraction. It states several accounts
+  // at once, prints a total over them, and puts a table of day's gains and
+  // last prices beside balances that look just like them. A level‑2 model read
+  // that page by filing every figure under the institution's name and calling
+  // a column of gains the holdings — both of which the instructions rule out
+  // in as many words. This is the ledger Eric's net worth is kept in, and the
+  // reasoning model that follows those rules costs a tenth of a cent more.
+  'finance.intake':{label:'Finance reading',level:3,outputTokens:2500,web:false,maxCost:0.03},
   'capture.note':{label:'Quick note reading',level:1,outputTokens:500,web:false,maxCost:0.01},
   'email.summary':{label:'Email summary',model:'gpt-5.6-terra',level:3,outputTokens:700,web:false,maxCost:0.04},
   // A reply goes out over Eric's name in Eric's voice, so it uses the model he

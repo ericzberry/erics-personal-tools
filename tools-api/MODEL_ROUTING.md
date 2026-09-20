@@ -49,11 +49,21 @@ is marked `vision` only where image input is known to be supported; an unmarked
 model is simply never chosen for an image, which surfaces as a clear "no model
 available" rather than a provider error.
 
-`finance.intake` uses level 2, 2,500 output tokens, no web tool, and a $0.03
-estimated request ceiling. It reads one block of pasted text into draft figures
-and nothing else: the owner's saved records are never sent, so it cannot match a
-figure to a record, and its instructions forbid totalling, netting, annualizing
-and currency conversion. Drafts are matched to records and all arithmetic is
+`finance.intake` uses level 3, 2,500 output tokens, no web tool, and a $0.03
+estimated request ceiling. It was raised from level 2 on 2026-09-20: reading a
+broker dashboard means holding several accounts apart, recognizing the total
+printed over them, and ignoring a table of day's gains and last prices that look
+exactly like balances, and a level-2 model read E*TRADE's complete view by
+filing every figure under the institution's name and reporting a column of gains
+as the account's holdings. Both failures are ruled out in the instructions in as
+many words. The device's fold is what caught them, and it should not have to.
+The reasoning model the raised level selects costs about a tenth of a cent more
+per read and stays inside the same ceiling.
+
+It reads one block of pasted text, or an image of a statement, into draft
+figures and nothing else: the owner's saved records are never sent, so it
+cannot match a figure to a record, and its instructions forbid totalling,
+netting, annualizing and currency conversion. Drafts are matched to records and all arithmetic is
 performed on the device. A draft without a usable as-of date is dropped rather
 than dated today. Fixtures cover that drop, the untrusted-text framing, input
 limits, and rejection of unparseable output.
