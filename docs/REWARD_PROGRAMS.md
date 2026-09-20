@@ -59,6 +59,24 @@ program at the same moment cannot lose each other's offers or reset how long the
 owner has had one. `firstSeenAt` survives every later reading, which is what
 puts offers that are new *to the owner* at the top of the list.
 
+## How a long catalogue is listed
+
+Morgan Stanley Reserved alone publishes well over a hundred offers, which is
+not a list to read down and would bury the wallet under it. So the offers are
+grouped: **New** first, then one line per category, each saying how many it
+holds and each closed until it is opened. A whole catalogue costs the height of
+its categories.
+
+Only **New** opens itself, and only while it is short enough to be worth
+opening. A first reading stamps every offer as first seen that day, so **New**
+would be the entire catalogue and say nothing about it — in that case the group
+is not shown at all and the categories are the list. A new offer also stays
+under its own category, because a category that quietly omitted its newest
+offers would be the wrong answer to what is there.
+
+Searching or choosing a category has already narrowed the list, so it is shown
+as one flat run of matches with no groups to open through.
+
 `program-offline.js` keeps the device's copy, so the offers stay readable on a
 phone with no signal. The phone never writes one: the reading needs the browser
 that is on the program's site.

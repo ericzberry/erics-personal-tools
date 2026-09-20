@@ -56,6 +56,10 @@
 .settings-group-head>.action-group{margin:0;flex:none}
 /* The institutions' own pages: a label per kind, and its links wrapping under
    it. Links, not buttons — each one leaves for the institution's own site. */
+/* An offer's summary says enough in two lines, and the offer's own page is one
+   press away for the rest. Without this a category of twenty offers is a screen
+   of prose, and the wallet under it is never reached. */
+.program-offers .record-row > p:not(.footnote){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .account-pages-group{display:grid;gap:4px}
 .account-pages-kind{font-weight:600}
 .account-pages-row{display:flex;flex-wrap:wrap;gap:4px 12px}

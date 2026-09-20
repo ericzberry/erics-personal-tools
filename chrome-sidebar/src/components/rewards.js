@@ -14,7 +14,7 @@ export function RewardsView(){
     UI.SettingsGroup({title:'Program offers',level:2,children:[
       Stack([],{id:'programs-filter'}),
       Notice('',{id:'programs-status'}),
-      Stack([],{id:'programs-list'})]}),
+      Stack([],{id:'programs-list',className:'program-offers'})]}),
     UI.SettingsGroup({title:'Protected values',level:2,children:[
       Notice('',{id:'vault-status'}),
       ActionGroup([],{id:'vault-actions',compact:true}),

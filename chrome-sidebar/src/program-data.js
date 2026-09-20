@@ -149,6 +149,9 @@ export function mergeCatalog(previous, next) {
 }
 
 export const NEW_DAYS = 30;
+// How many new offers are worth opening on arrival. Beyond this the group is
+// still the first thing in the list, but it waits to be asked.
+export const NEW_OPEN_MAX = 12;
 // The categories actually present, so the filter offers nothing that would
 // return an empty list.
 export const catalogCategories = catalog =>
@@ -164,4 +167,38 @@ export function catalogOffers(catalog, {query = '', category = '', now = new Dat
       (!needle || [offer.name, offer.category, offer.summary, offer.badge].join(' ').toLowerCase().includes(needle)))
     .map(offer => ({...offer, isNew: Date.parse(offer.firstSeenAt) >= fresh}))
     .sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || a.name.localeCompare(b.name));
+}
+
+// A catalogue of a hundred and thirty-six offers is not a list to read down.
+// Grouped it is a handful of lines: what is new, and then one line per category
+// to open when it is wanted. The groups are closed, so the whole catalogue
+// costs the height of its categories until the owner asks for one.
+//
+// Narrowing already answers the question, so a search or a chosen category
+// returns one flat run of matches rather than groups to open through.
+//
+// A new offer is listed twice — under `New` and under its own category — on
+// purpose: `New` is a lens over the catalogue, not a place offers live, and a
+// category that quietly omitted its newest offers would be the wrong answer to
+// "what is there".
+export function catalogGroups(catalog, {query = '', category = '', now = new Date()} = {}) {
+  const offers = catalogOffers(catalog, {query, category, now});
+  if (query.trim() || category) return [{key: 'matches', label: '', offers, open: true, flat: true}];
+  const groups = [];
+  const fresh = offers.filter(offer => offer.isNew);
+  // A first reading stamps every offer as first seen that day, so `New` would
+  // hold the entire catalogue and say nothing about it. The group earns its
+  // place only as a genuine subset, and it opens only while it is short enough
+  // to be worth opening — otherwise it sits closed like any other.
+  if (fresh.length && fresh.length < offers.length)
+    groups.push({key: 'new', label: 'New', offers: fresh, open: fresh.length <= NEW_OPEN_MAX});
+  const byCategory = new Map();
+  for (const offer of offers) {
+    const label = offer.category || 'Everything else';
+    if (!byCategory.has(label)) byCategory.set(label, []);
+    byCategory.get(label).push(offer);
+  }
+  for (const [label, list] of [...byCategory.entries()].sort((a, b) => a[0].localeCompare(b[0])))
+    groups.push({key: `category:${label}`, label, offers: list, open: false});
+  return groups;
 }

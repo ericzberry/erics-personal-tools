@@ -165,6 +165,9 @@ its model through the central task policy
 A perks portal — Morgan Stanley Reserved — publishes a catalogue of offers that
 changes without notice. Those are not wallet entries: they are read off the
 program's own pages and listed under **Program offers**, below the wallet,
-refreshed whenever the owner visits the site. The wallet's search filters them
-alongside your own entries, and a category picker narrows them further. See
+refreshed whenever the owner visits the site. They are grouped — what is new,
+then one closed line per category — because one program alone publishes well
+over a hundred. The wallet's search filters them alongside your own entries,
+and a category picker narrows them further; either narrowing shows a flat run
+of matches instead. See
 [reward programs](REWARD_PROGRAMS.md) for what is read, when, and what is not.

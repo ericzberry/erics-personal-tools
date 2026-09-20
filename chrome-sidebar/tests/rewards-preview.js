@@ -50,11 +50,27 @@ const store = records => ({request: async () => ({records})});
 // the one press that deletes it are all reviewed here.
 const DIRECTORY = directoryBalances(LOYALTY_PROGRAMS, []).map((entry, index) =>
   ({...entry, revision: `synthetic-directory-${index}`}));
+// What the owner actually has: a catalogue far too long to read down. Built
+// here at the size the real one reaches, so the grouping is reviewed against
+// the problem it exists for rather than against six rows.
+const MANY = Array.from({length: 136}, (_, i) => ({
+  key: `/offer/synthetic_${i}`,
+  name: `Synthetic offer ${String(i + 1).padStart(3, '0')}`,
+  category: ['AUTOMOTIVE', 'DINING', 'EVENTS', 'HOME', 'RETAIL', 'TRAVEL', 'WELLNESS'][i % 7],
+  badge: i % 11 === 0 ? 'LIMITED-TIME OFFER' : '',
+  summary: 'A synthetic offer, long enough in its own right to wrap onto a second line at sidebar width.'
+}));
+// Seven of them first seen this week, so the New group has something in it.
+const BIG = mergeCatalog(
+  mergeCatalog(null, validateProgramCatalog({programId: 'ms-reserved', complete: true, offers: MANY.slice(7)}, old)),
+  validateProgramCatalog({programId: 'ms-reserved', complete: true, offers: MANY}));
+
 const STATES = [
   ['Wallet and a program’s offers', WALLET, [CATALOG]],
   ['Nothing read from a program yet', WALLET, []],
   ['A program read, and an empty wallet', [], [CATALOG]],
-  ['Every program added, none read yet', DIRECTORY, []]
+  ['Every program added, none read yet', DIRECTORY, []],
+  ['A catalogue of 136 offers', WALLET, [BIG]]
 ];
 const root = document.getElementById('reward-states');
 for (const [label, entries, catalogs] of STATES) {

@@ -261,9 +261,15 @@ test('a program’s offers are shown beside the wallet, searched with it, and fi
   programs:{request:async()=>({records:[catalog]})}});
  await tool.refresh();
  const $=id=>h.document.getElementById(id);
- const names=()=>[...h.document.querySelectorAll('#programs-list strong')].map(node=>node.textContent);
+ // The offers themselves, not the headings they now sit under: a catalogue is
+ // grouped by category, so a group's own name is a `strong` in this list too.
+ const names=()=>[...h.document.querySelectorAll('#programs-list .record-name')].map(node=>node.textContent);
+ const groups=()=>[...h.document.querySelectorAll('#programs-list details.reward-group')]
+  .map(node=>node.querySelector('summary strong').textContent);
  await settle(()=>names().length===2);
  assert.deepEqual(names(),['LG','SIXT']);
+ // Neither offer is new, so there is no New group and the categories are the list.
+ assert.deepEqual(groups(),['Home','Travel']);
  assert.equal($('programs-status').textContent,'Morgan Stanley Reserved · 2 offers · read 2026-09-11');
  assert.equal($('programs-status').closest('section').hidden,false);
  const row=[...h.document.querySelectorAll('#programs-list section')].find(node=>node.textContent.includes('SIXT'));
@@ -275,6 +281,7 @@ test('a program’s offers are shown beside the wallet, searched with it, and fi
  $('rewards-search').value='appliances';
  $('rewards-search').dispatchEvent(new h.window.Event('input',{bubbles:true}));
  assert.deepEqual(names(),['LG']);
+ assert.deepEqual(groups(),[],'a search has already narrowed the list, so there is nothing to open through');
  assert.equal($('programs-status').textContent,'Morgan Stanley Reserved · 1 of 2 offers · read 2026-09-11');
  $('rewards-search').value='';
  $('rewards-search').dispatchEvent(new h.window.Event('input',{bubbles:true}));
@@ -284,6 +291,7 @@ test('a program’s offers are shown beside the wallet, searched with it, and fi
  picker.value='Travel';
  picker.dispatchEvent(new h.window.Event('change',{bubbles:true}));
  assert.deepEqual(names(),['SIXT']);
+ assert.deepEqual(groups(),[],'and neither has a chosen category');
 
  // Nothing read yet means no section at all, rather than an empty one.
  tool.clear();

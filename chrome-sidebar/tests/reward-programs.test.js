@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML, DOMParser} from 'linkedom';
-import {rewardProgram, programById, validateOffer, validateProgramCatalog, mergeCatalog, catalogOffers, catalogCategories, offerUrl, titleCase, MAX_OFFERS} from '../src/program-data.js';
+import {rewardProgram, programById, validateOffer, validateProgramCatalog, mergeCatalog, catalogOffers, catalogCategories, offerUrl, titleCase, MAX_OFFERS,catalogGroups,NEW_OPEN_MAX} from '../src/program-data.js';
 import {readProgramCards, shouldRead, readProgramFromTab, watchRewardPrograms, READ_MS, READ_STATE_KEY} from '../src/reward-programs.js';
 import {CONNECTION_KEY} from '../src/cloud-storage.js';
 
@@ -216,4 +216,55 @@ test('the watcher considers a finished load and an activated tab, one at a time'
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.deepEqual(seen, ['https://msreserved.com/offers/all_offers', 'saved:ms-reserved',
     'https://msreserved.com/offer/sixt', 'https://msreserved.com/offer/x']);
+});
+
+// A catalogue the size the real one reaches is not a list to read down: it is
+// grouped so the wallet underneath it stays reachable.
+test('a long catalogue is grouped by category, with what is new on top',()=>{
+  const offers=Array.from({length:136},(_,i)=>({key:`/o/${i}`,name:`Offer ${i}`,
+    category:['AUTOMOTIVE','DINING','EVENTS','RETAIL','TRAVEL'][i%5],summary:'s',
+    firstSeenAt:i<7?new Date().toISOString():'2020-01-01T00:00:00.000Z'}));
+  const groups=catalogGroups({programId:'ms-reserved',offers},{});
+  assert.equal(groups[0].label,'New','what is new is the reason to look, so it is first');
+  assert.equal(groups[0].open,true,'and it is the only group that starts open');
+  assert.equal(groups[0].offers.length,7);
+  assert.ok(groups.slice(1).every(group=>group.open===false),'every category starts closed');
+  assert.deepEqual(groups.slice(1).map(group=>group.label),
+    ['AUTOMOTIVE','DINING','EVENTS','RETAIL','TRAVEL'],'categories are in their own order, not the offers’');
+  // Every offer is reachable through a category, including the new ones: `New`
+  // is a lens over the catalogue, not a place offers are moved to.
+  const byCategory=groups.slice(1).reduce((count,group)=>count+group.offers.length,0);
+  assert.equal(byCategory,136);
+});
+
+test('a narrowed catalogue is one flat run of matches, with no groups to open through',()=>{
+  const offers=[{key:'/a',name:'Sixt',category:'AUTOMOTIVE',summary:'cars',firstSeenAt:'2020-01-01T00:00:00.000Z'},
+    {key:'/b',name:'Hertz',category:'AUTOMOTIVE',summary:'cars',firstSeenAt:'2020-01-01T00:00:00.000Z'},
+    {key:'/c',name:'Dinner',category:'DINING',summary:'food',firstSeenAt:'2020-01-01T00:00:00.000Z'}];
+  const catalog={programId:'ms-reserved',offers};
+  for(const narrowed of [catalogGroups(catalog,{query:'cars'}),catalogGroups(catalog,{category:'AUTOMOTIVE'})]){
+    assert.equal(narrowed.length,1);
+    assert.equal(narrowed[0].flat,true);
+    assert.equal(narrowed[0].offers.length,2);
+  }
+});
+
+test('a first reading has no New group, because every offer would be in it',()=>{
+  const offers=Array.from({length:136},(_,i)=>({key:`/o/${i}`,name:`Offer ${i}`,
+    category:['A','B','C'][i%3],summary:'s',firstSeenAt:new Date().toISOString()}));
+  const groups=catalogGroups({programId:'ms-reserved',offers},{});
+  assert.ok(!groups.some(group=>group.label==='New'),
+    'a group holding the whole catalogue says nothing about it');
+  assert.deepEqual(groups.map(group=>group.label),['A','B','C']);
+  assert.ok(groups.every(group=>group.open===false),'so the catalogue costs three closed lines');
+});
+
+test('a New group too long to be worth opening waits to be asked',()=>{
+  const build=fresh=>({programId:'ms-reserved',offers:Array.from({length:136},(_,i)=>({
+    key:`/o/${i}`,name:`Offer ${i}`,category:'A',summary:'s',
+    firstSeenAt:i<fresh?new Date().toISOString():'2020-01-01T00:00:00.000Z'}))});
+  assert.equal(catalogGroups(build(NEW_OPEN_MAX),{})[0].open,true);
+  assert.equal(catalogGroups(build(NEW_OPEN_MAX+1),{})[0].open,false,
+    'still first in the list, but it no longer opens itself');
+  assert.equal(catalogGroups(build(NEW_OPEN_MAX+1),{})[0].label,'New');
 });

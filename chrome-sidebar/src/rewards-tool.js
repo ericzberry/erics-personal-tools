@@ -3,7 +3,7 @@ import {CardMatches} from './components/cards.js';
 import {RecordRow,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
-import {catalogOffers,catalogCategories,offerUrl} from './program-data.js';
+import {catalogOffers,catalogGroups,catalogCategories,offerUrl} from './program-data.js';
 import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord,directoryBalances,UNREAD_BALANCE} from './balance-data.js';
 import {LOYALTY_PROGRAMS} from './loyalty-sites.js';
 import {aiConnections} from './ai-connection.js';
@@ -146,8 +146,10 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   function emptyState(){
     if(!loaded)return [Note('Connect in Settings to load your saved rewards.')];
     if(entries.length)return [Note('No matching rewards. Clear the search to see all entries.')];
-    return [Note('No saved rewards yet. A card you hold, a points balance, a card credit, or a membership such as a perks program all belong here.'),
-      ActionGroup([...(remote?[action('Add a card',startCard,'primary')]:[]),action('Add a reward',startEntry,remote?'secondary':'primary')],{compact:true})];
+    // The actions say what belongs here; a sentence listing the four kinds of
+    // reward said it again in longer form, above the two buttons that offer it.
+    return [ActionGroup([...(remote?[action('Add a card',startCard,'primary')]:[]),
+      action('Add a reward',startEntry,remote?'secondary':'primary')],{compact:true})];
   }
   function startEntry(){clearForm();$('reward-editor').open=true;$('reward-name').focus();}
   // What a program currently offers, read off its own site. Nothing here writes
@@ -196,15 +198,25 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     setStatus($('programs-status'),[live.length===1?live[0].label:'',
       shown===total?`${total} offer${total===1?'':'s'}`:`${shown} of ${total} offers`,
       read?`read ${read.slice(0,10)}`:''].filter(Boolean).join(' · '));
-    $('programs-list').replaceChildren(...(shown?groups.flatMap(({catalog,offers})=>[
+    // One row per offer, and — unless the owner has already narrowed the list —
+    // those rows live inside a group per category with what is new on top, so a
+    // catalogue of a hundred offers costs a handful of closed lines instead of
+    // a screen the wallet below it never gets past.
+    const offerRow=(catalog,offer)=>{
+      const url=offerUrl(catalog.programId,offer.key);
+      return RecordRow({title:offer.name,
+        detail:[offer.badge,offer.category,offer.dates].filter(Boolean).join(' · '),
+        notes:offer.summary,
+        actions:url?[RowLink(OPEN_GLYPH,`Open the ${offer.name} offer`,url)]:[]});
+    };
+    $('programs-list').replaceChildren(...(shown?groups.flatMap(({catalog})=>[
       live.length>1?Note(catalog.label):null,
-      ...offers.map(offer=>{
-        const url=offerUrl(catalog.programId,offer.key);
-        return RecordRow({title:offer.name,
-          detail:[offer.badge,offer.category,offer.dates].filter(Boolean).join(' · '),
-          notes:offer.summary,
-          actions:url?[RowLink(OPEN_GLYPH,`Open the ${offer.name} offer`,url)]:[]});
-      })
+      ...catalogGroups(catalog,{query,category:programCategory}).flatMap(group=>group.flat
+        ? group.offers.map(offer=>offerRow(catalog,offer))
+        : [RewardGroup({title:group.label,
+            detail:`${group.offers.length} offer${group.offers.length===1?'':'s'}`,
+            open:group.open,
+            children:group.offers.map(offer=>offerRow(catalog,offer))})])
     ].filter(Boolean)):[Note('No matching offers. Clear the search to see all of them.')]));
   }
   // Offered only where all three hold: a program's own page beside the panel, a
