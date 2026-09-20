@@ -2799,3 +2799,66 @@ states — the mortgage line reads ($1,359,800) in red, the bars sit behind the
 figures, and the trust names read as names. Native iPhone and installed Chrome
 behavior were not directly tested. Archive:
 `release/erics-sidebar-0.6.215.zip`.
+
+## Carta states positions, not balances (0.6.216 / mobile 0.1.166)
+
+Read as a brokerage page, Carta offered **$191,519,164** under the name of the
+entity the owner signs in as, and $142,412,829 beside it. Neither is his. What
+he actually put into a fund — $150,000 into C2V Tributary Fund II, LP — arrived
+as nothing at all.
+
+**A cap-table site states no account balance.** Every figure on one is either a
+private position's own — committed, called, distributed, what it is worth — or a
+number belonging to a company or a fund rather than to the reader: a portfolio
+company's valuation, what it has raised, a fund's own assets and liabilities. To
+a reading hunting for money on a page those are indistinguishable from a
+balance, and several digits larger. So `holdsPositionsOnly` names the sites where
+nothing read is a balance, and a figure from one is refused rather than
+reclassified — the figures are real, they are simply the fund's, and no asset
+class can make them his. The refusal is said in the same line every other one is:
+*Left out: 2 figures this page states about a company or a fund rather than
+about you.*
+
+What he holds there reaches the ledger the way every other private investment
+does — as a capital account, carrying the commitment and the called capital
+beside the value — which is the shape Carta was already printing it in. The
+intake now recognizes that table: one row per investment, the investor named
+once above it or in the entity switcher, Committed and Contributed and
+Distributed as the columns they are. Every such row is a capital account and
+belongs under `capital`, never as a reading, because a committed or called
+figure is not a balance.
+
+**A fund you manage is not a fund you hold.** Carta puts both behind one sign-on
+and in one table: Averin's management company and the general partner of the
+fund it manages sit directly above a fund he is simply an investor in, each with
+a commitment and called capital beside it, and nothing on the page says which
+kind it is. What is his inside a general partner is a share of that partner's
+own commitment, and no page states the share — so filing the GP's figures as his
+puts the fund investors' money in his net worth, and leaving them out silently
+loses a position. `MANAGED_VEHICLES` names the firm he runs, a statement for one
+of its vehicles is refused by name — *Left out: Averin Capital, which you manage
+rather than hold* — and what he holds of it is entered deliberately.
+
+**Whose position it is, when the page says only “Eric Berry”.** The investor
+account is in his own name and what he buys through it is the couple's, so the
+Carta roster titles it to the Eric and Ariana Berry Estate. The portfolio
+literally called *Eric Berry* is his IRA, which is the one place that
+distinction is worth money: a partnership interest bought personally cannot sit
+inside one. The institution now reaches the capital fold, so a statement read
+off a page is titled the way a balance read off the same page already was, and a
+statement dropped as a file — naming no site — is placed exactly as before.
+
+Carta joins the readable sites with this. The application is the whole of
+app.carta.com, named by the handful of log-on paths it is not, because the site
+routes between an investor's portfolio, a firm's funds and a company's cap table
+without ever changing the path.
+
+Validation: 582 extension, 33 mobile and 134 API tests pass, and both apps
+build. New coverage: two fund-sized figures refused at Carta and the same figure
+kept at a broker, the C2V row titled to the estate rather than to the IRA of the
+same name, that titling applying only where the institution is known, the
+management company and the general partner left out by name with nothing
+proposed for them, and Carta read on every application path and on none of the
+way in. Not directly checked: the live Carta page, which is behind a sign-on —
+the figures above came off the owner's own reading of it.
+Archive: `release/erics-sidebar-0.6.216.zip`.

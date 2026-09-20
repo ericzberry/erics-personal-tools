@@ -8,6 +8,7 @@ const morganStanley=ACCOUNT_SITES.find(site=>site.id==='morgan-stanley');
 const schwab=ACCOUNT_SITES.find(site=>site.id==='schwab');
 const coinbase=ACCOUNT_SITES.find(site=>site.id==='coinbase');
 const ubs=ACCOUNT_SITES.find(site=>site.id==='ubs');
+const carta=ACCOUNT_SITES.find(site=>site.id==='carta');
 const frame=(result,frameId=0)=>({frameId,result});
 
 test('an account site is recognized by its host, and nothing else is',()=>{
@@ -94,6 +95,25 @@ test('Coinbase is read on the pages the money is on, and on none of the pages an
   // And the sign-in step that does show a password field is refused whatever
   // path it is on.
   assert.equal(signedIn(coinbase,{...app,path:'/home',password:true}),false);
+});
+
+// Carta routes inside one application without changing the path: an investor's
+// portfolio, a firm's funds and a company's cap table can all sit on the same
+// one. So the application is named by what it is not — the handful of log-on
+// paths — rather than by a prefix that would refuse most of the site.
+test('Carta is read wherever the application is, and never on the way into it',()=>{
+  const app={ready:true,password:false,exit:false};
+  for(const path of ['/','/investors/portfolio','/firms/averin/funds','/corporations/celsie/securities'])
+    assert.equal(signedIn(carta,{...app,path}),true,path);
+  for(const path of ['/login','/logout','/sign-in','/password/reset','/mfa'])
+    assert.equal(signedIn(carta,{...app,path}),false,path);
+  assert.equal(signedIn(carta,{...app,path:'/investors/portfolio',password:true}),false);
+  // The application has a host of its own; the marketing site is Carta's page
+  // and never a readable one.
+  assert.equal(accountSite('https://app.carta.com/investors/portfolio')?.id,'carta');
+  for(const url of ['https://www.carta.com/','https://carta.com/pricing','https://app.carta.com.example.invalid/'])
+    assert.equal(accountSite(url),null,url);
+  assert.equal(financeSite('https://www.carta.com/')?.id,'carta');
 });
 
 test('a page still loading cannot be read as a signed-in one by its path',()=>{

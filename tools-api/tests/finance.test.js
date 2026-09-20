@@ -214,6 +214,14 @@ test('the intake model labels what it reads and is never asked to total, match o
   // and the holdings inside it from being added together.
   assert.match(prompt,/one position held inside an account/);
   assert.match(prompt,/Never guess a split that is not shown/);
+  // A cap-table page prints a company's own valuation and a fund's own assets
+  // beside the reader's position, in the same shape and several digits larger.
+  // What is on it that is his is a row of a table, and a table of commitments
+  // and called capital is a page of capital accounts, not of balances.
+  assert.match(prompt,/belongs to a company or a fund rather than to the person reading the page/);
+  assert.match(prompt,/a fund's own assets, liabilities, net asset value or total commitments/);
+  assert.match(prompt,/Every such row is a capital account and belongs in/);
+  assert.match(prompt,/a committed, called, unfunded, prepaid or outstanding figure is not an account balance/);
   for(const bad of ['',' ','x'.repeat(MAX_INTAKE_TEXT+1)])await assert.rejects(readFinanceUpdates(connection,{text:bad},fetcher),error=>error.status===400);
   assert.equal(prompt.includes('image'),false,'a text-only reading never mentions images');
   reply='not json at all';

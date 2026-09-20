@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,
   parseFinanceUpdates,foldReadings,financeAttention,legacyLedger,titledOwner,titledHolder,holdsManyTitles,
+  holdsPositionsOnly,managedVehicle,
   institutionName,registrationLabel,registrationFromName,
   markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,
   holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel,
@@ -1055,4 +1056,72 @@ test('a UBS Brokerage account is fund investments, and every other one is not',(
       [estate],{institution,today:'2026-09-20'});
     assert.notEqual(classLabel(other.marks[0].class),'Fund investments',institution);
   }
+});
+
+// Carta is the one site in the registry that states no account balance at all.
+// Read as a brokerage page it offered $191,519,164 under the name of the entity
+// the owner signs in as — a fund's own assets, not his — while the $150,000 he
+// actually put into a fund arrived as nothing. And it prints the firm he runs
+// in the same table as the fund he bought into, so the general partner's
+// commitment reads exactly like his own.
+test('a cap-table page states positions, never balances, and the fund he runs is not one he holds',()=>{
+  const reading=(account,label,cls,value)=>({account,label,class:classById(cls).code,registration:'',
+    scope:'account',value,asOf:'2026-09-20',confidence:'high',reason:''});
+  const fund=(name,holder,extra={})=>parseFinanceUpdates({readings:[],unread:'',capital:[
+    {fund:name,holder,vehicle:'fund',asOf:'2026-09-20',value:150000,commitment:150000,
+      contributed:150000,distributed:0,confidence:'high',reason:'The row states what was committed and called.',...extra}]}).capital[0];
+
+  assert.equal(holdsPositionsOnly('Carta'),true);
+  for(const elsewhere of ['Schwab','UBS','Chase',''])assert.equal(holdsPositionsOnly(elsewhere),false,elsewhere);
+
+  // Neither figure is a balance, whatever class the reading gave it, and the
+  // refusal is named: a number that simply vanished would be read as a page
+  // that could not be read at all.
+  const carta=foldReadings([
+    reading('CELSIE LLC','Total assets','unclassified',191519164),
+    reading('CELSIE LLC','Liquid securities','liquid',142412829)
+  ],[estate,ira],{institution:'Carta',today:'2026-09-20'});
+  assert.deepEqual(carta.marks,[]);
+  assert.deepEqual(carta.portfolios,[]);
+  assert.match(carta.notes.join(' '),/Left out: 2 figures this page states about a company or a fund rather than about you\./);
+  // The same figure at a broker is a balance, because there it is one.
+  assert.equal(foldReadings([reading('CELSIE LLC','Total assets','unclassified',191519164)],
+    [estate,ira],{institution:'Schwab',today:'2026-09-20'}).marks[0].amount,191519164);
+
+  // What he bought is a position, titled where he holds it. The investor
+  // account is his own name and the portfolio called "Eric Berry" is his IRA,
+  // which cannot hold a partnership interest bought personally.
+  const bought=foldCapital([fund('C2V Tributary Fund II, LP','Eric Berry')],ledger(),
+    {institution:'Carta',today:'2026-09-20'});
+  assert.equal(bought.rows.length,1);
+  assert.equal(bought.rows[0].name,'C2V Tributary Fund II, LP');
+  assert.equal(bought.rows[0].portfolio,1);
+  assert.equal(bought.rows[0].portfolioName,ESTATE);
+  assert.equal(bought.rows[0].portfolioIsNew,false);
+  assert.equal(classLabel(bought.rows[0].class),'Fund investments');
+  assert.equal(bought.rows[0].commitment,150000);
+  assert.equal(bought.portfolios.length,0);
+  // Away from Carta the roster says nothing, and a statement addressed to
+  // "Eric Berry" still matches the portfolio of that name exactly.
+  assert.equal(foldCapital([fund('C2V Tributary Fund II, LP','Eric Berry')],ledger(),{today:'2026-09-20'}).rows[0].portfolio,2);
+
+  // The management company and the general partner of the fund he manages are
+  // left out by name: his share of a GP's commitment is not on the page, and
+  // the GP's own figures are the fund investors' money, not his.
+  const runs=foldCapital([
+    fund('Averin Health Opportunities GP I LLC','Eric Berry',{commitment:2119150,contributed:850000,value:850000}),
+    fund('Averin Capital, LLC','Eric Berry',{commitment:0.5,contributed:0.5,value:0.5}),
+    fund('C2V Tributary Fund II, LP','Eric Berry')
+  ],ledger(),{institution:'Carta',today:'2026-09-20'});
+  assert.deepEqual(runs.rows.map(row=>row.name),['C2V Tributary Fund II, LP']);
+  assert.match(runs.notes.join(' '),/Left out: Averin Capital, which you manage rather than hold\./);
+  assert.equal(runs.holdings.length,1,'nothing is proposed for a vehicle that was refused');
+  // And the same vehicle on a page of balances is refused there too.
+  const beside=foldReadings([reading('Averin Health Opportunities GP I LLC','Total','liquid',850000),
+    reading('Individual Brokerage -4049','Net Account Value','liquid',1000)],
+    [estate,ira],{institution:'Schwab',today:'2026-09-20'});
+  assert.deepEqual(beside.marks.map(entry=>entry.amount),[1000]);
+  assert.match(beside.notes.join(' '),/Averin Capital, which you manage/);
+  assert.equal(managedVehicle('Averin Health Opportunities GP I LLC')?.name,'Averin Capital');
+  assert.equal(managedVehicle('C2V Tributary Fund II, LP'),null);
 });

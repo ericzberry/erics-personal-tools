@@ -288,6 +288,20 @@ export const ACCOUNT_TITLES=[
     // a-e-2-0-2-1 does not contain a-e-2-1.
     {owner:'Berry AE 21 Irrevocable Trust',registration:'trust',
       match:['ae2021trust']}
+  ]},
+  // Carta signs one person in to everything he has anything to do with: the
+  // funds he put money into, the general partner of the fund he runs, and the
+  // management company behind that. The investor account is in his own name,
+  // and what he buys through it is the couple's — so “Eric Berry” here is the
+  // estate and not the retirement portfolio that happens to carry the same
+  // name, which is the one place that distinction is worth money: a partnership
+  // interest bought personally cannot sit inside an IRA. An entity he invests
+  // through names itself in the switcher at the top of the page, and is spelled
+  // here exactly as the portfolio it already has.
+  {institution:'Carta',match:['carta'],holders:[
+    {owner:'Eric and Ariana Berry Estate',registration:'taxable',
+      match:['ericberry','ericzberry','ericandariana','arianacooperberry']},
+    {owner:'Celsie LLC',registration:'entity',match:['celsie']}
   ]}
 ];
 export const titledAccount=institution=>{
@@ -316,6 +330,39 @@ export function titledHolder(institution,said){
 // account nobody recognized keeps its own name instead of falling into the one
 // portfolio that happens to be registered the same way.
 export const holdsManyTitles=institution=>!!titledAccount(institution)?.holders?.length;
+// The firm the owner runs, as against the funds he bought into. Carta puts both
+// behind one sign-on and prints them in one table: a management company and the
+// general partner of the fund it manages sit directly above a fund he is simply
+// an investor in, each with a commitment and called capital beside it, and
+// nothing on the page says which kind it is.
+//
+// What is his inside a general partner is a share of that partner's own
+// commitment, and no page states the share. Filing the GP's figures as his puts
+// other people's money in his net worth; leaving them out silently loses a
+// position. So a vehicle named here is never filed by a reading — it is left
+// out, by name, and what he holds of it is entered deliberately.
+export const MANAGED_VEHICLES=[
+  {name:'Averin Capital',match:['averin']}
+];
+export const managedVehicle=said=>{
+  const key=matchKey(said);
+  return (key&&MANAGED_VEHICLES.find(entry=>entry.match.some(name=>key.includes(name))))||null;
+};
+// A site that states positions and no balances. Everything on an investor's
+// page at a cap-table or fund administrator is either one private position's
+// own figures — committed, called, distributed, what it is worth — or a figure
+// belonging to a company or a fund rather than to the reader: a portfolio
+// company's valuation, what it has raised, a fund's own assets and liabilities.
+// None of those is an account balance, and to a reading hunting for money on
+// the page they are indistinguishable from one, which is how a fund holding
+// $191M arrived as $191M of the owner's under the name he signs in as.
+//
+// So a figure read from such a site is not filed as a balance at all. What the
+// owner holds there reaches the ledger the way every other private investment
+// does — as a capital account, carrying the commitment and the called capital
+// beside the value — which is the shape the page was already printing it in.
+const PRIVATE_MARKETS=new Set(['carta']);
+export const holdsPositionsOnly=institution=>PRIVATE_MARKETS.has(matchKey(institution));
 // A title that states its own registration. A trust is a trust and an LLC is an
 // entity wherever they are read, so a holder the roster does not name still
 // lands beside its own kind rather than in the taxable pile.
@@ -1064,12 +1111,18 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   const usable=counted.filter(reading=>reading.scope!=='all'&&!groupTotal(reading));
   const summed=counted.length-usable.length;
   if(summed)dropped.push('a total across accounts');
+  // And on a site that states no balance at all, none of what is left is one.
+  // Refused here rather than reclassified: the figures are real, they are
+  // simply the fund's or the company's, and a class cannot make them his.
+  const mine=holdsPositionsOnly(institution)?[]:usable;
+  if(usable.length&&!mine.length)
+    dropped.push(`${usable.length} figure${usable.length===1?'':'s'} this page states about a company or a fund rather than about you`);
   // The two are refused together and mean different things. A headline total
   // is printed over accounts the page also states, so refusing it loses
   // nothing. A kind's total is printed instead of them.
   const kinds=counted.filter(groupTotal).length;
   const accounts=new Map();
-  for(const reading of usable){
+  for(const reading of mine){
     const key=accountKey(reading);
     if(!accounts.has(key))accounts.set(key,{name:reading.account||institutionName(institution),totals:[],holdings:[]});
     const holding=reading.scope==='holding'&&!PLAN_VALUE.test(reading.label||'');
@@ -1164,6 +1217,9 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // downstream, so that no figure of it reaches a total on any screen.
     const holder=titledHolder(institution,said);
     if(holder?.ignore){dropped.push(holder.owner);continue;}
+    // A fund he runs is not a fund he holds, whatever the page files it beside.
+    const managed=managedVehicle(said);
+    if(managed){dropped.push(`${managed.name}, which you manage`);continue;}
     const portfolio=resolve(inside,said);
     const totals=balances(account.totals,dropped);
     const holdings=account.holdings,held=sum(holdings.map(reading=>reading.value));
@@ -1203,7 +1259,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   // kind on the closed group's own heading, so the page can hold every account
   // and state none of them. Both answer to the same instruction, and telling
   // the owner to go elsewhere would have sent him off the page he wanted.
-  const anyAccount=usable.some(reading=>ownName(reading.account)
+  const anyAccount=mine.some(reading=>ownName(reading.account)
     ||accountDigits(`${reading.account||''} ${reading.label||''}`).length);
   if(kinds&&!anyAccount)notes.push('Only one total per kind of account reached the reading. Show the accounts themselves on the page, then read again.');
   // Read in the order it will be read back: whose money it is, then what it is
@@ -1226,7 +1282,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
 // on its own. A statement that shows only the period's movement is added to the
 // position's last filed figure here, and the row it produces says that it was,
 // because a derived cumulative is only as good as the row before it.
-export function foldCapital(statements,records,{today=new Date().toISOString().slice(0,10)}={}){
+export function foldCapital(statements,records,{institution='',today=new Date().toISOString().slice(0,10)}={}){
   const portfolios=portfoliosOf(records),holdings=holdingsOf(records),filed=capitalOf(records);
   const madePortfolios=[],madeHoldings=[],notes=[],rows=[];
   const nextNumber=(existing,made)=>Math.max(0,...existing.map(entry=>entry.number),...made.map(entry=>entry.number))+1;
@@ -1264,21 +1320,29 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
   // to be guessed — and a name that matches no portfolio yet describes one well
   // enough to propose it, because a trust says it is a trust.
   const resolvePortfolio=holder=>{
-    const found=holder&&bestMatch(holder,portfolios);
+    // Where the page it came from has a roster, the roster answers first. A
+    // statement is addressed to the party as that institution writes it, and
+    // the owner's own standing answer about his structure outranks a name
+    // match: “Eric Berry” at Carta is the couple's estate, while the portfolio
+    // literally called Eric Berry is his IRA, and matching on the name alone
+    // would file a partnership interest inside a retirement account.
+    const titled=titledHolder(institution,holder);
+    const named=titled?.owner||holder;
+    const found=named&&bestMatch(named,portfolios);
     if(found)return found;
-    const already=holder&&bestMatch(holder,madePortfolios);
+    const already=named&&bestMatch(named,madePortfolios);
     if(already)return already;
     // Nothing on the statement says whose it is. One taxable portfolio can take
     // it without a guess; more than one, and it goes to the first rather than
     // inventing a second, with a note saying so and a choice on the row.
-    if(!holder){
+    if(!named){
       const taxable=portfolios.filter(portfolio=>portfolio.kind===registrationById('taxable').code);
       if(taxable.length)return taxable[0];
       if(portfolios.length)return portfolios[0];
     }
-    const kind=registrationFromName(holder)||registrationById('taxable');
+    const kind=(titled&&registrationById(titled.registration))||registrationFromName(named)||registrationById('taxable');
     const fresh={row:'portfolio',number:nextNumber(portfolios,madePortfolios),
-      name:String(holder||kind.label).slice(0,80),kind:kind.code,currency:'USD',isNew:true};
+      name:String(named||kind.label).slice(0,80),kind:kind.code,currency:'USD',isNew:true};
     madePortfolios.push(fresh);
     return fresh;
   };
@@ -1309,7 +1373,13 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
   // landed on the first time, or the write stops being idempotent.
   const preceding=(holding,asOf)=>filed.filter(entry=>entry.holding===holding&&entry.asOf<asOf)
     .sort((a,b)=>b.asOf.localeCompare(a.asOf))[0]||null;
+  // Vehicles the owner runs, gathered as they are refused and named once at the
+  // end. A statement for one of them is not a statement of his position: it is
+  // the general partner's own, and his share of it is not on the page.
+  const runs=[];
   for(const statement of statements){
+    const managed=managedVehicle(`${statement.name} ${statement.holder||''}`);
+    if(managed){runs.push(managed.name);continue;}
     const portfolio=resolvePortfolio(statement.holder);
     const holding=resolveHolding(statement,portfolio);
     const previous=holding.isNew?null:preceding(holding.number,statement.asOf);
@@ -1338,6 +1408,7 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
       asOf:statement.asOf,value:statement.value,contributed,distributed,commitment,
       confidence:statement.confidence,from:statement.reason?[statement.reason]:[]});
   }
+  if(runs.length)notes.unshift(`Left out: ${[...new Set(runs)].join(', ')}, which you manage rather than hold.`);
   return {rows,portfolios:madePortfolios,holdings:madeHoldings,notes,today};
 }
 

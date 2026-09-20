@@ -168,8 +168,22 @@ export const FINANCE_SITES=[
     url:'https://participant.empower-retirement.com/participant/'},
   {id:'tiaa',label:'TIAA',institution:'TIAA',kind:'retirement',hosts:['tiaa.org'],
     url:'https://www.tiaa.org/public/tcm/user/dashboard'},
+  // The one site in this list that states no account balance. Carta is a cap
+  // table and a fund administrator: what it prints is what was committed to a
+  // fund, how much of that has been called, what has come back, and what the
+  // position is worth — and beside those, the numbers belonging to the
+  // companies and the funds themselves. Read as a brokerage page it offers a
+  // portfolio company's valuation as the reader's money, which is why the
+  // reading is narrowed to positions in `finance-data.js` rather than here.
   {id:'carta',label:'Carta',institution:'Carta',kind:'private',hosts:['carta.com'],
-    url:'https://app.carta.com/'},
+    url:'https://app.carta.com/',
+    // The signed-in application is the whole of app.carta.com, so the log-on
+    // paths are named instead of the application's. The site routes inside the
+    // application without changing the path — an investor's portfolio, a firm's
+    // funds and a company's cap table can all sit on one — so a prefix that
+    // named the portfolio would refuse every other page the figures are on.
+    read:{hosts:['app.carta.com'],
+      app:/^\/(?!(login|logout|signin|sign-?in|sign-?up|register|password|reset|mfa|verify)\b)/i}},
   {id:'coinbase',label:'Coinbase',institution:'Coinbase',kind:'crypto',hosts:['coinbase.com'],
     url:'https://www.coinbase.com/assets',
     // Coinbase signs in on a host of its own: asking for www.coinbase.com/home
