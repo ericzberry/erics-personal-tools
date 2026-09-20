@@ -477,13 +477,17 @@ is the heading for what is under it, so no block inside repeats it:
    the two are one number printed twice under two names. The date the whole
    ledger stands at is stated once here, and a portfolio or a line below repeats
    it only when it is behind that date.
-3. **New figures** — the statement drop zone, what it read, **Enter by
+3. **Figures** — the statement drop zone, what it read, **Enter by
    hand** and **Open an account page**. Named for what it holds rather than for
    what it does: a label reading *Add* beside *Chase* mixes a verb with a noun,
-   and the row then reads as a row of buttons. The three records that can be typed in
-   stay three forms, because folding them together would make one form that is
-   mostly hidden whichever way it is used; what they are not is three separate
-   offers. As three closed drawers under a fourth they read as a run of
+   and the row then reads as a row of buttons. *New figures* was that noun and
+   still named the wrong thing — what the owner leaves with, when nobody arrives
+   here holding figures; they arrive holding a statement, a number, or nothing
+   but the bank's own web address. The plain noun sits beside **Net worth** the
+   way it is read: the amounts themselves, against what all of them come to.
+   The three records that can be typed in stay three forms, because folding them
+   together would make one form that is mostly hidden whichever way it is used;
+   what they are not is three separate offers. As three closed drawers under a fourth they read as a run of
    unexplained boundaries, and the one being looked for is found only by reading
    all of them — so which record is being entered is a switch inside the one
    drawer, **Figure · Private investment · Property**, chosen where it applies

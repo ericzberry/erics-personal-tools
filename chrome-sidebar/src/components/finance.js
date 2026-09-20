@@ -235,7 +235,10 @@ export function FinanceView(){
     // the reading and the ways in, and nothing of what the owner is worth.
     //
     // Every label names a view. "Add" among them named an action instead, and a
-    // row mixing a verb with two nouns read as a row of buttons.
+    // row mixing a verb with two nouns read as a row of buttons; "New figures"
+    // then named what the owner leaves with rather than what is under the
+    // label, and nobody arrives here holding figures — they arrive holding a
+    // statement, a number, or nothing but the bank's web address.
     Tabs({id:'finance-tabs',label:'Finance',items:[
       {key:'page',label:'This page',hidden:true,content:
         SettingsGroup({id:'finance-page-block',className:'settings-group snapshot-panel',children:[
@@ -260,7 +263,7 @@ export function FinanceView(){
           ],{id:'finance-trend-panel',className:'ledger-panel'}),
           Stack([],{id:'finance-list',className:'travel-list'})
         ]})},
-      {key:'add',label:'New figures',content:
+      {key:'add',label:'Figures',content:
         SettingsGroup({id:'finance-add',children:[
           UI.UploadField({id:'finance-drop',inputId:'finance-file',statusId:'finance-file-status',
             label:'Drop a statement',formats:'PDF, CSV, XLSX or image',accept:ACCEPTED.join(','),
