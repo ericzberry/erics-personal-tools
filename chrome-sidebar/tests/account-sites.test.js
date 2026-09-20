@@ -7,6 +7,7 @@ const chase=ACCOUNT_SITES.find(site=>site.id==='chase');
 const morganStanley=ACCOUNT_SITES.find(site=>site.id==='morgan-stanley');
 const schwab=ACCOUNT_SITES.find(site=>site.id==='schwab');
 const coinbase=ACCOUNT_SITES.find(site=>site.id==='coinbase');
+const ubs=ACCOUNT_SITES.find(site=>site.id==='ubs');
 const frame=(result,frameId=0)=>({frameId,result});
 
 test('an account site is recognized by its host, and nothing else is',()=>{
@@ -135,6 +136,25 @@ test('the Schwab application is /app/, and nothing signed out is there',()=>{
   const combined=combineSignInState([frame(page('/Areas/Access/Login'),0),frame(page('/ui/host/',{password:true}),4)]);
   assert.equal(combined.password,true,'the gateway frame answers for the page');
   assert.equal(signedIn(schwab,combined),false);
+});
+
+// UBS Online Services splits one host down its first path segment: /wma/ is the
+// application — the joint account and the trusts under the titles that hold them
+// — and /cauth/ is the log-on form and everything public. A deep link into the
+// application with no session is sent to the form carrying why it was refused,
+// never the path it wanted, and a path that is neither answers from /cauth/ too.
+test('the UBS application is /wma/, and the log-on form and public pages are not',()=>{
+  const page=(path,extra={})=>({path,ready:true,password:false,exit:false,...extra});
+  assert.equal(signedIn(ubs,page('/wma/accounts/dashboard')),true,'where the accounts are listed');
+  assert.equal(signedIn(ubs,page('/wma/whatever-online-services-adds-next')),true,'the whole prefix is the application');
+  assert.equal(signedIn(ubs,page('/cauth/wma/signin',{password:true})),false,'the log-on form');
+  assert.equal(signedIn(ubs,page('/cauth/wma/signin')),false,'and the form before its password field is built');
+  assert.equal(signedIn(ubs,page('/cauth/wma/404.html')),false,'the public page every other path answers from');
+  // Reading is the Online Services subdomain alone; the firm's own site carries
+  // no balances and is recognized without ever being asked anything.
+  assert.equal(accountSite('https://onlineservices.ubs.com/wma/accounts/dashboard')?.id,'ubs');
+  assert.equal(accountSite('https://www.ubs.com/us/en.html'),null,'the marketing site has nothing to read');
+  assert.equal(financeSite('https://www.ubs.com/us/en.html')?.id,'ubs','and is still recognized as UBS’s');
 });
 
 test('the page probe reports four facts and no page content',()=>{

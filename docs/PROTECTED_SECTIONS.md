@@ -484,7 +484,7 @@ the headings, not by a sentence under each one.
 
 **The panel turns to Finance on its own, and says nothing about what is in it.**
 `FINANCE_SITES` in `account-sites.js` recognizes about thirty institutions by
-host — the four whose signed-in pages can be read, and the rest of the
+host — the five whose signed-in pages can be read, and the rest of the
 brokerages, banks, card issuers, retirement and private-holding sites a figure
 comes from. Recognition costs one URL comparison, so `context-panel.js` asks it
 of every tab, and a recognized page shows Finance beside the tab those figures
@@ -575,7 +575,7 @@ its job. Everything after that is `foldReadings` on the device:
   marked `vision` in the catalog; a connection with no such model is refused
   rather than sent something it cannot read.
 - **Read the accounts on a site the sidebar recognizes.** The sidebar knows the
-  readable account sites in `ACCOUNT_SITES` from the tab beside it — the four
+  readable account sites in `ACCOUNT_SITES` from the tab beside it — the five
   whose signed-in pages have been checked against their log-on and public pages,
   which is the only work separating them from the rest of the registry above —
   and asks every frame of that page
