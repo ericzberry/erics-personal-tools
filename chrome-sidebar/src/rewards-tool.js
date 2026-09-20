@@ -217,9 +217,11 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     // a search does too, so there the category is what tells the rows apart and
     // it stays.
     const offerRow=(catalog,offer,heading='')=>{
-      const url=offerUrl(catalog.programId,offer.key);
+      const url=offerUrl(catalog.programId,offer);
       return RecordRow({title:offer.name,
-        detail:[offer.badge,offer.category===heading?'':offer.category,offer.dates].filter(Boolean).join(' · '),
+        // The card comes before the category, because which card an offer is
+        // on is the thing that decides whether it is any use today.
+        detail:[offer.badge,offer.card,offer.category===heading?'':offer.category,offer.dates].filter(Boolean).join(' · '),
         notes:offer.summary,
         actions:url?[RowLink(OPEN_GLYPH,`Open the ${offer.name} offer`,url)]:[]});
     };
@@ -319,7 +321,10 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   async function saveOffers(token,url,result){
     const program=rewardProgram(url);
     if(!program||program.reading!==READ_TEXT)return 0;
-    const offers=parseOfferReading(result,program.id);
+    // The page's own address goes with them, so an offer's link opens the list
+    // it is on: an issuer keeps one per card, told apart by an account key the
+    // reading never sees and never needs.
+    const offers=parseOfferReading(result,program.id,{path:url});
     if(!offers.length)return 0;
     const value=validateProgramCatalog({programId:program.id,complete:false,offers});
     await remote(token,`/v1/rewards/programs/${program.id}`,{method:'PUT',value,maxBytes:MAX_CATALOG_BYTES});

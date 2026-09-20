@@ -35,6 +35,21 @@ is scrolled, so a reading adds and updates and never retires: scroll, press
 again, and what was further down joins what was already saved. At most
 `OFFER_READ_LIMIT` (100) offers come back from one press.
 
+### One list per card
+
+An issuer runs a different set of offers on each card, on a page of its own —
+`/offers/eligible?account_key=…`, one key per account. So an offer carries the
+card the page names it for ("Blue Cash Preferred® ····72005") and the address of
+the list it was read from. The card is part of the offer's identity: the same
+merchant offer on two cards is two offers, and one key for both would keep
+whichever was read last and lose the other. Each offer's link opens the list it
+is actually on, rather than whichever card the issuer happens to show first,
+and the card is searched along with the merchant, so typing a card's name
+narrows the tab to that card's offers.
+
+Reading them all means visiting each card's list and pressing once on each. The
+one catalogue holds them together, told apart by the card on every row.
+
 ## What is read, and what is not
 
 The reading follows the rule Finance already follows for an account site. The
@@ -43,8 +58,10 @@ reads a page the owner already has open, in the page.
 
 What it takes is the offer list: for each offer, its name, category, one-line
 summary, any badge (*New*, *Exclusive*, *Limited-Time Offer*, or *Added* where
-an issuer says the offer is already on a card), any dates, and the path of the
-offer's own page where it has one.
+an issuer says the offer is already on a card), any dates, the card it is on
+where the program keeps a list per card, and the path of the page it belongs to
+— the offer's own where it has one, and the list it sits on where it does not.
+A path on any other origin is not this program's and is dropped.
 
 What it never takes is a session, a cookie, or a credential — neither leaves the
 browser, and for a published catalogue none is needed: it is the same list

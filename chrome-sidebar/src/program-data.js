@@ -13,7 +13,7 @@
 // hold, and nothing here writes one.
 
 export const MAX_OFFERS = 500;
-export const FIELD_MAX = {name: 200, category: 60, summary: 400, badge: 40, dates: 80};
+export const FIELD_MAX = {name: 200, category: 60, summary: 400, badge: 40, dates: 80, card: 120, path: 200};
 // A catalogue is one document, and a large program's is several times the 64 KB
 // an ordinary record is allowed. Both ends of the write agree on this number:
 // the device refuses to send more, and the Worker refuses to read more.
@@ -78,14 +78,17 @@ export function rewardProgram(url) {
 export const programById = id => REWARD_PROGRAMS.find(program => program.id === id) || null;
 // An offer's page on the program's own site. The stored key is that page's
 // path, so the link is the program's address and nothing of the owner's.
-export function offerUrl(programId, key) {
+export function offerUrl(programId, offer) {
   const program = programById(programId);
   if (!program) return '';
-  // An offer with a page of its own is linked to it; one without — a tile on
-  // the program's own list — is linked to the list, because that is where the
-  // owner goes to add it.
-  if (String(key || '').startsWith('/')) return `${program.origin}${key}`;
-  return program.reading === READ_TEXT ? `${program.origin}${program.catalog}` : '';
+  // An offer with a page of its own is linked to it. One without — a tile on a
+  // list — is linked to the list it sits on, which for an issuer is the list
+  // for that one card, and failing that to the program's own.
+  const key = typeof offer === 'string' ? offer : text(offer?.key, KEY_MAX);
+  const path = typeof offer === 'string' ? '' : text(offer?.path, FIELD_MAX.path);
+  if (key.startsWith('/')) return `${program.origin}${key}`;
+  if (program.reading !== READ_TEXT) return '';
+  return `${program.origin}${path.startsWith('/') ? path : program.catalog}`;
 }
 export const catalogUrl = programId => {
   const program = programById(programId);
@@ -122,6 +125,14 @@ export function validateOffer(input = {}) {
     summary: text(input.summary, FIELD_MAX.summary),
     badge: titleCase(text(input.badge, FIELD_MAX.badge)),
     dates: titleCase(text(input.dates, FIELD_MAX.dates)),
+    // Which card the offer is on, where the program keeps a list per card. An
+    // issuer does: the same merchant offer is on the Platinum and not on the
+    // Blue Cash, and a list that mixed them would answer neither.
+    card: text(input.card, FIELD_MAX.card),
+    // The page the offer was read off, as a path on the program's own origin.
+    // An issuer's list is one page per card — `/offers/eligible?account_key=…`
+    // — so this is what makes an offer's link open the list it is actually on.
+    path: String(input.path || '').startsWith('/') ? text(input.path, FIELD_MAX.path) : '',
     firstSeenAt: isoDate(input.firstSeenAt)
   };
 }
@@ -140,20 +151,29 @@ export function validateOffer(input = {}) {
 // pressing over and over to say the same thing — so the limit is the list, and
 // the page's own paging is what bounds it in practice.
 export const OFFER_READ_LIMIT = 100;
-export const offerKey = (name, summary) =>
-  `${text(name, FIELD_MAX.name)} ${text(summary, FIELD_MAX.summary)}`
+// The card comes first, because an issuer's offers are per card: the same
+// merchant offer on two of them is two offers, and one key for both would keep
+// whichever was read last and lose the other.
+export const offerKey = (card, name, summary) =>
+  `${text(card, FIELD_MAX.card)} ${text(name, FIELD_MAX.name)} ${text(summary, FIELD_MAX.summary)}`
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, KEY_MAX);
-export function parseOfferReading(input, programId) {
+// `path` is the page the reading came off, which the device knows and the
+// reading is never asked: an issuer's list is one page per card, and its
+// address is how an offer's link opens the list it is on rather than whichever
+// card the issuer shows first.
+export function parseOfferReading(input, programId, {path = ''} = {}) {
   const program = programById(programId);
   if (!program || program.reading !== READ_TEXT) return [];
   const found = Array.isArray(input?.offers) ? input.offers : [];
   if (found.length > OFFER_READ_LIMIT) throw Error(`A page reading returns at most ${OFFER_READ_LIMIT} offers.`);
+  const here = programPath(programId, path);
   const seen = new Set();
   return found.map(row => {
     const name = text(row?.merchant ?? row?.name, FIELD_MAX.name);
     const summary = text(row?.offer ?? row?.summary, FIELD_MAX.summary);
     if (!name || !summary) return null;
-    const offer = validateOffer({key: offerKey(name, summary), name, summary,
+    const card = text(row?.card, FIELD_MAX.card);
+    const offer = validateOffer({key: offerKey(card, name, summary), name, summary, card, path: here,
       category: text(row?.category, FIELD_MAX.category),
       badge: text(row?.badge, FIELD_MAX.badge),
       dates: text(row?.dates ?? row?.expires, FIELD_MAX.dates)});
@@ -161,6 +181,17 @@ export function parseOfferReading(input, programId) {
     seen.add(offer.key);
     return offer;
   }).filter(Boolean);
+}
+// An address on the program's own site, as the path an offer is stored with.
+// Anything else — another origin, a page the program does not serve — is no
+// address of this program's and is kept out of the catalogue.
+export function programPath(programId, url) {
+  const program = programById(programId);
+  if (!program) return '';
+  let parsed;
+  try {parsed = new URL(String(url || ''), program.origin);} catch {return '';}
+  if (parsed.origin !== program.origin) return '';
+  return text(`${parsed.pathname}${parsed.search}`, FIELD_MAX.path);
 }
 
 // A whole catalogue, as it is stored and as it crosses the network. `complete`
@@ -233,7 +264,7 @@ export function catalogOffers(catalog, {query = '', category = '', now = new Dat
   const fresh = now.getTime() - NEW_DAYS * 86400000;
   return (catalog?.offers || [])
     .filter(offer => (!category || offer.category === category) &&
-      (!needle || [offer.name, offer.category, offer.summary, offer.badge].join(' ').toLowerCase().includes(needle)))
+      (!needle || [offer.name, offer.category, offer.summary, offer.badge, offer.card].join(' ').toLowerCase().includes(needle)))
     .map(offer => ({...offer, isNew: Date.parse(offer.firstSeenAt) >= fresh}))
     .sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || a.name.localeCompare(b.name));
 }

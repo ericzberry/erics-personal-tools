@@ -116,7 +116,9 @@ names the entry it would land on, and a press of yours saves it.
 
 An issuer's page also lists the offers it has picked for your cards, and those
 are a catalogue rather than wallet entries: the same press saves them under
-**Offers**, beside the other catalogue, and says how many. Nothing there waits
+**Offers**, beside the other catalogue, and says how many. There is a list per
+card, each on a page of its own, so every offer says which card it is on and
+links back to that card's list; reading them all means a press on each. Nothing there waits
 to be reviewed, because a hundred merchants reviewed one at a time is not a
 thing to ask of anyone; the list adds and updates and retires nothing, so
 scrolling further and pressing again brings back the rest. See

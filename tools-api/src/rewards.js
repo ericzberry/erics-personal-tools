@@ -162,9 +162,10 @@ The page lists one more thing: what the card gives that has no tracker and no fi
 
 Report at most ${BENEFIT_LIMIT} benefits. A benefit whose tracker the page states belongs in credits and is not reported here as well. Omit welcome offers, APR and introductory interest rates. Return an empty list rather than guessing.
 
-An issuer also lists the offers the holder can add to a card: a named merchant, what to spend and what comes back, and a date it runs out. Each offer is {"merchant","offer","category","badge","expires","confidence"}.
+An issuer also lists the offers the holder can add to a card: a named merchant, what to spend and what comes back, and a date it runs out. Each offer is {"merchant","offer","card","category","badge","expires","confidence"}.
 - merchant: the brand the offer is with, as the page names it — "Hyatt", "Saks Fifth Avenue". Required.
 - offer: what it gives, in the page's own terms — "Spend $200 or more, get $40 back", "Get 5X Membership Rewards points". Required.
+- card: the card these offers are for, as the page names it — an issuer lists a different set for each card, and the page says which one it is showing, usually once above the list and often with the last digits of the account: "Blue Cash Preferred® ····72005". Give every offer on the page that same name. Use "" only when the page never names a card.
 - category: the kind of merchant it is, in one or two words — Travel, Dining, Retail, Entertainment, Services, Home, Health & Beauty. Use "" when the page states none and the merchant does not plainly say.
 - badge: what the page marks it with — "Added" when the holder has already added it to a card, "Expiring soon", "New". Use "" when it is marked with nothing.
 - expires: the date it runs out, as the page states it. Use "" when the page states none.

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML, DOMParser} from 'linkedom';
-import {rewardProgram, programById, validateOffer, validateProgramCatalog, mergeCatalog, catalogOffers, catalogCategories, offerUrl, titleCase, MAX_OFFERS,catalogGroups,NEW_OPEN_MAX,parseOfferReading,offerKey,OFFER_READ_LIMIT,READ_TEXT} from '../src/program-data.js';
+import {rewardProgram, programById, validateOffer, validateProgramCatalog, mergeCatalog, catalogOffers, catalogCategories, offerUrl, titleCase, MAX_OFFERS,catalogGroups,NEW_OPEN_MAX,parseOfferReading,offerKey,programPath,OFFER_READ_LIMIT,READ_TEXT} from '../src/program-data.js';
 import {readProgramCards, shouldRead, readProgramFromTab, watchRewardPrograms, READ_MS, READ_STATE_KEY} from '../src/reward-programs.js';
 import {CONNECTION_KEY} from '../src/cloud-storage.js';
 
@@ -311,8 +311,8 @@ test('a page reading of an issuer’s offers becomes catalogue offers, once each
   assert.equal(offers[0].dates, 'Expires 12/31/2026');
   // The key is what the page states, so the same offer read twice is one offer
   // and a merchant's new offer is a new one.
-  assert.equal(offers[0].key, offerKey('Hyatt', 'Spend $500 or more, get $100 back'));
-  assert.notEqual(offers[0].key, offerKey('Hyatt', 'Spend $700 or more, get $150 back'));
+  assert.equal(offers[0].key, offerKey('', 'Hyatt', 'Spend $500 or more, get $100 back'));
+  assert.notEqual(offers[0].key, offerKey('', 'Hyatt', 'Spend $700 or more, get $150 back'));
   // A catalogue read from markup takes nothing from a page reading.
   assert.deepEqual(parseOfferReading({offers: [{merchant: 'Hyatt', offer: 'Spend $500'}]}, 'ms-reserved'), []);
   assert.deepEqual(parseOfferReading({}, 'amex-offers'), []);
@@ -327,4 +327,37 @@ test('an issuer’s offers fold in like any catalogue, and a partial reading ret
   assert.equal(merged.complete, false);
   assert.equal(merged.offers.find(offer => offer.name === 'Saks').firstSeenAt, first.offers[1].firstSeenAt,
     'an offer seen twice keeps the day it was first seen');
+});
+
+// An issuer keeps a list per card, on a page of its own, and the same merchant
+// offer is on one card and not on another.
+const BLUE = '/offers/eligible?account_key=816A6198A3E8D902DDA67A8F65D407A8';
+const PLATINUM = '/offers/eligible?account_key=4330AEBF5B30A98811A86533F1ABABFC';
+test('an issuer’s offers belong to the card they are on, and link to that card’s own list', () => {
+  const read = (path, card) => parseOfferReading({offers: [
+    {merchant: 'Hyatt', offer: 'Spend $500 or more, get $100 back', card, category: 'Travel'},
+    {merchant: 'Synthetic Grocer', offer: 'Spend $75, get $15 back', card, category: 'Food & Drink'}
+  ]}, 'amex-offers', {path: `https://global.americanexpress.com${path}`});
+  const blue = read(BLUE, 'Blue Cash Preferred® ····72005');
+  const platinum = read(PLATINUM, 'Platinum Card® ····61007');
+  // Two cards, one merchant, two offers — and neither key takes the other's place.
+  assert.notEqual(blue[0].key, platinum[0].key);
+  assert.equal(blue[0].card, 'Blue Cash Preferred® ····72005');
+  assert.equal(offerUrl('amex-offers', blue[0]), `https://global.americanexpress.com${BLUE}`);
+  assert.equal(offerUrl('amex-offers', platinum[0]), `https://global.americanexpress.com${PLATINUM}`);
+  // Both cards' offers live in the one catalogue, and a partial reading of one
+  // card leaves the other card's offers alone.
+  const catalog = mergeCatalog(
+    validateProgramCatalog({programId: 'amex-offers', complete: false, offers: blue}),
+    validateProgramCatalog({programId: 'amex-offers', complete: false, offers: platinum}));
+  assert.equal(catalog.offers.length, 4);
+  // Which is why the card is searched: it is how the owner asks for one list.
+  assert.deepEqual(catalogOffers(catalog, {query: 'platinum'}).map(offer => offer.card),
+    ['Platinum Card® ····61007', 'Platinum Card® ····61007']);
+  // A page of somebody else's is no address of this program's.
+  assert.equal(programPath('amex-offers', 'https://phishing.example/offers/eligible'), '');
+  assert.equal(parseOfferReading({offers: [{merchant: 'Hyatt', offer: 'Spend $500', card: 'Platinum'}]},
+    'amex-offers', {path: 'https://phishing.example/offers'})[0].path, '');
+  // With no page to link to, an offer still links to the program's own list.
+  assert.equal(offerUrl('amex-offers', {key: 'x', path: ''}), 'https://global.americanexpress.com/offers/eligible');
 });

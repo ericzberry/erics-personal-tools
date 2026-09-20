@@ -2694,3 +2694,35 @@ partial reading folding in beside what was already saved. Validation: 577
 extension, 33 mobile and 134 API tests pass from an archive of HEAD. The Offers
 tab was reviewed at 380px against a synthetic wallet holding both catalogues.
 Archive: `release/erics-sidebar-0.6.212.zip`.
+
+## An issuer's offers belong to the card they are on (0.6.213 / mobile 0.1.163)
+
+**One list was never going to be right.** American Express runs a different set
+of offers on each card and keeps each set on a page of its own —
+`/offers/eligible?account_key=…`, one key per account. Read into a single
+catalogue with nothing saying which card an offer came from, the Blue Cash's
+offers and the Platinum's sat in one list, and the same merchant's offer on both
+cards was one row that kept whichever page was read last.
+
+**So an offer carries its card.** The reading is asked which card the page says
+it is showing — "Blue Cash Preferred® ····72005" — and that name goes on every
+offer read off it, into the row and into the offer's identity, so the same offer
+on two cards is two offers and neither takes the other's place. The card is
+searched along with the merchant, which is how you ask the tab for one card's
+list without another control to set.
+
+**And each offer links to the list it is on.** The page's own address goes with
+the offers the device read off it, so opening one lands on that card's offers
+rather than on whichever card the issuer shows first. An address on any other
+origin is not the program's and is dropped rather than stored.
+
+Reading them all is a press on each card's list. They land in the one catalogue,
+told apart by the card on every row.
+
+New coverage: two cards' offers read off their own pages, keyed apart, each
+linking to the page it came from; both cards folded into one catalogue by a
+partial reading that leaves the other card's offers alone; a card's name
+narrowing the tab to its own offers; and a page of another origin's dropped.
+Validation: 581 extension, 33 mobile and 134 API tests pass from an archive of
+HEAD. The Offers tab was reviewed at 380px against a synthetic catalogue holding
+two cards' offers beside a published one. Archive: `release/erics-sidebar-0.6.213.zip`.

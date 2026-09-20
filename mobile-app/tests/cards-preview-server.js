@@ -19,7 +19,7 @@ let rewards={entries:[
   {id:'99999999-9999-4999-8999-999999999999',kind:'benefit',name:'Synthetic ride credit',source:'Synthetic Gold Card (...4321)',value:'$15 per month',due:'',state:'available',url:'',notes:'',secret:'',secretHint:'',cadence:'monthly',remaining:'$15',updatedAt:new Date().toISOString()}
 ],revision:'first'};
 let cards=[{id:'22222222-2222-4222-8222-222222222222',name:'Synthetic Everyday Cash',unit:'cash',base:2,cpp:1,rules:'[]',checked:'2026-09-09',source:'https://example.com/terms',notes:'Synthetic terms for testing only.',revision:'first'}, {id:'33333333-3333-4333-8333-333333333333',name:'Synthetic Dining Points',unit:'points',base:1,cpp:1.5,rules:JSON.stringify([{category:'Dining',channel:'Any',rate:3,remaining:50,active:true,end:'',condition:'Eligible restaurant purchase'}]),checked:'2026-09-09',source:'',notes:'',revision:'first'}, {id:'44444444-4444-4444-8444-444444444444',name:'Synthetic Everyday Points',unit:'points',base:1,cpp:1.2,rules:JSON.stringify([{category:'Gas',channel:'Any',rate:4,remaining:null,active:true,end:'',condition:''},{category:'Department stores',channel:'Any',rate:3,remaining:null,active:true,end:'',condition:''}]),checked:'2026-09-09',source:'',notes:'',revision:'first'}];
-const offer=(programId,key,name,category,summary,extra={})=>({key,name,category,summary,badge:'',dates:'',
+const offer=(programId,key,name,category,summary,extra={})=>({key,name,category,summary,badge:'',dates:'',card:'',path:'',
   firstSeenAt:new Date(Date.now()-40*86400000).toISOString(),...extra});
 const reservedCatalog={id:'ms-reserved',programId:'ms-reserved',label:'Morgan Stanley Reserved',
   source:'Morgan Stanley Reserved Living & Giving',complete:true,readAt:new Date().toISOString(),listedAt:new Date().toISOString(),
@@ -32,11 +32,17 @@ const reservedCatalog={id:'ms-reserved',programId:'ms-reserved',label:'Morgan St
 // merchant as the name, and the badge the page put on it.
 let amexCatalog={id:'amex-offers',programId:'amex-offers',label:'Amex Offers',source:'American Express',
   complete:false,readAt:new Date().toISOString(),listedAt:'',
+  // Two cards, because an issuer keeps a list per card: the same merchant runs
+  // an offer on one and not the other, and each list is a page of its own.
   offers:[
-    offer('amex-offers','synthetic-hotel-spend-500-get-100-back','Synthetic Hotel','Travel','Spend $500 or more, get $100 back.',{badge:'Added',dates:'Expires 12/31/2026'}),
-    offer('amex-offers','synthetic-grocer-spend-75-get-15-back','Synthetic Grocer','Food & Drink','Spend $75 or more, get $15 back.',{dates:'Expires 11/30/2026'}),
-    offer('amex-offers','synthetic-tailor-spend-250-get-50-back','Synthetic Tailor','Retail','Spend $250 or more, get $50 back.',{badge:'New',firstSeenAt:new Date().toISOString()}),
-    offer('amex-offers','synthetic-streaming-get-5x-points','Synthetic Streaming','Entertainment','Get 5X Membership Rewards points on eligible purchases.')
+    offer('amex-offers','reserve-synthetic-hotel-spend-500','Synthetic Hotel','Travel','Spend $500 or more, get $100 back.',
+      {badge:'Added',dates:'Expires 12/31/2026',card:'Synthetic Reserve Card ····61007',path:'/offers/eligible?account_key=SYNTHETICRESERVE'}),
+    offer('amex-offers','reserve-synthetic-tailor-spend-250','Synthetic Tailor','Retail','Spend $250 or more, get $50 back.',
+      {badge:'New',firstSeenAt:new Date().toISOString(),card:'Synthetic Reserve Card ····61007',path:'/offers/eligible?account_key=SYNTHETICRESERVE'}),
+    offer('amex-offers','cash-synthetic-grocer-spend-75','Synthetic Grocer','Food & Drink','Spend $75 or more, get $15 back.',
+      {dates:'Expires 11/30/2026',card:'Synthetic Everyday Cash Card ····72005',path:'/offers/eligible?account_key=SYNTHETICCASH'}),
+    offer('amex-offers','cash-synthetic-streaming-5x','Synthetic Streaming','Entertainment','Get 5X Membership Rewards points on eligible purchases.',
+      {card:'Synthetic Everyday Cash Card ····72005',path:'/offers/eligible?account_key=SYNTHETICCASH'})
   ],updatedAt:new Date().toISOString()};
 const fixture = `
 const fixtureEncode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
