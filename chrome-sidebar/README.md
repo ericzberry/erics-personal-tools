@@ -2225,3 +2225,26 @@ holds, and nothing in either — and on the mobile home screen at 375px, where t
 tracker figure reads back off the phone's own copy. Native iPhone and installed
 Chrome behavior were not directly tested. Archive:
 `release/erics-sidebar-0.6.187.zip`.
+
+## The heading rule, back, and a credit score is not money (0.6.194 / mobile 0.1.144)
+
+Two things came out of one Chase reading. The panel offered a portfolio called
+**Chase accounts** holding $2,101,804 — a heading over a group, read as the name
+of an account — and another called **Credit Journey** holding $737 of cash,
+which is a credit score.
+
+The heading rule had been generalized in 0.6.180 so that a new kind of heading
+needed no new word: up to two words and then the plural, because what those
+headings share is the end of the phrase and not the front. That change was
+reverted by accident in `7b61d45`, along with its test, and the enumerated list
+came back — which is why a fourth spelling walked straight through. It is
+restored, with Chase accounts among the spellings it is now tested against.
+
+A credit score is the other kind of thing that is not a balance. It is three
+digits in the range of a small balance, the bank files it beside the money under
+a product name of its own, and nothing about its shape says what it is. Only its
+name does, so the name is what refuses it — on the figure or on the account,
+because the bank is as likely to put it on one as the other. The reading is told
+the same.
+
+Validation: 537 extension and 33 mobile tests pass.

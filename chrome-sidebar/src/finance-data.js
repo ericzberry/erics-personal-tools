@@ -810,7 +810,15 @@ const accountDigits=said=>[...String(said).matchAll(ACCOUNT_DIGITS)].map(found=>
 // a reading told to put the heading in front of the account's own name does
 // exactly that: "Investment accounts · BERRY 2020 IRREV FAM TR (...5007)" is one
 // trust's account and must stay one.
-const CATEGORY=/^(?:my |your |all |total )*(?:bank|deposit|checking|savings|credit|debit|card|investment|brokerage|retirement|trust|loan|mortgage|business|personal)[\s-]*(?:card|account)s\b[\s·•|–—>›:]*/i;
+// Naming the kinds one at a time does not end. The list held bank, credit and
+// investment, and the page answered with Outstanding, then External accounts,
+// then Chase accounts — each a heading over a sum, each read as the name of an
+// account nobody holds. What they have in common is not the word in front but
+// the word at the end: a heading over a group of accounts says "accounts", and
+// an account of one's own almost never does. So the shape is the rule — up to
+// two words and then the plural — and the next bank to invent a kind needs no
+// new word here.
+const CATEGORY=/^(?:[A-Za-z][\w'&-]*[ -]){0,2}(?:accounts|cards)\b[\s·•|–—>›:]*/i;
 // What a column is called, which is never what an account is called. These are
 // the words left over when a page names a figure but not the account it belongs
 // to: Present balance, Net Account Value, Total.
@@ -897,6 +905,12 @@ const NOT_A_VALUE=/\b(gains?|loss|losses|change|returns?|performance|cost basis|
 // of the two: read as a balance it files the whole limit as debt, and a card
 // with nothing on it becomes the biggest liability in the ledger.
 const HEADROOM=/\b(available credit|credit (limit|line|available)|minimum payment|payment due|amount due)\b/i;
+// A credit score is a number in the same range as a small balance and is filed
+// beside the accounts by the bank itself — Chase prints one under Credit
+// Journey, on the same page as the money. Read as a figure it became $737 of
+// cash, which is not wrong by a little: it is not money at all, and nothing
+// about its shape says so. Only its name does.
+const SCORE=/\b(credit journey|credit score|fico|vantage ?score|experian|transunion|equifax)\b/i;
 // A stock plan's two halves, named by the page rather than by the reading: the
 // potential, projected or unvested benefit is a schedule, and everything else
 // in the account is stock that is held. The class is forced here because it is
@@ -945,9 +959,15 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   const values=readings.filter(reading=>!NOT_A_VALUE.test(reading.label||''));
   const changes=readings.length-values.length;
   if(changes)dropped.push(`${changes} gain${changes===1?'':'s'} or return${changes===1?'':'s'}`);
-  const counted=values.filter(reading=>!HEADROOM.test(reading.label||''));
-  const limits=values.length-counted.length;
+  const spendable=values.filter(reading=>!HEADROOM.test(reading.label||''));
+  const limits=values.length-spendable.length;
   if(limits)dropped.push(`${limits} credit limit${limits===1?'':'s'}`);
+  // A score is refused by what it is called, wherever the name sits: the bank
+  // files it under a product of its own, so the account is as likely to name it
+  // as the figure is.
+  const counted=spendable.filter(reading=>!SCORE.test(`${reading.account||''} ${reading.label||''}`));
+  const scores=spendable.length-counted.length;
+  if(scores)dropped.push(`${scores} credit score${scores===1?'':'s'}`);
   // A total over accounts, however the reading labelled its scope. One says so
   // — scope "all" — and the other says so by naming a kind of account instead of
   // an account, which is what a dashboard's group heading is.

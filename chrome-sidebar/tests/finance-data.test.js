@@ -546,6 +546,41 @@ test('a headline total over accounts the page states does not send the owner els
   assert.equal(folded.notes.some(note=>/Show the accounts themselves/.test(note)),false);
 });
 
+// A heading over a group of accounts, whatever word is in front of it. This
+// was fixed once by adding words to a list — bank, credit, investment — and the
+// page answered Outstanding, then External accounts, then Chase accounts. What
+// they share is the end of the phrase, not the front.
+test('a heading over a group of accounts is one whatever word is in front of it',()=>{
+  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:'',class:classById('cash').code};
+  for(const account of ['Chase accounts','External accounts','Bank accounts','Credit cards',
+    'Investment accounts','Deposit accounts','My accounts','Accounts','Business checking accounts']){
+    const folded=foldReadings([{...base,account,label:'Total',value:109}],[],{institution:'Chase',defaultClass:classById('cash').code});
+    assert.deepEqual(folded.marks,[],account);
+  }
+  // What it must not take with it: a heading with a real account behind it.
+  const kept=foldReadings([
+    {...base,account:'External accounts · Fidelity Cash Management (...4410)',label:'Present balance',value:109}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(kept.marks.map(row=>[row.name,row.amount]),[['Fidelity Cash Management (...4410)',109]],
+    'the heading comes off the front and the account behind it stays');
+});
+
+// A bank files a credit score beside the money, under a product name of its
+// own. It is three digits in the range of a small balance, and nothing about
+// its shape says it is not one — so a score of 737 arrived as $737 of cash.
+test('a credit score is not a balance, wherever the page files it',()=>{
+  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:'',class:9};
+  const folded=foldReadings([
+    {...base,account:'Credit Journey',label:'Credit score',value:737},
+    {...base,account:'Joint Savings (...8917)',label:'Present balance',value:880033.77}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(folded.marks.map(row=>row.amount),[880033.77],'the balance beside it is untouched');
+  assert.match(folded.notes[0],/credit score/);
+  // Named on the figure rather than the account, it goes the same way.
+  const named=foldReadings([{...base,account:'',label:'FICO Score',value:737}],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(named.marks,[]);
+});
+
 // A card is read at a bank, behind the same password as the checking account,
 // and the site answers cash for what it holds. A balance owed is the one figure
 // where taking that answer moves net worth by twice the number.
