@@ -1,5 +1,5 @@
 import * as UI from './ui.js';
-import {TAX_DOCUMENT_TYPES,taxYears,defaultTaxYear,TAX_ROOT_FOLDER_URL,MAX_DOCUMENT_BYTES} from '../tax-data.js';
+import {TAX_DOCUMENT_TYPES,TAX_TAXPAYERS,TAX_JURISDICTIONS,TAX_QUARTERS,taxYears,defaultTaxYear,TAX_ROOT_FOLDER_URL,MAX_DOCUMENT_BYTES} from '../tax-data.js';
 import {ACCEPTED} from '../statement-text.js';
 const {Stack,Section,Note,Notice,Button,ActionGroup,SettingsGroup,FormField,Strong,Label,Text,Link,ToolTitle,GroupTitle}=UI;
 
@@ -25,9 +25,20 @@ export function TaxesView({today=new Date()}={}){
       // is none to pick.
       Note('',{id:'taxes-ai-status',role:'status'}),
       Stack([],{id:'taxes-document',hidden:true}),
+      Stack([],{id:'taxes-password',hidden:true}),
       FormField({id:'taxes-type',label:'Document type',kind:'select',
         options:[{text:'Choose a type',value:''},...TAX_DOCUMENT_TYPES.map(type=>({text:type.label,value:type.id}))]}),
       FormField({id:'taxes-issuer',label:'What it is',kind:'text',placeholder:'e.g. Schwab'}),
+      // Whose document this is. It decides the year's subfolder as well as the
+      // name, so a return and the estimates that paid it end up together.
+      FormField({id:'taxes-taxpayer',label:'Taxpayer',kind:'select',
+        options:TAX_TAXPAYERS.map(who=>({text:who.label,value:who.id}))}),
+      // Only for what the household filed or paid: which government, and which
+      // instalment of the year.
+      FormField({id:'taxes-jurisdiction',label:'Filed with',kind:'select',
+        options:[{text:'Choose Federal or New York',value:''},...TAX_JURISDICTIONS.map(place=>({text:place.label,value:place.id}))]}),
+      FormField({id:'taxes-quarter',label:'Quarter',kind:'select',
+        options:[{text:'Choose a quarter',value:''},...TAX_QUARTERS.map(quarter=>({text:quarter.label,value:quarter.id}))]}),
       FormField({id:'taxes-year',label:'Tax year',kind:'select',
         options:taxYears(today).map(year=>({text:year,value:year}))}),
       Stack([],{id:'taxes-destination',className:'tax-destination',hidden:true}),
@@ -62,11 +73,36 @@ export function DocumentCard({label,detail,note,tone,onRemove}){
 }
 
 // The name and folder this document would take, shown before it moves so the
-// owner is approving a destination rather than trusting one.
-export const Destination=({year,name})=>Stack([
+// owner is approving a destination rather than trusting one. `path` is the
+// folders under the tax folder, outermost first, so a year that is divided by
+// taxpayer shows the division rather than only the year.
+export const Destination=({path=[],name})=>Stack([
   Label('Files as'),
-  Strong(`${year} / ${name}`,{className:'tax-destination-name'})
+  Strong([...path,name].join(' / '),{className:'tax-destination-name'})
 ],{className:'tax-destination-line'});
+
+// A document that arrived locked. The password is used on this device and
+// never sent anywhere: it opens the file so an unlocked copy can be written
+// here, and that copy is what Drive receives. Filing it as it arrived stays
+// available, because a password nobody has is not a reason to lose the
+// document — and that choice, not a paragraph, is what says so.
+//
+// What is wrong, and what a refused password said, belong to the status line
+// this panel appears under, so they are not repeated inside it.
+export function PasswordPanel({value='',busy=false,onType,onUnlock,onSkip}){
+  const field=FormField({id:'taxes-password-value',label:'Password',kind:'password'});
+  const input=field.querySelector('input');
+  // A password that was refused is kept, so a typo is corrected rather than
+  // typed again from the start.
+  input.value=value;
+  const unlock=Button('Unlock and file',{variant:'primary',size:'compact',disabled:busy});
+  const skip=Button('File it locked',{variant:'secondary',size:'compact',disabled:busy});
+  input.addEventListener('input',()=>onType(input.value));
+  unlock.addEventListener('click',()=>onUnlock(input.value));
+  input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();onUnlock(input.value);}});
+  skip.addEventListener('click',onSkip);
+  return Section([field,ActionGroup([unlock,skip],{compact:true})],{className:'record-row tax-password'});
+}
 
 // A name already in that year's folder. Replacing is the destructive choice, so
 // it says what would be overwritten and is not the first or the default button.
@@ -85,14 +121,26 @@ export function ConflictPanel({existing,keepBothName,onKeepBoth,onReplace,onCanc
   ],{className:'record-row'});
 }
 
-export function FiledList(year,files){
-  if(!files.length)return Stack([GroupTitle(year,{className:'record-group-title'}),Note('Nothing filed yet.')],{className:'record-group'});
+// What a year holds, read down rather than across: one line per document and
+// nothing else on it. A date and a size on every row doubled the length of a
+// list whose whole job is to answer "is this one already filed?".
+//
+// `groups` are the year's subfolders — one per taxpayer, from 2026 — each
+// named above the documents inside it. Loose documents in the year itself come
+// first, which is every document of 2025 and earlier.
+export function FiledList(year,files,groups=[]){
+  const total=files.length+groups.reduce((count,group)=>count+group.files.length,0);
+  if(!total)return Stack([GroupTitle(year,{className:'record-group-title'}),Note('Nothing filed yet.')],{className:'record-group'});
+  const row=file=>file.webViewLink
+    ?Link(file.name,file.webViewLink,{className:'tax-filed-row'})
+    :Strong(file.name,{className:'tax-filed-row'});
   return Section([
-    GroupTitle(`${year} · ${files.length} document${files.length===1?'':'s'}`,{className:'record-group-title'}),
-    ...files.map(file=>Stack([
-      file.webViewLink?Link(file.name,file.webViewLink):Strong(file.name),
-      Note([filedOn(file.modifiedTime),file.size&&fileSize(file.size)].filter(Boolean).join(' · '))
-    ],{className:'tax-filed-row'}))
+    GroupTitle(`${year} · ${total} document${total===1?'':'s'}`,{className:'record-group-title'}),
+    ...files.map(row),
+    ...groups.flatMap(group=>[
+      Strong(group.name,{className:'tax-filed-group'}),
+      ...group.files.map(row)
+    ])
   ],{className:'record-group tax-filed-list'});
 }
 

@@ -8,6 +8,7 @@
 // anything is saved. Silence about a bad extraction is the one failure this
 // module must not have.
 import {pdfText} from './pdf-text.js';
+import {unlockPdf} from './pdf-unlock.js';
 
 export const TEXT_TYPES = ['.pdf', '.csv', '.tsv', '.txt', '.xlsx'];
 export const IMAGE_TYPES = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'];
@@ -61,10 +62,16 @@ async function downscale(file) {
 }
 
 // Returns either {kind:'text', text, confidence, note} or
-// {kind:'image', image, confidence, note}. Throws only when the file itself is
-// unusable; a poor extraction comes back as a low confidence, not an error,
-// because the owner is the one who decides whether it is good enough to read.
-export async function readStatement(file) {
+// {kind:'image', image, confidence, note}, and in both cases the `file` to use
+// from here on. Throws only when the file itself is unusable; a poor
+// extraction comes back as a low confidence, not an error, because the owner
+// is the one who decides whether it is good enough to read.
+//
+// `password` opens a PDF that needs one. `unlock` says what to do with an
+// encrypted one afterwards: a reading only wants its text, so it leaves the
+// file alone, while a tool that keeps the file asks for an unlocked copy and
+// gets it back as `file`.
+export async function readStatement(file, {password = '', unlock = false} = {}) {
   const extension = extensionOf(file.name);
   if (!ACCEPTED.includes(extension)) throw Error(`Use ${ACCEPTED.join(', ')}.`);
   if (file.size > MAX_BYTES) throw Error(`That file is ${(file.size / 1000000).toFixed(1)} MB. The limit is ${MAX_BYTES / 1000000} MB.`);
@@ -72,25 +79,35 @@ export async function readStatement(file) {
 
   if (IMAGE_TYPES.includes(extension)) {
     const image = await downscale(file);
-    return {kind: 'image', image, confidence: 'good', note: `Downscaled to ${image.width}×${image.height} (${Math.round(image.bytes / 1000)} KB) on this device before sending.`};
+    return {kind: 'image', file, image, confidence: 'good', note: `Downscaled to ${image.width}×${image.height} (${Math.round(image.bytes / 1000)} KB) on this device before sending.`};
   }
 
   if (extension === '.pdf') {
-    const result = await pdfText(new Uint8Array(await file.arrayBuffer()));
-    return {kind: 'text', text: result.text, confidence: result.confidence, note: result.note, pages: result.pages};
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (!unlock) {
+      const result = await pdfText(bytes, {password});
+      return {kind: 'text', file, text: result.text, confidence: result.confidence, note: result.note,
+        pages: result.pages, encrypted: result.encrypted, needsPassword: result.needsPassword};
+    }
+    // Throws with `needsPassword` when it cannot be opened, so the caller can
+    // ask for the password rather than report an unreadable file.
+    const result = await unlockPdf(bytes, {password});
+    return {kind: 'text', text: result.text, confidence: result.confidence, note: result.note, pages: result.pages,
+      encrypted: result.encrypted, unlocked: result.unlocked,
+      file: result.unlocked ? new File([result.bytes], file.name, {type: file.type || 'application/pdf'}) : file};
   }
 
   if (extension === '.xlsx') {
     const text = await spreadsheet(file);
     return text.trim()
-      ? {kind: 'text', text, confidence: 'good', note: ''}
-      : {kind: 'text', text: '', confidence: 'none', note: 'That spreadsheet has no readable rows on its first sheet.'};
+      ? {kind: 'text', file, text, confidence: 'good', note: ''}
+      : {kind: 'text', file, text: '', confidence: 'none', note: 'That spreadsheet has no readable rows on its first sheet.'};
   }
 
   const text = (await file.text()).replace(/\r\n?/g, '\n').trim();
   return text
-    ? {kind: 'text', text, confidence: 'good', note: ''}
-    : {kind: 'text', text: '', confidence: 'none', note: 'That file is empty.'};
+    ? {kind: 'text', file, text, confidence: 'good', note: ''}
+    : {kind: 'text', file, text: '', confidence: 'none', note: 'That file is empty.'};
 }
 
 // The reading has a character budget. Trimming is the owner's business, so say

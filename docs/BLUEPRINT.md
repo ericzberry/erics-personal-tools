@@ -135,18 +135,23 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `capture-data.js`/`capture-stores.js` (what a typed note may become: the
   capability that owns the record, the path its store writes to, the validator
   that decides it, and the stores a host offers quick add),
-  `tax-data.js` (no offline wrapper:
-  Taxes keeps nothing on the device). The `*-data.js` modules own validation and
-  are also imported by the Worker.
+  `tax-data.js` (the document types, the taxpayers a year is divided by, the
+  governments an estimate is paid to, the naming and the folder path; no offline
+  wrapper: Taxes keeps nothing on the device). The `*-data.js` modules own
+  validation and are also imported by the Worker.
 - **Statement intake** — `statement-text.js` (turns a dropped file into text or
   a downscaled image, entirely on the device), `pdf-text.js` (the PDF reader:
   page tree, form XObjects, subset fonts through their ToUnicode tables, and
   text laid out back into rows, with its own confidence reporting),
-  `pdf-crypt.js` (the standard security handler, so a statement locked with an
-  owner password and an empty user password — what a bank sends — opens
-  instead of looking like a scan), `finance-page-read.js` (one
+  `pdf-crypt.js` (the standard security handler through AES-256, so a statement
+  locked with an owner password and an empty user password — what a bank sends —
+  opens instead of looking like a scan, and a document that genuinely needs a
+  password says so rather than being guessed at), `pdf-unlock.js` (writes the
+  unlocked copy Taxes files, rebuilding the document without its lock and
+  checking the copy reads back before offering it),
+  `finance-page-read.js` (one
   text snapshot of the tab the owner is looking at, narrowed to the lines that
-  carry a figure and the lines that name one). All four ship to mobile
+  carry a figure and the lines that name one). All five ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
   `account-sites.js` is the sidebar's alone: `FINANCE_SITES`, the registry of

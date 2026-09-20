@@ -2,10 +2,11 @@
 
 Filing a tax document where it belongs, without opening Drive.
 
-Drop a K-1, a 1099 or anything else that arrives for a tax year; the device
-reads it, proposes what it is; you correct anything wrong and file it. It lands
-in the year's subfolder of the tax folder in Google Drive, named the way the
-rest of that folder is named.
+Drop a K-1, a 1099 or anything else that arrives for a tax year — or a return
+you filed, a quarterly voucher, the receipt that paid it; the device reads it,
+proposes what it is; you correct anything wrong and file it. It lands in the
+year's subfolder of the tax folder in Google Drive, named the way the rest of
+that folder is named. A document that arrives locked is filed unlocked.
 
 ## What the tool does
 
@@ -23,11 +24,44 @@ answers most recent first) and keeps it while it exists. With no usable
 connection saved, one line under the drop zone says where to save one.
 Disconnecting Drive is therefore not offered from the tool once it is connected.
 
-**The reading is asked three questions and nothing else.** `tax-intake` returns
-the form type, the issuer and the tax year printed on the document, with a
-confidence and a sentence saying what it read them off. It is not asked what the
+**The reading is asked what it takes to name and place the document, and
+nothing else.** `tax-intake` returns the form type, the issuer, the tax year
+printed on it, which of the five taxpayers it belongs to, and — for a return or
+an instalment — which government and which quarter. It is not asked what the
 document says or what anything totals. Every answer arrives in an editable
 field, and a document it cannot read still files — you name it yourself.
+
+**Whose it is, and what that decides.** Five taxpayers file here: Eric & Ariana
+Berry and the four trusts, listed in `tax-data.js`. Every document names one,
+which the reading proposes and you correct. It decides two things: from tax year
+2026 it is the subfolder inside the year the document lands in, and for a return
+or an instalment it is part of the filed name. 2025 and earlier were filed
+straight into the year folder and stay that way, so nothing already filed moves.
+A subfolder you made by hand is filed into rather than duplicated.
+
+**A return, an instalment and its receipt are named from their own facts.** They
+have no issuer, so they are not asked for one; they are asked which government —
+Federal or New York — and, for a quarterly payment, which quarter:
+
+- `Return - Federal - Eric & Ariana Berry.pdf`
+- `Estimated payment - Q3 Federal - Berry 2020 Irrevocable Family Trust.pdf`
+- `Proof of payment - Q2 New York - Berry EA 2021 Irrevocable Family Trust.pdf`
+
+The taxpayer is in the name as well as in the folder, so a return downloaded on
+its own still says whose it is.
+
+**A locked document is filed unlocked.** Tax documents often arrive encrypted.
+`pdf-crypt.js` reads the lock and says which kind it is. A file locked only
+against editing — a bank's statement, with an empty user password — opens
+without anyone being asked. A file that genuinely needs a password stops and
+asks for it; the password is used on the device and is never saved or sent
+anywhere. `pdf-unlock.js` then writes an unlocked copy — every object decrypted
+and written back, `/Encrypt` gone, the cross-reference table rebuilt — and reads
+that copy back before offering it, because filing a quietly corrupted return
+would be worse than filing a locked one. The copy is what reaches Drive, so the
+document still opens in five years. RC4, AES-128 and AES-256 locks are all
+opened, by the user password or the owner password. When there is no password to
+be had, **File it locked** files the document exactly as it arrived and says so.
 
 **The year defaults to the one just ended.** Documents arrive after their year,
 so in 2026 the tool offers 2025 first, with 2026 and 2024 either side of it. A
@@ -35,9 +69,9 @@ document the reading thinks is older than that window is reported rather than
 filed somewhere convenient.
 
 **The name is settled before the bytes move.** `POST /v1/drive/plan` resolves
-the year folder — creating it if this is the first document of that year —
-checks whether the name is taken, and returns a ticket standing for that
-destination. The upload carries the file and the ticket, so the destination
+the folders — the year, and from 2026 the taxpayer inside it, creating whichever
+of them is not there yet — checks whether the name is taken, and returns a
+ticket standing for that destination. The upload carries the file and the ticket, so the destination
 shown to you is the destination the file reaches, and no firm or fund name ever
 travels in a URL that request logs would keep. A ticket is good once and for
 fifteen minutes.
@@ -50,8 +84,8 @@ that click; `new` over a name that exists is refused by the Worker too.
 **Naming.** `Type - What it is.ext`: `Form 1099 - Schwab.pdf`,
 `K-1 - Averin Capital Fund I, LP.pdf`. "Other document" carries no prefix, so
 its name is whatever you call it. `chrome-sidebar/src/tax-data.js` owns the
-types, the years, the naming and the validation, and both the app and the
-Worker answer to it.
+types, the taxpayers, the years, the naming, the folder path and the validation,
+and both the app and the Worker answer to it.
 
 **It opens in the side panel**, beside the message a document arrives in, so a
 K-1 can be dragged out of an open mail message and onto the drop zone without a
@@ -76,8 +110,8 @@ Google account, one refresh token, one thing to renew; `GOOGLE_SCOPES` in
 `src/drive.js` is the whole list. The Worker holds the refresh
 token, encrypted at rest with `SETTINGS_ENCRYPTION_KEY` in `drive_accounts`;
 no page ever receives a Drive credential, and the only writes the code can make
-are creating a year folder, adding a file, and replacing one you asked to
-replace. There is no delete path.
+are creating a folder in the path a filing needs, adding a file, and replacing
+one you asked to replace. There is no delete path.
 
 `GET /v1/drive/callback` is the one route outside the bearer check, because
 Google's redirect arrives without one. A single-use `state` this Worker issued,
@@ -150,18 +184,28 @@ disconnecting means calling `POST /v1/drive/disconnect`.
 
 `TAX_ROOT_FOLDER_ID` in `chrome-sidebar/src/tax-data.js` is the top-level tax
 folder. Year subfolders are named by the four-digit year and are created on
-first use. Two folders for the same year is reported rather than guessed at.
+first use. From `TAX_SUBFOLDER_FROM_YEAR` — 2026 — each year is divided again by
+taxpayer, named by the taxpayer's own label. The Worker walks that path from the
+tax folder down, using each folder it finds and making each one it does not. Two
+folders of the same name in the same place is reported rather than guessed at.
+
+**Already filed** lists a year's own documents and then each taxpayer's, one
+line per document. It is read to answer one question — is this one already in
+there? — so a row is the name and nothing else.
 
 ## Where the code is
 
 | Piece | File |
 | --- | --- |
-| Types, years, naming, validation | `chrome-sidebar/src/tax-data.js` |
+| Types, taxpayers, years, naming, folders, validation | `chrome-sidebar/src/tax-data.js` |
 | The tool, shared by both hosts | `chrome-sidebar/src/taxes.js` |
 | Its DOM | `chrome-sidebar/src/components/taxes.js` / `.css` |
 | Extension page | `chrome-sidebar/taxes.html` → `src/taxes-page.js`; also mounted into the side panel by `capability-links.js` |
 | Mobile mounting | `mobile-app/public/app/capabilities.js` |
 | Drive access and the routes | `tools-api/src/drive.js`, `tools-api/drive-schema.sql` |
 | The reading | `tools-api/src/taxes.js` (`/v1/ai-connections/:id/tax-intake`) |
+| Opening a locked document | `chrome-sidebar/src/pdf-crypt.js` |
+| Writing the unlocked copy | `chrome-sidebar/src/pdf-unlock.js` |
 | Synthetic states to look at | `chrome-sidebar/tests/taxes-preview.html` |
 | What the states must hold to | `chrome-sidebar/tests/taxes-tool.test.js` |
+| Locked PDFs to test against | `chrome-sidebar/tests/fixtures/locked-pdf.js` |

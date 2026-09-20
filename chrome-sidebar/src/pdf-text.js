@@ -64,11 +64,11 @@ function indexObjects(source) {
 
 // A document is the object table plus the one thing that makes its streams
 // readable. Everything below reads from this and caches what it decodes.
-async function openDocument(bytes, source) {
+export async function openDocument(bytes, source, {password = ''} = {}) {
   const objects = indexObjects(source);
-  const doc = {bytes, source, objects, decrypt: null, streams: new Map(), locked: ''};
-  try { doc.decrypt = decryptor(source, number => objects.get(number)?.dict || ''); }
-  catch (error) { doc.locked = error.message; }
+  const doc = {bytes, source, objects, decrypt: null, streams: new Map(), locked: '', needsPassword: false};
+  try { doc.decrypt = await decryptor(source, number => objects.get(number)?.dict || '', {password}); }
+  catch (error) { doc.locked = error.message; doc.needsPassword = !!error.needsPassword; }
   if (!doc.locked) await expandObjectStreams(doc);
   return doc;
 }
@@ -412,10 +412,10 @@ function pageList(doc, number, inherited = '', seen = new Set()) {
 
 // Returns {text, pages, confidence, note}. Never throws on a malformed object:
 // one unreadable page should not lose the rest of a statement.
-export async function pdfText(bytes) {
+export async function pdfText(bytes, {password = ''} = {}) {
   const source = latin1(bytes);
   if (!source.startsWith('%PDF-')) throw Error('That is not a PDF file.');
-  const doc = await openDocument(bytes, source);
+  const doc = await openDocument(bytes, source, {password});
   const parts = [];
   let pages = 0, dropped = 0, pictures = 0;
   for (const page of doc.locked ? [] : pageList(doc)) {
@@ -450,5 +450,8 @@ export async function pdfText(bytes) {
     .replace(/\n{3,}/g, '\n\n')
     .trim()
     .slice(0, MAX_TEXT);
-  return {text, pages, ...confidenceOf(text, {locked: doc.locked, dropped: parts.length ? dropped : 0, pictures})};
+  // `needsPassword` is the one failure the owner can do something about, so it
+  // is reported as its own answer rather than folded into a note about a scan.
+  return {text, pages, encrypted: !!doc.decrypt || !!doc.locked, needsPassword: doc.needsPassword,
+    ...confidenceOf(text, {locked: doc.locked, dropped: parts.length ? dropped : 0, pictures})};
 }

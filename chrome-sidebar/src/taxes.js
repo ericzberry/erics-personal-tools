@@ -1,8 +1,9 @@
-import {TaxesView,DocumentCard,Destination,ConflictPanel,FiledList,ConnectionPanel,fileSize} from './components/taxes.js';
+import {TaxesView,DocumentCard,Destination,ConflictPanel,PasswordPanel,FiledList,ConnectionPanel,fileSize} from './components/taxes.js';
 import {Button,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED} from './statement-text.js';
-import {taxFileName,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,MAX_DOCUMENT_BYTES,extensionOf} from './tax-data.js';
+import {taxFileName,taxFolderPath,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,
+  needsIssuer,needsJurisdiction,needsQuarter,DEFAULT_TAXPAYER,MAX_DOCUMENT_BYTES,extensionOf} from './tax-data.js';
 
 const today=()=>new Date().toISOString().slice(0,10);
 // Google's consent page is a round trip through another tab, so the tool waits
@@ -23,7 +24,10 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   // The reading's connection is chosen here rather than asked for. The Worker
   // lists connections most recently changed first, so the one in use is the one
   // last touched, and it is kept for as long as it still exists.
-  let dropped=null,reading=null,plan=null,filed={year:'',files:[]},polling=0,consentUrl='',connectionId='';
+  // `locked` is a dropped PDF that would not open: what it said, waiting for a
+  // password. `original` is the file as it arrived, kept so a document whose
+  // password nobody has can still be filed exactly as it is.
+  let dropped=null,original=null,reading=null,plan=null,filed={year:'',files:[],groups:[]},polling=0,consentUrl='',connectionId='',locked='',typed='';
 
   const status=(text,target='status',tone='')=>setStatus($(target),text,tone);
   const action=(label,handler,variant='secondary',extra={})=>{
@@ -55,7 +59,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       drive=await remote(token,'/v1/drive/status');
       if(!quiet)status(drive.configured?'':'Google Drive is not configured on the Worker yet.');
       if(drive.connected)await loadFiled(token);
-      else filed={year:'',files:[]};
+      else filed={year:'',files:[],groups:[]};
       return drive;
     },'status');
   }
@@ -98,7 +102,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     await run(async token=>{
       await remote(token,'/v1/drive/disconnect',{method:'POST',value:{}});
       drive={...drive,connected:false,account:''};
-      filed={year:'',files:[]};
+      filed={year:'',files:[],groups:[]};
       status('','status');
     },'status');
   }
@@ -106,32 +110,70 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   async function loadFiled(token){
     const year=$('year').value||defaultTaxYear();
     const result=await remote(token,`/v1/drive/filed?year=${encodeURIComponent(year)}`);
-    filed={year:result.year,files:result.files||[]};
+    filed={year:result.year,files:result.files||[],groups:result.groups||[]};
   }
 
   // --- The dropped document
   async function receive(file){
     clearFiling({keepFields:false});
-    dropped=file;
-    const result=await readStatement(file);
-    const extension=extensionOf(file.name);
+    original=file;dropped=file;
+    return examine('');
+  }
+
+  // Reads what was dropped, with a password when one has been given. A file
+  // that will not open without one stops here and asks: the document is not
+  // reported as unreadable, because it is readable by the one person filing it.
+  async function examine(password){
+    let result;
+    try{result=await readStatement(original,{password,unlock:true});}
+    catch(error){
+      if(!error.needsPassword)throw error;
+      locked=error.message;dropped=original;reading=null;
+      renderDocument();renderPassword();render();
+      return {message:error.message,tone:'alert'};
+    }
+    locked='';typed='';
+    // An encrypted document is filed as the unlocked copy made here, so what
+    // reaches Drive opens without a password five years from now.
+    dropped=result.file||original;
     if(result.kind==='image'){
       reading={kind:'image',image:result.image,text:'',
-        detail:`Image · ${fileSize(file.size)}`,note:'',tone:''};
+        detail:`Image · ${fileSize(dropped.size)}`,note:'',tone:''};
     }else if(result.text.trim()){
       const {text}=trimForReading(result.text);
       reading={kind:'text',text,image:null,
-        detail:`${fileSize(file.size)} · ${text.length.toLocaleString('en-US')} characters read on this device`,
-        note:result.note,tone:result.confidence==='good'?'':'warning'};
+        detail:`${fileSize(dropped.size)} · ${text.length.toLocaleString('en-US')} characters read on this device`,
+        note:result.note,tone:result.unlocked?'success':result.confidence==='good'?'':'alert'};
     }else{
-      reading={kind:'none',text:'',image:null,detail:fileSize(file.size),
-        note:'No text came out of this file, so it cannot be named for you. It still files exactly as it is.',tone:'warning'};
+      reading={kind:'none',text:'',image:null,detail:fileSize(dropped.size),
+        note:[result.note,'No text came out of this file, so it cannot be named for you. It still files exactly as it is.'].filter(Boolean).join(' '),
+        tone:'alert'};
     }
-    renderDocument();render();
+    renderDocument();renderPassword();render();
     if(reading.kind==='none')return 'Choose the type and year yourself, then file it.';
     if(!connectionId)return 'Save an AI connection in Settings to have a document named for you, or fill the fields in yourself.';
     await readDocument();
     return 'Ready to file.';
+  }
+
+  // The password panel's two answers. Unlocking reads the document again with
+  // it; filing it locked keeps the file exactly as it arrived and moves on to
+  // naming it, which still has to be done by hand because nothing was read.
+  async function unlock(password){
+    if(busy)return;
+    typed=password;
+    if(!password){status('Enter the password, or file it as it is.','file-status','alert');return;}
+    status('Opening the document…','file-status','progress');
+    const result=await examine(password);
+    const {message,tone}=typeof result==='object'&&result?result:{message:result,tone:'success'};
+    status(message||'','file-status',tone||'success');
+  }
+  function fileLocked(){
+    locked='';typed='';dropped=original;
+    reading={kind:'none',text:'',image:null,detail:fileSize(original.size),
+      note:'This document is filed exactly as it arrived, and still needs its password to open.',tone:'alert'};
+    renderDocument();renderPassword();render();
+    status('Choose the type and year yourself, then file it.','file-status','alert');
   }
   async function readDocument(){
     const id=connectionId;
@@ -143,8 +185,12 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       const proposal=parseTaxReading(result);
       if(proposal.type)$('type').value=proposal.type;
       if(proposal.issuer)$('issuer').value=proposal.issuer;
+      if(proposal.taxpayer)$('taxpayer').value=proposal.taxpayer;
+      if(proposal.jurisdiction)$('jurisdiction').value=proposal.jurisdiction;
+      if(proposal.quarter)$('quarter').value=proposal.quarter;
       if(proposal.year&&taxYears().includes(proposal.year))$('year').value=proposal.year;
-      reading={...reading,note:proposal.reason,tone:proposal.confidence==='high'?'':'warning'};
+      reading={...reading,note:[reading.note,proposal.reason].filter(Boolean).join(' '),
+        tone:proposal.confidence==='high'?reading.tone:'alert'};
       renderDocument();renderDestination();
       status(proposal.confidence==='high'?'':'Check the type, name and year before filing.','file-form-status','alert');
       if(proposal.year&&!taxYears().includes(proposal.year))status(`This looks like a ${proposal.year} document, which is outside the years you can file into. Pick the year yourself.`,'file-form-status','alert');
@@ -154,7 +200,8 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
 
   // --- Filing
   function currentFiling(){
-    return normalizeTaxFiling({type:$('type').value,issuer:$('issuer').value,year:$('year').value,fileName:dropped?.name||''});
+    return normalizeTaxFiling({type:$('type').value,issuer:$('issuer').value,taxpayer:$('taxpayer').value,
+      jurisdiction:$('jurisdiction').value,quarter:$('quarter').value,year:$('year').value,fileName:dropped?.name||''});
   }
   async function file(){
     if(!dropped){status('Drop a document first.','file-form-status','alert');return;}
@@ -171,19 +218,22 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   async function send(token,mode){
     status(mode==='replace'?'Replacing…':'Filing…','file-form-status','progress');
     const result=await upload(token,`/v1/drive/upload?ticket=${encodeURIComponent(plan.ticket)}&mode=${mode}`,{file:dropped});
-    const {name,year}=result.filed;
+    const {name,year,path=[year]}=result.filed;
     clearFiling({keepFields:false});
     $('year').value=year;
     await loadFiled(token);
-    status(`${result.replaced?'Replaced':'Filed'} ${year} / ${name}.`,'file-form-status','success');
+    status(`${result.replaced?'Replaced':'Filed'} ${[...path,name].join(' / ')}.`,'file-form-status','success');
   }
   const resolveConflict=mode=>run(token=>send(token,mode),'file-form-status');
 
   function clearFiling({keepFields=true}={}){
-    dropped=null;reading=null;plan=null;
-    if(!keepFields){$('type').value='';$('issuer').value='';}
+    dropped=null;original=null;reading=null;plan=null;locked='';typed='';
+    if(!keepFields){
+      $('type').value='';$('issuer').value='';$('jurisdiction').value='';$('quarter').value='';
+      $('taxpayer').value=DEFAULT_TAXPAYER;
+    }
     setStatus($('file-status'),'');
-    renderDocument();renderConflict();renderDestination();
+    renderDocument();renderPassword();renderConflict();renderDestination();
   }
 
   // --- Rendering
@@ -196,9 +246,20 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   }
   function renderDestination(){
     let name='';
-    try{name=dropped?taxFileName({type:$('type').value,issuer:$('issuer').value,extension:extensionOf(dropped.name)}):'';}catch{name='';}
+    try{
+      name=dropped?taxFileName({type:$('type').value,issuer:$('issuer').value,taxpayer:$('taxpayer').value,
+        jurisdiction:$('jurisdiction').value,quarter:$('quarter').value,extension:extensionOf(dropped.name)}):'';
+    }catch{name='';}
     $('destination').hidden=!name;
-    $('destination').replaceChildren(...(name?[Destination({year:$('year').value,name})]:[]));
+    $('destination').replaceChildren(...(name
+      ?[Destination({path:taxFolderPath({year:$('year').value,taxpayer:$('taxpayer').value}),name})]:[]));
+  }
+  // A locked document is the only thing being asked about while it is locked:
+  // nothing below it can be answered until the file has been opened.
+  function renderPassword(){
+    $('password').hidden=!locked;
+    $('password').replaceChildren(...(locked?[PasswordPanel({value:typed,busy,
+      onType:value=>{typed=value;},onUnlock:unlock,onSkip:fileLocked})]:[]));
   }
   function renderConflict(){
     $('conflict').hidden=!plan?.existing;
@@ -213,7 +274,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   // conflict the owner is answering has none of its own, and an empty drop
   // zone has nothing to offer at all.
   function renderActions(){
-    $('file-actions').replaceChildren(...(!dropped||plan?.existing?[]:[
+    $('file-actions').replaceChildren(...(!dropped||locked||plan?.existing?[]:[
       action('File it',file,'primary',{disabled:busy||!drive.connected}),
       action('Clear',()=>{clearFiling({keepFields:false});status('','file-form-status');render();})
     ]));
@@ -227,12 +288,20 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     // Connecting Drive goes through this device's cloud connection, so without
     // one the button would only repeat what the status line already says.
     for(const node of $('connection').querySelectorAll('button'))node.disabled=busy||!drive.configured||!activeToken;
-    $('filed').replaceChildren(FiledList(filed.year||$('year').value,filed.files));
-    // Only what applies: the type and the name describe a document, so they
-    // appear once there is one. The year stays, because it also says which
-    // year's folder is listed below.
-    for(const key of ['type','issuer'])$(key).closest('.form-field').hidden=!dropped;
-    for(const key of ['type','issuer'])$(key).disabled=busy;
+    $('filed').replaceChildren(FiledList(filed.year||$('year').value,filed.files,filed.groups));
+    // Only what applies. The type, the taxpayer and the name describe a
+    // document, so they appear once there is one, and a document that is still
+    // locked is not being named yet. Which government and which instalment are
+    // questions only about what the household filed or paid; who issued it is a
+    // question only about what arrived. The year stays throughout, because it
+    // also says which year's folder is listed below.
+    const type=$('type').value,naming=!!dropped&&!locked;
+    const shown={type:naming,taxpayer:naming,issuer:naming&&needsIssuer(type),
+      jurisdiction:naming&&needsJurisdiction(type),quarter:naming&&needsQuarter(type)};
+    for(const [key,visible] of Object.entries(shown)){
+      $(key).closest('.form-field').hidden=!visible;
+      $(key).disabled=busy;
+    }
     $('year').disabled=busy;
     $('drive-contents').hidden=!drive.connected;
     $('drop').disabled=busy;
@@ -255,7 +324,8 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
 
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_DOCUMENT_BYTES});
   $('file-clear').addEventListener('click',()=>{clearFiling({keepFields:false});status('','file-form-status');render();});
-  for(const key of ['type','issuer'])$(key).addEventListener(key==='issuer'?'input':'change',()=>{plan=null;renderConflict();renderDestination();});
+  for(const key of ['type','issuer','taxpayer','jurisdiction','quarter'])
+    $(key).addEventListener(key==='issuer'?'input':'change',()=>{plan=null;renderConflict();renderDestination();render();});
   $('year').addEventListener('change',()=>{
     plan=null;renderConflict();renderDestination();
     run(loadFiled,'status').then(render);
@@ -264,7 +334,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   function clear(){
     generation++;polling=0;activeToken='';
     drive={connected:false,account:'',configured:true};
-    filed={year:'',files:[]};consentUrl='';connectionId='';
+    filed={year:'',files:[],groups:[]};consentUrl='';connectionId='';
     $('year').value=defaultTaxYear();
     clearFiling({keepFields:false});
     for(const target of ['status','file-form-status','ai-status'])status('',target);

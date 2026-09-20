@@ -1,13 +1,17 @@
-// Opens a PDF that was locked before it was sent. Banks do this routinely: the
-// file carries an owner password that forbids printing or copying, while the
-// user password is empty, so any reader may open it without being asked for
-// anything. Chase statements are exactly this. Without the standard security
-// handler every stream in such a file is unreadable noise, and a statement
-// full of text looks to a reader like a scan.
+// Opens a PDF that was locked before it was sent. Two different locks arrive
+// here and they are not the same problem.
 //
-// Only the empty user password is attempted, because that is the case where
-// the owner is entitled to the contents and no one has to be asked for a
-// secret. A file that genuinely needs a password says so and is not guessed at.
+// Banks lock a statement with an owner password while leaving the user
+// password empty, so any reader may open it without being asked for anything.
+// Chase statements are exactly this. Without the standard security handler
+// every stream in such a file is unreadable noise, and a statement full of
+// text looks to a reader like a scan.
+//
+// A tax document is often locked the other way: it genuinely needs a password,
+// which the owner has and this code does not. Nothing here guesses at one. A
+// password is used only when it is handed in, and a file that needs one and was
+// given none says so — `needsPassword` on the error — so the caller can ask
+// rather than report a broken file.
 const PAD = new Uint8Array([0x28,0xBF,0x4E,0x5E,0x4E,0x75,0x8A,0x41,0x64,0x00,0x4E,0x56,0xFF,0xFA,0x01,0x08,
   0x2E,0x2E,0x00,0xB6,0xD0,0x68,0x3E,0x80,0x2F,0x0C,0xA9,0xFE,0x64,0x53,0x69,0x7A]);
 
@@ -113,27 +117,122 @@ const bytesOf = (...parts) => {
   return out;
 };
 
-// Algorithm 2: the file key from the empty user password. Everything a stream
-// needs afterwards is derived from it and the object it belongs to.
-function fileKey({revision, ownerEntry, permissions, id, length, encryptMetadata}) {
+// A password the owner typed is refused, not thrown away: the caller shows the
+// message and asks again, so the two cases are told apart on the error itself.
+const locked = (message, extra = {}) => Object.assign(Error(message), {needsPassword: true, ...extra});
+
+// Up to revision 4 a password is padded out to 32 bytes with a constant the
+// specification fixes; from revision 5 it is UTF-8 and used as it is.
+const latin1Bytes = text => Uint8Array.from([...String(text ?? '')].map(character => character.charCodeAt(0) & 255));
+function padPassword(password) {
+  const bytes = latin1Bytes(password);
+  const out = new Uint8Array(32);
+  const taken = Math.min(bytes.length, 32);
+  out.set(bytes.subarray(0, taken));
+  out.set(PAD.subarray(0, 32 - taken), taken);
+  return out;
+}
+const utf8Password = password => new TextEncoder().encode(String(password ?? '')).slice(0, 127);
+
+// Algorithm 2: the file key from a padded password. Everything a stream needs
+// afterwards is derived from it and the object it belongs to.
+function fileKey({revision, padded, ownerEntry, permissions, id, length, encryptMetadata}) {
   const p = new Uint8Array(4);
   new DataView(p.buffer).setInt32(0, permissions, true);
   const extra = revision >= 4 && !encryptMetadata ? new Uint8Array([255, 255, 255, 255]) : new Uint8Array();
-  let key = md5(bytesOf(PAD, ownerEntry, p, id, extra));
+  let key = md5(bytesOf(padded, ownerEntry, p, id, extra));
   const size = revision === 2 ? 5 : length;
   if (revision >= 3) for (let i = 0; i < 50; i++) key = md5(key.slice(0, size));
   return key.slice(0, size);
 }
 
-// Algorithms 4 and 5: does the empty password actually open this file? A wrong
-// answer here would hand the extractor noise and call it a scan, so it is
-// checked rather than assumed.
-function opensWithEmptyPassword({revision, key, userEntry, id}) {
+// Algorithms 4 and 5: does this key actually open the file? A wrong answer here
+// would hand the extractor noise and call it a scan, so it is checked rather
+// than assumed.
+function keyOpens({revision, key, userEntry, id}) {
   if (revision === 2) return rc4(key, PAD).every((byte, i) => byte === userEntry[i]);
-  let digest = md5(bytesOf(PAD, id));
-  let out = rc4(key, digest);
+  let out = rc4(key, md5(bytesOf(PAD, id)));
   for (let i = 1; i <= 19; i++) out = rc4(key.map(byte => byte ^ i), out);
   return out.every((byte, i) => byte === userEntry[i]);
+}
+
+// Algorithm 7: an owner password does not open the file directly — it unwraps
+// the user password held in /O, which then does. Someone who knows the owner
+// password is entitled to the contents, so both are accepted.
+function userPasswordFromOwner({revision, password, ownerEntry, length}) {
+  let key = md5(padPassword(password));
+  if (revision >= 3) for (let i = 0; i < 50; i++) key = md5(key);
+  key = key.slice(0, revision === 2 ? 5 : length);
+  if (revision === 2) return rc4(key, ownerEntry);
+  let out = ownerEntry;
+  for (let i = 19; i >= 0; i--) out = rc4(key.map(byte => byte ^ i), out);
+  return out;
+}
+
+// ------------------------------------------------------------ AES-256 (V5) --
+// Revisions 5 and 6 drop MD5 and RC4 entirely: the password is hashed to a key
+// that unwraps the real file key, and every stream is AES-256 with that one key
+// rather than a key per object.
+const zeroIv = () => new Uint8Array(16);
+const sha = async (bits, bytes) => new Uint8Array(await crypto.subtle.digest(`SHA-${bits}`, bytes));
+
+// CBC without padding, both ways. WebCrypto always pads, so encryption drops
+// the block it added, and decryption is handed one extra block built to
+// decrypt to exactly the padding WebCrypto insists on finding.
+async function aesEncryptNoPad(key, iv, data) {
+  const material = await crypto.subtle.importKey('raw', key, 'AES-CBC', false, ['encrypt']);
+  const out = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-CBC', iv}, material, data));
+  return out.slice(0, data.length);
+}
+async function aesDecryptNoPad(key, iv, data) {
+  if (!data.length) return new Uint8Array();
+  const material = await crypto.subtle.importKey('raw', key, 'AES-CBC', false, ['encrypt', 'decrypt']);
+  const last = data.slice(data.length - 16);
+  const filler = Uint8Array.from(last, byte => byte ^ 16);
+  const tail = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-CBC', iv: zeroIv()}, material, filler)).slice(0, 16);
+  return new Uint8Array(await crypto.subtle.decrypt({name: 'AES-CBC', iv}, material, bytesOf(data, tail)));
+}
+
+const repeat = (bytes, times) => {
+  const out = new Uint8Array(bytes.length * times);
+  for (let i = 0; i < times; i++) out.set(bytes, i * bytes.length);
+  return out;
+};
+
+// Algorithm 2.B. Revision 5 is the single SHA-256 Adobe shipped before the
+// standard settled; revision 6 is the hardened loop that replaced it.
+export async function hash2B(revision, password, salt, extra = new Uint8Array()) {
+  let key = await sha(256, bytesOf(password, salt, extra));
+  if (revision < 6) return key;
+  let rounds = 0, block;
+  do {
+    block = await aesEncryptNoPad(key.slice(0, 16), key.slice(16, 32),
+      repeat(bytesOf(password, key, extra), 64));
+    const pick = block.slice(0, 16).reduce((sum, byte) => sum + byte, 0) % 3;
+    key = await sha([256, 384, 512][pick], block);
+    rounds++;
+  } while (rounds < 64 || block[block.length - 1] > rounds - 32);
+  return key.slice(0, 32);
+}
+
+// Which of the two passwords was given, and the file key it unwraps. Both are
+// tried, because a document sent with only an owner password set is opened by
+// that password and by an empty user password alike.
+async function aes256Key({revision, password, ownerEntry, userEntry, ownerKeyEntry, userKeyEntry}) {
+  const bytes = utf8Password(password);
+  if (userEntry.length < 48 || ownerEntry.length < 48) throw locked('This PDF is encrypted and its lock could not be read.');
+  const user = userEntry.slice(0, 48);
+  if ((await hash2B(revision, bytes, userEntry.slice(32, 40))).slice(0, 32)
+    .every((byte, i) => byte === userEntry[i])) {
+    const intermediate = await hash2B(revision, bytes, userEntry.slice(40, 48));
+    return aesDecryptNoPad(intermediate, zeroIv(), userKeyEntry);
+  }
+  if ((await hash2B(revision, bytes, ownerEntry.slice(32, 40), user)).slice(0, 32)
+    .every((byte, i) => byte === ownerEntry[i])) {
+    const intermediate = await hash2B(revision, bytes, ownerEntry.slice(40, 48), user);
+    return aesDecryptNoPad(intermediate, zeroIv(), ownerKeyEntry);
+  }
+  return null;
 }
 
 async function aesDecrypt(key, data) {
@@ -144,10 +243,12 @@ async function aesDecrypt(key, data) {
 }
 
 // Returns a function that turns one object's stored bytes back into its real
-// ones, or null when the file is not encrypted. Throws when the file needs a
-// password this reader is not entitled to guess, or uses a scheme it cannot
-// open — both of which the caller reports rather than mistaking for a scan.
-export function decryptor(source, dictOf) {
+// ones, or null when the file is not encrypted. The function carries what the
+// rewriter needs to know about the lock it came from. Throws when the file
+// needs a password that was not given or was wrong — both carry
+// `needsPassword`, so the caller asks instead of reporting a broken file — and
+// when the scheme is one this reader cannot open at all.
+export async function decryptor(source, dictOf, {password = ''} = {}) {
   const reference = /\/Encrypt\s+(\d+)\s+\d+\s+R/.exec(source);
   if (!reference && !/\/Encrypt\s*<</.test(source)) return null;
   const dict = reference ? dictOf(Number(reference[1])) : '';
@@ -161,25 +262,42 @@ export function decryptor(source, dictOf) {
   const userEntry = stringEntry(dict, '/U');
   const idHex = /\/ID\s*\[\s*<([0-9a-fA-F]*)>/.exec(source)?.[1] || '';
   const id = hexString(idHex);
-  // V5 is AES-256 with its own password algorithm. It is rare outside PDF 2.0
-  // producers, and guessing at it would be worse than saying plainly that this
-  // file has to come out of its viewer as a fresh PDF first.
-  if (version >= 5) throw Error('This PDF uses AES-256 encryption this reader cannot open. Print or export it to a new PDF, then drop that.');
+  if (version > 5) throw Error('This PDF uses an encryption scheme this reader cannot open. Print or export it to a new PDF, then drop that.');
   if (!ownerEntry || !userEntry) throw Error('This PDF is encrypted and its lock could not be read. Print or export it to a new PDF, then drop that.');
-  const method = version >= 4
-    ? (/\/CFM\s*\/(\w+)/.exec(dict)?.[1] || 'V2')
-    : 'V2';
-  if (!['V2', 'AESV2', 'None'].includes(method)) throw Error('This PDF uses an encryption method this reader cannot open. Print or export it to a new PDF, then drop that.');
   const encryptMetadata = !/\/EncryptMetadata\s+false/.test(dict);
-  const key = fileKey({revision, ownerEntry, permissions, id, length, encryptMetadata});
-  if (!opensWithEmptyPassword({revision, key, userEntry, id})) throw Error('This PDF needs a password to open. Open it in a PDF reader, then print or export it to an unlocked PDF.');
-  if (method === 'None') return (number, generation, data) => data;
+  const given = String(password ?? '');
+  const wrong = () => given
+    ? locked('That password did not open this PDF.', {wrongPassword: true})
+    : locked('This PDF needs a password to open.');
+
+  if (version === 5) {
+    const key = await aes256Key({revision, password: given, ownerEntry, userEntry,
+      ownerKeyEntry: stringEntry(dict, '/OE') || new Uint8Array(),
+      userKeyEntry: stringEntry(dict, '/UE') || new Uint8Array()});
+    if (!key) throw wrong();
+    const decrypt = (number, generation, data) => aesDecrypt(key, data);
+    return Object.assign(decrypt, {method: 'AESV3', version, revision, encryptMetadata});
+  }
+
+  const method = version >= 4 ? (/\/CFM\s*\/(\w+)/.exec(dict)?.[1] || 'V2') : 'V2';
+  if (!['V2', 'AESV2', 'None'].includes(method)) throw Error('This PDF uses an encryption method this reader cannot open. Print or export it to a new PDF, then drop that.');
+  const settings = {revision, ownerEntry, permissions, id, length, encryptMetadata};
+  // The empty user password first, because that is the bank's lock and asks
+  // nobody for anything; then what was typed, as a user password and as an
+  // owner password.
+  const candidates = [PAD, ...(given ? [padPassword(given),
+    userPasswordFromOwner({revision, password: given, ownerEntry, length})] : [])];
+  const key = candidates.map(padded => fileKey({...settings, padded}))
+    .find(candidate => keyOpens({revision, key: candidate, userEntry, id}));
+  if (!key) throw wrong();
+  if (method === 'None') return Object.assign((number, generation, data) => data, {method, version, revision, encryptMetadata});
   // Algorithm 1: every object gets its own key, made from the file key and the
   // object's own number, so one object's bytes never decrypt another's.
-  return (number, generation, data) => {
+  const decrypt = (number, generation, data) => {
     const salt = method === 'AESV2' ? new Uint8Array([0x73, 0x41, 0x6C, 0x54]) : new Uint8Array();
     const objectKey = md5(bytesOf(key, new Uint8Array([number & 255, (number >> 8) & 255, (number >> 16) & 255, generation & 255, (generation >> 8) & 255]), salt))
       .slice(0, Math.min(key.length + 5, 16));
     return method === 'AESV2' ? aesDecrypt(objectKey, data) : rc4(objectKey, data);
   };
+  return Object.assign(decrypt, {method, version, revision, encryptMetadata});
 }

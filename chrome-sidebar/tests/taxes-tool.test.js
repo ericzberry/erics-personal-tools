@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
 import {mountTaxes} from '../src/taxes.js';
+import {rc4Locked} from './fixtures/locked-pdf.js';
 
 const settle=async(check,attempts=600)=>{
   for(let i=0;i<attempts;i++){await new Promise(resolve=>setTimeout(resolve,1));if(check())return;}
@@ -27,16 +28,20 @@ function setup(){
   return {document,window,restore:selectValues(window)};
 }
 const FILED=[{name:'K-1 - Averin Capital LLC.pdf',modifiedTime:'2026-03-02T00:00:00.000Z',size:2240000,webViewLink:'https://drive.example/k1'}];
+const GROUPS=[{name:'Berry EA 2024 Family Trust',folderId:'trust',
+  files:[{name:'Return - Federal - Berry EA 2024 Family Trust.pdf',modifiedTime:'2026-04-10T00:00:00.000Z',size:4100000,webViewLink:'https://drive.example/return'}]}];
 // One synthetic Worker, recording what the tool asked it for.
-function worker({connected=true,connections=[{id:'newest',name:'Newest',hasApiKey:true},{id:'older',name:'Older',hasApiKey:true}]}={}){
+function worker({connected=true,groups=[],connections=[{id:'newest',name:'Newest',hasApiKey:true},{id:'older',name:'Older',hasApiKey:true}]}={}){
   const asked=[];
   return {asked,
     async remote(_token,path,options={}){
       asked.push({path,value:options.value});
       if(path==='/v1/drive/status')return {connected,account:connected?'owner@example.com':'',configured:true};
-      if(path.startsWith('/v1/drive/filed'))return {year:'2025',files:connected?FILED:[]};
+      if(path.startsWith('/v1/drive/filed'))return {year:'2025',files:connected?FILED:[],groups:connected?groups:[]};
       if(path==='/v1/ai-connections')return {connections};
       if(path.endsWith('/tax-intake'))return {type:'1099',issuer:'Schwab',year:'2025',confidence:'high',reason:'Read off the form header.'};
+      if(path==='/v1/drive/plan')return {ticket:'t',year:options.value.year,name:options.value.name,path:options.value.path,
+        folder:{id:'f',created:false},existing:null,keepBothName:''};
       return {};
     }};
 }
@@ -88,5 +93,109 @@ test('an unconnected Drive is named, and a device with no AI connection is told 
   assert.match(document.getElementById('taxes-ai-status').textContent,/Save an AI connection in Settings/);
   // Nothing is filed yet, so the list stays out of the way entirely.
   assert.equal(document.getElementById('taxes-drive-contents').hidden,true);
+  restore();
+});
+
+// Every document a year holds is read down this list, so a row is the name and
+// nothing else: a date and a size on each one doubled its length.
+test('what is already filed is one line per document, under the taxpayer it belongs to',async()=>{
+  const {document,window,restore}=setup();
+  const root=document.querySelector('main');
+  mountTaxes(root,{credentials:{get:async()=>'token'},remote:worker({groups:GROUPS}).remote,upload:async()=>({filed:{name:'x',year:'2025'}})});
+  await settle(()=>root.querySelectorAll('.tax-filed-row').length===2);
+
+  const rows=[...root.querySelectorAll('.tax-filed-row')].map(node=>node.textContent);
+  assert.deepEqual(rows,['K-1 - Averin Capital LLC.pdf','Return - Federal - Berry EA 2024 Family Trust.pdf']);
+  // Neither the date it was filed nor how large it is appears anywhere in it.
+  const listed=document.getElementById('taxes-filed').textContent;
+  assert.doesNotMatch(listed,/Mar 2|Apr 10|MB|KB/);
+  // The taxpayer names the rows under it, so it is set above them, not inside.
+  assert.equal(root.querySelector('.tax-filed-group').textContent,'Berry EA 2024 Family Trust');
+  assert.match(listed,/2025 · 2 documents/);
+  restore();
+});
+
+test('a return is asked who filed it and where, not who issued it',async()=>{
+  const {document,window,restore}=setup();
+  const api=worker();
+  const root=document.querySelector('main');
+  mountTaxes(root,{credentials:{get:async()=>'token'},remote:api.remote,upload:async()=>({filed:{name:'x',year:'2026'}})});
+  await settle(()=>root.querySelectorAll('.tax-filed-row').length===1);
+  document.getElementById('taxes-drop').dispatchEvent(Object.assign(new window.Event('drop',{bubbles:true,cancelable:true}),{dataTransfer:{files:[document1099()]}}));
+  await settle(()=>document.getElementById('taxes-destination').hidden===false);
+
+  const shown=id=>!document.getElementById(`taxes-${id}`).closest('.form-field').hidden;
+  // A document that arrived is named by its issuer and asked nothing else.
+  assert.deepEqual([shown('issuer'),shown('taxpayer'),shown('jurisdiction'),shown('quarter')],[true,true,false,false]);
+
+  const type=document.getElementById('taxes-type');
+  type.value='return';
+  type.dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.deepEqual([shown('issuer'),shown('jurisdiction'),shown('quarter')],[false,true,false]);
+  const estimate=document.getElementById('taxes-quarter');
+  type.value='estimated-payment';
+  type.dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.equal(shown('quarter'),true);
+
+  // Named and placed from the answers: from 2026 the year is divided by
+  // taxpayer, and the destination says so before anything moves.
+  type.value='return';
+  type.dispatchEvent(new window.Event('change',{bubbles:true}));
+  document.getElementById('taxes-taxpayer').value='ea-2024';
+  document.getElementById('taxes-jurisdiction').value='federal';
+  document.getElementById('taxes-year').value='2026';
+  estimate.value='';
+  document.getElementById('taxes-jurisdiction').dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.match(document.getElementById('taxes-destination').textContent,
+    /2026 \/ Berry EA 2024 Family Trust \/ Return - Federal - Berry EA 2024 Family Trust\.txt/);
+  restore();
+});
+
+// A locked document is not a broken one: it is the owner's file, and they have
+// the password. What reaches Drive is the copy that opens without it.
+test('a document that needs a password asks for it, and files the unlocked copy',async()=>{
+  const {document,window,restore}=setup();
+  const api=worker();
+  const sent=[];
+  const root=document.querySelector('main');
+  mountTaxes(root,{credentials:{get:async()=>'token'},remote:api.remote,
+    upload:async(_token,_path,{file})=>{sent.push(file);return {filed:{name:file.name,year:'2025',path:['2025']}};}});
+  await settle(()=>root.querySelectorAll('.tax-filed-row').length===1);
+
+  const locked=new File([rc4Locked()],'Return.pdf',{type:'application/pdf'});
+  document.getElementById('taxes-drop').dispatchEvent(Object.assign(new window.Event('drop',{bubbles:true,cancelable:true}),{dataTransfer:{files:[locked]}}));
+  await settle(()=>document.getElementById('taxes-password').hidden===false);
+
+  // What is wrong is said once, on the line above the field that answers it.
+  assert.match(document.getElementById('taxes-file-status').textContent,/needs a password/);
+  assert.doesNotMatch(document.getElementById('taxes-password').textContent,/needs a password/);
+  // Nothing is named or filed while it cannot be opened.
+  assert.equal(document.getElementById('taxes-file-actions').children.length,0);
+  assert.equal(document.getElementById('taxes-type').closest('.form-field').hidden,true);
+
+  // A wrong password is refused and asked again rather than filed.
+  const type=value=>{
+    const input=document.getElementById('taxes-password-value');
+    input.value=value;
+    input.dispatchEvent(new window.Event('input',{bubbles:true}));
+  };
+  const press=()=>[...root.querySelectorAll('#taxes-password button')][0].click();
+  type('not-it');press();
+  await settle(()=>/did not open/.test(document.getElementById('taxes-file-status').textContent));
+  assert.equal(document.getElementById('taxes-file-actions').children.length,0);
+
+  // What was typed survives the refusal, so the panel comes back with it in
+  // place rather than empty.
+  assert.equal(document.getElementById('taxes-password-value').value,'not-it');
+  type('taxes-2025');press();
+  await settle(()=>document.getElementById('taxes-password').hidden===true);
+  assert.match(document.getElementById('taxes-document').textContent,/Unlocked on this device/);
+
+  document.getElementById('taxes-file-actions').querySelector('button').click();
+  await settle(()=>sent.length===1);
+  // The bytes that went to Drive are the unlocked copy, not the file dropped.
+  const filed=new Uint8Array(await sent[0].arrayBuffer());
+  assert.equal(Buffer.from(filed).includes('/Encrypt'),false);
+  assert.ok(filed.length&&filed.length!==locked.size,'the copy filed is not the file that arrived');
   restore();
 });

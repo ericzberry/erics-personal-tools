@@ -1460,3 +1460,45 @@ note and a wrapped name, hover and keyboard reveal of the row actions, the
 delete question and its two answers, and the connected-empty and not-connected
 states. Native iPhone and installed Chrome behavior were not directly tested.
 Archive: `release/erics-sidebar-0.6.132.zip`.
+
+## The returns and the estimates, and a document that arrives locked (0.6.143 / mobile 0.1.97)
+
+Taxes filed what arrived. What the household files and pays had nowhere to go:
+five returns a year, four instalments each to two governments, and the receipts
+proving they were paid. A **Filed return**, an **Estimated payment** and a
+**Proof of payment** are now named from their own facts rather than from an
+issuer they do not have — who filed it, which government, which quarter:
+`Estimated payment - Q3 Federal - Berry 2020 Irrevocable Family Trust.pdf`.
+
+Every document now names a taxpayer: Eric & Ariana Berry, or one of the four
+trusts. From tax year 2026 that is the subfolder inside the year it lands in, so
+five entities' documents no longer pile into one folder. 2025 and earlier stay
+exactly as they are, and a subfolder made by hand is filed into rather than
+duplicated. The reading proposes the taxpayer, the government and the quarter
+along with the form and the year, and every one of them is a field to correct.
+
+A locked document is now filed unlocked. Tax documents often arrive encrypted,
+and a return that needs a password is a file that opens to a prompt nobody
+remembers the answer to five years from now. The lock is read on the device: one
+that only forbids editing — a bank's — opens unasked, and one that genuinely
+needs a password asks for it, uses it here and saves it nowhere. An unlocked
+copy is then written on the device, read back to prove it is still the same
+document, and that copy is what reaches Drive. RC4, AES-128 and AES-256 are all
+opened, by either the user or the owner password; when there is no password to
+be had, **File it locked** files the document as it arrived and says so.
+
+**Already filed** is a run of one-line rows. The date and the size sat under
+every name, doubling the length of a list read to answer one question — is this
+one already in there? — and a year's documents now sit under the taxpayer they
+belong to.
+
+Fixed along the way: a reading the model was not sure of threw instead of
+warning, because the tool was asking for a status colour that no longer exists.
+
+Validation: 430 extension, 108 Worker and 33 mobile tests pass, including locked PDFs built
+at RC4 and AES-256 and unlocked end to end, and the unlocked copy opening in
+Apple's own PDF engine. The synthetic Taxes states were reviewed in the sidebar
+harness at 380px and the 280px minimum: a return named from its taxpayer and
+government, a locked document before and after its password, and a year divided
+by taxpayer. Native iPhone and installed Chrome behavior were not directly
+tested. Archive: `release/erics-sidebar-0.6.143.zip`.

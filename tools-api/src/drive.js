@@ -129,27 +129,45 @@ async function driveFetch(env,request,fetcher,path,init={},retried=false){
 const quote=text=>String(text).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 const listing=params=>`/files?${new URLSearchParams({...params,supportsAllDrives:'true',includeItemsFromAllDrives:'true',spaces:'drive'})}`;
 
-// The year's subfolder, made on first use. A year Drive already has two
-// folders for is a question for the owner, not something to guess at.
-async function yearFolder(env,request,fetcher,year,{create=false}={}){
+// The folders a filing lands in, walked from the tax folder down: the year, and
+// from 2026 the taxpayer inside it. Each one is used if it is there and made if
+// it is not, so a subfolder made by hand is filed into rather than duplicated.
+// A name Drive already has two folders for is a question for the owner, not
+// something to guess at.
+async function folderNamed(env,request,fetcher,parentId,name){
   const found=await driveFetch(env,request,fetcher,listing({
-    q:`'${quote(TAX_ROOT_FOLDER_ID)}' in parents and name = '${quote(year)}' and mimeType = '${FOLDER_TYPE}' and trashed = false`,
+    q:`'${quote(parentId)}' in parents and name = '${quote(name)}' and mimeType = '${FOLDER_TYPE}' and trashed = false`,
     fields:'files(id,name)',pageSize:'10'
   }));
-  if(found.files?.length>1)fail(409,`Drive has more than one ${year} folder in your tax folder. Tidy that up, then file this again.`);
-  if(found.files?.length)return {...found.files[0],created:false};
-  if(!create)return null;
-  const folder=await driveFetch(env,request,fetcher,'/files?supportsAllDrives=true&fields=id,name',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({name:year,mimeType:FOLDER_TYPE,parents:[TAX_ROOT_FOLDER_ID]})
-  });
-  return {...folder,created:true};
+  if(found.files?.length>1)fail(409,`Drive has more than one ${name} folder where this would be filed. Tidy that up, then file this again.`);
+  return found.files?.[0]||null;
+}
+async function resolveFolder(env,request,fetcher,path,{create=false}={}){
+  let folder={id:TAX_ROOT_FOLDER_ID,name:'',created:false};
+  for(const name of path){
+    const found=await folderNamed(env,request,fetcher,folder.id,name);
+    if(found){folder={...found,created:false};continue;}
+    if(!create)return null;
+    const made=await driveFetch(env,request,fetcher,'/files?supportsAllDrives=true&fields=id,name',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,mimeType:FOLDER_TYPE,parents:[folder.id]})
+    });
+    folder={...made,created:true};
+  }
+  return folder;
 }
 
 const folderContents=(env,request,fetcher,folderId)=>driveFetch(env,request,fetcher,listing({
   q:`'${quote(folderId)}' in parents and trashed = false`,
-  fields:'files(id,name,modifiedTime,size,webViewLink)',pageSize:'1000',orderBy:'name'
+  fields:'files(id,name,mimeType,modifiedTime,size,webViewLink)',pageSize:'1000',orderBy:'name'
 }));
+const isFolder=file=>file.mimeType===FOLDER_TYPE;
+const documentsIn=contents=>(contents.files||[]).filter(file=>!isFolder(file)).map(file=>({
+  name:file.name,modifiedTime:file.modifiedTime,size:Number(file.size)||0,webViewLink:file.webViewLink
+}));
+// A year is divided by taxpayer, and there are five of those. The cap is what
+// keeps one listing from turning into an unbounded run of requests.
+const MAX_GROUPS=12;
 
 // Drive's one-request upload: the metadata and the file in one multipart body.
 // Exported because this is the part that depends on the runtime rather than on
@@ -200,13 +218,13 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
   if(path==='/v1/drive/plan'&&method==='POST'){
     const input=await body();
     const filing=normalizeTaxFiling(input);
-    const folder=await yearFolder(env,request,fetcher,filing.year,{create:true});
+    const folder=await resolveFolder(env,request,fetcher,filing.path,{create:true});
     const contents=await folderContents(env,request,fetcher,folder.id);
-    const files=contents.files||[];
+    const files=(contents.files||[]).filter(file=>!isFolder(file));
     const existing=files.find(file=>file.name.toLowerCase()===filing.name.toLowerCase())||null;
-    const ticket=await keepTicket(env,'upload',{folderId:folder.id,name:filing.name,year:filing.year,
+    const ticket=await keepTicket(env,'upload',{folderId:folder.id,name:filing.name,year:filing.year,path:filing.path,
       existingId:existing?.id||'',taken:files.map(file=>file.name)});
-    return json({ticket,year:filing.year,name:filing.name,folder:{id:folder.id,created:folder.created},
+    return json({ticket,year:filing.year,name:filing.name,path:filing.path,folder:{id:folder.id,created:folder.created},
       existing:existing&&{name:existing.name,modifiedTime:existing.modifiedTime,size:Number(existing.size)||0,webViewLink:existing.webViewLink},
       keepBothName:availableName(filing.name,files.map(file=>file.name))});
   }
@@ -232,7 +250,7 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
       metadata:mode==='replace'?{name}:{name,parents:[plan.folderId]},
       bytes,mimeType
     });
-    return json({filed:{name:file.name,year:plan.year,id:file.id,webViewLink:file.webViewLink,
+    return json({filed:{name:file.name,year:plan.year,path:plan.path||[plan.year],id:file.id,webViewLink:file.webViewLink,
       size:Number(file.size)||bytes.byteLength,modifiedTime:file.modifiedTime},replaced:mode==='replace'});
   }
 
@@ -241,12 +259,17 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
   if(path==='/v1/drive/filed'&&method==='GET'){
     const year=url.searchParams.get('year')||'';
     if(!/^\d{4}$/.test(year))fail(400,'Choose a tax year.');
-    const folder=await yearFolder(env,request,fetcher,year);
-    if(!folder)return json({year,files:[]});
+    const folder=await resolveFolder(env,request,fetcher,[year]);
+    if(!folder)return json({year,files:[],groups:[]});
     const contents=await folderContents(env,request,fetcher,folder.id);
-    return json({year,folderId:folder.id,files:(contents.files||[]).map(file=>({
-      name:file.name,modifiedTime:file.modifiedTime,size:Number(file.size)||0,webViewLink:file.webViewLink
-    }))});
+    // A year's own documents, then each taxpayer's, so what is already filed
+    // answers "is this one in there?" wherever in the year it actually sits.
+    const groups=[];
+    for(const sub of (contents.files||[]).filter(isFolder).slice(0,MAX_GROUPS)){
+      groups.push({name:sub.name,folderId:sub.id,webViewLink:sub.webViewLink,
+        files:documentsIn(await folderContents(env,request,fetcher,sub.id))});
+    }
+    return json({year,folderId:folder.id,files:documentsIn(contents),groups});
   }
 
   fail(404,'Unknown Drive request.');
