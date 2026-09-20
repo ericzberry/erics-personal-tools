@@ -1503,7 +1503,7 @@ government, a locked document before and after its password, and a year divided
 by taxpayer. Native iPhone and installed Chrome behavior were not directly
 tested. Archive: `release/erics-sidebar-0.6.143.zip`.
 
-## An update is not the end of a session (0.6.144 / mobile 0.1.98)
+## An update is not the end of a session (0.6.146 / mobile 0.1.101)
 
 Updating the extension, or pressing **Reload** on it, asked for the passkey
 again. Nothing about the session had ended: `chrome.storage.session` is memory
@@ -1530,4 +1530,5 @@ no readable key. The sealing and unsealing were also run against a real browser'
 IndexedDB and WebCrypto, confirming that two pages sealing at once agree on one
 key and that the key refuses to be exported. Reloading the installed extension
 in the owner's own Chrome was not directly tested. Archive:
-`release/erics-sidebar-0.6.144.zip`.
+`release/erics-sidebar-0.6.146.zip`, which carries the two releases committed
+alongside this one.
