@@ -65,19 +65,21 @@ export const TASK_POLICIES = {
   // every answer, and thinking first and then writing twenty-eight accounts is
   // what made the press sit for the better part of two minutes.
   //
-  // Luna is the current family's small model and answers at effort `none`. The
-  // argument for the tier above it was that a smaller model once read E*TRADE's
-  // page by filing every figure under the institution's name and calling a
-  // column of gains the holdings. That is a rule-following failure rather than
-  // a reading one, and this prompt is rule-dense — classes, registrations,
-  // scope, and a list of figures to leave out — so it is the fair worry about a
-  // small model. But it is a worry about a model two generations older than
-  // this one, on a snapshot that no longer hands over bare figures with no row
-  // around them, and it is checked where it would show: nothing is written to
-  // the ledger until the owner has read the drafts. A reading that comes back
-  // wrong costs a press, and Settings pins this one task to a larger model
-  // without a deploy.
-  'finance.intake':{label:'Finance reading',model:'gpt-5.6-luna',level:2,outputTokens:7000,web:false,maxCost:0.03},
+  // The small model of that family was tried here and could not hold the rules.
+  // A wealth manager's page groups its accounts under the title that holds them
+  // — Joint Accounts, Descendants Tst — and the instructions say in as many
+  // words to carry that heading in front of the account's own name, because it
+  // is the only thing on the page saying whose money an account number is.
+  // Luna returned the numbers alone. Twenty-eight accounts then had no holder
+  // between them, every one proposed a portfolio of its own named "Y1 60033",
+  // and a family's four entities came apart into a list. The tier is the
+  // difference: this prompt is rule-dense — classes, registrations, scope, a
+  // holder to carry down, and a list of figures to leave out — and rule-density
+  // is what a small model spends first.
+  //
+  // Terra follows them and still answers without reasoning first, which is the
+  // whole reason it is here rather than the reasoning model above it.
+  'finance.intake':{label:'Finance reading',model:'gpt-5.6-terra',level:3,outputTokens:7000,web:false,maxCost:0.12},
   'capture.note':{label:'Quick note reading',level:1,outputTokens:500,web:false,maxCost:0.01},
   'email.summary':{label:'Email summary',model:'gpt-5.6-terra',level:3,outputTokens:700,web:false,maxCost:0.04},
   // A reply goes out over Eric's name in Eric's voice, so it uses the model he

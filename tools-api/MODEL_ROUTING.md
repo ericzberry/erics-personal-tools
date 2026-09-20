@@ -51,6 +51,16 @@ is marked `vision` only where image input is known to be supported; an unmarked
 model is simply never chosen for an image, which surfaces as a clear "no model
 available" rather than a provider error.
 
+`finance.intake` names `gpt-5.6-terra`, with 7,000 output tokens, no web tool,
+and a $0.12 estimated request ceiling.
+
+A task whose input carries an image is automatically restricted to models
+marked `vision` in the catalog, and each image adds `IMAGE_TOKENS` to the
+estimated input so the cost ceiling is judged on what is actually sent. A model
+is marked `vision` only where image input is known to be supported; an unmarked
+model is simply never chosen for an image, which surfaces as a clear "no model
+available" rather than a provider error.
+
 `finance.intake` names `gpt-5.6-luna`, with 7,000 output tokens, no web tool,
 and a $0.03 estimated request ceiling. The output budget was raised from 2,500 on
 2026-09-20: a wealth manager listing a household's joint account and its trusts
@@ -81,23 +91,26 @@ up first and can say why.
 The model is named rather than left to whichever is cheapest, because the two
 things this reading needs are the two things cheapest does not choose for. It
 has to be current: selection by price landed on `gpt-4.1-mini`, a generation
-behind everything else the app calls. And it has to be quick: the models at the
-tier above reason before every answer, and thinking first and then writing
+behind everything else the app calls. And it has to be quick: the reasoning
+models think before every answer, and thinking first and then writing
 twenty-eight accounts is what made one press sit for the better part of two
-minutes. `gpt-5.6-luna` is the current family's small model, takes image input,
-and answers at `reasoning.effort: none`.
+minutes. `gpt-5.6-terra` is current, takes image input, and answers at
+`reasoning.effort: none`.
 
-The argument for the tier above it — `gpt-5.6-terra`, which this briefly used —
-was that a smaller model once read E*TRADE's page by filing every figure under
-the institution's name and calling a column of gains the holdings. That is a
-rule-following failure rather than a reading one, and this prompt is rule-dense,
-so it is the fair worry about a small model. Against it: that model was two
-generations older, the snapshot no longer hands over bare figures with no row
-around them, and nothing reaches the ledger until the owner has read the drafts,
-so a bad reading costs a press rather than a wrong net worth. Terra costs about
-ten times as much for the same page. A connection that cannot reach the named
-model is refused in words rather than sent quietly to another, and Settings pins
-this one task to a larger model without a deploy.
+The family's small model, `gpt-5.6-luna`, was tried here on 2026-09-20 and could
+not hold the rules. A wealth manager's page groups its accounts under the title
+that holds them, and the instructions say in as many words to carry that heading
+in front of the account's own name — it is the only thing on the page saying
+whose money an account number is. Luna returned the numbers alone, so twenty-
+eight accounts had no holder between them, each proposed a portfolio of its own
+named after an account number, and a family's four entities came apart into a
+list. This prompt is rule-dense — classes, registrations, scope, a holder to
+carry down, and a list of figures to leave out — and rule-density is what a
+small model spends first. Terra costs about four cents for a page that size
+against half a cent, which is the price of the rules holding.
+
+A connection that cannot reach the named model is refused in words rather than
+sent quietly to another, and Settings pins this one task to any reviewed model.
 
 It reads one block of pasted text, or an image of a statement, into draft
 figures and nothing else: the owner's saved records are never sent, so it
