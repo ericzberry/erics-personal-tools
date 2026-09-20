@@ -1203,6 +1203,15 @@ separates them, the covering figure is still the one kept, because guessing that
 two figures are two accounts would count a balance twice. A separated group
 drops its holdings: nothing is left saying which account a position sits in.
 
+**A change is not a value.** A day's gain, a return, a cost basis and an
+unrealized figure are printed in the same column shape as a balance, and the
+reading is told to leave them out. It does not always: a top-movers table states
+gains and last prices and no market value at all. Those never reconciled with an
+account total, so nothing was ever counted wrongly — but an account whose only
+figure came back as "Day's Gain" would have been filed at $7,036 against a $1.6M
+balance, so the fold refuses a figure that names itself a change and says how
+many it left out.
+
 Unclassified is an ordinary class that sums like any other. Letting a split
 supersede it would have quietly dropped a brokerage total out of a portfolio
 that also held a checking balance.

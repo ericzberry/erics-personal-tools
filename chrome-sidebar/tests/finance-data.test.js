@@ -182,6 +182,30 @@ test('several accounts read under one name are counted separately, not folded in
   assert.match(alike.notes.join(' '),/3 account-level figures were read/);
 });
 
+// What a level-3 model actually returned for that same E*TRADE page on
+// 2026-09-20: both accounts named correctly, and both columns of the top-movers
+// table — day's gains and last prices — reported as figures, which the reading
+// is told in as many words not to do.
+test('a figure naming a gain, a loss or a return is refused however it is scoped',()=>{
+  const dated={asOf:'2026-09-20',confidence:'high',reason:'',class:9,registration:''};
+  const folded=foldReadings([
+    {...dated,account:'Individual Brokerage -4049',label:'Net Account Value',scope:'account',value:1668402.54},
+    {...dated,account:'Individual Brokerage -4049',label:"Day's Gain",scope:'account',value:7036.71},
+    {...dated,account:'Individual Brokerage -4049',label:"DIS Day's Gain $",class:1,scope:'holding',value:1318.56},
+    {...dated,account:'Traditional IRA -4144',label:'Net Account Value',registration:'ira',scope:'account',value:122666.62},
+    {...dated,account:'Traditional IRA -4144',label:"Day's Gain",registration:'ira',scope:'account',value:4.68}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
+  assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[1,1668402.54],[2,122666.62]]);
+  assert.match(folded.notes.join(' '),/3 figures naming a gain, a loss or a return/);
+
+  // An account whose only figure is a gain states no balance at all, rather
+  // than a $7,036 balance for a $1.6M account.
+  const only=foldReadings([{...dated,account:'Individual Brokerage -4049',label:"Day's Gain",scope:'account',value:7036.71}],
+    [{...estate,id:'p1'}],{institution:'E*TRADE'});
+  assert.deepEqual(only.marks,[]);
+  assert.match(only.notes.join(' '),/1 figure naming a gain, a loss or a return rather than what something is worth was left out/);
+});
+
 test('a reading lands in the portfolio its registration and institution settle, and proposes one only when it must',()=>{
   const dated={label:'Net Account Value',class:9,scope:'account',asOf:'2026-09-19',confidence:'high',reason:''};
   const folded=foldReadings([

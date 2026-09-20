@@ -68,7 +68,8 @@ const merged={readings:[
   {account:'E*TRADE',label:'Total Assets',class:'unclassified',registration:'',scope:'account',value:1791069.16,asOf:'2026-09-18',confidence:'high',reason:'Total assets.'},
   {account:'E*TRADE',label:'Individual Brokerage -4049 Net Account Value',class:'unclassified',registration:'',scope:'account',value:1668402.54,asOf:'2026-09-18',confidence:'high',reason:'Net account value.'},
   {account:'E*TRADE',label:'Traditional IRA -4144 Net Account Value',class:'unclassified',registration:'ira',scope:'account',value:122666.62,asOf:'2026-09-18',confidence:'high',reason:'Net account value.'},
-  {account:'E*TRADE',label:'DIS',class:'stocks',registration:'',scope:'holding',value:102.67,asOf:'2026-09-18',confidence:'low',reason:'Listed among the top movers.'}
+  {account:'E*TRADE',label:'DIS',class:'stocks',registration:'',scope:'holding',value:102.67,asOf:'2026-09-18',confidence:'low',reason:'Listed among the top movers.'},
+  {account:'E*TRADE',label:"DIS Day's Gain $",class:'stocks',registration:'',scope:'holding',value:1318.56,asOf:'2026-09-18',confidence:'low',reason:"The top movers table states a day's gain."}
 ],capital:[],unread:''};
 const credentials={get:async()=>'synthetic-preview-token-at-least-32-characters'};
 // Each state is one vault, so the three can sit side by side on one page.

@@ -567,13 +567,27 @@ function separate(account,notes){
   if(held)notes.push(`${account.name}: the ${held} holding${held===1?'':'s'} read under this name could not be placed in one of them, so each account total was kept whole.`);
   return marks.map(mark=>({...account,totals:totals.filter(total=>accountMark(total)===mark),holdings:[]}));
 }
+// A change is not a value. A day's gain, a return, a cost basis and an
+// unrealized figure are printed in the same column shape as a balance, and the
+// reading is told in as many words to leave every one of them out. It does not
+// always: a broker's top-movers table states gains and last prices and no
+// market value at all, and two readings of the same page reported first one
+// column and then the other as the account's holdings. Those never reconciled,
+// so nothing was counted wrongly — but a page whose only account-level figure
+// came back as "Day's Gain" would have filed $7,036 as the balance of a $1.6M
+// account, and nobody reading the ledger a year later could tell. So the device
+// refuses a figure that names itself a change, whatever scope it was given.
+const NOT_A_VALUE=/\b(gains?|loss|losses|change|returns?|performance|cost basis|unrealized|realized|yield)\b/i;
 export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
   // A site says what it is: a bank's account total is cash whether or not the
   // page uses the word. A reading that did classify itself is never overridden,
   // and neither is an account whose own name says it holds investments.
   const classify=(reading,said='')=>reading.class===UNCLASSIFIED&&defaultClass&&!INVESTED.test(said)?defaultClass:reading.class;
-  const notes=[],usable=readings.filter(reading=>reading.scope!=='all');
-  if(usable.length<readings.length)notes.push('A total across accounts was left out; the accounts it covers are counted individually.');
+  const notes=[],counted=readings.filter(reading=>!NOT_A_VALUE.test(reading.label||''));
+  const changes=readings.length-counted.length;
+  if(changes)notes.push(`${changes} figure${changes===1?'':'s'} naming a gain, a loss or a return rather than what something is worth ${changes===1?'was':'were'} left out.`);
+  const usable=counted.filter(reading=>reading.scope!=='all');
+  if(usable.length<counted.length)notes.push('A total across accounts was left out; the accounts it covers are counted individually.');
   const accounts=new Map();
   for(const reading of usable){
     const key=accountKey(reading);
