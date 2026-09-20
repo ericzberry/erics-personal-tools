@@ -137,11 +137,18 @@ Anniversaries are left out — they roll forward the same way, but the screen sa
 birthdays. An age is shown only where somebody recorded the year, by the same
 rule as everywhere else here.
 
+**A third run follows them, and it is not a birthday.** Under the fortnight sits
+the money on a card that the close of the quarter takes back: the high-value
+credits from the rewards wallet whose period ends inside the quarter the owner
+is in now, largest first. It is the same screen's third question, and the wallet
+owns the rule — see [rewards](REWARDS.md). Today's birthdays stay at the top of
+the screen whatever follows them.
+
 **It reads and writes nothing**, so it has no action, no status line and no
-error to report: a device that cannot reach the records shows the home screen it
-always showed, and Reminders is where a connection problem is said out loud. The
-records are the device's own copies, so a phone with no signal still knows whose
-day it is.
+error to report: a device that cannot reach one of the two stores shows the home
+screen it always showed, and Reminders and Rewards are where a connection
+problem is said out loud. The records are the device's own copies, so a phone
+with no signal still knows whose day it is and what is about to reset.
 
 ## Quick add
 

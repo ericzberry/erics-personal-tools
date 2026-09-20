@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateReward,nextActions,luhnValid,resetDate,parseCardBenefits,BENEFIT_LIMIT} from '../src/rewards-data.js';
+import {validateReward,nextActions,luhnValid,resetDate,parseCardBenefits,BENEFIT_LIMIT,creditsThisQuarter,rewardWorth} from '../src/rewards-data.js';
 const base={id:'a',kind:'balance',name:'Test airline',source:'Test program',value:'40,000 miles',state:'available'};
 const now=new Date(2026,8,9,12);
 test('rewards validate dates, required fields, and safe account links',()=>{
@@ -132,4 +132,48 @@ test('a card number typo is caught before it is sealed',()=>{
   assert.equal(luhnValid('378282246310005'),true);
   assert.equal(luhnValid('4111111111111112'),false);
   for(const bad of ['','1234','4111-1111-1111-1111','41111111111111111111'])assert.equal(luhnValid(bad),false);
+});
+
+// The home screen's run: money on a card that the close of the quarter takes
+// back. September 20 sits in the quarter that closes on the 30th.
+const quarter=new Date(2026,8,20,12);
+const credit=(id,value,extra={})=>({id,kind:'benefit',name:id,source:'Synthetic Platinum',value,state:'available',...extra});
+test('the quarter raises money worth crossing the room for, largest first',()=>{
+  const entries=[
+    credit('airline','$200 airline fee credit',{cadence:'annual',due:'2026-09-30'}),
+    credit('dining','$100 dining credit',{cadence:'quarterly'}),
+    credit('ride','$15 ride credit',{cadence:'monthly'}),
+    credit('hotel','$300 hotel credit',{due:'2026-09-25'}),
+    // A yearly credit with no date of its own closes on December 31, which is
+    // next quarter's problem.
+    credit('equinox','$300 fitness credit',{cadence:'annual'}),
+    credit('visits','4 lounge visits',{cadence:'quarterly'}),
+    credit('spent','$200 airline fee credit',{cadence:'quarterly',state:'used'}),
+    credit('queued','$500 credit',{cadence:'quarterly',deleting:true}),
+    {...credit('balance','$400'),kind:'balance',cadence:'quarterly'},
+    {...credit('card','$695 annual fee'),kind:'card'}];
+  const raised=creditsThisQuarter(entries,{now:quarter});
+  assert.deepEqual(raised.map(e=>e.id),['hotel','airline','dining']);
+  assert.deepEqual(raised.map(e=>e.worth),[300,200,100]);
+  // Each carries the day it stops being spendable and how long that is.
+  assert.deepEqual(raised.map(e=>e.deadline),['2026-09-25','2026-09-30','2026-09-30']);
+  assert.deepEqual(raised.map(e=>e.days),[5,10,10]);
+});
+test('what the tracker says is left wins over what the card gives',()=>{
+  const read=credit('dining','$100 dining credit',{cadence:'quarterly',remaining:'$62.50'});
+  assert.equal(rewardWorth(read),62.5);
+  assert.equal(creditsThisQuarter([read],{now:quarter})[0].worth,62.5);
+  // Nothing left is not high value, whatever the card gives.
+  assert.deepEqual(creditsThisQuarter([{...read,remaining:'$0'}],{now:quarter}),[]);
+  assert.equal(rewardWorth(credit('visits','4 lounge visits')),null);
+});
+test('a deadline already past belongs to the wallet, not the home screen',()=>{
+  const entries=[credit('lapsed','$200 credit',{due:'2026-09-19'}),credit('today','$200 credit',{due:'2026-09-20'})];
+  assert.deepEqual(creditsThisQuarter(entries,{now:quarter}).map(e=>e.id),['today']);
+  assert.equal(creditsThisQuarter(entries,{now:quarter})[0].days,0);
+});
+test('the floor is the thing that keeps a ride credit off a home screen',()=>{
+  const small=credit('ride','$15 ride credit',{cadence:'monthly'});
+  assert.deepEqual(creditsThisQuarter([small],{now:quarter}),[]);
+  assert.deepEqual(creditsThisQuarter([small],{now:quarter,floor:10}).map(e=>e.id),['ride']);
 });

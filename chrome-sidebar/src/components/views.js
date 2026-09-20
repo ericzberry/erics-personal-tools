@@ -67,8 +67,9 @@ export function VoiceView() {
 export const VoiceLines=(voices=[])=>voices.map(voice=>Stack([
   Strong(voice.name),Note([voice.audience,...voice.markers].filter(Boolean).join(' · '))
 ],{className:'voice-line'}));
-// The quiet screen, and the one thing it is worth interrupting for: whose
-// birthday it is. Nothing coming leaves it exactly as it was.
+// The quiet screen, and the things it is worth interrupting for: whose birthday
+// it is, and the money on a card that the close of the quarter takes back.
+// Nothing coming leaves it exactly as it was.
 export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),
   Main([Note('Open a tool, or a site a tool knows.'),Stack([],{id:'home-birthdays'})])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {

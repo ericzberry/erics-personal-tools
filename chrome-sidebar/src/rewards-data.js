@@ -57,13 +57,51 @@ export function nextActions(entries,now=new Date()){
     // A balance whose value states no figure has never been read: it is a
     // program the owner keeps in the wallet to reach, not a reading that has
     // gone out of date, so there is nothing about it to update and it is left
-    // off the list. `balanceTotals` already counts it as unread, which is where
-    // a program awaiting its first reading belongs — and without this every
-    // program in the directory would arrive here 30 days after it was added.
+    // off the list. The row itself already says it holds nothing yet, which is
+    // all a program awaiting its first reading has to say — and without this
+    // every program in the directory would arrive here 30 days after it was
+    // added.
     const unread=e.kind==='balance'&&!/\d/.test(String(e.value||''));
     const reason=days!==null&&days<0?'Deadline passed — verify availability':days!==null&&days<=limit?(days===0?'Use by today':`Use within ${days} day${days===1?'':'s'}`):e.state==='activation'?'Activate before using':e.kind==='balance'&&stale&&!unread?'Update this balance':null;
     return reason?[{...e,deadline,reason,priority:days!==null&&days<=limit?days:e.state==='activation'?31:32}]:[];
   }).sort((a,b)=>a.priority-b.priority||a.name.localeCompare(b.name));
+}
+// The money a benefit is worth today, and nothing else about it. What the
+// issuer's own tracker last said is left wins over what the card gives, because
+// "$25 left this month" is the figure that decides whether anything is worth
+// doing. A benefit worth something that is not money - four lounge visits, a
+// companion fare - has no amount here and is never called high value.
+// `credit-data.js` reads this same money off the issuer's page; this reads it
+// back out of the record that reading saved.
+const WORTH=/\$\s?(\d[\d,]*(?:\.\d{1,2})?)/;
+export function rewardWorth(entry){
+  const [,found]=WORTH.exec(String(entry?.remaining||entry?.value||''))||[];
+  if(found===undefined)return null;
+  const amount=Number(found.replace(/,/g,''));
+  return Number.isFinite(amount)&&amount<1e9?amount:null;
+}
+// What is worth doing something about before the quarter closes, largest first.
+// A recurring credit is only spendable while its period is open, so a credit's
+// deadline is its own date or the close of the period it repeats on, and it
+// belongs here only if that lands inside the quarter the owner is in now.
+//
+// The floor is what earns a place on a home screen. A $15 ride credit resetting
+// on Tuesday is true and not worth interrupting anybody for; Next actions in
+// the wallet is where every one of them is listed.
+export const QUARTER_FLOOR=50;
+export function creditsThisQuarter(entries=[],{now=new Date(),floor=QUARTER_FLOOR}={}){
+  const today=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+  const closes=Date.parse(resetDate('quarterly',now));
+  return entries.flatMap(entry=>{
+    if(!entry||entry.deleting||entry.conflict||entry.state==='used')return [];
+    if(!['benefit','membership'].includes(entry.kind))return [];
+    const deadline=entry.due||(entry.cadence?resetDate(entry.cadence,now):'');
+    const at=deadline?Date.parse(deadline):NaN;
+    if(!Number.isFinite(at)||at<today||at>closes)return [];
+    const worth=rewardWorth(entry);
+    if(worth===null||worth<floor)return [];
+    return [{...entry,deadline,worth,days:Math.round((at-today)/86400000)}];
+  }).sort((a,b)=>b.worth-a.worth||a.days-b.days||a.name.localeCompare(b.name));
 }
 // A link and a date, kept only when they are the real thing. Exported because
 // a benefit read off the owner's own page passes through exactly the same two

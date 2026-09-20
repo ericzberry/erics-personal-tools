@@ -11,7 +11,14 @@ const port = Number(process.env.PORT || 8791);
 const token = 'synthetic-private-token-at-least-32-characters';
 const id = '11111111-1111-4111-8111-111111111111';
 let records = [{id, name: 'Synthetic airline', category: 'Airline', traveler: 'Test traveler', number: '000123456', notes: 'Synthetic private note', expires: '', revision: 'first', updatedAt: new Date().toISOString()}];
-let rewards={entries:[],revision:null};let cards=[];
+// A wallet with money on it that the close of the quarter takes back: one
+// credit read off an issuer's own tracker, one that still has to be enrolled
+// in, and one too small to reach the home screen.
+let rewards={entries:[
+  {id:'61111111-1111-4111-8111-111111111111',kind:'benefit',name:'Dining credit',source:'Synthetic Gold',value:'$100 dining credit',remaining:'$62.50',cadence:'quarterly',state:'available',due:'',url:'',notes:'',secret:'',secretHint:'',card:'',updatedAt:new Date().toISOString()},
+  {id:'61111111-1111-4111-8111-111111111112',kind:'benefit',name:'Hotel credit',source:'Synthetic Platinum',value:'$300 prepaid hotel credit',remaining:'',cadence:'',state:'activation',due:'2026-09-25',url:'',notes:'',secret:'',secretHint:'',card:'',updatedAt:new Date().toISOString()},
+  {id:'61111111-1111-4111-8111-111111111113',kind:'benefit',name:'Ride credit',source:'Synthetic Platinum',value:'$15 ride credit',remaining:'',cadence:'monthly',state:'available',due:'',url:'',notes:'',secret:'',secretHint:'',card:'',updatedAt:new Date().toISOString()}
+],revision:null};let cards=[];
 const programOffers=[
   {key:'/offer/sixt',name:'SIXT',category:'Automotive',badge:'Limited-Time Offer',dates:'',summary:'For a limited time, save up to 20% off SIXT car rentals. Offer expires on 9/30/2026.',firstSeenAt:new Date().toISOString()},
   {key:'/offer/music_city_festival',name:'Music City Festival',category:'Events',badge:'New',dates:'November 16-18, 2026',summary:'An exclusive three-day, invite-only experience featuring curated showcases and behind-the-scenes access to a lineup of country artists in Nashville, Tennessee.',firstSeenAt:new Date().toISOString()},

@@ -88,10 +88,11 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   the owner — one entry per source, and no page is read to answer it) and
   `page-strip.js` (the controller for the row under the header that offers
   them; `context-panel.js` hands it the tab it already watches).
-- **Home screen** — `home.js` with `components/home.{js,css}`: the birthdays
-  both hosts open on, read from the reminders store and written to nothing.
-  The sidebar mounts it through `home-page.js`; mobile mounts it in its own
-  `capabilities.js`.
+- **Home screen** — `home.js` with `components/home.{js,css}`: the three runs
+  both hosts open on — today's birthdays, the fortnight behind them, and the
+  credits worth using before the quarter closes — read from the reminders and
+  rewards stores and written to nothing. The sidebar mounts it through
+  `home-page.js`; mobile mounts it in its own `capabilities.js`.
 - **Links** — `public-url.js`: the one reading of "a link safe to show and
   open", used by gift links and restaurant booking links alike.
 - **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),

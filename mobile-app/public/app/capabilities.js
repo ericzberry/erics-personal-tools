@@ -13,7 +13,7 @@ import {mountFinance} from './shared/finance.js';
 import {financeOffline} from './shared/finance-offline.js';
 import {mountPersonal} from './shared/personal.js';
 import {mountReminders} from './shared/reminders.js';
-import {mountHomeBirthdays} from './shared/home.js';
+import {mountHome} from './shared/home.js';
 import {remindersOffline} from './shared/reminders-offline.js';
 import {mountCapture} from './shared/capture.js';
 import {mountPushBridge} from './push-bridge.js';
@@ -68,10 +68,12 @@ const personalTool=mountPersonal(document.getElementById('capability-personal'),
 const reminderTool=mountReminders(document.getElementById('capability-reminders'),{credentials,offline:reminderStore,onSettings:openSettings});
 const giftTool=mountGifts(document.getElementById('capability-gifts'),{credentials,offline:giftStore,onSettings:openSettings});
 const sizeTool=mountSizes(document.getElementById('capability-sizes'),{credentials,offline:sizeStore,onSettings:openSettings});
-// The fortnight's birthdays lead the home screen, read from the same offline
-// copies the tool keeps, so a phone with no signal still knows whose day it is.
-const birthdayRoot=document.getElementById('capability-birthdays');
-const birthdays=mountHomeBirthdays(birthdayRoot,{credentials,offline:reminderStore});
+// The fortnight's birthdays lead the home screen, and the money about to reset
+// on a card follows them, both read from the same offline copies the tools
+// keep, so a phone with no signal still knows whose day it is and what is
+// about to be taken back.
+const homeRoot=document.getElementById('capability-birthdays');
+const home=mountHome(homeRoot,{credentials,reminders:reminderStore,rewards:rewardStore});
 // Quick add sits on the home screen and writes through the same offline store
 // the tool uses, so a note typed with no signal queues like any other change.
 const captureRoot=document.getElementById('capability-capture');
@@ -81,7 +83,7 @@ mountCapture(captureRoot,{credentials,remote:cloudRequest,stores:captureStores({
     ({gifts:giftTool,sizes:sizeTool,reminders:reminderTool}[capability])?.refresh();
     // A note typed here can be a birthday, and the birthdays are the thing
     // directly above it on this screen.
-    if(capability==='reminders')birthdays?.refresh();
+    if(capability==='reminders')home?.refresh();
   }});
 // Taxes keeps nothing on the device: a document is read here and goes straight
 // to Drive, so it has no offline store to disconnect - only a tool to clear.
@@ -112,13 +114,13 @@ function showScreen(screen){
   const settings=screen===SETTINGS_SCREEN;
   selectedTool=settings?null:screen;
   connectionRoot.hidden=!settings;
-  // Quick add and the birthdays belong to the home screen: with a tool open,
-  // the tool is what the page is for.
+  // Quick add and the glance belong to the home screen: with a tool open, the
+  // tool is what the page is for.
   captureRoot.hidden=settings||!!selectedTool;
-  birthdayRoot.hidden=settings||!!selectedTool;
-  // Coming back to the home screen is when a birthday added or edited in
-  // Reminders is worth reading again.
-  if(!birthdayRoot.hidden)birthdays?.refresh();
+  homeRoot.hidden=settings||!!selectedTool;
+  // Coming back to the home screen is when a birthday added in Reminders, or a
+  // credit read in Rewards, is worth reading again.
+  if(!homeRoot.hidden)home?.refresh();
   for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=selectedTool!==capability.id;
   if(selectedTool==='attention')attentionTool.refresh();
   if(selectedTool==='subscriptions')subscriptionTool.refresh();
