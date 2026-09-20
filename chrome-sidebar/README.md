@@ -2551,3 +2551,31 @@ the figures on screen to speak for it, and this ledger does not narrate its
 successes.
 
 Validation: 565 extension tests pass.
+
+## Reading past the shadow boundary, and showing its work (0.6.205 / mobile 0.1.155)
+
+`The page gave 0 account tables and 32 lines` — said on a Chase page holding two
+tables and twenty accounts, with the owner looking straight at them. That number
+was the answer.
+
+A custom element renders its content in a shadow root, and **both** of the ways
+this reader looks at a page stop at that boundary: `querySelectorAll` never
+crosses one, and `innerText` does not include what is inside one. A bank that
+builds its account list out of components hands back its summary panel and
+nothing else. Every fix before this one was spent on what the fold did with
+those summary figures, which was never where the accounts went.
+
+The reader now opens every root the page draws through, bounded, and asks each
+for its grids and its text. Against a reconstruction of that page the trusts
+come back as rows — name, number and balance together, under the header that
+says which column each figure fell out of.
+
+**And a reading keeps its evidence.** From the panel, a page whose accounts are
+in a shadow root and a page whose accounts the reader cannot parse look exactly
+alike; telling them apart cost a round trip through the owner's browser every
+time. A closed **What was read** disclosure now holds what the page was built
+out of — elements, roots, grids, frames — and the text that was sent. It is
+rendered before the reading is attempted, because a reading that fails outright
+is the case it exists for.
+
+Validation: 566 extension and 33 mobile tests pass.

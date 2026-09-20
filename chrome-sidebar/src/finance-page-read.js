@@ -170,7 +170,26 @@ export function readAccountPage(options) {
     ? [...grid.rows].slice(0, 200).map(row => [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean))
     : inside(grid, ROW, GRID).slice(0, 200)
       .map(row => inside(row, CELL, ROW).map(cell => clean(cell.innerText)).filter(Boolean));
-  const found = document.querySelectorAll(GRID);
+  // Every root the page draws through, not just the document. A custom element
+  // renders its content in a shadow root, and both of the ways this reader
+  // looks at a page stop dead at that boundary: querySelectorAll never crosses
+  // one, and innerText does not include what is inside one. A bank that builds
+  // its account list out of components therefore hands back a page with its
+  // summary panel on it and nothing else — twenty accounts on the screen, the
+  // owner looking straight at them, and not one of them in the text. That is
+  // what "0 account tables and 32 lines" meant on a page holding two tables.
+  //
+  // The walk is bounded twice, because a page of components can nest them: a
+  // cap on how many roots are opened at all, and the ordinary querySelectorAll
+  // over each, so a deep tree costs a pass rather than a descent per node.
+  const MAX_ROOTS = 400;
+  const roots = [document];
+  for (let index = 0; index < roots.length && roots.length < MAX_ROOTS; index++) {
+    for (const element of roots[index].querySelectorAll('*')) {
+      if (element.shadowRoot && roots.length < MAX_ROOTS) roots.push(element.shadowRoot);
+    }
+  }
+  const found = roots.flatMap(root => [...root.querySelectorAll(GRID)]);
   const tables = [];
   for (let index = 0; index < found.length && index < WALK && tables.length < KEEP; index++) {
     const cells = gridRows(found[index]);
@@ -184,7 +203,14 @@ export function readAccountPage(options) {
 
   // A figure often sits on its own line under the name it belongs to, so a
   // kept figure brings the short line above it along as its label.
-  const lines = (body.innerText || body.textContent || '').split('\n').map(clean);
+  // The same boundary, for the text. What a shadow root renders is absent from
+  // the host's innerText, so each root's own children are asked for theirs and
+  // added — a nested root is its own entry in the walk above, so nothing is
+  // read twice by being reached two ways.
+  const shadowText = roots.slice(1)
+    .map(root => [...root.children].map(node => node.innerText || node.textContent || '').join('\n'))
+    .join('\n');
+  const lines = [(body.innerText || body.textContent || ''), shadowText].filter(Boolean).join('\n').split('\n').map(clean);
   // A card's page, read whole. Nothing here is hunting for a figure, so none of
   // the balance page's rules apply: no market runs, no labels taken from above
   // and below a number, and no line dropped for being only a percentage —
@@ -334,7 +360,15 @@ export function readAccountPage(options) {
     title: clean(document.title),
     text: filtered ? focused : whole,
     filtered,
-    tables
+    tables,
+    // What the page is made of, for the one case where the figures do not
+    // arrive and the owner and this reader are looking at different things.
+    shape: {
+      roots: roots.length,
+      grids: found.length,
+      frames: typeof window === 'undefined' ? 0 : (window.frames ? window.frames.length : 0),
+      elements: document.querySelectorAll('*').length
+    }
   };
 }
 
@@ -375,6 +409,7 @@ export async function readOpenAccountPage(api = globalThis.chrome, options = {})
     host: page.host,
     title: page.title,
     filtered: page.filtered,
+    shape: page.shape,
     trimmed: Math.max(0, combined.length - text.length),
     tables: page.tables.length
   };

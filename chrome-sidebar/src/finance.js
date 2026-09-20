@@ -38,7 +38,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // and a dropped statement produce the same thing — figures already folded
   // into one amount per portfolio and asset class — so they are reviewed the
   // same way and saved by the same path.
-  let site=null,snapshot=null,snapshotEditing=false,fold=null,foldEditing=false;
+  let site=null,snapshot=null,snapshotEditing=false,pageSource=null,fold=null,foldEditing=false;
   // Capital account statements read out of the same file, reviewed on their
   // own. A statement is not a figure — it carries a commitment, what has been
   // called against it and what has come back — so it gets a review that shows
@@ -422,13 +422,13 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // otherwise. A host with no page beside it — a full tab, the phone — has no
     // such tab at all.
     $('tabs').show('page',!!readPage);
-    if(!readPage){$('snapshot-body').replaceChildren();return;}
+    if(!readPage){$('snapshot-body').replaceChildren();pageSource=null;return;}
     $('tabs').rename('page',site?.label||'This page');
     $('snapshot-body').replaceChildren(PagePanel({
-      site,rows:snapshot?.rows||[],editing:snapshotEditing,disabled:busy||!loaded,
+      site,rows:snapshot?.rows||[],editing:snapshotEditing,disabled:busy||!loaded,source:pageSource,
       onRead:readOpenPage,onSave:()=>saveReview('snapshot'),
       onEdit:()=>{snapshotEditing=true;renderSnapshot();},
-      onDiscard:()=>{snapshot=null;snapshotEditing=false;renderSnapshot();status('','snapshot-status');},
+      onDiscard:()=>{snapshot=null;snapshotEditing=false;pageSource=null;renderSnapshot();status('','snapshot-status');},
       onAmount:(index,value)=>{snapshot.rows[index].amount=value;}
     }));
   }
@@ -447,6 +447,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     await run(async token=>{
       status(site?`Reading your ${site.label} accounts…`:'Reading the accounts on this page…','snapshot-status','progress');
       const page=await readPage();
+      // Kept whatever the reading comes to, and shown before it is attempted:
+      // a reading that fails outright is the case this evidence exists for, and
+      // waiting for it to succeed would withhold it exactly then.
+      pageSource={text:page.text,shape:page.shape,trimmed:page.trimmed};renderSnapshot();
       // What the site itself settles is settled before folding: the institution
       // decides which portfolio a figure is titled to, and what an account
       // total is made of when the page never says.
@@ -879,7 +883,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   }
   function clear(){
     generation++;records=[];loaded=false;activeToken='';connection='';attachment=null;
-    fold=null;foldEditing=false;snapshot=null;snapshotEditing=false;engaged=false;
+    fold=null;foldEditing=false;snapshot=null;snapshotEditing=false;pageSource=null;engaged=false;
     capital=null;capitalEditing=false;capitalSource='file';
     clearForm();clearInvestmentForm();clearPropertyForm();renderFold();renderCapital();renderAttachment();renderSnapshot();
     status('','snapshot-status');

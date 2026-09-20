@@ -400,6 +400,35 @@ test('a reading that finds nothing says what the page gave it',async()=>{
   tool.stop();restore();
 });
 
+// The owner and the reader look at the same screen and do not always see the
+// same page. A bank drew twenty accounts in front of him out of components and
+// what arrived here was the summary panel; from the panel that is
+// indistinguishable from a reader that cannot parse them. So a reading keeps
+// its own evidence.
+test('a reading keeps what it took off the page, and what the page was made of',async()=>{
+  const {document,restore}=setup();
+  const {tool}=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[],unread:''},
+    readPage:async()=>({text:'Overview\n$16,369,841.07\nAssets',host:'secure.chase.com',title:'Overview',
+      trimmed:0,tables:0,shape:{roots:31,grids:0,frames:2,elements:4120}})
+  });
+  await ready(document);
+  tool.site(CHASE);
+  const panel=()=>document.getElementById('finance-snapshot-body');
+  panel().querySelector('button').click();
+  await settle(()=>!!document.getElementById('finance-page-source'));
+  const source=document.getElementById('finance-page-source');
+  assert.match(source.textContent,/4120 elements/,'what the page was built out of');
+  assert.match(source.textContent,/31 roots/,'including the roots a component draws through');
+  assert.match(source.textContent,/0 grids/);
+  assert.match(source.textContent,/2 frames/);
+  assert.match(source.textContent,/3 lines/,'and how much was sent');
+  assert.match(source.textContent,/\$16,369,841\.07/,'with the text itself, so the two can be compared');
+  assert.equal(source.hasAttribute('open'),false,'closed: it is for when something is wrong');
+  tool.stop();restore();
+});
+
 // An exchange states one balance for a page and never says what kind of money
 // it is, because to it there is only one kind. The site is what answers: a
 // figure read at Coinbase is coin, which is the whole reason the class exists.

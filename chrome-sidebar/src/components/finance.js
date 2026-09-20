@@ -207,7 +207,30 @@ function FoldRow(row,{index,editing,dated,onAmount}){
 // itself and reads under its own name; any other page the host can read is
 // offered the same errand. The heading above this says which, so nothing in
 // here repeats it.
-export function PagePanel({site,rows=[],editing=false,disabled=false,onRead,onSave,onEdit,onDiscard,onAmount}){
+// What the last reading actually took off the page, kept closed.
+//
+// The owner and this reader look at the same screen and do not always see the
+// same page: a bank drew twenty accounts in front of him out of components, and
+// what arrived here was the summary panel and nothing else. From the panel the
+// two are indistinguishable, and every guess about which it was cost a round
+// trip through his browser. So the reading brings its own evidence — what the
+// page was built out of, and the text that was sent — and it sits behind a
+// disclosure, because it is for the times something is wrong and for nobody's
+// ordinary reading.
+export function PageSource({text='',shape=null,trimmed=0}){
+  if(!text&&!shape)return null;
+  const built=shape?`${shape.elements} elements · ${shape.roots} root${shape.roots===1?'':'s'} · ${shape.grids} grid${shape.grids===1?'':'s'} · ${shape.frames} frame${shape.frames===1?'':'s'}`:'';
+  const sent=`${text.split('\n').filter(Boolean).length} lines · ${text.length.toLocaleString('en-US')} characters${trimmed?` · ${trimmed.toLocaleString('en-US')} left out`:''}`;
+  const source=document.createElement('pre');
+  source.className='page-source-text';
+  source.textContent=text;
+  return Disclosure('What was read',[Stack([
+    Label(built,{className:'page-source-shape'}),
+    Label(sent,{className:'page-source-shape'}),
+    source
+  ],{className:'page-source'})],{id:'finance-page-source'});
+}
+export function PagePanel({site,rows=[],editing=false,disabled=false,source=null,onRead,onSave,onEdit,onDiscard,onAmount}){
   const read=Button(site?`Read my ${site.label} accounts`:'Read the accounts on this page',{id:'finance-page-read',variant:'primary',size:'compact',disabled});
   read.addEventListener('click',onRead);
   return Stack([
@@ -215,7 +238,8 @@ export function PagePanel({site,rows=[],editing=false,disabled=false,onRead,onSa
       // The button says what it does and the heading says which page. A
       // sentence underneath repeating both is a paragraph nobody reads twice.
       ActionGroup([read],{compact:true})
-    ])
+    ]),
+    ...(source?[PageSource(source)].filter(Boolean):[])
   ],{className:'snapshot-reading'});
 }
 
