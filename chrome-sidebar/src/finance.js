@@ -537,7 +537,13 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // A date printed on every line was one fact written six times, and it was
     // what made the list unreadable.
     const newest=netWorthSeries(records,{currency}).at(-1)?.asOf||'';
-    const dated=(asOf,against)=>asOf&&asOf!==against?`as of ${asOf}`:'';
+    // On a line, the date alone: the middot says it qualifies the name it
+    // follows, "AS OF" above the totals has already said what a date beside a
+    // figure means, and the two extra words were what pushed it into breaking
+    // at its own hyphens in a narrow panel. Under a heading it has a line to
+    // itself and reads as the fragment it is.
+    const dated=(asOf,against)=>asOf&&asOf!==against?asOf:'';
+    const since=(asOf,against)=>dated(asOf,against)?`as of ${asOf}`:'';
     const figure=(portfolio,row,against)=>{
       const mark=row.current;
       const confirm=Stack([Note(`Delete the ${row.label} figure for ${portfolio.name} as of ${mark.asOf}?`),ActionGroup([
@@ -640,7 +646,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         // what the line above cannot say: a date behind the rest of the
         // ledger, and a portfolio still waiting to reach the cloud.
         kind:registrationLabel(portfolio.kind),
-        meta:[dated(asOf,newest),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
+        meta:[since(asOf,newest),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
         actions:[rowAction(EDIT_GLYPH,`Rename ${portfolio.name}`,()=>fillPortfolio(portfolio)),
           rowAction(DELETE_GLYPH,`Delete ${portfolio.name}`,()=>{confirm.hidden=false;},true)],
         rows:[...rows.map(row=>figure(portfolio,row,asOf)),

@@ -403,16 +403,21 @@ export const SettingsLink=(title,href)=>Link(title,href,{className:'settings-lin
 // read down one column of names and one column of amounts instead of down a
 // name with a grey sentence hanging under it. A record with neither is the
 // same row it always was.
+//
+// The line divides in two, and the halves are what make it read: the name and
+// its qualification on the left, the amount and the record's verbs on the
+// right. The qualification belongs to the name and is set against it —
+// floating loose in the space between name and amount it read as a label for
+// neither. The two halves keep the line whichever one is long, so a name that
+// needs three lines wraps inside its own half rather than pushing the amount
+// out of the column its neighbours are read down.
 export function RecordRow({title,detail,meta='',figure='',notes='',actions=[],extra=[]}) {
   const lines=(Array.isArray(notes)?notes:[notes]).filter(Boolean);
   const verbs=ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'});
-  // The amount and the record's verbs are one block, the way a group's total
-  // and its verbs are: a name too long for the line takes the line, and the two
-  // drop under it together rather than the verbs being stranded on a row of
-  // their own beneath every record.
+  const name=Strong(title,{className:'record-name'});
   return Section([
-    Stack([Strong(title,{className:'record-name'}),
-      meta?Label(meta,{className:'record-meta'}):null,
+    Stack([
+      figure?Stack([name,meta?Label(meta,{className:'record-meta'}):null],{className:'record-head'}):name,
       figure?Stack([Strong(figure),verbs],{className:'record-figure'}):verbs],
       {className:`record-line${figure?' record-line--figure':''}`}),
     Note(detail),...lines.map(line=>Text(line)),...extra.filter(Boolean)

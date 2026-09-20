@@ -27,16 +27,26 @@
    eye does not read it as one of the comparable ones. */
 .trend-row--partial>span:first-child,.trend-row--partial strong{color:var(--muted);font-weight:500}
 /* The account's kind rides on the name, close enough to it to read as what the
-   account is rather than as a label for the figures below. */
-.group-name{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;flex-wrap:wrap}
-.portfolio-kind{flex:0 0 auto}
+   account is rather than as a label for the figures below.
+   The heading divides the way a record's line does: the name and its kind take
+   whatever the total leaves, so every portfolio's total sits in the same column
+   whatever its name is. A name long enough to fill the line used to push its
+   own total onto a second row, and two portfolios one above the other were
+   then read differently — one with its figure beside the name, the next with
+   it underneath.
+   The name and its kind run as one piece of text rather than two blocks side
+   by side, so the kind follows the last word of a name that wrapped instead of
+   being set adrift on a line of its own underneath it. */
+.group-name{flex:1 1 100%;min-width:0;overflow-wrap:break-word}
+.group-name>.record-group-title{display:inline}
+.portfolio-kind{margin-inline-start:6px;vertical-align:2px}
 /* A portfolio's heading is its name, its total, and its own two verbs, ruled
    off from the figures under it as one line. In a narrow sidebar the total
    drops under the name rather than squeezing it into a column six words deep,
    and the rule belongs to the line so it closes the heading either way. */
 .breakdown-row.group-line{align-items:center;flex-wrap:wrap;padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
 .breakdown-row.group-line>.group-name>.record-group-title{min-width:0;padding:0;border-bottom:0}
-.group-figure{flex:0 0 auto;display:flex;align-items:center;gap:8px}
+.group-figure{flex:0 0 auto;display:flex;align-items:center;gap:8px;margin-inline-start:auto}
 .breakdown-row strong,.trend-row strong{font-weight:600}
 /* An amount never breaks across lines. "$1,720,000" split after the "0" reads
    as a different number, so the name beside it wraps instead. */

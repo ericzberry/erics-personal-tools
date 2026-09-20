@@ -402,7 +402,9 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
    their own under it. See DESIGN.md; the wallet sets the sizes. */
 .record-line { display: flex; align-items: center; gap: 8px; }
 .record-line > .record-name { flex: 1; min-width: 0; }
-.record-line > .record-meta { flex: 0 1 auto; min-width: 0; color: var(--muted); font-size: 12px; }
+.record-line > .record-head { flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px; }
+.record-head > .record-meta { flex: 0 1 auto; min-width: 0; color: var(--muted); font-size: 12px; }
+.record-head > .record-meta::before { content: '·'; margin-inline-end: 4px; }
 .record-line > .record-figure { flex: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .record-line > .action-group { flex: none; margin: 0; }
 .record-line > .action-group:empty { display: none; }

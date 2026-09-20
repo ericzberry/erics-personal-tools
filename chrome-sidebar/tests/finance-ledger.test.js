@@ -80,8 +80,8 @@ test('the ledger states its date once, and a line repeats it only when it is beh
   // confirmation names its figure's date too, but it is out of sight until the
   // row raises it, so the visible qualifications are what is counted.)
   const dates=[...document.querySelectorAll('#finance-list .record-meta')].map(node=>node.textContent);
-  assert.deepEqual(dates,['as of 2026-09-19']);
-  assert.match(document.getElementById('finance-list').textContent,/Cashas of 2026-09-19\$0\.54/);
+  assert.deepEqual(dates,['2026-09-19']);
+  assert.match(document.getElementById('finance-list').textContent,/Cash2026-09-19\$0\.54/);
   tool.stop();
 });
 
