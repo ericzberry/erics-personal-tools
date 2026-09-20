@@ -499,8 +499,10 @@ export function RecordRow({title,detail,meta='',figure='',notes='',actions=[],ex
 
 export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true});
 
-// A compact list row with a separate quick action and optional inline details.
-export function ExpandableRecord({title,subtitle,action,preview,children,onToggle}) {
+// A compact list row that opens into the value it is holding. The whole line is
+// the press: the name is what the list is read down, and the record's own verbs
+// ride at the end of the value's line inside the block rather than under it.
+export function ExpandableRecord({title,subtitle,preview,children,onToggle}) {
   const toggle=Button('',{variant:'secondary',className:'record-row-toggle','aria-expanded':'false'});
   toggle.append(Strong(title),...(subtitle?[Note(subtitle)]:[]));
   const content=Stack(children,{className:'record-row-content',hidden:true});
@@ -509,13 +511,7 @@ export function ExpandableRecord({title,subtitle,action,preview,children,onToggl
     toggle.setAttribute('aria-expanded',String(!content.hidden));
     onToggle?.(!content.hidden);
   });
-  return Section([Stack([toggle,action],{className:'record-row-heading'}),...(preview?[preview]:[]),content],{className:'record-row'});
-}
-
-export function CopyIconButton(label){
-  const button=Button('',{className:'icon-button row-copy','aria-label':label,title:label});
-  button.append(element('span',{className:'copy-glyph','aria-hidden':'true'}));
-  return button;
+  return Section([toggle,...(preview?[preview]:[]),content],{className:'record-row'});
 }
 
 // What a saved record's own actions look like when the record is one line: the
@@ -538,6 +534,8 @@ export const UNDO_GLYPH='M4.5 10h10a4.5 4.5 0 0 1 0 9H9 M4.5 10l4-4 M4.5 10l4 4'
 export const SHOW_GLYPH='M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z';
 export const HIDE_GLYPH='M4 4l16 16 M9.8 5.9A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.6 4.3 M6.5 7.9A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1 0 2-.2 2.9-.5 M10.2 10.2a2.5 2.5 0 0 0 3.6 3.6';
 export const COPY_GLYPH='M9.5 8.5h9v11h-9z M14.5 8.5v-4h-9v11h4';
+// What was written down about a record, as opposed to the number itself.
+export const NOTES_GLYPH='M5.5 4.5h8L18.5 9.5v10h-13z M13.5 4.5v5h5 M8.5 13h7 M8.5 16.5h4.5';
 export const OPEN_GLYPH='M14 4h6v6 M20 4l-8.5 8.5 M18 14.5V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10';
 export const SEARCH_GLYPH='M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z M15.2 15.2 20 20';
 export const HISTORY_GLYPH='M12 7.5V12l3.2 1.9 M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z';

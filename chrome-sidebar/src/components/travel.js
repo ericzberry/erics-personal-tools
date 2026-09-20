@@ -1,4 +1,4 @@
-import {Section,Heading,GroupTitle,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord,CopyIconButton} from './ui.js';
+import {Section,Heading,GroupTitle,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord,RowAction,EDIT_GLYPH,COPY_GLYPH,NOTES_GLYPH,DELETE_GLYPH} from './ui.js';
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
 export function TravelView({connection=true,mode='inline',editId=null}={}) {
   return Section([
@@ -31,14 +31,19 @@ export function TravelGroup(category, rows) {
 export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,onResolve,showNumber=false}) {
   const action=(label,options)=>Button(label,{size:'compact',...options});
   const number=Strong(showNumber?record.number||'—':'••••••••',{className:'travel-number','aria-live':'polite'});
-  const copy=CopyIconButton(`Copy number for ${record.name}`), edit=action('Edit',{variant:'subtle'}), remove=action('Delete',{variant:'danger-subtle'});
-  copy.addEventListener('click',onCopy);edit.addEventListener('click',onEdit);
+  const remove=RowAction(DELETE_GLYPH,`Delete ${record.name}`,()=>{confirmation.hidden=false;confirm.focus();},{danger:true});
   const confirm=action('Delete from all devices',{variant:'danger'}), keep=action('Keep record',{variant:'secondary'});
   const confirmation=Stack([Note('Delete this record from all devices?'),ActionGroup([confirm,keep],{compact:true})],{hidden:true});
-  remove.addEventListener('click',()=>{confirmation.hidden=false;confirm.focus();});
   keep.addEventListener('click',()=>{confirmation.hidden=true;remove.focus();});confirm.addEventListener('click',onDelete);
-  const notes=action('Copy notes',{variant:'subtle'});notes.addEventListener('click',onCopyNotes);
-  const resolutions=Stack([]);
+  // The number and the verbs that act on it are one line: Copy sits beside the
+  // value it copies, and the record's own actions are the glyphs every other
+  // list in the wallet carries rather than a row of words under the record.
+  const numberLine=Stack([number,ActionGroup([
+    RowAction(EDIT_GLYPH,`Edit ${record.name}`,onEdit),
+    RowAction(COPY_GLYPH,`Copy number for ${record.name}`,onCopy),
+    ...(record.hasNotes?[RowAction(NOTES_GLYPH,`Copy notes for ${record.name}`,onCopyNotes)]:[]),
+    remove],{compact:true})],{className:'record-number-line'});
+  const decisions=[confirmation];
   if(record.conflict){
     const local=action('Keep this device’s changes',{variant:'secondary'}), cloud=action('Use cloud version',{variant:'secondary'});
     const accept=action('Discard my pending change',{variant:'danger'}), cancel=action('Keep reviewing',{variant:'secondary'});
@@ -46,14 +51,17 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
     local.addEventListener('click',()=>onResolve('local'));
     cloud.addEventListener('click',()=>{warning.hidden=false;accept.focus();});cancel.addEventListener('click',()=>{warning.hidden=true;cloud.focus();});
     accept.addEventListener('click',()=>onResolve('cloud'));
-    resolutions.append(Note('Changed on another device. Choose which version to use.'),ActionGroup([local,cloud],{compact:true}),warning);
+    decisions.push(Stack([Note('Changed on another device. Choose which version to use.'),ActionGroup([local,cloud],{compact:true}),warning]));
   }
+  // What a record raised for this device to decide stays with the number it was
+  // raised against: beside it where the number is always shown, under it where
+  // opening the record is what brings the number out.
+  const detail=Note([showNumber?record.traveler:'',record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · '));
   return ExpandableRecord({
     title:record.name,
     subtitle:[showNumber?'':record.traveler,record.pending?(record.conflict?'Needs review':record.deleting?'Deletion waiting to sync':'Waiting to sync'):''].filter(Boolean).join(' · '),
-    action:showNumber?null:copy,
-    preview:showNumber?Stack([number,copy],{className:'record-number-line'}):null,
-    children:[...(showNumber?[]:[number]),Note([showNumber?record.traveler:'',record.expires?`Expires ${record.expires}`:''].filter(Boolean).join(' · ')),ActionGroup([edit,...(record.hasNotes?[notes]:[]),remove],{compact:true}),confirmation,resolutions],
+    preview:showNumber?Stack([numberLine,...decisions],{className:'record-value'}):null,
+    children:showNumber?[detail]:[numberLine,detail,...decisions],
     onToggle:async open=>{
       if(showNumber)return;
       number.textContent='••••••••';

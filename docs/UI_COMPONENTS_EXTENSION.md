@@ -13,7 +13,7 @@ Compose the sidebar through `views.js` and shared component modules. `sidepanel.
 - Design for approximately 380px and the supported 280px minimum. Keep one main column and let long names, values, and actions wrap without hiding essential content.
 - Use shared page insets and the compact spacing in DESIGN.md. Avoid stacked container padding, oversized figures, and decorative summary cards.
 - Keep the useful record or result first. Put settings and optional reference detail under named disclosures. Anchor Refresh, Disconnect, and other maintenance actions to the resource they affect.
-- Use `ExpandableRecord` and shared record views for detail. Keep common copy actions reachable by keyboard as well as hover. Follow the existing mask/reveal behavior for private values.
+- Use `ExpandableRecord` and shared record views for detail. A record that opens into a block keeps its verbs on the line of the value it opened for, as `RowAction` glyphs reachable by keyboard as well as pointer. Follow the existing mask/reveal behavior for private values.
 - Use `ActionGroup` and the shared button densities; compact does not mean reducing every target below its defined size. An open select menu must remain usable at the sidebar's actual width and height.
 
 ## Context and state

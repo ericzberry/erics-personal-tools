@@ -28,7 +28,12 @@ test('travel wallet preserves failed edits, masks records, and confirms deletion
   show.click();await tick();assert.match($('list').textContent,/00123456/);
   show.click();assert.doesNotMatch($('list').textContent,/00123456/);
   assert.equal($('cloud').open,false);assert.equal($('setup').hidden,true);
-  [...$('list').querySelectorAll('button')].find(b=>b.textContent==='Edit').click();
+  // A record's verbs are glyphs named for the record, on the number's own line.
+  const verbs=$('list').querySelector('.record-number-line .action-group');
+  assert.deepEqual([...verbs.querySelectorAll('button')].map(button=>button.getAttribute('aria-label')),
+    ['Edit Synthetic airline','Copy number for Synthetic airline','Copy notes for Synthetic airline','Delete Synthetic airline']);
+  assert.deepEqual([...verbs.querySelectorAll('button')].map(button=>button.textContent),['','','','']);
+  $('list').querySelector('[aria-label="Edit Synthetic airline"]').click();
   assert.equal($('editor').open,true);
   assert.equal($('number').value,'');
   $('name').value='Updated program';$('name').dispatchEvent(new window.Event('input',{bubbles:true}));
@@ -37,14 +42,14 @@ test('travel wallet preserves failed edits, masks records, and confirms deletion
   assert.equal(writes[0].number,undefined);assert.equal(writes[0].revision,'one');
   fail=false;$('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();
   assert.equal($('name').value,'');assert.match($('list').textContent,/Updated program/);
-  const buttons=[...$('list').querySelectorAll('button')];buttons.find(b=>b.textContent==='Delete').click();assert.equal(deleted,false);
-  buttons.find(b=>b.textContent==='Delete from all devices').click();await tick();assert.equal(deleted,true);
+  $('list').querySelector('[aria-label="Delete Updated program"]').click();assert.equal(deleted,false);
+  [...$('list').querySelectorAll('button')].find(b=>b.textContent==='Delete from all devices').click();await tick();assert.equal(deleted,true);
   assert.match($('list').textContent,/No travel records yet/);
   const unsafe=TravelRecord({...record,name:'<img src=x onerror=alert(1)>'},{onEdit(){},onCopy(){},onCopyNotes(){},onDelete(){}});
   assert.equal(unsafe.querySelector('img'),null);
 });
 
-test('long travel lists reveal only the selected row and copy without expanding',async()=>{
+test('long travel lists read nothing until one row is opened',async()=>{
   const {window,document}=parseHTML('<html><body><main></main></body></html>');
   globalThis.window=window;globalThis.document=document;
   let reads=0,copies=0;
@@ -52,18 +57,21 @@ test('long travel lists reveal only the selected row and copy without expanding'
   for(let i=0;i<100;i++)list.append(TravelRecord({name:`Program ${i}`,category:'Airline',traveler:'Synthetic traveler'}, {
     onShow:async()=>{reads++;return '00123456';},onCopy:()=>copies++,onEdit(){},onCopyNotes(){},onDelete(){}
   }));
+  // A hundred rows are a hundred names: nothing is fetched, and nothing is on
+  // screen to copy, until one of them is opened.
   assert.equal(reads,0);
-  list.querySelector('[aria-label="Copy number for Program 0"]').click();
-  assert.equal(copies,1);assert.equal(reads,0);
+  assert.equal(list.querySelectorAll('.record-row-content:not([hidden])').length,0);
   const toggle=list.querySelector('.record-row-toggle');
   toggle.click();await tick();
   assert.equal(reads,1);assert.equal(toggle.getAttribute('aria-expanded'),'true');
   assert.equal([...list.querySelectorAll('.record-row-content')].filter(n=>!n.hidden).length,1);
+  list.querySelector('[aria-label="Copy number for Program 0"]').click();
+  assert.equal(copies,1);assert.equal(reads,1);
   toggle.click();assert.equal(toggle.getAttribute('aria-expanded'),'false');
   assert.doesNotMatch(list.textContent,/00123456/);
 });
 
-test('mobile record shows the cached number beside Copy without expanding or fetching',()=>{
+test('mobile record shows the cached number and its verbs without expanding or fetching',()=>{
   const {document}=parseHTML('<html><body></body></html>');globalThis.document=document;
   let reads=0,copies=0;
   const row=TravelRecord({name:'Synthetic program',category:'Airline',number:'00123456'}, {
@@ -71,8 +79,17 @@ test('mobile record shows the cached number beside Copy without expanding or fet
   });
   const preview=row.querySelector('.record-number-line');
   assert.match(preview.textContent,/00123456/);
-  preview.querySelector('button').click();assert.equal(copies,1);assert.equal(reads,0);
+  // A record with nothing written down does not carry the verb for it.
+  assert.deepEqual([...preview.querySelectorAll('button')].map(button=>button.getAttribute('aria-label')),
+    ['Edit Synthetic program','Copy number for Synthetic program','Delete Synthetic program']);
+  preview.querySelector('[aria-label="Copy number for Synthetic program"]').click();
+  assert.equal(copies,1);assert.equal(reads,0);
   assert.equal(row.querySelector('.record-row-content').hidden,true);
+  // The deletion it raises is a sentence, and waits beside the number rather
+  // than behind the disclosure the number no longer sits under.
+  preview.querySelector('[aria-label="Delete Synthetic program"]').click();
+  const confirmation=[...row.querySelector('.record-value').children].find(node=>node.textContent.startsWith('Delete this record'));
+  assert.equal(confirmation.hidden,false);
 });
 
 test('travel records stay alphabetical when loaded, searched, and refreshed',async()=>{

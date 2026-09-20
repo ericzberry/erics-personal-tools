@@ -51,7 +51,7 @@ test('sidebar Add and Edit launch the editor without an inline form or local wri
   await mountTravel(root,{mode:'browse',credentials:{get:async()=> 'test'},request:async(_token,_path,options)=>{assert.equal(options,undefined);return {records:[record]};},onOpenEditor:id=>opened.push(id)}).ready;
   assert.equal($('editor').hidden,true);
   $('add').click();await tick();
-  [...$('list').querySelectorAll('button')].find(b=>b.textContent==='Edit').click();await tick();
+  $('list').querySelector('[aria-label="Edit Synthetic airline"]').click();await tick();
   assert.deepEqual(opened,[undefined,'abc']);
   $('form').dispatchEvent(new window.Event('submit',{cancelable:true}));
   assert.equal($('editor').hidden,true);

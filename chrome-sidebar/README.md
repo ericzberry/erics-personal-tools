@@ -2500,3 +2500,36 @@ computed styles, since a change that should look like nothing is verified by
 reading the values rather than by looking at a screenshot. Native iPhone and
 installed Chrome behavior were not directly tested. Archive:
 `release/erics-sidebar-0.6.201.zip`.
+
+## The number you opened, and the verbs beside it (0.6.203 / mobile 0.1.153)
+
+**What an opened record looked like.** Three bands. The name and its traveler on
+the first, the number under it at a size nothing else on the screen came near,
+and under that a rule with the words Edit, Copy notes and Delete in a strip of
+its own. A wallet of hotel programs read as a run of cards with a headline in
+each, and the loudest thing on the screen was a number nobody had asked to read
+yet. Every other list in these two apps had already stopped doing this: a
+record's verbs are glyphs at the end of a line, named for the record they act
+on, and words are kept for what the record is asking to have decided.
+
+**What it is now.** One block. The name line, then a line holding the number at
+the record's own size and the record's verbs at the end of it — Edit, Copy,
+Copy notes where there are notes, then Delete in danger ink. Copy is beside the
+value it copies rather than a line above it. The rule and the strip are gone,
+and so is the headline weight.
+
+**What moved with it.** A closed row in the sidebar now carries nothing but its
+name, its traveler and its marker, so the markers keep one column however many
+verbs a record has and nothing is copied out of a row nobody looked at; copying
+a number is the press that opens the record and the glyph beside it. On the
+phone, where the number is always shown, the verbs ride on that same line — and
+the delete confirmation comes out under it, which is where it was always meant
+to be: it used to open inside the disclosure, so pressing Delete on a closed
+row on the phone appeared to do nothing at all.
+
+Validation: 560 extension, 33 mobile and 134 API tests pass. The synthetic
+wallet was reviewed at 390px, at the 280px sidebar minimum and at a desktop
+width — populated with three categories, a name long enough to wrap, a record
+with notes and one without — and in the phone shell: open and closed rows,
+hover, keyboard focus and tab order, the delete confirmation, and the touch
+size of every glyph. Archive: `release/erics-sidebar-0.6.203.zip`.

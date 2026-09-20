@@ -1,6 +1,11 @@
 // Local synthetic integration fixture. Not copied into release builds.
 const storageKey='travel-editor-preview-records';
-const initial=[{id:'11111111-1111-4111-8111-111111111111',revision:'first',name:'Synthetic airline',category:'Airline',traveler:'Test traveler',number:'001234567',notes:'',expires:''}];
+const initial=[
+  {id:'11111111-1111-4111-8111-111111111111',revision:'first',name:'Synthetic airline',category:'Airline',traveler:'Test traveler',number:'001234567',notes:'',expires:''},
+  {id:'22222222-2222-4222-8222-222222222222',revision:'first',name:'Synthetic hotel group',category:'Hotel',traveler:'Test traveler',number:'374511538',notes:'Front desk asks for the last four.',hasNotes:true,expires:''},
+  {id:'33333333-3333-4333-8333-333333333333',revision:'first',name:'Synthetic boutique hotel collection with a long name',category:'Hotel',traveler:'Second traveler',number:'88 2299 4401',notes:'',expires:'2029-04-30'},
+  {id:'44444444-4444-4444-8444-444444444444',revision:'first',name:'Synthetic rail pass',category:'Other',traveler:'Test traveler',number:'RAIL-99120',notes:'',expires:''}
+];
 const records=()=>JSON.parse(localStorage.getItem(storageKey)||JSON.stringify(initial));
 const realFetch=window.fetch.bind(window);
 window.fetch=async(url,options={})=>{

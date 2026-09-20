@@ -187,8 +187,7 @@
 .travel-wallet :is(.travel-list,.record-group,.reward-group,.settings-group)>:last-child:not(.record-group)>:last-child>:is(:last-child,.record-row:last-of-type):not(button,input,select,textarea),
 .travel-wallet :is(.travel-list,.record-group,.reward-group,.settings-group)>:last-child:not(.record-group)>:last-child>:last-child>:is(:last-child,.record-row:last-of-type):not(button,input,select,textarea){border-bottom:0}
 .travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]){background:var(--wallet-surface);border-radius:6px 6px 0 0}
-.travel-wallet .record-row-heading{display:flex;align-items:center;gap:8px}
-.travel-wallet .record-row-toggle{position:relative;flex:1;min-width:0;min-height:32px;border:0;border-radius:0;background:transparent;text-align:left;padding:5px 18px 5px 0;display:grid;gap:1px;line-height:1.3}
+.travel-wallet .record-row-toggle{position:relative;width:100%;min-width:0;min-height:32px;border:0;border-radius:0;background:transparent;text-align:left;padding:5px 18px 5px 0;display:grid;gap:1px;line-height:1.3}
 .travel-wallet .record-row-toggle strong{font-size:13px;font-weight:500}
 .travel-wallet .record-row-toggle .footnote{font-size:11px}
 .travel-wallet .record-row-toggle::after{content:'';position:absolute;right:4px;top:50%;width:5px;height:5px;border-right:1.5px solid var(--wallet-control-line);border-bottom:1.5px solid var(--wallet-control-line);transform:translateY(-50%) rotate(-45deg);transition:transform .15s ease}
@@ -196,14 +195,14 @@
 @media(prefers-reduced-motion:reduce){.travel-wallet .record-row-toggle::after{transition:none}}
 .travel-wallet .record-row-content{display:grid;gap:2px;padding:0 0 4px}
 .travel-wallet .record-row-content p:empty{display:none}
-.travel-number{font-size:15px;font-weight:600;line-height:1.3;font-variant-numeric:tabular-nums;user-select:text}
+/* A number is read back at the record's own size: it leads its line by weight
+   and by the space around it, and a wallet of them stays a list rather than a
+   run of headlines with the programs' names shrunk underneath. */
+.travel-number{font-size:14px;font-weight:600;line-height:1.3;letter-spacing:.01em;font-variant-numeric:tabular-nums;user-select:text}
+/* Words are for what a record is asking to have decided — a deletion, a
+   conflict — so only those keep a group of labelled buttons. */
 .travel-wallet .record-row-content .action-group{gap:4px;margin-top:4px}
-.travel-wallet .record-row-content>.action-group{border-top:1px solid var(--wallet-line);margin-top:6px;padding-top:6px}
 .travel-wallet .icon-button{width:28px;min-height:28px;padding:6px;border:0;background:transparent;display:grid;place-items:center}
-.travel-wallet .row-copy,.travel-wallet .row-copy:disabled{opacity:0}
-.travel-wallet .record-row:hover .row-copy,.travel-wallet .record-row:focus-within .row-copy,.travel-wallet .row-copy:focus-visible{opacity:1}
-.copy-glyph{position:relative;width:11px;height:12px;border:1.5px solid currentColor;border-radius:2px}
-.copy-glyph::before{content:'';position:absolute;width:8px;height:9px;left:-5px;top:-5px;border:1.5px solid currentColor;border-right:0;border-bottom:0;border-radius:2px}
 .connection-surface{display:grid;gap:16px}
 .travel-wallet .connection-surface{font-size:12px;color:var(--wallet-muted)}
 .connection-only{padding-top:12px;padding-bottom:12px}
@@ -214,14 +213,26 @@
 @media(hover:none){
   .travel-wallet input:not([type=search]),.travel-wallet select{font-size:16px;min-height:44px}
   .travel-wallet .form-stack button{min-height:44px}
-  .travel-wallet .record-row-content button{min-height:28px}
-  .travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]) .row-copy{opacity:1}
+  .travel-wallet .record-row-content button:not(.row-action){min-height:28px}
   .travel-wallet .record-line{min-height:36px}
   .travel-wallet .row-action{opacity:1;width:32px;min-height:32px}
   .travel-wallet .row-action:disabled{opacity:.4}
 }
-/* Unlocked mobile records keep the number and its copy action together. */
-.travel-wallet .record-number-line{display:flex;align-items:center;gap:4px;padding:0 0 4px}.travel-wallet .record-number-line .travel-number{font-size:15px;font-weight:500;letter-spacing:.01em}.travel-wallet .record-number-line .row-copy{opacity:1}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle{min-height:22px;padding:4px 18px 0 0}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle strong{font-size:12px;color:var(--wallet-muted)}
+/* The number and everything the record can be told to do with it: the value
+   along the left, its verbs at the end of the same line. They are the point of
+   the row that was opened, so they do not wait for a pointer the way a verb on
+   a closed row does; while the wallet is busy they dim rather than disappear,
+   which would leave the line jumping under the finger that pressed it. */
+.travel-wallet .record-number-line{display:flex;align-items:center;gap:8px;min-height:28px}
+.travel-wallet .record-number-line>.travel-number{flex:1 1 auto;min-width:0}
+.travel-wallet .record-number-line>.action-group{flex:none;gap:0;margin:0}
+.travel-wallet .record-number-line .row-action{opacity:1}
+.travel-wallet .record-number-line .row-action:disabled{opacity:.4}
+/* Where the number is always shown, it is what the row is read for and the
+   program's name is the label above it. */
+.travel-wallet .record-row:has(>.record-value) .record-row-toggle{min-height:22px;padding:4px 18px 0 0}
+.travel-wallet .record-row:has(>.record-value) .record-row-toggle strong{font-size:12px;color:var(--wallet-muted)}
+.travel-wallet .record-value{display:grid;gap:2px;padding:0 0 4px}
 
 /* Connection setup and maintenance share compact, explicit groups. */
 .travel-wallet .connection-content{display:grid;gap:12px}

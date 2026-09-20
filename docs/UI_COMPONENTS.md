@@ -29,8 +29,8 @@ The catalogue below describes existing exports, not a promise that each componen
 | Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceFlow`, `FieldGrid` | Compose layout before introducing new wrappers; a full-tab workspace runs down the page rather than into a side column |
 | Text and supporting detail | `Title`, `Text`, `Note`, `Strong`, `Label` | `Heading` aliases `Title`; `Label` is a text span, not an input label |
 | Form and labeled inputs | `Form`, `FormStack`, `FormField`, `Field` | `Field` supplies an associated label and control |
-| Actions and links | `Button`, `Link`, `CopyIconButton`, `IconButton` | Choose role and density explicitly; use real links for navigation |
-| A record's or group's own action | `RowAction`, `RowLink`, `CopyIconButton` | At the end of the record's line, never in a row of words under it. The glyph carries the verb and the label names the record it acts on; a decision that needs a sentence is not a row action |
+| Actions and links | `Button`, `Link`, `IconButton` | Choose role and density explicitly; use real links for navigation |
+| A record's or group's own action | `RowAction`, `RowLink` | At the end of the record's line, never in a row of words under it. The glyph carries the verb and the label names the record it acts on; a decision that needs a sentence is not a row action |
 | Select or editable suggestions | `Select`, `Field` with `kind: 'select'` or `list` | Shared formatted trigger and open menu; keep custom text for suggestions |
 | Choice of two or three | `SegmentedField` | Show the options side by side instead of behind a menu; it is a radio group exposing `value` like a select |
 | Boolean choice | `Toggle`, `ChoiceRow` | Keep the explanation and click target together |
