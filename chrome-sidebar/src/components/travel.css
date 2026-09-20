@@ -195,10 +195,13 @@
 @media(prefers-reduced-motion:reduce){.travel-wallet .record-row-toggle::after{transition:none}}
 .travel-wallet .record-row-content{display:grid;gap:2px;padding:0 0 4px}
 .travel-wallet .record-row-content p:empty{display:none}
-/* A number is read back at the record's own size: it leads its line by weight
-   and by the space around it, and a wallet of them stays a list rather than a
-   run of headlines with the programs' names shrunk underneath. */
-.travel-number{font-size:14px;font-weight:600;line-height:1.3;letter-spacing:.01em;font-variant-numeric:tabular-nums;user-select:text}
+/* The list is read down its programs' names, and a number is what one of them
+   was opened for, so it is set a step under the name above it rather than over
+   it: the same weight, one size smaller, spaced and tabular so it can still be
+   read back a digit at a time. Larger and bolder than the name it belongs to,
+   it was the loudest thing on the screen and the row read as a label with a
+   headline hanging under it. */
+.travel-number{font-size:12px;font-weight:500;line-height:1.3;letter-spacing:.01em;font-variant-numeric:tabular-nums;user-select:text}
 /* Words are for what a record is asking to have decided — a deletion, a
    conflict — so only those keep a group of labelled buttons. */
 .travel-wallet .record-row-content .action-group{gap:4px;margin-top:4px}

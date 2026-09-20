@@ -2551,3 +2551,22 @@ the figures on screen to speak for it, and this ledger does not narrate its
 successes.
 
 Validation: 565 extension tests pass.
+
+## A number is not a headline (0.6.206 / mobile 0.1.156)
+
+The record's number came out one step *over* the program it belongs to — 14px
+600 against the name's 13px 500 — so an opened Alaska row read as a small label
+with a big bold figure hanging under it. The wallet is read down its programs'
+names; the number is what one of them was opened for, not the thing the list is
+scanned by.
+
+It is 12px 500 now, the same weight as the name and one size under it, keeping
+the .01em spacing and tabular figures that let it be read back a digit at a
+time. On the phone, where every number is shown at once, the name stays the
+muted label it already was and the number keeps full ink, so the pair is told
+apart by colour rather than by size.
+
+Validation: 560 extension, 33 mobile and 134 API tests pass. Reviewed in the
+sidebar harness and the phone shell: the name leads its record in both, and the
+computed sizes were read off the rendered rows rather than the stylesheet.
+Archive: `release/erics-sidebar-0.6.206.zip`.
