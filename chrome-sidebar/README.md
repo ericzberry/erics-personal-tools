@@ -3095,8 +3095,8 @@ on a tab nobody was looking at and the screen did not change at all — the shar
 this release adds would have been unreachable by the one path anybody would
 take to it. `showEntry` selects the tab it opens the drawer on.
 
-Validation: 593 extension, 33 mobile and 134 API tests pass, and both apps
-build. New coverage: the share stored, defaulted and refused outside 0.01–100%;
+Validation: 591 extension, 33 mobile and 134 API tests pass from an archive of
+this release, and both apps build. New coverage: the share stored, defaulted and refused outside 0.01–100%;
 a GP at 35% and a trust at 65% summing to the vehicle with the statement
 untouched behind them; a multiple unmoved by a share; a statement landing on
 the portfolio's own position rather than the other holder's; and Averin filed
