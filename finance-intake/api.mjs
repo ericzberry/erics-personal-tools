@@ -50,14 +50,18 @@ export async function api(path, {method = 'GET', body} = {}) {
   return parsed;
 }
 
-// The ledger arrives as one record stream: a handful of portfolios and the
-// figures filed into them. Splitting it here keeps every script reading the
-// same two lists.
+// The ledger arrives as one record stream: a handful of portfolios, the figures
+// filed into them, and the two things that do not reduce to a figure — a
+// private investment with its capital accounts, and a property with its dated
+// valuations. Splitting it here keeps every script reading the same lists.
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base', numeric: true});
 export const ledger = async () => {
   const {records} = await api('/v1/finance');
+  const of = row => records.filter(record => record.row === row);
   return {
-    portfolios: records.filter(record => record.row === 'portfolio')
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base', numeric: true})),
-    marks: records.filter(record => record.row === 'mark')
+    portfolios: of('portfolio').sort(byName),
+    marks: of('mark'),
+    properties: of('property').sort(byName),
+    valuations: of('valuation')
   };
 };

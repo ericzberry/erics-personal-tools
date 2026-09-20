@@ -88,6 +88,23 @@
    length of the list and outshout the records in it. */
 .travel-wallet .record-line{display:flex;align-items:center;gap:8px;min-height:30px}
 .travel-wallet .record-name{flex:1;min-width:0;font-size:13px;font-weight:500}
+/* A record whose one number belongs on its own line: the qualification that
+   number needs, muted and beside it, then the number, which never wraps. A run
+   of records is then read down one column of names and one of amounts. */
+.travel-wallet .record-meta{flex:0 1 auto;min-width:0;color:var(--wallet-muted);font-size:12px;overflow-wrap:anywhere}
+/* A name beside a figure wraps at its spaces and never inside a word. The
+   wallet breaks anywhere by default, which is right for a name on a line of its
+   own and wrong here: squeezed against an amount, a fund's name came out as a
+   two-character column reading down the page one syllable at a time. Holding it
+   to its longest word is what keeps it a name; when even that will not fit
+   beside the amount, the line wraps and the amount and the record's verbs drop
+   under it together rather than the verbs alone. */
+.travel-wallet .record-line--figure{flex-wrap:wrap;row-gap:0}
+.travel-wallet .record-line--figure>.record-name{flex:1 1 auto;min-width:auto;overflow-wrap:break-word}
+.travel-wallet .record-figure{flex:0 0 auto;margin-inline-start:auto;display:flex;align-items:center;gap:8px}
+.travel-wallet .record-figure>strong{font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.travel-wallet .record-figure>.action-group{flex:none;gap:0;margin:0}
+.travel-wallet .record-figure>.action-group:empty{display:none}
 .travel-wallet .record-line>.action-group{flex:none;gap:0;margin:0}
 .travel-wallet .record-line>.action-group:empty{display:none}
 .travel-wallet .row-action{width:26px;min-height:26px;padding:5px;border:0;background:transparent;display:grid;place-items:center;opacity:0;transition:opacity .12s ease;color:var(--wallet-muted)}

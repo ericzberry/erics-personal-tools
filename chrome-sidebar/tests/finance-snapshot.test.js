@@ -116,7 +116,7 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
   assert.equal(document.getElementById('finance-read').disabled,false);
   assert.equal(document.getElementById('finance-editor').hidden,false,'and a figure typed by hand');
   assert.equal(document.getElementById('finance-editor').hasAttribute('open'),false,'offered, not opened');
-  assert.equal(document.getElementById('finance-actions').textContent,'Show everything you hold','one action, and it is the one that applies');
+  assert.equal(document.getElementById('finance-actions').textContent,'Show net worth','one action, and it is the one that applies');
 
   document.querySelector('#finance-actions button').click();
   await settle(()=>document.getElementById('finance-ledger').hidden===false);

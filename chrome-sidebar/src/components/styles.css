@@ -402,6 +402,8 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
    their own under it. See DESIGN.md; the wallet sets the sizes. */
 .record-line { display: flex; align-items: center; gap: 8px; }
 .record-line > .record-name { flex: 1; min-width: 0; }
+.record-line > .record-meta { flex: 0 1 auto; min-width: 0; color: var(--muted); font-size: 12px; }
+.record-line > .record-figure { flex: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .record-line > .action-group { flex: none; margin: 0; }
 .record-line > .action-group:empty { display: none; }
 .icon-button, .row-action { display: grid; place-items: center; }

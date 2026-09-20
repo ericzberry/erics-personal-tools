@@ -30,6 +30,18 @@
 // own pair of rows: a holding, which is the investment, and one dated capital
 // account per statement. Its value still counts in its portfolio and its asset
 // class exactly like any other figure, so nothing downstream has to know.
+//
+// A property is the second thing that does not reduce to four numbers, and it
+// asks the same question in different words: what is the house worth, what is
+// still owed on it, and what is therefore mine. A class total called Real
+// estate can hold the first of those and none of the rest — two houses added
+// together lose both addresses, and a mortgage filed beside them as a liability
+// is attached to nothing in particular. So a property is its own pair of rows
+// as well: the property, which is an address, and one dated valuation per
+// reading. Its value counts under Real estate and its debt under Mortgage,
+// which is how it reaches every total without anything downstream knowing that
+// a house is not a brokerage account.
+import {safePublicURL} from './public-url.js';
 const fail=message=>{throw Object.assign(Error(message),{status:400});};
 
 // The categorizations. A code is what is stored; the label is what is shown.
@@ -114,11 +126,23 @@ export const VEHICLES=[
   {code:2,id:'equity',label:'Direct Equity Investment',short:'Equity'},
   {code:3,id:'spv',label:'SPV Investment',short:'SPV'}
 ];
+// Where a property's value came from. The Zestimate is the standing answer —
+// it is public, it is dated, it costs nothing to look up, and it is the number
+// the owner would reach for anyway — so anything else is a deliberate override
+// and the row says which, because a figure somebody chose and a figure Zillow
+// published are not the same kind of claim about a house.
+export const VALUE_SOURCES=[
+  {code:1,id:'zestimate',label:'Zestimate'},
+  {code:2,id:'appraisal',label:'Appraisal'},
+  {code:3,id:'sale',label:'Sale price'},
+  {code:4,id:'owner',label:'Own estimate'}
+];
 export const STALE_DAYS=90;
 export const MAX_VALUE=1e12;
 export const MAX_DATES=240;
 export const MAX_PORTFOLIOS=200;
 export const MAX_HOLDINGS=400;
+export const MAX_PROPERTIES=200;
 export const assetClass=code=>ASSET_CLASSES.find(entry=>entry.code===Number(code))||null;
 export const classById=id=>ASSET_CLASSES.find(entry=>entry.id===id)||null;
 export const classLabel=code=>assetClass(code)?.label||`Class ${code}`;
@@ -132,6 +156,14 @@ export const vehicleOf=code=>VEHICLES.find(entry=>entry.code===Number(code))||nu
 export const vehicleById=id=>VEHICLES.find(entry=>entry.id===id)||null;
 export const vehicleLabel=code=>vehicleOf(code)?.label||'';
 export const vehicleShort=code=>vehicleOf(code)?.short||'';
+export const valueSource=code=>VALUE_SOURCES.find(entry=>entry.code===Number(code))||null;
+export const valueSourceById=id=>VALUE_SOURCES.find(entry=>entry.id===id)||null;
+export const valueSourceLabel=code=>valueSource(code)?.label||'';
+// The class a property's value counts under, and the class its debt counts
+// under. Named once, here, so nothing downstream has to know which codes a
+// house reaches the totals through.
+export const PROPERTY_CLASS=7;
+export const PROPERTY_DEBT_CLASS=21;
 
 // Names compared the way a person would compare them: case, punctuation and
 // spacing carry no meaning here, so "Charles Schwab", "Schwab Bank" and a bare
@@ -251,23 +283,30 @@ export const dateText=value=>{const digits=String(value).padStart(8,'0');return 
 export const toCents=value=>Math.round(Number(value)*100);
 export const fromCents=value=>Math.round(Number(value))/100;
 
-// Four kinds of row share one record stream, so the offline queue, the conflict
+// Six kinds of row share one record stream, so the offline queue, the conflict
 // rules and the Worker's routes stay exactly one of each. A portfolio is
 // addressed by `p3`; a figure by the three numbers that identify it; an
-// investment by `h3`; and one of its capital accounts by the investment and the
-// date the statement was struck. The prefixes keep them apart with no ambiguity
-// to resolve: only a mark begins with a digit.
+// investment by `h3`; one of its capital accounts by the investment and the
+// date the statement was struck; a property by `r3`; and one of its valuations
+// by the property and the date it was read. The prefixes keep them apart with
+// no ambiguity to resolve: only a mark begins with a digit.
 export const PORTFOLIO_ID=/^p([1-9]\d{0,3})$/;
 export const MARK_ID=/^([1-9]\d{0,3})-(\d{1,2})-(\d{8})$/;
 export const HOLDING_ID=/^h([1-9]\d{0,3})$/;
 export const CAPITAL_ID=/^h([1-9]\d{0,3})-(\d{8})$/;
+export const PROPERTY_ID=/^r([1-9]\d{0,3})$/;
+export const VALUATION_ID=/^r([1-9]\d{0,3})-(\d{8})$/;
 export const portfolioRef=number=>`p${number}`;
 export const markRef=mark=>`${mark.portfolio}-${mark.class}-${dateNumber(mark.asOf)}`;
 export const holdingRef=number=>`h${number}`;
 export const capitalRef=entry=>`h${entry.holding}-${dateNumber(entry.asOf)}`;
+export const propertyRef=number=>`r${number}`;
+export const valuationRef=entry=>`r${entry.property}-${dateNumber(entry.asOf)}`;
 export const recordRef=record=>record.row==='portfolio'?portfolioRef(record.number)
   :record.row==='holding'?holdingRef(record.number)
   :record.row==='capital'?capitalRef(record)
+  :record.row==='property'?propertyRef(record.number)
+  :record.row==='valuation'?valuationRef(record)
   :markRef(record);
 export function parseRef(ref){
   const portfolio=PORTFOLIO_ID.exec(ref||'');
@@ -276,6 +315,10 @@ export function parseRef(ref){
   if(holding)return {row:'holding',number:Number(holding[1])};
   const capital=CAPITAL_ID.exec(ref||'');
   if(capital)return {row:'capital',holding:Number(capital[1]),asOf:dateText(capital[2])};
+  const property=PROPERTY_ID.exec(ref||'');
+  if(property)return {row:'property',number:Number(property[1])};
+  const valuation=VALUATION_ID.exec(ref||'');
+  if(valuation)return {row:'valuation',property:Number(valuation[1]),asOf:dateText(valuation[2])};
   const mark=MARK_ID.exec(ref||'');
   if(!mark)return null;
   return {row:'mark',portfolio:Number(mark[1]),class:Number(mark[2]),asOf:dateText(mark[3])};
@@ -318,6 +361,31 @@ export function normalizeFinance(input,previous={}){
       distributed:amount(get('distributed')??0,'the amount returned to date'),
       commitment:amount(get('commitment')??0,'the commitment')};
   }
+  // The property itself: which portfolio holds it, the address, and the page
+  // its value is published on. No figure lives here — an address corrected
+  // should not move a total — and no asset class either: a house is real
+  // estate, and offering the choice would only be offering a way to be wrong.
+  if(row==='property'){
+    const link=text(get('link')??'',300,'a link to the property page');
+    return {row:'property',number:counting(get('number'),'a property number',MAX_PROPERTIES),
+      portfolio:counting(get('portfolio'),'a portfolio number',MAX_PORTFOLIOS),
+      name:text(get('name'),160,'the property address',true),
+      // A link that is not one is dropped rather than refused: the address is
+      // the record, and a mistyped URL should not stop a house being saved.
+      link:safePublicURL(link)||''};
+  }
+  // One dated reading of what a property is worth and what is still owed on it.
+  // The two travel together for the same reason a capital account's four do: a
+  // value with no debt beside it cannot say what any of it is worth to the
+  // owner, and a mortgage filed on its own is attached to no particular house.
+  if(row==='valuation'){
+    const source=Number(get('source')??VALUE_SOURCES[0].code);
+    if(!valueSource(source))fail('Choose where this value came from.');
+    return {row:'valuation',property:counting(get('property'),'a property number',MAX_PROPERTIES),
+      asOf:date(get('asOf'),'as-of date',true),
+      value:amount(get('value'),'the market value'),
+      debt:amount(get('debt')??0,'the amount still owed'),source};
+  }
   if(row!=='mark')fail('Unknown ledger row.');
   const cls=Number(get('class'));
   if(!assetClass(cls))fail('Choose an asset class.');
@@ -332,6 +400,8 @@ export const portfoliosOf=records=>counted(records).filter(record=>record.row===
 export const marksOf=records=>counted(records).filter(record=>record.row==='mark');
 export const holdingsOf=records=>counted(records).filter(record=>record.row==='holding').sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
 export const capitalOf=records=>counted(records).filter(record=>record.row==='capital');
+export const propertiesOf=records=>counted(records).filter(record=>record.row==='property').sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
+export const valuationsOf=records=>counted(records).filter(record=>record.row==='valuation');
 const sum=values=>Math.round(values.reduce((total,value)=>total+value,0)*100)/100;
 const byTotal=(a,b)=>Math.abs(b.total)-Math.abs(a.total)||a.label.localeCompare(b.label);
 
@@ -391,6 +461,41 @@ const positionFigure=position=>({portfolio:position.holding.portfolio,class:posi
 const livePositions=(records,mine,when)=>positionsOn(records,when)
   .filter(position=>position.current&&mine.has(position.holding.portfolio));
 
+// A property and whichever of its valuations is newest on or before a date —
+// the same step function everything else here follows, for the same reason: a
+// Zestimate is a reading taken on a day, and nothing observable happened to the
+// house between two of them.
+//
+// A property with no valuation yet is still a property. Recording the address
+// the day it is bought is how it gets into the ledger before anyone has looked
+// up what it is worth, and it counts as nothing until a figure says otherwise.
+export function propertiesOn(records,when){
+  const readings=valuationsOf(records);
+  return propertiesOf(records).map(property=>{
+    const history=readings.filter(entry=>entry.property===property.number&&(!when||entry.asOf<=when))
+      .sort((a,b)=>b.asOf.localeCompare(a.asOf));
+    const current=history[0]||null;
+    const value=current?.value||0,debt=current?.debt||0;
+    return {property,current,history,value,debt,source:current?.source||0,
+      // What is actually the owner's. The whole reason the debt is kept on the
+      // property rather than filed beside it: a house worth twice its mortgage
+      // and a house worth a tenth more than its mortgage are the same line in a
+      // Real estate total and nothing like each other here.
+      equity:Math.round((value-debt)*100)/100};
+  });
+}
+// A property counts as two figures, because it is two: what the house is worth
+// under Real estate, and what is owed on it under Mortgage. Both are ordinary
+// figures from there on, so the grouping, the signing, the totals and the
+// series all work on them unchanged — a mortgage is negative because its class
+// says so, not because anything here decided it.
+const propertyFigures=entry=>[
+  {portfolio:entry.property.portfolio,class:PROPERTY_CLASS,asOf:entry.current.asOf,amount:entry.value,property:entry.property.number},
+  ...(entry.debt?[{portfolio:entry.property.portfolio,class:PROPERTY_DEBT_CLASS,asOf:entry.current.asOf,amount:entry.debt,property:entry.property.number}]:[])
+];
+const liveProperties=(records,mine,when)=>propertiesOn(records,when)
+  .filter(entry=>entry.current&&mine.has(entry.property.portfolio));
+
 export function financeCurrencies(records){
   const counts=new Map();
   for(const portfolio of portfoliosOf(records))counts.set(portfolio.currency||'USD',(counts.get(portfolio.currency||'USD')||0)+1);
@@ -404,8 +509,10 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
   const portfolios=portfoliosOf(records).filter(portfolio=>(portfolio.currency||'USD')===currency);
   const mine=new Map(portfolios.map(portfolio=>[portfolio.number,portfolio]));
   const held=positionsOn(records).filter(position=>mine.has(position.holding.portfolio));
+  const owned=propertiesOn(records).filter(entry=>mine.has(entry.property.portfolio));
   const live=[...heldOn(marksOf(records).filter(mark=>mine.has(mark.portfolio))),
-    ...held.filter(position=>position.current).map(positionFigure)];
+    ...held.filter(position=>position.current).map(positionFigure),
+    ...owned.filter(entry=>entry.current).flatMap(propertyFigures)];
   const assets=live.filter(mark=>classSide(mark.class)==='asset');
   const liabilities=live.filter(mark=>classSide(mark.class)==='liability');
   const group=(list,key,label)=>{
@@ -447,6 +554,16 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
       value:sum(held.map(position=>position.value)),
       unfunded:sum(held.map(position=>position.unfunded))
     },
+    // What the class breakdown cannot say about a house: the two figures are
+    // in two different classes, one of them negative, so nothing in the list
+    // above puts them back together into what the property is worth to its
+    // owner.
+    properties:{
+      count:owned.length,
+      value:sum(owned.map(entry=>entry.value)),
+      debt:sum(owned.map(entry=>entry.debt)),
+      equity:sum(owned.map(entry=>entry.equity))
+    },
     stale
   };
 }
@@ -458,9 +575,14 @@ export function netWorthSeries(records,{currency='USD'}={}){
   // was struck is a day the series has a point on.
   const held=new Set(holdingsOf(records).filter(holding=>mine.has(holding.portfolio)).map(holding=>holding.number));
   const statements=capitalOf(records).filter(entry=>held.has(entry.holding));
-  const dates=[...new Set([...marks.map(mark=>mark.asOf),...statements.map(entry=>entry.asOf)])].sort();
+  // And so is a valuation: the day a Zestimate was read is a day the series has
+  // a point on.
+  const owned=new Set(propertiesOf(records).filter(property=>mine.has(property.portfolio)).map(property=>property.number));
+  const readings=valuationsOf(records).filter(entry=>owned.has(entry.property));
+  const dates=[...new Set([...marks.map(mark=>mark.asOf),...statements.map(entry=>entry.asOf),...readings.map(entry=>entry.asOf)])].sort();
   return dates.map(asOf=>{
-    const live=[...heldOn(marks,asOf),...livePositions(records,mine,asOf).map(positionFigure)];
+    const live=[...heldOn(marks,asOf),...livePositions(records,mine,asOf).map(positionFigure),
+      ...liveProperties(records,mine,asOf).flatMap(propertyFigures)];
     return {
       asOf,figures:live.length,
       assets:sum(live.filter(mark=>classSide(mark.class)==='asset').map(mark=>mark.amount)),
@@ -474,7 +596,7 @@ export function netWorthSeries(records,{currency='USD'}={}){
 // the date that figure was observed. This is what the list shows, and it is
 // where a class's own history is reached from.
 export function groupFinanceRecords(records){
-  const marks=marksOf(records),positions=positionsOn(records);
+  const marks=marksOf(records),positions=positionsOn(records),estates=propertiesOn(records);
   return portfoliosOf(records).map(portfolio=>{
     const mine=marks.filter(mark=>mark.portfolio===portfolio.number);
     const rows=[...new Set(mine.map(mark=>mark.class))]
@@ -484,8 +606,13 @@ export function groupFinanceRecords(records){
       })
       .sort((a,b)=>ASSET_CLASSES.findIndex(entry=>entry.code===a.class)-ASSET_CLASSES.findIndex(entry=>entry.code===b.class));
     const held=positions.filter(position=>position.holding.portfolio===portfolio.number);
-    return {portfolio,rows,positions:held,
-      total:sum([...rows.map(row=>signed(row.current)),...held.map(position=>position.value)])};
+    const owned=estates.filter(entry=>entry.property.portfolio===portfolio.number);
+    return {portfolio,rows,positions:held,properties:owned,
+      // A property adds its equity, which is the one arithmetic step a house
+      // needs that a position does not: its value and its debt are two figures
+      // and the portfolio holds the difference.
+      total:sum([...rows.map(row=>signed(row.current)),...held.map(position=>position.value),
+        ...owned.map(entry=>entry.equity)])};
   });
 }
 

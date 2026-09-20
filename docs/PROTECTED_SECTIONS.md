@@ -252,6 +252,25 @@ step function between observed figures; nothing is interpolated, and a class
 contributes nothing before its first figure. Each class keeps up to 240 dates;
 past that the oldest fall off, and today's is never the one dropped.
 
+**Two dated points are comparable only when the same figures stand behind
+both.** A ledger is filled in over weeks, so a reading taken before half the
+accounts were entered is not a lower net worth — it is a smaller ledger, and
+subtracting one from the other announced a two-million-dollar rise that never
+happened. The newest point carries every figure the ledger holds, because a
+figure stands until a later one replaces it, so it is the measure of a full
+reading; an older point is partial exactly when it holds fewer, says so with its
+count, and no change is drawn against it. The table is read quarterly by
+default — a quarter is shown by its last reading, and the part-filled days spent
+reaching it stop being rows of their own — with a daily view beside it.
+
+**A figure zeroed out is a figure no longer held.** The ledger never deletes
+one: a reading corrected later is superseded by a zero under the same portfolio,
+class and date, which is how `finance-intake` amends a figure it got wrong. So a
+class whose newest figure is zero is a correction's tombstone, not a holding
+worth nothing, and it is left out of the breakdown and out of the holdings list.
+The zeros stand where there is nothing else, so a portfolio holding only them is
+never shown as empty.
+
 **Retrofitting the old ledger.** `/v1/finance/backfill` reads the record-per-
 account table, maps each record to a portfolio and a class, and brings every
 dated figure across rather than only the newest. A portfolio is named by the
@@ -341,6 +360,61 @@ commitment signed this morning is registered, counting as nothing until a figure
 says otherwise — while figures with no as-of date are refused before anything is
 written.
 
+### Property
+
+**A property is the second holding that does not reduce to four numbers**, and
+it asks the same question in different words: what is the house worth, what is
+still owed on it, and what is therefore mine. A class total called Real estate
+holds the first of those and none of the rest — two houses added together lose
+both addresses, and a mortgage filed beside them is attached to no particular
+one. So a property is its own pair of rows too.
+
+**A property** (`finance_properties`, addressed `r3`) carries the portfolio that
+holds it, its address, and the page its value is published on — a Zillow
+home-details link, read through the same `safePublicURL` rule every stored link
+in this repository answers to, and dropped rather than refused when it is not
+one, because the address is the record. The address is encrypted exactly as a
+portfolio's name is; the portfolio number stays a readable column, for the same
+reason an investment's does. It carries no asset class: a house is real estate,
+and offering the choice would only be offering a way to be wrong.
+
+**A valuation** (`finance_valuations`, addressed `r3-20260920`) is one dated
+reading: what the property is worth, what is still owed on it, and which kind of
+figure the value is — three integers keyed by property and date, so a monthly
+refresh that runs twice replaces its own row exactly as a figure does.
+`VALUE_SOURCES` names the four kinds: **Zestimate**, **Appraisal**, **Sale
+price** and **Own estimate**. The Zestimate is the standing answer — public,
+dated, and the number the owner would reach for anyway — so anything else is a
+deliberate override and the row says which, because a figure somebody chose and
+a figure Zillow published are not the same kind of claim about a house.
+
+**A property reaches the totals as two ordinary figures**, on the same step
+function as everything else: its value under **Real estate** and its debt under
+**Mortgage**. Nothing downstream knows that a house is not a brokerage account —
+the breakdowns, the value over time and the stale check needed no second set of
+any of it, and the mortgage is negative because its class says so. The portfolio
+holds the difference, which is the one arithmetic step a house needs that a
+position does not. What the class breakdown cannot say, because the two figures
+sit in two classes and one of them is negative, is shown under **Real estate**
+in the breakdown: Value, and — only when something is owed — Owed and Equity.
+
+**Recording one by hand** is the third form under the ledger, **Enter a
+property**, because it is a third job: neither of the forms above has anywhere
+to put an address. A property with no valuation behind it is a whole record —
+that is how a house bought this morning is recorded, counting as nothing until a
+figure says otherwise — while figures with no as-of date are refused before
+anything is written, so a refused valuation never leaves a property saved behind
+it.
+
+**Keeping the value current** is [`real-estate-value/`](../real-estate-value/):
+a scheduled task that runs on the 1st of each month, reads each property's
+Zestimate off its own Zillow page in a browser, and files it through
+`finance-intake/property.mjs`. The addresses are not copied into that directory
+— the ledger is the list, and the run asks it. **A refresh that does not mention
+`debt` carries the last known balance forward** and says so in its preview;
+filing zero would erase a mortgage, and nothing afterwards would show that it
+had.
+
 **What this shape gave up**, deliberately: the per-account record, its
 institution and free-text name, liquidity, ownership share, rate, tags, notes,
 and the account number sealed with the passkey. There is no account entity left
@@ -361,8 +435,15 @@ scopes in one:
    what it will read, and afterwards the figures that reading folded into. A
    host with no page beside it — an extension tab, the phone — has no such
    block at all.
-2. **Everything you hold** — the totals, the breakdown, the value over time and
-   the holdings list, under one heading that says the scope is the whole ledger.
+2. **Net worth** — the totals, the breakdown, the value over time and the
+   holdings list, under one heading that says the scope is the whole ledger.
+   Named for the figure it leads with: *Everything you hold* described the
+   contents and not the question, and what all of it comes to, liabilities
+   included, is the one thing that phrase could not say. Assets appear beside
+   the net figure only when something is owed against them; with no liabilities
+   the two are one number printed twice under two names. The date the whole
+   ledger stands at is stated once here, and a portfolio or a line below repeats
+   it only when it is behind that date.
 3. **Add to the ledger** — the statement drop zone, what it read, the two
    forms — **Enter a figure** and **Enter a private investment** — and
    **Open an account page**. The two form names have to say they are two jobs;
@@ -400,10 +481,10 @@ of every tab, and a recognized page shows Finance beside the tab those figures
 would come off.
 
 What it does not do is answer a question nobody asked. An arrival like that is
-**quiet**: **Everything you hold** is not hidden but unbuilt — no balance is
+**quiet**: **Net worth** is not hidden but unbuilt — no balance is
 anywhere in the page — while the two blocks around it are ready at once: the
 page in front of the owner, and the ways of adding a figure. One action sits beside the
-title, **Show everything you hold** — named for the section it opens — and one
+title, **Show net worth** — named for the section it opens — and one
 press makes it the ledger it always was.
 Visiting a bank should not put a net worth on a shared screen, and it does not
 raise a passkey sheet either.
@@ -546,11 +627,13 @@ its record id — an envelope moved to another record does not open.
 
 Personal information uses the shared encrypted IndexedDB adapter and
 authenticated encrypted D1 records (`personal_records`) with per-record
-revisions. Finance uses the same device adapter over two relational tables,
-`finance_portfolios` (id, encrypted name/registration/currency, revision) and
+revisions. Finance uses the same device adapter over six relational tables:
+`finance_portfolios` (id, encrypted name/registration/currency, revision),
 `finance_marks` (portfolio, class, as_of as YYYYMMDD, cents — `WITHOUT ROWID`,
-keyed by the three that identify a figure). Portfolios and figures travel as one
-record stream, so one offline queue and one set of conflict rules cover both.
+keyed by the three that identify a figure), and the two pairs that do not reduce
+to a figure — `finance_holdings`/`finance_capital` and
+`finance_properties`/`finance_valuations`. All six travel as one record stream,
+so one offline queue and one set of conflict rules cover every row.
 The amounts are plain integers rather than an encrypted blob: that is what makes
 the shape relational and small, and a table of integers with no names in it says
 little without the portfolio table beside it.
@@ -570,8 +653,9 @@ offline.
 
 `/v1/personal[/…]` reuses the generic record store in `tools-api/src/travel.js`.
 `/v1/finance[/…]` is its own handler in `tools-api/src/finance.js`, because its
-rows are not records: a portfolio is addressed as `p3` and a figure as
-`3-1-20260919`. `/v1/finance/backfill` plans the retrofit on `GET` and performs
+rows are not records: a portfolio is addressed as `p3`, a figure as
+`3-1-20260919`, an investment as `h3` and its capital accounts as
+`h3-20260630`, a property as `r3` and its valuations as `r3-20260920`. `/v1/finance/backfill` plans the retrofit on `GET` and performs
 it on `POST`. Apply `tools-api/finance-schema.sql` and
 `tools-api/personal-schema.sql` before deploying the code that depends on them;
 both are additive `CREATE TABLE IF NOT EXISTS` statements that leave existing

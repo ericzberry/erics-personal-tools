@@ -1,0 +1,4 @@
+{
+  "_help": "Properties the monthly Zestimate refresh should leave alone, keyed by ledger property number (r1, r2...). Delete an entry to resume it. Use this when a value has been set deliberately — an appraisal or a sale price — and should not be overwritten by the next Zestimate.",
+  "paused": {}
+}

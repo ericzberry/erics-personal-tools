@@ -63,3 +63,37 @@ CREATE TABLE IF NOT EXISTS finance_capital (
   commitment INTEGER NOT NULL,
   PRIMARY KEY (holding, as_of)
 ) WITHOUT ROWID;
+
+-- A property. This is the other holding that does not reduce to an asset-class
+-- line, and for the same reason the investment above does not: the question is
+-- not "how much is in real estate" but "what is this house worth, what is still
+-- owed on it, and what is therefore mine". Two houses folded into one Real
+-- estate total lose both addresses, and a mortgage filed beside them as a
+-- liability is attached to no particular house.
+--
+-- The address and the page its value is published on are the only text here,
+-- encrypted exactly like a portfolio's name. `portfolio` stays a readable
+-- column because deleting a portfolio has to be able to find what it held.
+CREATE TABLE IF NOT EXISTS finance_properties (
+  id INTEGER PRIMARY KEY,
+  portfolio INTEGER NOT NULL REFERENCES finance_portfolios(id),
+  value TEXT NOT NULL,
+  revision TEXT NOT NULL
+);
+
+-- One dated reading of a property: what it is worth, what is still owed on it,
+-- and which kind of figure the value is — a published Zestimate, an appraisal,
+-- a sale price or the owner's own number.
+--
+-- The primary key is the idempotency rule, as it is everywhere else here: one
+-- valuation per property and date, so a monthly refresh that runs twice, or a
+-- change queued offline and replayed by the Worker, replaces its own row
+-- instead of duplicating it.
+CREATE TABLE IF NOT EXISTS finance_valuations (
+  property INTEGER NOT NULL REFERENCES finance_properties(id),
+  as_of INTEGER NOT NULL,
+  cents INTEGER NOT NULL,
+  debt INTEGER NOT NULL,
+  source INTEGER NOT NULL,
+  PRIMARY KEY (property, as_of)
+) WITHOUT ROWID;

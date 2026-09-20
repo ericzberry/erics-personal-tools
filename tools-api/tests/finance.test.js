@@ -288,3 +288,58 @@ test('a live account page dates its own balances, and its furniture is left out'
   await readFinanceUpdates(connection,{text:page.text,today:page.today,live:'yes',institution:{}},fetcher);
   assert.equal(JSON.stringify(body).includes('signed in to right now'),false);
 });
+
+// A property is the other holding that does not reduce to an asset-class line,
+// and its routes are the investment's routes with different columns. What this
+// checks is that nothing about a house needed a different shape: the address is
+// the only text and it is encrypted, the valuation is integers, the write is
+// idempotent by property and date, and deleting the portfolio takes both with
+// it rather than leaving rows nothing can name.
+test('a property keeps its address encrypted, its valuations in integers, and dies with its portfolio',async()=>{
+  const {sql,env}=environment('finance-schema.sql');
+  await request(env,'/v1/finance/p1','PUT',{row:'portfolio',name:'Eric and Ariana Berry Estate',kind:1,currency:'USD',revision:null});
+
+  // A property cannot be filed into a portfolio that does not exist, and a
+  // valuation cannot be filed against a property that does not exist.
+  assert.equal((await request(env,'/v1/finance/r1','PUT',{row:'property',portfolio:9,name:'123 Example St',revision:null})).status,400);
+  assert.equal((await request(env,'/v1/finance/r1-20260920','PUT',{row:'valuation',value:100,revision:null})).status,400);
+
+  const property={row:'property',portfolio:1,name:'123 Example St, Town ST 00000',
+    link:'https://www.zillow.com/homedetails/123-Example-St/1234_zpid/',revision:null};
+  for(const change of [{name:''},{portfolio:0}])
+    assert.equal((await request(env,'/v1/finance/r1','PUT',{...property,...change})).status,400,JSON.stringify(change));
+  const saved=(await (await request(env,'/v1/finance/r1','PUT',property)).json()).record;
+  assert.deepEqual([saved.number,saved.portfolio,saved.name],[1,1,'123 Example St, Town ST 00000']);
+  // The address is text, so it is encrypted exactly like a portfolio's name.
+  assert.equal(sql.prepare('SELECT value FROM finance_properties').get().value.includes('Example'),false);
+  // The portfolio stays readable, because deleting one has to find what it held.
+  assert.equal(sql.prepare('SELECT portfolio FROM finance_properties').get().portfolio,1);
+
+  assert.equal((await request(env,'/v1/finance/r1-20260920','PUT',{row:'valuation',value:610000,debt:-1,revision:null})).status,400);
+  assert.equal((await request(env,'/v1/finance/r1-20260920','PUT',{row:'valuation',value:610000,source:99,revision:null})).status,400);
+  const first=(await (await request(env,'/v1/finance/r1-20260920','PUT',{row:'valuation',value:610000,debt:320000,source:1,revision:null})).json()).record;
+  assert.deepEqual([first.property,first.asOf,first.value,first.debt,first.source],[1,'2026-09-20',610000,320000,1]);
+  assert.deepEqual(sql.prepare('SELECT * FROM finance_valuations').all().map(row=>({...row})),
+    [{property:1,as_of:20260920,cents:61000000,debt:32000000,source:1}]);
+  // The row's own content is its revision, so no revision column is stored.
+  assert.equal(first.revision,'61000000:32000000:1');
+
+  // Keyed by property and date: a monthly refresh that runs twice replaces its
+  // own row rather than filing the house twice.
+  assert.equal((await request(env,'/v1/finance/r1-20260920','PUT',{row:'valuation',value:99,revision:null})).status,409);
+  const again=(await (await request(env,'/v1/finance/r1-20260920','PUT',{row:'valuation',value:615000,debt:319000,source:1,revision:first.revision})).json()).record;
+  assert.equal(again.value,615000);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_valuations').get().n,1);
+
+  // A second date is filed alongside the first rather than replacing it.
+  await request(env,'/v1/finance/r1-20261020','PUT',{row:'valuation',value:620000,debt:317000,source:1,revision:null});
+  const snapshot=await (await request(env,'/v1/finance/snapshot')).json();
+  assert.equal(snapshot.records.find(entry=>entry.row==='property').link,'https://www.zillow.com/homedetails/123-Example-St/1234_zpid/');
+  assert.deepEqual(snapshot.records.filter(entry=>entry.row==='valuation').map(entry=>entry.asOf),['2026-10-20','2026-09-20']);
+
+  // Deleting the portfolio takes the property and its valuations with it.
+  const held=(await (await request(env,'/v1/finance/p1')).json()).record;
+  assert.equal((await request(env,'/v1/finance/p1','DELETE',{revision:held.revision})).status,200);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_properties').get().n,0);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_valuations').get().n,0);
+});

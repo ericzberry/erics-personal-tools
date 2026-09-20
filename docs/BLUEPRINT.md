@@ -129,7 +129,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   and the direct-investment rows — a holding and its dated capital accounts —
   with `positionsOn` for what a position is worth and what it cost, and
   `foldCapital`, which ties a capital account statement to the investment it
-  names),
+  names; plus `VALUE_SOURCES` and the property rows — an address and its dated
+  valuations — with `propertiesOn` for what a property is worth, what is owed on
+  it and what is left),
   `personal-data.js`/`personal-offline.js`,
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored, plus `birthdaysAhead`
@@ -264,7 +266,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   reuse it for `card_records`, `personal_records`,
   `reminder_records`, `gift_records` and `size_records`.
   `src/finance.js` does not: the ledger is two relational tables, so it has its
-  own handler, its own `p3` / `3-1-20260919` addressing, and the
+  own handler, its own `p3` / `3-1-20260919` / `h3` / `r3` addressing, and the
   `/v1/finance/backfill` route that retrofits the record-per-account table.
   `src/capture.js` is not a store: it reads one typed note into a record one of
   them already accepts. `src/push.js` and `src/web-push.js` are the
@@ -300,7 +302,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   be sent an image — never copy model IDs into features).
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
-  (`finance_portfolios`, `finance_marks`, `finance_holdings`, `finance_capital`), `personal-schema.sql` (`personal_records`),
+  (`finance_portfolios`, `finance_marks`, `finance_holdings`, `finance_capital`,
+  `finance_properties`, `finance_valuations`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
@@ -328,7 +331,10 @@ Not an app: a small operator directory Claude uses to file statements into the
 Finance ledger over `/v1/finance`, so figures reach the app without being typed
 in. `ledger.mjs` is dependency-free Node that lists portfolios with their
 figures and appends dated ones — it cannot delete, and previews every write
-until `--confirm`. `backfill.mjs` drives the one-time retrofit of the
+until `--confirm`. `property.mjs` is its counterpart for the rows that are not
+figures: it lists the properties with their value, debt and equity, and appends
+dated valuations, carrying a mortgage forward rather than erasing one the
+reading did not mention. `backfill.mjs` drives the one-time retrofit of the
 record-per-account ledger through `/v1/finance/backfill`, previewing until
 `--confirm`. `api.mjs` is the bearer token and the request wrapper both scripts
 share. `RUNBOOK.md` is the procedure a run follows; `README.md` covers setup and
@@ -338,6 +344,15 @@ login keychain (`erics-tools-api` / `API_TOKEN`), then a gitignored
 gates every route, so nothing there is reachable without presenting it first. Changing the ledger's record shape means re-reading
 `chrome-sidebar/src/finance-data.js`, which is the validator both this and the
 Worker answer to.
+
+## real-estate-value/
+
+Not an app: the monthly Zestimate refresh. A scheduled Claude task follows
+`RUNBOOK.md`, reads each property's Zestimate off its own Zillow page in a
+browser, and files it through `finance-intake/property.mjs`. The addresses are
+not copied here — the ledger is the list, and the run asks it with
+`property.mjs list --json`. `skip.json` names properties the run leaves alone;
+`log.md` is one line per run. The run sends no email.
 
 ## scripts/
 

@@ -14,6 +14,7 @@ const fail=(status,message)=>{throw {status,message};};
 // precisely because a row is small.
 const AAD=number=>`finance:p${number}`;
 const HOLDING_AAD=number=>`finance:h${number}`;
+const PROPERTY_AAD=number=>`finance:r${number}`;
 const portfolioRecord=(row,value)=>({id:`p${row.id}`,row:'portfolio',revision:row.revision,number:row.id,...value});
 const markRecord=row=>({id:`${row.portfolio}-${row.class}-${row.as_of}`,row:'mark',
   // A figure's revision is the figure itself. Nothing else identifies a version
@@ -31,16 +32,29 @@ const capitalRecord=row=>({id:`h${row.holding}-${row.as_of}`,row:'capital',
   holding:row.holding,asOf:dateText(row.as_of),value:fromCents(row.cents),
   contributed:fromCents(row.contributed),distributed:fromCents(row.distributed),commitment:fromCents(row.commitment)});
 
+// A property and its dated valuations, exactly like an investment and its
+// capital accounts: an address that can be corrected and sealed, and dated rows
+// whose own content is their revision.
+const propertyRecord=(row,value)=>({id:`r${row.id}`,row:'property',revision:row.revision,number:row.id,portfolio:row.portfolio,...value});
+const valuationRecord=row=>({id:`r${row.property}-${row.as_of}`,row:'valuation',
+  revision:`${row.cents}:${row.debt}:${row.source}`,
+  property:row.property,asOf:dateText(row.as_of),value:fromCents(row.cents),
+  debt:fromCents(row.debt),source:row.source});
+
 export async function financeRecords(env){
-  const [portfolios,marks,holdings,capital]=await Promise.all([
+  const [portfolios,marks,holdings,capital,properties,valuations]=await Promise.all([
     env.DB.prepare('SELECT id, value, revision FROM finance_portfolios ORDER BY id').all(),
     env.DB.prepare('SELECT portfolio, class, as_of, cents FROM finance_marks ORDER BY portfolio, class, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_holdings ORDER BY id').all(),
-    env.DB.prepare('SELECT holding, as_of, cents, contributed, distributed, commitment FROM finance_capital ORDER BY holding, as_of DESC').all()
+    env.DB.prepare('SELECT holding, as_of, cents, contributed, distributed, commitment FROM finance_capital ORDER BY holding, as_of DESC').all(),
+    env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_properties ORDER BY id').all(),
+    env.DB.prepare('SELECT property, as_of, cents, debt, source FROM finance_valuations ORDER BY property, as_of DESC').all()
   ]);
   const named=await Promise.all(portfolios.results.map(async row=>portfolioRecord(row,await decryptSettings(row.value,AAD(row.id),env))));
   const invested=await Promise.all(holdings.results.map(async row=>holdingRecord(row,await decryptSettings(row.value,HOLDING_AAD(row.id),env))));
-  return [...named,...marks.results.map(markRecord),...invested,...capital.results.map(capitalRecord)];
+  const owned=await Promise.all(properties.results.map(async row=>propertyRecord(row,await decryptSettings(row.value,PROPERTY_AAD(row.id),env))));
+  return [...named,...marks.results.map(markRecord),...invested,...capital.results.map(capitalRecord),
+    ...owned,...valuations.results.map(valuationRecord)];
 }
 
 export async function finance(request,env,readValue,json){
@@ -61,6 +75,8 @@ export async function finance(request,env,readValue,json){
   if(ref.row==='portfolio')return json(await portfolioRoute(request,env,readValue,ref));
   if(ref.row==='holding')return json(await holdingRoute(request,env,readValue,ref));
   if(ref.row==='capital')return json(await capitalRoute(request,env,readValue,ref));
+  if(ref.row==='property')return json(await propertyRoute(request,env,readValue,ref));
+  if(ref.row==='valuation')return json(await valuationRoute(request,env,readValue,ref));
   return json(await markRoute(request,env,readValue,ref));
 }
 
@@ -81,6 +97,8 @@ async function portfolioRoute(request,env,readValue,ref){
       env.DB.prepare('DELETE FROM finance_marks WHERE portfolio = ?').bind(ref.number),
       env.DB.prepare('DELETE FROM finance_capital WHERE holding IN (SELECT id FROM finance_holdings WHERE portfolio = ?)').bind(ref.number),
       env.DB.prepare('DELETE FROM finance_holdings WHERE portfolio = ?').bind(ref.number),
+      env.DB.prepare('DELETE FROM finance_valuations WHERE property IN (SELECT id FROM finance_properties WHERE portfolio = ?)').bind(ref.number),
+      env.DB.prepare('DELETE FROM finance_properties WHERE portfolio = ?').bind(ref.number),
       env.DB.prepare('DELETE FROM finance_portfolios WHERE id = ? AND revision = ?').bind(ref.number,previous.revision)
     ]);
     return {ok:true};
@@ -188,6 +206,70 @@ async function capitalRoute(request,env,readValue,ref){
     env.DB.prepare('DELETE FROM finance_capital WHERE holding = ? AND as_of NOT IN (SELECT as_of FROM finance_capital WHERE holding = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.holding,ref.holding,MAX_DATES)
   ]);
   return {record:capitalRecord(row)};
+}
+
+// A property is a portfolio's, and its valuations are its own, so these two
+// routes mirror the investment and capital routes exactly. Nothing about a
+// house needed a different shape; only the columns differ.
+async function propertyRoute(request,env,readValue,ref){
+  const previous=await env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_properties WHERE id = ?').bind(ref.number).first();
+  const saved=previous?await decryptSettings(previous.value,PROPERTY_AAD(ref.number),env):null;
+  if(request.method==='GET'){
+    if(!previous)fail(404,'Property not found. Refresh your records.');
+    return {record:propertyRecord(previous,saved)};
+  }
+  const input=JSON.parse(await readValue(request));
+  if((previous?.revision??null)!==(input.revision??null))fail(409,'This changed on another device. Cancel your edits and refresh before trying again.');
+  if(request.method==='DELETE'){
+    if(!previous)return {ok:true};
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM finance_valuations WHERE property = ?').bind(ref.number),
+      env.DB.prepare('DELETE FROM finance_properties WHERE id = ? AND revision = ?').bind(ref.number,previous.revision)
+    ]);
+    return {ok:true};
+  }
+  const context=saved?{...saved,row:'property',number:ref.number,portfolio:previous.portfolio}:{};
+  const value=normalizeFinance({...input,row:'property',number:ref.number},context);
+  const owner=await env.DB.prepare('SELECT id FROM finance_portfolios WHERE id = ?').bind(value.portfolio).first();
+  if(!owner)fail(400,'Save the portfolio before saving a property in it.');
+  const row={id:ref.number,portfolio:value.portfolio,revision:crypto.randomUUID()};
+  const stored=await encryptSettings({name:value.name,link:value.link},PROPERTY_AAD(ref.number),env);
+  const result=previous
+    ? await env.DB.prepare('UPDATE finance_properties SET portfolio = ?, value = ?, revision = ? WHERE id = ? AND revision = ?').bind(value.portfolio,stored,row.revision,ref.number,previous.revision).run()
+    : await env.DB.prepare('INSERT INTO finance_properties (id, portfolio, value, revision) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING').bind(ref.number,value.portfolio,stored,row.revision).run();
+  if(!result.meta.changes)fail(409,'This changed. Refresh before saving.');
+  return {record:propertyRecord(row,value)};
+}
+
+async function valuationRoute(request,env,readValue,ref){
+  const as_of=dateNumber(ref.asOf);
+  const where=[ref.property,as_of];
+  const columns='property, as_of, cents, debt, source';
+  const previous=await env.DB.prepare(`SELECT ${columns} FROM finance_valuations WHERE property = ? AND as_of = ?`).bind(...where).first();
+  if(request.method==='GET'){
+    if(!previous)fail(404,'Valuation not found. Refresh your records.');
+    return {record:valuationRecord(previous)};
+  }
+  const input=JSON.parse(await readValue(request));
+  if((previous?valuationRecord(previous).revision:null)!==(input.revision??null))fail(409,'This valuation changed on another device. Cancel your edits and refresh before trying again.');
+  if(request.method==='DELETE'){
+    if(!previous)return {ok:true};
+    await env.DB.prepare('DELETE FROM finance_valuations WHERE property = ? AND as_of = ?').bind(...where).run();
+    return {ok:true};
+  }
+  const value=normalizeFinance({...input,row:'valuation',property:ref.property,asOf:ref.asOf});
+  const owner=await env.DB.prepare('SELECT id FROM finance_properties WHERE id = ?').bind(ref.property).first();
+  if(!owner)fail(400,'Save the property before saving a valuation for it.');
+  const row={property:ref.property,as_of,cents:toCents(value.value),debt:toCents(value.debt),source:value.source};
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO finance_valuations (${columns}) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(property, as_of) DO UPDATE SET cents = excluded.cents, debt = excluded.debt, source = excluded.source`)
+      .bind(row.property,row.as_of,row.cents,row.debt,row.source),
+    // The same bound the figures keep, for the same reason, and today's
+    // valuation is never the one dropped.
+    env.DB.prepare('DELETE FROM finance_valuations WHERE property = ? AND as_of NOT IN (SELECT as_of FROM finance_valuations WHERE property = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.property,ref.property,MAX_DATES)
+  ]);
+  return {record:valuationRecord(row)};
 }
 
 // The upgrade path for data that already exists. It is re-runnable: every write

@@ -397,11 +397,24 @@ export const SettingsLink=(title,href)=>Link(title,href,{className:'settings-lin
 // record's first. `extra` is what this record raised and only it can answer — a
 // delete confirmation, a sync conflict, a revealed value — kept inside the row
 // so it stays visibly attached to the record that asked.
-export function RecordRow({title,detail,notes='',actions=[],extra=[]}) {
+// A record whose one important number belongs on its own line takes `figure`,
+// and `meta` for the qualification that number needs — an older date, a figure
+// still waiting to sync. Both ride on the name's line, so a run of records is
+// read down one column of names and one column of amounts instead of down a
+// name with a grey sentence hanging under it. A record with neither is the
+// same row it always was.
+export function RecordRow({title,detail,meta='',figure='',notes='',actions=[],extra=[]}) {
   const lines=(Array.isArray(notes)?notes:[notes]).filter(Boolean);
+  const verbs=ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'});
+  // The amount and the record's verbs are one block, the way a group's total
+  // and its verbs are: a name too long for the line takes the line, and the two
+  // drop under it together rather than the verbs being stranded on a row of
+  // their own beneath every record.
   return Section([
     Stack([Strong(title,{className:'record-name'}),
-      ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})],{className:'record-line'}),
+      meta?Label(meta,{className:'record-meta'}):null,
+      figure?Stack([Strong(figure),verbs],{className:'record-figure'}):verbs],
+      {className:`record-line${figure?' record-line--figure':''}`}),
     Note(detail),...lines.map(line=>Text(line)),...extra.filter(Boolean)
   ],{className:'record-row'});
 }

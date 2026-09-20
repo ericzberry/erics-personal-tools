@@ -1,8 +1,8 @@
 import * as UI from './ui.js';
-import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,classLabel,registrationLabel,vehicleLabel,vehicleShort,classSide} from '../finance-data.js';
+import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,classLabel,registrationLabel,vehicleLabel,vehicleShort,valueSourceLabel,classSide} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
 import {FINANCE_SITES} from '../account-sites.js';
-const {Stack,Section,GroupTitle,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link}=UI;
+const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link}=UI;
 
 // Where each institution prints its balances. Reaching the figures is its own
 // small errand — a bank's own front page is marketing, and the account summary
@@ -31,6 +31,7 @@ export const Figure=({label,value,id,tone=''})=>Stack([Label(label,{className:'f
 export const classOptions=()=>ASSET_CLASSES.map(entry=>({text:`${entry.label}${entry.side==='liability'?' (liability)':''}`,value:String(entry.code)}));
 export const registrationOptions=()=>REGISTRATIONS.map(entry=>({text:entry.label,value:String(entry.code)}));
 export const vehicleOptions=()=>VEHICLES.map(entry=>({text:entry.label,value:String(entry.code)}));
+export const sourceOptions=()=>VALUE_SOURCES.map(entry=>({text:entry.label,value:String(entry.code)}));
 // An investment's value is somebody's asset. A liability class would be a
 // category error here, so it is not offered.
 export const investedClassOptions=()=>ASSET_CLASSES.filter(entry=>entry.side==='asset').map(entry=>({text:entry.label,value:String(entry.code)}));
@@ -48,6 +49,21 @@ export const positionDetail=(position,currency)=>[
   position.distributed?`Returned ${money(position.distributed,currency)}`:'',
   position.unfunded?`Unfunded ${money(position.unfunded,currency)}`:'',
   position.multiple===null?'':`${position.multiple.toFixed(2)}×`
+].filter(Boolean).join(' · ');
+
+// What a property is worth to its owner, beside what it is worth. A house and
+// its mortgage reach the totals as two figures in two classes, one of them
+// negative, and nothing in a breakdown puts them back together — so the row
+// says the three things the value alone cannot: where the number came from,
+// what is still owed, and what is left.
+//
+// Only the parts that exist. A house with nothing owed on it has equity equal
+// to its value, and printing that twice would say only that this is a shape
+// with three slots in it.
+export const propertyDetail=(entry,currency)=>[
+  valueSourceLabel(entry.source),
+  entry.debt?`Mortgage ${money(entry.debt,currency)}`:'',
+  entry.debt?`Equity ${money(entry.equity,currency)}`:''
 ].filter(Boolean).join(' · ');
 
 // One action group, two kinds of review — extracted rather than written twice
@@ -196,7 +212,7 @@ export function FinanceView(){
   return Stack([
     ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
     // Three blocks, one scope each, in this order: the page in front of you,
-    // everything you hold, and the ways of putting a figure in. They used to
+    // what the whole ledger comes to, and the ways of putting a figure in. They used to
     // alternate — a site's reading, the whole ledger's totals, the page action
     // again, the whole ledger's list — so a reader had to work out which scope
     // each block meant, and "Position" sitting directly under "E*TRADE" read as
@@ -212,12 +228,21 @@ export function FinanceView(){
         // exists to stop, in miniature.
         Stack([],{id:'finance-capital-page'})
       ]}),
-    SettingsGroup({title:'Everything you hold',level:2,id:'finance-ledger',children:[
+    // Named for the figure it leads with. "Everything you hold" described the
+    // contents and not the question — the block exists to answer what all of
+    // it comes to, liabilities included, which is the one thing "everything
+    // you hold" cannot say.
+    SettingsGroup({title:'Net worth',level:2,id:'finance-ledger',children:[
       Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
       Stack([],{id:'finance-totals',className:'finance-totals'}),
       Notice('',{id:'finance-stale',hidden:true}),
-      Disclosure('Breakdown',[Stack([],{id:'finance-breakdown'})],{id:'finance-breakdown-panel'}),
-      Disclosure('Value over time',[Stack([],{id:'finance-trend'})],{id:'finance-trend-panel'}),
+      Disclosure('Breakdown',[Stack([],{id:'finance-breakdown'})],{id:'finance-breakdown-panel',className:'ledger-panel'}),
+      // Quarterly or daily is a question about this table and nothing else, so
+      // the choice lives inside it rather than beside the totals.
+      Disclosure('Value over time',[
+        Stack([],{id:'finance-trend-switch',className:'currency-switch trend-switch',hidden:true}),
+        Stack([],{id:'finance-trend'})
+      ],{id:'finance-trend-panel',className:'ledger-panel'}),
       Stack([],{id:'finance-list',className:'travel-list'})
     ]}),
     SettingsGroup({title:'Add to the ledger',level:2,children:[
@@ -271,6 +296,24 @@ export function FinanceView(){
       ],{id:'finance-inv-form',className:'form-stack'})
       ],{id:'finance-investment'})
       ,
+      // A third form, because it is a third job. A property is an address and
+      // two numbers that belong together — what it is worth and what is owed on
+      // it — and neither of the forms above has anywhere to put an address.
+      Disclosure('Enter a property',[
+      Form([
+        Strong('New property',{id:'finance-prop-title'}),
+        FormField({id:'finance-prop-portfolio',label:'Portfolio',kind:'select',options:[]}),
+        FormField({id:'finance-prop-name',label:'Address',kind:'text',placeholder:'e.g. 123 Example St, Town ST 00000'}),
+        FormField({id:'finance-prop-link',label:'Zillow page',kind:'text',placeholder:'https://www.zillow.com/homedetails/…'}),
+        FormField({id:'finance-prop-value',label:'Market value',kind:'text',placeholder:'0.00'}),
+        FormField({id:'finance-prop-source',label:'Value from',kind:'select',options:sourceOptions()}),
+        FormField({id:'finance-prop-debt',label:'Still owed',kind:'text',placeholder:'0.00'}),
+        FormField({id:'finance-prop-asOf',label:'As of',kind:'date'}),
+        Notice('',{id:'finance-prop-status',role:'status'}),
+        ActionGroup([Button('Save property',{id:'finance-prop-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-prop-cancel',variant:'secondary'})])
+      ],{id:'finance-prop-form',className:'form-stack'})
+      ],{id:'finance-property'})
+      ,
       // Closed until it is wanted. Getting to the figures is a way of putting
       // one in the ledger, which is the scope this block already has, so it
       // belongs here rather than as a fourth heading of its own.
@@ -285,9 +328,20 @@ export function FinanceView(){
 // The portfolio's own verbs ride on its heading line beside the total, the way
 // a figure's do on its own line, rather than trailing the run as a stray row of
 // words that reads as one more figure.
-export function PortfolioGroup({name,meta,total,currency,rows,actions=[]}){
+// What kind of account it is rides on the heading as a tag, beside the name it
+// qualifies. "Taxable" set as a grey word under the heading belonged to
+// nothing the eye could find — it read as a label for the figures below it
+// rather than as what the account is.
+//
+// The date is stated once, above, for the whole ledger. A portfolio repeats it
+// only when its own newest figure is older than that, and a line inside it only
+// when that line is older still. A date printed on every line was the same fact
+// written six times, and it was what made the list unreadable.
+export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[]}){
   return Section([
-    Stack([GroupTitle(name,{className:'record-group-title'}),
+    Stack([
+      Stack([GroupTitle(name,{className:'record-group-title'}),
+        kind?Badge(kind,{className:'pill portfolio-kind'}):null],{className:'group-name'}),
       // The total and the portfolio's verbs are one block, so a narrow sidebar
       // drops them under the name together instead of stranding the actions on
       // a line of their own.
@@ -299,28 +353,82 @@ export function PortfolioGroup({name,meta,total,currency,rows,actions=[]}){
   ],{className:'record-group'});
 }
 
-export function BreakdownList(title,rows,currency){
+// A breakdown is a proportion, so every line shows the one it is: its share
+// drawn behind the row, and the percentage beside the amount. Without it the
+// list was four columns of money that the reader had to divide in their head
+// against a total further up the screen.
+//
+// A line that comes to nothing is left out. The ledger never deletes a figure —
+// a reading corrected later is superseded by a zero under the same portfolio,
+// class and date — so a zeroed class is a figure no longer held, not a holding
+// worth nothing, and it has no place in a breakdown of what is held.
+//
+// `shares` is off where the rows are not parts of one whole: what a private
+// investment committed, funded, returned and is worth do not add up to
+// anything, and a percentage of their sum would be arithmetic about nothing.
+export function BreakdownList(title,rows,currency,{shares=true}={}){
+  const live=rows.filter(row=>Math.round(row.total*100)!==0);
+  const whole=shares?live.reduce((total,row)=>total+Math.max(0,row.total),0):0;
   return Stack([
     GroupTitle(title,{className:'record-group-title'}),
-    ...(rows.length?rows.map(row=>Stack([Label(row.label),Strong(money(row.total,currency))],{className:'breakdown-row'})):[Note('Nothing recorded yet.')])
+    ...(live.length?live.map(row=>{
+      const share=whole>0&&row.total>0?row.total/whole:0;
+      return Stack([
+        Label(row.label,{className:'breakdown-name'}),
+        share?Label(share<0.005?'<1%':`${Math.round(share*100)}%`,{className:'breakdown-share'}):null,
+        Strong(money(row.total,currency))
+      ],{className:'breakdown-row breakdown-line',...(share?{style:`--share:${(share*100).toFixed(1)}%`}:{})});
+    }):[Note('Nothing recorded yet.')])
   ],{className:'breakdown-group'});
 }
 
-export function TrendTable(series,currency){
-  if(series.length<2)return Note('Two dated figures needed.');
-  const recent=series.slice(-12);
-  const first=series[0],last=series.at(-1);
-  const change=last.net-first.net;
+export const quarterOf=asOf=>`${asOf.slice(0,4)} Q${Math.floor((Number(asOf.slice(5,7))-1)/3)+1}`;
+
+// Value over time, read off a ledger that is still being filled in.
+//
+// Two dated points are only comparable when the same figures stand behind both.
+// A reading taken while half the accounts were still to be entered is not a
+// smaller net worth, it is a smaller ledger, and subtracting one from the other
+// announced a two-million-dollar rise that never happened. So every point says
+// how much of the ledger it covers, and a change is drawn only between two
+// points that cover all of it.
+//
+// Quarterly by default, because that is the grain these figures have. A quarter
+// is shown by its last reading — the one with everything in it — and the
+// part-filled days spent getting there stop being rows of their own. Daily is
+// there for the run-up to today, where every reading is worth seeing.
+export function TrendTable(series,currency,{period='quarter'}={}){
+  if(!series.length)return Note('No dated figures yet.');
+  // The newest point carries every figure the ledger holds, because a figure
+  // stands until a later one replaces it. So it is the measure of a full
+  // reading, and an older point is partial exactly when it holds fewer.
+  const whole=series.at(-1).figures;
+  // A later reading in the same quarter replaces the earlier one in the map,
+  // so each quarter keeps the last reading taken in it.
+  const points=period==='quarter'?[...new Map(series.map(point=>[quarterOf(point.asOf),point])).values()]:series;
+  const rows=points.slice(-12).map(point=>({...point,
+    label:period==='quarter'?quarterOf(point.asOf):point.asOf,
+    complete:point.figures>=whole}));
+  const full=rows.filter(row=>row.complete);
+  const change=full.length>1?full.at(-1).net-full[0].net:null;
+  const headline=change!==null
+    ?`${money(change,currency)} ${change<0?'lower':'higher'} than ${full[0].label}.`
+    :rows.length>1?`Earlier readings covered part of the ledger, so ${full.at(-1)?.label||rows.at(-1).label} is the first full picture.`:'';
+  let previous=null;
   return Stack([
-    Note(`${money(change,currency)} ${change<0?'lower':'higher'} than ${first.asOf}, across ${series.length} dated figure${series.length===1?'':'s'}.`),
-    ...recent.map((point,index)=>{
-      const previous=recent[index-1];
-      const delta=previous?point.net-previous.net:null;
+    headline?Note(headline):null,
+    ...rows.map(row=>{
+      const delta=row.complete&&previous?row.net-previous.net:null;
+      if(row.complete)previous=row;
       return Stack([
-        Label(point.asOf),
-        Strong(money(point.net,currency)),
-        Note(delta===null?`${point.figures} figure${point.figures===1?'':'s'}`:`${delta>=0?'+':''}${money(delta,currency)}`)
-      ],{className:'trend-row'});
+        Label(row.label),
+        Strong(money(row.net,currency)),
+        // Partial coverage is said in words, never in a colour: this point is
+        // missing figures the newest one has, and that is why no change is
+        // drawn against it.
+        Note(row.complete?(delta===null?'':`${delta>=0?'+':''}${money(delta,currency)}`)
+          :`${row.figures} of ${whole} figures`)
+      ],{className:`trend-row${row.complete?'':' trend-row--partial'}`});
     })
   ],{className:'trend-table'});
 }

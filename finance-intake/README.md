@@ -142,6 +142,54 @@ recognize is filed under the name the source gave it and registered by what that
 name says — a trust is a trust, an LLC is an entity — rather than joining a
 portfolio it was never part of. Adding a holder is one line in that roster.
 
+## Properties
+
+A house is not a figure, so it is not filed as one. `property.mjs` writes the
+two rows a property is — the address, and one dated valuation per reading — and
+the app counts its value under **Real estate** and its debt under **Mortgage**,
+so net worth holds the equity.
+
+```bash
+node finance-intake/property.mjs list                 # every property: value, debt, equity
+node finance-intake/property.mjs list --json          # the same, machine-readable
+node finance-intake/property.mjs save values.json     # preview — writes nothing
+node finance-intake/property.mjs save values.json --confirm
+```
+
+`save` takes a JSON array. An entry files a valuation against a property that
+already exists:
+
+```json
+[{"property": "r1", "value": 1240000, "source": "zestimate", "asOf": "2026-10-01"}]
+```
+
+…or creates the property first:
+
+```json
+[
+  {"create": true, "portfolio": "Estate",
+   "address": "123 Example St, Town ST 00000",
+   "link": "https://www.zillow.com/homedetails/123-Example-St/1234_zpid/",
+   "value": 1240000, "source": "zestimate", "asOf": "2026-09-20"}
+]
+```
+
+`property` accepts its number (`r1` or `1`), an exact address, or a unique
+fragment of one. **A fragment matching two properties is an error, not a coin
+flip** — use the number. `source` is one of `zestimate`, `appraisal`, `sale`,
+`owner`, and defaults to `zestimate`. `debt` is what is still owed, as a
+positive number; the app applies the sign.
+
+### Leaving `debt` out is not the same as filing zero
+
+Leaving it out **carries the last known balance forward**, and the preview says
+that it did. Filing `0` means the mortgage is paid off, and nothing afterwards
+shows the difference. A refresh that knows the new Zestimate and nothing about
+the loan must leave the field out.
+
+The monthly refresh that keeps each Zestimate current is
+[real-estate-value/](../real-estate-value/).
+
 ## Retrofitting the old ledger
 
 The ledger that came before kept a record per account, each with its own value
@@ -188,7 +236,8 @@ its figures is newest by date.
 
 | File | Purpose |
 |------|---------|
-| `ledger.mjs` | The CLI. Read and append only. |
+| `ledger.mjs` | The CLI for figures. Read and append only. |
+| `property.mjs` | The same for properties and their dated valuations. |
 | `backfill.mjs` | The one-time retrofit of the record-per-account ledger. |
 | `api.mjs` | The token lookup and request wrapper both scripts share. |
 | `RUNBOOK.md` | The procedure Claude follows for each intake. |

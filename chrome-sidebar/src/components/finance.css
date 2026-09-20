@@ -3,21 +3,48 @@
 .figure-label{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .figure-value{font-size:1.05rem;font-variant-numeric:tabular-nums}
 .figure-value--negative{color:var(--danger,#8c2f26)}
+/* Not money. The date the figures stand at qualifies them, so it is set below
+   their weight rather than beside it as a fifth amount. */
+.figure-value--date{font-size:.95rem;font-weight:500;color:var(--muted)}
 .currency-switch{display:flex;flex-wrap:wrap;gap:6px}
-.breakdown-group{display:flex;flex-direction:column;gap:2px;margin-block-end:8px}
+.breakdown-group{display:flex;flex-direction:column;gap:2px;margin-block-end:10px}
 .breakdown-row,.trend-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+/* A breakdown line carries its own share, drawn behind it rather than in a
+   column of its own: the bar costs no height, and a list of amounts becomes a
+   list of proportions without another number to read. `--share` is set on the
+   row; a line with no share of its own simply has no bar. */
+.breakdown-line{padding:2px 5px;border-radius:4px;
+  background:linear-gradient(90deg,var(--sage) 0 var(--share,0%),transparent var(--share,0%))}
+.breakdown-name{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.breakdown-share{flex:0 0 auto;color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums}
+/* The three disclosures inside the ledger are peers of the run of portfolios
+   under them, so their summaries carry a group's weight rather than the 12px
+   of a footnote lost between two blocks of figures. */
+.finance-ledger .ledger-panel>summary{font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.trend-switch{margin-block-end:8px}
+/* A point that predates half the ledger is not a lower net worth; it is a
+   smaller ledger. Its count says so in words, and the row is set back so the
+   eye does not read it as one of the comparable ones. */
+.trend-row--partial>span:first-child,.trend-row--partial strong{color:var(--muted);font-weight:500}
+/* The account's kind rides on the name, close enough to it to read as what the
+   account is rather than as a label for the figures below. */
+.group-name{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:0;flex-wrap:wrap}
+.portfolio-kind{flex:0 0 auto}
 /* A portfolio's heading is its name, its total, and its own two verbs, ruled
    off from the figures under it as one line. In a narrow sidebar the total
    drops under the name rather than squeezing it into a column six words deep,
    and the rule belongs to the line so it closes the heading either way. */
 .breakdown-row.group-line{align-items:center;flex-wrap:wrap;padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
-.breakdown-row.group-line>.record-group-title{flex:1 1 auto;min-width:0;padding:0;border-bottom:0}
+.breakdown-row.group-line>.group-name>.record-group-title{min-width:0;padding:0;border-bottom:0}
 .group-figure{flex:0 0 auto;display:flex;align-items:center;gap:8px}
 .breakdown-row strong,.trend-row strong{font-weight:600}
 /* An amount never breaks across lines. "$1,720,000" split after the "0" reads
    as a different number, so the name beside it wraps instead. */
 .breakdown-row strong,.trend-row strong{flex:0 0 auto;white-space:nowrap}
 .trend-table{display:flex;flex-direction:column;gap:2px}
+/* "2025 Q1" broken after the year reads as two things. The period keeps its
+   line; the amount beside it never wrapped in the first place. */
+.trend-row>span:first-child{flex:0 0 auto;white-space:nowrap}
 .trend-row .footnote{margin:0;min-width:88px;text-align:end}
 .finance-ledger .record-row{gap:2px}
 /* The reading beside a signed-in account page is a group of its own: what was

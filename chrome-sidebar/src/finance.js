@@ -1,11 +1,15 @@
-import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionDetail} from './components/finance.js';
+import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionDetail,propertyDetail} from './components/finance.js';
 import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,SITE_CLASSES,REGISTRATIONS,VEHICLES} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertyRef,valuationRef,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 const today=()=>new Date().toISOString().slice(0,10);
+// How the value-over-time table is read. Quarterly leads, because a quarter is
+// shown by its last reading and the part-filled days spent reaching it stop
+// being rows of their own.
+const TREND_PERIODS=[['quarter','Quarterly'],['day','Daily']];
 
 // `readPage` is the host's ability to read the tab the owner is looking at.
 // The sidebar sits beside that tab and supplies it; a full tab and the phone
@@ -23,6 +27,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   gate.content.replaceChildren(FinanceView());
   const $=id=>gate.content.querySelector(`#finance-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',connection='';
+  let trendPeriod='quarter';
   // What was read, before any of it is saved. A reading is a proposal: the
   // amounts stay editable, and nothing is written by reading. The site panel
   // and a dropped statement produce the same thing — figures already folded
@@ -36,7 +41,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // the investment currently open in the second form.
   // A capital account is reviewed in the block the reading came from, so what
   // is under review is beside the thing it was read out of.
-  let capital=null,capitalEditing=false,capitalSource='file',investing=null;
+  // `housing` is the property currently open in the third form. A house is an
+  // address and a dated pair of numbers, so editing one edits both rows.
+  let capital=null,capitalEditing=false,capitalSource='file',investing=null,housing=null;
   // Arriving because the tab is a finance page is not the owner asking to see
   // what they are worth. Such an arrival is quiet: the intake is ready for what
   // the page in front of them can put into the ledger, and the ledger's own
@@ -70,6 +77,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   const holdings=()=>holdingsOf(records);
   const holdingOf=number=>holdings().find(entry=>entry.number===number)||null;
   const nextHolding=()=>Math.max(0,...holdings().map(entry=>entry.number))+1;
+  const properties=()=>propertiesOf(records);
+  const nextProperty=()=>Math.max(0,...properties().map(entry=>entry.number))+1;
   const portfolioChoices=()=>portfolios().map(entry=>({text:`${entry.name} · ${registrationLabel(entry.kind)}`,value:portfolioRef(entry.number)}));
 
   // The form does two jobs, because they are the same job at two sizes: name a
@@ -144,6 +153,37 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('investment').open=true;$('inv-name').focus();
   }
 
+  // The third form: a property, and the dated reading that says what it is
+  // worth and what is owed on it. Its portfolio choices are the ledger's own
+  // and it invents none — a house belongs to a portfolio that already exists.
+  function fillPropertyPortfolios(selected=''){
+    const options=portfolioChoices();
+    $('prop-portfolio').replaceChildren(...options.map(option=>Option(option.text,option.value)));
+    $('prop-portfolio').value=options.some(option=>option.value===selected)?selected:(options[0]?.value||'');
+  }
+  function clearPropertyForm(){
+    housing=null;
+    fillPropertyPortfolios();
+    for(const key of ['prop-name','prop-link','prop-value','prop-debt'])$(key).value='';
+    $('prop-source').value=String(VALUE_SOURCES[0].code);
+    $('prop-asOf').value=today();
+    $('prop-title').textContent='New property';
+    status('','prop-status');
+  }
+  function fillProperty(entry){
+    const property=entry.property,current=entry.current;
+    housing={number:property.number,id:property.id,revision:property.revision,
+      valuationId:current?.id||'',valuationRevision:current?.revision??null};
+    fillPropertyPortfolios(portfolioRef(property.portfolio));
+    $('prop-name').value=property.name;$('prop-link').value=property.link||'';
+    $('prop-value').value=current?String(current.value):'';
+    $('prop-debt').value=current?String(current.debt):'';
+    $('prop-source').value=String(current?.source||VALUE_SOURCES[0].code);
+    $('prop-asOf').value=current?current.asOf:'';
+    $('prop-title').textContent=`Editing ${property.name}`;
+    $('property').open=true;$('prop-name').focus();
+  }
+
   function renderPosition(){
     const currencies=financeCurrencies(records);
     if(currencies.length&&!currencies.some(entry=>entry.currency===currency))currency=currencies[0].currency;
@@ -154,34 +194,64 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       return button;
     })));
     const summary=financeSummary(records,{currency});
+    const series=netWorthSeries(records,{currency});
+    // How current all of this is, stated once at the top where the totals it
+    // qualifies are. Every line underneath then carries a date only when it
+    // disagrees with this one.
+    const newest=series.at(-1)?.asOf||'';
     $('totals').replaceChildren(
       Figure({label:'Net',value:money(summary.net,currency),tone:summary.net<0?'negative':''}),
-      Figure({label:'Assets',value:money(summary.assets,currency)}),
+      // Assets on their own are news only when something is owed against them.
+      // With no liabilities they are the net worth again, and the pair read as
+      // one number printed twice under two names.
+      ...(summary.liabilities?[Figure({label:'Assets',value:money(summary.assets,currency)})]:[]),
       ...(summary.liabilities?[Figure({label:'Liabilities',value:money(summary.liabilities,currency)})]:[]),
       // What is still owed on a commitment is money already spoken for, and it
       // appears only when there is some. It is not a liability — nobody can
       // demand all of it today — so it sits beside the totals rather than in
       // them.
-      ...(summary.positions.unfunded?[Figure({label:'Unfunded',value:money(summary.positions.unfunded,currency)})]:[])
+      ...(summary.positions.unfunded?[Figure({label:'Unfunded',value:money(summary.positions.unfunded,currency)})]:[]),
+      ...(newest?[Figure({label:'As of',value:newest,tone:'date'})]:[])
     );
     $('stale').hidden=!summary.stale.length;
     $('stale').textContent=summary.stale.length?`${summary.stale.length} portfolio${summary.stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${summary.stale[0].name}${summary.stale[0].asOf?` from ${summary.stale[0].asOf}`:''}. Totals still count ${summary.stale.length===1?'it':'them'} at ${summary.stale.length===1?'its':'their'} last known figure.`:'';
-    $('breakdown').replaceChildren(
+    // A ledger with nothing in it needs one line saying so, not the same line
+    // under four headings that break down nothing.
+    $('breakdown').replaceChildren(...summary.figures?[
       // Liquid against illiquid first: it is the question the class list cannot
       // answer on its own, and the one the classes underneath it explain.
       BreakdownList('By liquidity',summary.byGroup,currency),
       BreakdownList('By asset class',summary.byClass,currency),
       BreakdownList('By portfolio',summary.byPortfolio,currency),
-      BreakdownList('By registration',summary.byRegistration,currency),
+      // "By registration" is the paperwork's word for it. What the owner is
+      // being told apart here is what kind of account each figure sits in, and
+      // that is what the tag on every portfolio underneath says too.
+      BreakdownList('By account type',summary.byRegistration,currency),
+      ...(summary.properties.count?[BreakdownList('Real estate',[
+        {label:'Value',total:summary.properties.value},
+        // What is owed and what is left appear only when something is owed. A
+        // house with no mortgage has equity equal to its value, and two more
+        // lines saying so would say nothing.
+        ...(summary.properties.debt?[{label:'Owed',total:summary.properties.debt},
+          {label:'Equity',total:summary.properties.equity}]:[])
+      ],currency,{shares:false})]:[]),
       ...(summary.positions.count?[BreakdownList('Private investments',[
         {label:'Committed',total:summary.positions.committed},
         {label:'Funded',total:summary.positions.contributed},
         {label:'Returned',total:summary.positions.distributed},
         {label:'Unfunded',total:summary.positions.unfunded},
         {label:'Value',total:summary.positions.value}
-      ],currency)]:[])
-    );
-    $('trend').replaceChildren(TrendTable(netWorthSeries(records,{currency}),currency));
+      ],currency,{shares:false})]:[])
+    ]:[Note('Nothing recorded yet.')]);
+    // One reading is not a series, and a table of one row needs no grain to be
+    // read at.
+    $('trend-switch').hidden=series.length<2;
+    $('trend-switch').replaceChildren(...(series.length<2?[]:TREND_PERIODS.map(([id,label])=>{
+      const button=Button(label,{variant:trendPeriod===id?'primary':'secondary',size:'compact','aria-pressed':String(trendPeriod===id)});
+      button.addEventListener('click',()=>{trendPeriod=id;renderPosition();});
+      return button;
+    })));
+    $('trend').replaceChildren(TrendTable(series,currency,{period:trendPeriod}));
     // Currencies are never added together, so say what a total covers.
     $('breakdown-panel').querySelector('summary').textContent=currencies.length>1?`Breakdown · ${currency} only`:'Breakdown';
   }
@@ -432,6 +502,17 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     const id=capitalRef(value),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
   }
+  function saveProperty(property,target='prop-status'){
+    const id=propertyRef(property.number),existing=records.find(record=>record.id===id);
+    return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',
+      value:normalizeAndStamp({row:'property',number:property.number,portfolio:property.portfolio,
+        name:property.name,link:property.link??''},id,existing)}),target);
+  }
+  function saveValuation(entry,target='prop-status'){
+    const value={row:'valuation',property:entry.property,asOf:entry.asOf,value:entry.value,debt:entry.debt,source:entry.source};
+    const id=valuationRef(value),existing=records.find(record=>record.id===id);
+    return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
+  }
   function savePortfolio(portfolio,target='form-status'){
     const id=portfolioRef(portfolio.number),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',
@@ -450,7 +531,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // The totals and the ledger, built only when they have been asked for.
   function renderLedger(){
     const groups=groupFinanceRecords(records).filter(group=>(group.portfolio.currency||'USD')===currency);
-    const figure=(portfolio,row)=>{
+    // The date cascades instead of repeating. The ledger's newest date is
+    // stated once above the totals; a portfolio says its own only when it is
+    // behind that, and a line inside it only when it is behind the portfolio.
+    // A date printed on every line was one fact written six times, and it was
+    // what made the list unreadable.
+    const newest=netWorthSeries(records,{currency}).at(-1)?.asOf||'';
+    const dated=(asOf,against)=>asOf&&asOf!==against?`as of ${asOf}`:'';
+    const figure=(portfolio,row,against)=>{
       const mark=row.current;
       const confirm=Stack([Note(`Delete the ${row.label} figure for ${portfolio.name} as of ${mark.asOf}?`),ActionGroup([
         action('Delete from all devices',async()=>{if(await remove(mark))onChanged();},'danger'),
@@ -470,16 +558,18 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         :[];
       // A liability is shown as what it does to the total. Without the sign a
       // mortgage reads like another asset, and only the portfolio's own figure
-      // further down would say otherwise.
-      const detail=[money(signed(mark),portfolio.currency),row.side==='liability'?'liability':'',`as of ${mark.asOf}`,
+      // further down would say otherwise — so the word rides beside it as well,
+      // because a minus sign is a shape and some readers will not see it.
+      const meta=[dated(mark.asOf,against),row.side==='liability'?'liability':'',
         mark.pending?(mark.conflict?'Conflict':mark.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
-      return RecordRow({title:row.label,detail,actions,extra:[past,...decide,confirm]});
+      return RecordRow({title:row.label,figure:money(signed(mark),portfolio.currency),meta,
+        actions,extra:[past,...decide,confirm]});
     };
     // A position reads as what it is: a name, what kind of vehicle it is, what
     // it is worth, and underneath, the three flows the value alone cannot
     // explain. Where the paperwork and the ledger disagree about the kind, the
     // row says so instead of choosing.
-    const investment=(portfolio,position)=>{
+    const investment=(portfolio,position,against)=>{
       const holding=position.holding,current=position.current;
       const confirm=Stack([Note(`Permanently delete “${holding.name}” and every capital account filed for it, from all devices?`),ActionGroup([
         action('Delete investment',async()=>{if(await remove(holding))onChanged();},'danger'),
@@ -493,15 +583,38 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         ...(position.history.length>1?[rowAction(HISTORY_GLYPH,`Earlier figures for ${holding.name}`,()=>{past.hidden=!past.hidden;})]:[]),
         rowAction(DELETE_GLYPH,`Delete ${holding.name}`,()=>{confirm.hidden=false;},true)
       ];
-      const detail=[money(position.value,portfolio.currency),
-        current?`as of ${current.asOf}`:'no statement yet',
+      const meta=[current?dated(current.asOf,against):'no statement yet',
         holding.pending?'Waiting to sync':''].filter(Boolean).join(' · ');
       // The row's own title already says how it is filed, so the claim gets a
       // line of its own saying only the part the title cannot: what the
       // paperwork calls it. Run into the figures it reads as one of them.
       const notes=[positionDetail(position,portfolio.currency),
         position.disputed?`The statement calls this a ${vehicleLabel(holding.stated)}.`:''];
-      return RecordRow({title:`${holding.name} · ${vehicleShort(holding.vehicle)}`,detail,notes,actions,extra:[past,confirm]});
+      return RecordRow({title:`${holding.name} · ${vehicleShort(holding.vehicle)}`,
+        figure:money(position.value,portfolio.currency),meta,notes,actions,extra:[past,confirm]});
+    };
+    // A property reads as what it is: an address, what it is worth, and
+    // underneath, the two things the value alone cannot say — where the number
+    // came from and what is still owed against it.
+    const estate=(portfolio,entry,against)=>{
+      const property=entry.property,current=entry.current;
+      const confirm=Stack([Note(`Permanently delete “${property.name}” and every valuation filed for it, from all devices?`),ActionGroup([
+        action('Delete property',async()=>{if(await remove(property))onChanged();},'danger'),
+        action('Keep it',()=>{confirm.hidden=true;})
+      ],{compact:true})],{hidden:true});
+      const past=Stack(entry.history.slice(0,8).map(reading=>Note(
+        [`${reading.asOf} · ${money(reading.value,portfolio.currency)}`,
+          reading.debt?`owed ${money(reading.debt,portfolio.currency)}`:''].filter(Boolean).join(' · ')
+      )),{hidden:true});
+      const actions=[
+        rowAction(EDIT_GLYPH,`Edit ${property.name}`,()=>fillProperty(entry)),
+        ...(entry.history.length>1?[rowAction(HISTORY_GLYPH,`Earlier valuations for ${property.name}`,()=>{past.hidden=!past.hidden;})]:[]),
+        rowAction(DELETE_GLYPH,`Delete ${property.name}`,()=>{confirm.hidden=false;},true)
+      ];
+      const meta=[current?dated(current.asOf,against):'not valued yet',
+        property.pending?'Waiting to sync':''].filter(Boolean).join(' · ');
+      return RecordRow({title:property.name,figure:money(entry.value,portfolio.currency),meta,
+        notes:[propertyDetail(entry,portfolio.currency)],actions,extra:[past,confirm]});
     };
     $('list').replaceChildren(...(groups.length?groups.map(group=>{
       const portfolio=group.portfolio;
@@ -509,21 +622,38 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         action('Delete portfolio',async()=>{if(await remove(portfolio))onChanged();},'danger'),
         action('Keep it',()=>{confirm.hidden=true;})
       ],{compact:true})],{hidden:true});
+      // A figure that comes to nothing is not a holding. The ledger never
+      // deletes one — a reading corrected later is superseded by a zero under
+      // the same portfolio, class and date — so a zeroed class is the mark of
+      // a figure no longer held, and it belongs in the history behind the
+      // class it was corrected into, not in the list of what is held. The
+      // zeros stand where there is nothing else, so a portfolio is never shown
+      // as empty when it holds rows.
+      const held=group.rows.filter(row=>Math.round(row.current.amount*100)!==0);
+      const rows=held.length||group.positions.length||group.properties.length?held:group.rows;
+      const asOf=[...rows.map(row=>row.current.asOf),
+        ...group.positions.map(position=>position.current?.asOf||''),
+        ...group.properties.map(entry=>entry.current?.asOf||'')].filter(Boolean).sort().at(-1)||'';
       return PortfolioGroup({
         name:portfolio.name,currency:portfolio.currency,total:group.total,
-        meta:[registrationLabel(portfolio.kind),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
+        // What kind of account this is, as a tag on the name. Under it, only
+        // what the line above cannot say: a date behind the rest of the
+        // ledger, and a portfolio still waiting to reach the cloud.
+        kind:registrationLabel(portfolio.kind),
+        meta:[dated(asOf,newest),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
         actions:[rowAction(EDIT_GLYPH,`Rename ${portfolio.name}`,()=>fillPortfolio(portfolio)),
           rowAction(DELETE_GLYPH,`Delete ${portfolio.name}`,()=>{confirm.hidden=false;},true)],
-        rows:[...group.rows.map(row=>figure(portfolio,row)),
-          ...group.positions.map(position=>investment(portfolio,position)),confirm]
+        rows:[...rows.map(row=>figure(portfolio,row,asOf)),
+          ...group.positions.map(position=>investment(portfolio,position,asOf)),
+          ...group.properties.map(entry=>estate(portfolio,entry,asOf)),confirm]
       });
     }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one below.')]));
     renderPosition();
   }
   // Not hidden figures: figures that were never put on the page.
   function sealLedger(){
-    for(const id of ['currency-switch','totals','breakdown','trend','list'])$(id).replaceChildren();
-    $('currency-switch').hidden=true;$('stale').hidden=true;
+    for(const id of ['currency-switch','totals','breakdown','trend','trend-switch','list'])$(id).replaceChildren();
+    $('currency-switch').hidden=true;$('trend-switch').hidden=true;$('stale').hidden=true;
   }
   function render(){
     // What the ledger holds — the totals and the saved figures — waits to be
@@ -533,8 +663,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     if(quiet)sealLedger();else renderLedger();
     for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-asOf'])$(key).disabled=busy||!loaded;
+    for(const key of ['prop-portfolio','prop-name','prop-link','prop-value','prop-source','prop-debt','prop-asOf'])$(key).disabled=busy||!loaded;
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
     $('inv-save').disabled=busy||!loaded;$('inv-cancel').disabled=busy;
+    $('prop-save').disabled=busy||!loaded;$('prop-cancel').disabled=busy;
     $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     $('drop').disabled=busy||!loaded;
     // Beside the title, only what applies: a quiet arrival can be asked for the
@@ -546,7 +678,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // something narrower here — one investment's capital account, on a row that
     // says Position — so the one button on a quiet arrival read as an offer to
     // open a single holding.
-    $('actions').replaceChildren(quiet?toolAction('Show everything you hold',showPosition)
+    $('actions').replaceChildren(quiet?toolAction('Show net worth',showPosition)
       :loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
     syncReadings();
   }
@@ -581,6 +713,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     if(await run(token=>offline.request(token,'/v1/finance'))){
       fillPortfolioChoices($('editor').open?$('portfolio').value:'');
       fillInvestmentPortfolios($('investment').open?$('inv-portfolio').value:'');
+      fillPropertyPortfolios($('property').open?$('prop-portfolio').value:'');
       connectionNote();
     }
   }
@@ -588,7 +721,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     generation++;records=[];loaded=false;activeToken='';connection='';attachment=null;
     fold=null;foldEditing=false;snapshot=null;snapshotEditing=false;engaged=false;
     capital=null;capitalEditing=false;capitalSource='file';
-    clearForm();clearInvestmentForm();renderFold();renderCapital();renderAttachment();renderSnapshot();
+    clearForm();clearInvestmentForm();clearPropertyForm();renderFold();renderCapital();renderAttachment();renderSnapshot();
     status('','snapshot-status');
     status('Unlock this section with your passkey.','status','alert');
     render();
@@ -668,9 +801,36 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       clearInvestmentForm();$('investment').open=false;onChanged();
     }catch(error){status(vaultReason(error),'inv-status','error');}
   });
-  clearForm();clearInvestmentForm();clear();
+  $('prop-cancel').addEventListener('click',()=>{clearPropertyForm();$('property').open=false;});
+  $('prop-form').addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(busy||!loaded)return;
+    try{
+      const chosen=$('prop-portfolio').value;
+      if(!chosen){status('Add a portfolio before recording a property in it.','prop-status','alert');return;}
+      const portfolio=Number(chosen.slice(1));
+      const number=housing?.number??nextProperty();
+      // A house bought this morning has no valuation behind it yet, and that is
+      // a whole record: the address is recorded and counts as nothing until a
+      // figure says otherwise. Figures without the date they are as of are not
+      // a record at all — settled before anything is written, so a refused
+      // valuation does not leave a property saved behind it.
+      const asOf=$('prop-asOf').value.trim();
+      const figures=['prop-value','prop-debt'].map(key=>$(key).value.trim());
+      if(!asOf&&figures.some(Boolean)){status('Give the date these figures are as of, or clear them.','prop-status','alert');return;}
+      if(!await saveProperty({number,portfolio,name:$('prop-name').value,link:$('prop-link').value}))return;
+      if(asOf&&!await saveValuation({property:number,asOf,value:$('prop-value').value||0,
+        debt:$('prop-debt').value||0,source:Number($('prop-source').value)}))return;
+      // A valuation moved to another date is a different row. The one it came
+      // from is removed, so an edit cannot leave two.
+      const moved=housing?.valuationId&&asOf&&housing.valuationId!==valuationRef({property:number,asOf});
+      if(moved)await remove(records.find(record=>record.id===housing.valuationId)||{id:housing.valuationId,revision:housing.valuationRevision},'prop-status');
+      clearPropertyForm();$('property').open=false;onChanged();
+    }catch(error){status(vaultReason(error),'prop-status','error');}
+  });
+  clearForm();clearInvestmentForm();clearPropertyForm();clear();
   if(gate.unlocked())refresh();
-  const reload=()=>{if(gate.unlocked()&&!$('editor').open&&!$('investment').open)refresh();};
+  const reload=()=>{if(gate.unlocked()&&!$('editor').open&&!$('investment').open&&!$('property').open)refresh();};
   window.addEventListener('online',reload);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   credentials.subscribe?.(()=>{clear();if(gate.unlocked())refresh();});
