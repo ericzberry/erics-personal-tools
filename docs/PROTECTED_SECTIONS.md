@@ -454,17 +454,20 @@ had one. Finance is still passkey-gated as a section, and Personal information
 still holds sealed values.
 
 
-### Three blocks, one scope each
+### Three tabs, one scope each
 
-The panel says what each block covers, in its heading, and never mixes two
-scopes in one:
+The three scopes are three tabs, and the tab's label says which. They ran down
+one page before, so reaching the ledger meant scrolling past a reading that had
+nothing to do with it; one at a time, each is the length it deserves. The label
+is the heading for what is under it, so no block inside repeats it:
 
-1. **The page in front of you** — headed by the site when one is recognized
+1. **The page in front of you** — labelled with the site when one is recognized
    (**E*TRADE**, **Schwab**) and **This page** when the host can read the tab
    but the site is not one the sidebar knows. It holds one action, named for
    what it will read, and afterwards the figures that reading folded into. A
    host with no page beside it — an extension tab, the phone — has no such
-   block at all.
+   tab at all, and where there is one it leads the row, because a panel opened
+   beside a bank page is there for that page.
 2. **Net worth** — the totals, the breakdown, the value over time and the
    holdings list, under one heading that says the scope is the whole ledger.
    Named for the figure it leads with: *Everything you hold* described the
@@ -474,8 +477,10 @@ scopes in one:
    the two are one number printed twice under two names. The date the whole
    ledger stands at is stated once here, and a portfolio or a line below repeats
    it only when it is behind that date.
-3. **Add to the ledger** — the statement drop zone, what it read, **Enter by
-   hand** and **Open an account page**. The three records that can be typed in
+3. **New figures** — the statement drop zone, what it read, **Enter by
+   hand** and **Open an account page**. Named for what it holds rather than for
+   what it does: a label reading *Add* beside *Chase* mixes a verb with a noun,
+   and the row then reads as a row of buttons. The three records that can be typed in
    stay three forms, because folding them together would make one form that is
    mostly hidden whichever way it is used; what they are not is three separate
    offers. As three closed drawers under a fourth they read as a run of
@@ -520,11 +525,11 @@ of every tab, and a recognized page shows Finance beside the tab those figures
 would come off.
 
 What it does not do is answer a question nobody asked. An arrival like that is
-**quiet**: **Net worth** is not hidden but unbuilt — no balance is
-anywhere in the page — while the two blocks around it are ready at once: the
-page in front of the owner, and the ways of adding a figure. One action sits beside the
-title, **Show net worth** — named for the section it opens — and one
-press makes it the ledger it always was.
+**quiet**: **Net worth** is not hidden but unbuilt — no balance is anywhere in
+the page, and it is not even a tab in the row — while the two tabs around it are
+ready at once: the page in front of the owner, and the ways of adding a figure.
+One action sits beside the title, **Show net worth** — named for the tab it
+opens — and one press builds the ledger and opens that tab on it.
 Visiting a bank should not put a net worth on a shared screen, and it does not
 raise a passkey sheet either.
 

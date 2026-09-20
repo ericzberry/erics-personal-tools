@@ -67,26 +67,30 @@ function setup(){
 // The tool is ready once the ledger has loaded; which saved connection reads
 // a page is settled behind the screen, not by a control on it.
 const ready=document=>settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet')||document.getElementById('finance-list').querySelector('.record-group,.record-row'));
+// Each scope is a tab, and the tab's label is its heading.
+const tab=(document,key)=>document.getElementById(`finance-tabs-${key}-tab`);
 
 test('a signed-in account page offers one action, and nothing before that',async()=>{
   const {document,restore}=setup();
   const {tool}=financeHost(document);
   await ready(document);
-  // The block is there for any page beside the panel; what changes when a site
-  // is recognized is the name above it and the name on the action.
-  assert.equal(document.getElementById('finance-page-block').hidden,false);
-  assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'This page');
+  // The tab is there for any page beside the panel; what changes when a site
+  // is recognized is the name on the tab and the name on the action.
+  assert.equal(tab(document,'page').hidden,false);
+  assert.equal(tab(document,'page').textContent,'This page');
+  assert.equal(tab(document,'page').getAttribute('aria-selected'),'true','a page beside the panel leads the row');
   tool.site(ETRADE);
-  assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'E*TRADE');
+  assert.equal(tab(document,'page').textContent,'E*TRADE');
   const panel=document.getElementById('finance-snapshot-body');
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Read my E*TRADE accounts']);
-  // The heading says which page and the button says what it does, so the block
-  // before a reading is those two things and nothing else.
+  // The tab says which page and the button says what it does, so the panel
+  // before a reading is one action and nothing else.
   assert.equal(panel.textContent.trim(),'Read my E*TRADE accounts','no sentence under the action repeating it');
   assert.equal(document.getElementById('finance-page-block').className.includes('settings-group'),true);
+  assert.equal(document.querySelector('#finance-page-block .settings-group-title'),null,'the tab is the heading');
   assert.equal(panel.querySelector('.record-row'),null);
   tool.site(null);
-  assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'This page',
+  assert.equal(tab(document,'page').textContent,'This page',
     'leaving a recognized site leaves an ordinary page, not nothing');
   tool.stop();restore();
 });
@@ -102,14 +106,15 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
 
   tool.quiet(true);
   tool.site(ETRADE);
-  assert.equal(document.getElementById('finance-ledger').hidden,true);
+  assert.equal(tab(document,'ledger').hidden,true,'the ledger is not even a tab until it is asked for');
   // Not hidden figures — figures that were never built.
   for(const id of ['finance-totals','finance-list','finance-breakdown','finance-trend'])
     assert.equal(document.getElementById(id).textContent,'',id);
   assert.equal(document.body.textContent.includes('100,000'),false,'no balance is anywhere on the page');
 
   // Everything that puts a figure into the ledger is ready without asking.
-  assert.equal(document.getElementById('finance-page-block').hidden,false);
+  assert.equal(tab(document,'page').hidden,false);
+  assert.equal(tab(document,'page').getAttribute('aria-selected'),'true');
   assert.deepEqual([...document.querySelectorAll('#finance-snapshot-body button')].map(node=>node.textContent),['Read my E*TRADE accounts'],
     'one way to read the page, in the block about the page');
   assert.ok(document.getElementById('finance-drop'),'drop a statement');
@@ -119,7 +124,8 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
   assert.equal(document.getElementById('finance-actions').textContent,'Show net worth','one action, and it is the one that applies');
 
   document.querySelector('#finance-actions button').click();
-  await settle(()=>document.getElementById('finance-ledger').hidden===false);
+  await settle(()=>tab(document,'ledger').hidden===false);
+  assert.equal(tab(document,'ledger').getAttribute('aria-selected'),'true','the press was the asking, so the ledger is what opens');
   assert.match(document.getElementById('finance-totals').textContent,/\$100,000/);
 
   assert.equal(document.getElementById('finance-actions').textContent,'Refresh');
@@ -127,7 +133,7 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
   // Asked once, answered for the sitting: the next bank page does not cover it
   // up again and ask a second time.
   tool.quiet(true);
-  assert.equal(document.getElementById('finance-ledger').hidden,false);
+  assert.equal(tab(document,'ledger').hidden,false);
   tool.stop();restore();
 });
 

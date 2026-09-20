@@ -6,8 +6,8 @@ the catalogue of offers behind it. Morgan Stanley Reserved Living & Giving
 catalogue is read from the program's own pages instead of being typed in, and
 it is refreshed whenever the owner visits the site.
 
-The offers appear under **Program offers** in Rewards & benefits, on the
-extension and on the phone.
+The offers appear under **Offers**, the tab beside **Wallet** in Rewards &
+benefits, on the extension and on the phone.
 
 ## What is read, and what is not
 

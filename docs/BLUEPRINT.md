@@ -69,6 +69,8 @@ state, release checks, launcher) and the content scripts
 `ui.js` (primitives and reusable presentation) · `views.js` (screens composed from
 them) · `tokens.css` (design tokens) · `status.css` (the four status tones and the
 progress indicators, imported by `tokens.css` so every host has them) ·
+`tabs.css` (the tab strip a tool's two concepts are split across, imported by
+`tokens.css` the same way) ·
 `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns

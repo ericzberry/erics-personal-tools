@@ -206,10 +206,8 @@ th, td { padding: 8px 11px; }
 .selection-row .action-group { margin: 6px 0 0; }
 .selection-row .action-group > button { font-size: 10px; padding: 6px 8px; }
 
-/* Shared tabs and compact ranked lists. */
-.tabs-list { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 14px 0 8px; }
-.tabs-button { flex: 1; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 12px; padding: 9px 8px; }
-.tabs-button[aria-selected=true] { color: var(--forest); border-bottom-color: var(--forest); font-weight: 600; }
+/* Compact ranked lists. Tabs are shared with every host, so they live in
+   tabs.css, which tokens.css imports. */
 .recommendation-summary.has-pick { background: #edf1e6; border-color: #c4d2b6; box-shadow: none; }
 .recommendation-summary .context-note { margin: 1px 0; }
 .recommendation-compact { padding: 8px 0 2px; }

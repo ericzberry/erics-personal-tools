@@ -152,9 +152,10 @@ test('a section the sidebar opened on its own raises no passkey sheet until it i
   h.document.querySelector('#finance-vault-actions button').click();
   await settle(()=>prompts>0&&h.document.getElementById('finance-vault-content').hidden===false);
   await settle(()=>h.document.getElementById('finance-actions').textContent==='Show net worth');
-  assert.equal(h.document.getElementById('finance-ledger').hidden,true);
+  const ledgerTab=()=>h.document.getElementById('finance-tabs-ledger-tab');
+  assert.equal(ledgerTab().hidden,true,'the ledger is not even a tab until it is asked for');
   tool.quiet(false);
-  assert.equal(h.document.getElementById('finance-ledger').hidden,false);
+  assert.equal(ledgerTab().hidden,false);
   assert.equal(prompts,1,'one passkey, given once, for the whole sitting');
   tool.stop();h.restore();
 });

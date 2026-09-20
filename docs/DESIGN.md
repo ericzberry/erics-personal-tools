@@ -113,6 +113,40 @@ A record list is organized by type, not one long alphabetical run. Records group
 
 The group label heads its records and is never set below them: 13px uppercase sans-serif with .06em tracking, in full ink, at 600 against the rows' 500. It is told apart from them by that weight, by its hairline, and by the space around it — not by being shrunk and greyed, which would invert the hierarchy and leave the run reading as rows with a caption stuck above them. Georgia stays with the page title and the record number, so the label never competes with the program names it heads: the label and its rule open the run, a single fine separator divides one row from the next, and 18px separates one group from the next. The last row in a run closes without a rule of its own: it would land a gap above the rule that opens whatever follows — the next group's label, or the editor under the list — and the two together read as a pair of bars rather than one boundary. An empty or filtered-empty list shows only its explanation, never a stray rule.
 
+### Tabs
+
+Two concepts on one screen are two tabs, not one longer page. A tool that
+answers more than one question — what the ledger comes to, and how a figure gets
+into it; what you hold, and what the programs are offering — asks the questions
+across the top and answers one at a time, so reaching either never means
+scrolling past the other. This is inside a tool and has nothing to do with
+choosing one: the shell's function still follows the browser tab, and no tool
+becomes a tab in the header.
+
+A tab's label is the heading for what is under it, so nothing inside repeats it
+and a group filling a whole panel drops the boundary it needed when it sat above
+another group. Every label names a view — `Net worth`, `Offers`, `This page` —
+never an action: a row mixing a verb with two nouns reads as a row of buttons,
+which is the one thing the strip must not look like.
+
+The strip is text, not controls: 12px labels at their own width against the left
+edge, muted, the selected one in forest above a 2px rule, on a hairline that
+closes the row. It takes 26px, less than the heading it replaces, and wraps to a
+second line rather than clipping or scrolling sideways. A label longer than the
+panel is cut with an ellipsis. Where there is no pointer the labels keep a 44px
+line. Arrow keys, Home and End move between them, skipping the ones not
+currently there.
+
+A tab exists only while it has something to answer: the page in front of the
+owner is a tab only while there is one, a catalogue only once one has been read,
+the ledger only once it has been asked for. Until the owner picks a tab the
+leading visible one is shown, so a tab arriving at the head of the row takes the
+lead; once they have picked, nothing moves them but their own tab disappearing.
+One visible tab draws no row at all — one tab is not a choice.
+
+`Tabs` in `chrome-sidebar/src/components/ui.js` is the only implementation, with
+`tabs.css` beside it; `tokens.css` imports it so every host has it.
+
 ### Row actions
 
 A record's own actions ride at the end of its name's line, and a group's own actions at the end of its heading line. They are never a row of words under the record: Edit and Delete repeated beneath every row double the length of a list and end up the loudest thing in it, when the list is there to be read down.

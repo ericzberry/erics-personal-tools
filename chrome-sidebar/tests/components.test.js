@@ -86,6 +86,41 @@ test('shared tabs expose one panel and support click, arrows, Home and End',asyn
     assert.equal(buttons[index].getAttribute('aria-selected'),'true');assert.equal(buttons[index].getAttribute('tabindex'),'0');assert.equal(panels[index].hidden,false);
   }
 });
+test('a tab comes and goes, the leading one leads until the owner chooses, and one tab draws no row',async()=>{
+  const {Tabs,Text}=await import('../src/components/ui.js');const doc=setup();
+  const tabs=Tabs({id:'t',label:'Example',items:[
+    {key:'page',label:'This page',hidden:true,content:Text('P')},
+    {key:'wallet',label:'Wallet',content:Text('W')},
+    {key:'offers',label:'Offers',hidden:true,content:Text('O')}]});
+  doc.body.append(tabs);
+  const button=key=>doc.getElementById(`t-${key}-tab`),panel=key=>doc.getElementById(`t-${key}-panel`);
+  const list=tabs.querySelector('[role=tablist]');
+  assert.equal(list.hidden,true,'one tab is not a choice');
+  assert.equal(panel('wallet').hidden,false);
+  // A tab arriving behind the chosen one waits its turn; one arriving in front
+  // of it leads, because nobody has chosen anything yet.
+  tabs.show('offers');
+  assert.equal(list.hidden,false);
+  assert.equal(button('wallet').getAttribute('aria-selected'),'true');
+  tabs.show('page');
+  assert.equal(button('page').getAttribute('aria-selected'),'true');
+  // Once the owner has chosen, nothing moves them.
+  button('offers').click();
+  tabs.show('page',false);tabs.show('page');
+  assert.equal(button('offers').getAttribute('aria-selected'),'true');
+  // A tab that leaves hands the reader to the first one left, never to a blank panel.
+  tabs.show('offers',false);
+  assert.equal(button('page').getAttribute('aria-selected'),'true');
+  assert.equal(panel('offers').hidden,true);
+  // The label is the heading, so it says what the panel is about right now.
+  tabs.rename('page','E*TRADE');
+  assert.equal(button('page').textContent,'E*TRADE');
+  assert.equal(button('page').getAttribute('title'),'E*TRADE');
+  // Arrow keys step over the tabs that are not there.
+  const event=new doc.defaultView.Event('keydown',{cancelable:true});event.key='ArrowRight';
+  button('page').dispatchEvent(event);
+  assert.equal(button('wallet').getAttribute('aria-selected'),'true');
+});
 test('ranked spreadsheet keeps source order, tiers, ownership and explicit availability labels',async()=>{
   const {TieredRankings,Stack}=await import('../src/components/ui.js');setup();
   const players=[{rank:3,tier:2,name:'C',key:'c'},{rank:1,tier:1,name:'A',key:'a'},{rank:2,tier:1,name:'B',key:'b'}];

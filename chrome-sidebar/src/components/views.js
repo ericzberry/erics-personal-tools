@@ -126,13 +126,21 @@ export function AISettingsView() {
     Main([
       Stack([Stack([Heading('AI connections',1)]),
         Badge('Not connected',{id:'settings-connection-badge'})],{className:'settings-heading'}),
+      Notice('',{id:'settings-status',role:'status',hidden:true}),
+      // Three different things live on this page: the connections themselves,
+      // which model runs which action, and one box for trying a connection out.
+      // Down one page they were a long scroll with the thing being looked for
+      // somewhere in the middle of it, so each is a tab and the tab's label is
+      // its heading. What went wrong stays above the row, because it can come
+      // from any of them.
+      UI.Tabs({id:'settings-tabs',label:'Settings',items:[
+      {key:'connections',label:'Connections',content:[
       Disclosure('Cloud connection',[
         Stack([
           field({id:'settings-token',label:'Extension access token',kind:'password',placeholder:'Paste your private token'}),
           ActionGroup([Button('Connect',{id:'settings-connect',variant:'primary'}),Button('Disconnect this browser',{id:'settings-disconnect',variant:'secondary'})]),
           Note('',{id:'settings-cloud-status',role:'status'})],{className:'connection-setup'})
       ],{id:'settings-cloud'}),
-      Notice('',{id:'settings-status',role:'status',hidden:true}),
       // What the account's cloud is holding, against what the plan allows. It
       // sits with the connection because it is that connection's resource, and
       // it is the whole of the answer: a size, a limit, and the databases the
@@ -167,17 +175,18 @@ export function AISettingsView() {
             ],{id:'connection-remove-confirm',hidden:true})
           ],{id:'connection-form'})
         ],{className:'settings-card settings-editor'})
-      ],{className:'settings-columns'}),
+      ],{className:'settings-columns'})]},
       // Every action the app can ask a model to do, listed in one place with the
       // model that runs it. No feature offers this choice next to its own
       // button: a model is a setting, not a decision to make mid-errand.
+      {key:'models',label:'Models',content:
       UI.Panel([
-        SectionTitle('AI models'),
         Notice('',{id:'ai-tasks-status',role:'status'}),
         Stack([],{id:'ai-tasks-list',className:'record-group'})
-      ],{className:'settings-card ai-tasks-card'}),
+      ],{className:'settings-card ai-tasks-card'})},
+      {key:'playground',label:'Playground',content:
       UI.Panel([
-        SectionTitle('Try a connection',Button('Fetch models',{id:'connection-models',variant:'secondary',size:'compact'})),
+        ActionGroup([Button('Fetch models',{id:'connection-models',variant:'secondary',size:'compact'})],{compact:true}),
         Note('',{id:'playground-context'}),
         UI.ModelSuggestions({id:'provider-model-list'}),
         Note('',{id:'model-list-status',role:'status'}),
@@ -191,7 +200,8 @@ export function AISettingsView() {
         ],{id:'playground-form'}),
         Note('',{id:'playground-status',role:'status'}),
         UI.OutputText({id:'playground-output',hidden:true})
-      ],{className:'settings-card playground-card'})
+      ],{className:'settings-card playground-card'})}
+      ]})
     ])
   ],{className:'settings-shell'});
 }

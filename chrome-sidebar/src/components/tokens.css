@@ -1,5 +1,6 @@
 /* Canonical palette and typography for every app host. */
 @import url('./status.css');
+@import url('./tabs.css');
 :root {
   --page-inset: 14px;
   --section-gap: 12px;

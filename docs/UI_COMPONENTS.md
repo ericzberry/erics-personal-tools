@@ -25,6 +25,7 @@ The catalogue below describes existing exports, not a promise that each componen
 | App identity and tool selection | `AppHeader`, `CapabilityNavigation`, `CapabilityMenu`, `CapabilityLauncher` | Use the capabilities registry and general Tools navigation; a registry `section` groups entries in both hosts: a heading over the mobile launcher grid, and a row that opens to reveal its tools in the sidebar menu. The mobile menu button and its open panel follow the shared `Select` trigger and list, so the Tools menu reads as the dropdown it is |
 | Page heading and body | `PageHeader`, `PageBody`; `ToolHeading` and `Main` aliases | One page title; shared insets and section rhythm |
 | Section heading or secondary view | `SectionTitle`, `SubPage`, `Section` | Name the group and provide a meaningful return path |
+| Two concepts on one screen | `Tabs` | One at a time, with the row of labels as their heading; every label names a view, never an action, and a tab appears only while it has something to answer |
 | Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceFlow`, `FieldGrid` | Compose layout before introducing new wrappers; a full-tab workspace runs down the page rather than into a side column |
 | Text and supporting detail | `Title`, `Text`, `Note`, `Strong`, `Label` | `Heading` aliases `Title`; `Label` is a text span, not an input label |
 | Form and labeled inputs | `Form`, `FormStack`, `FormField`, `Field` | `Field` supplies an associated label and control |

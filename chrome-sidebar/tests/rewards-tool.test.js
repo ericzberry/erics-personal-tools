@@ -249,7 +249,7 @@ test('a loose card name asks which card before researching one, and a failed sav
  tool.stop();h.restore();
 });
 
-test('a program’s offers are shown beside the wallet, searched with it, and filtered by category',async()=>{
+test('a program’s offers are a tab of their own, with their own search and a category filter',async()=>{
  const h=harness();
  const catalog={id:'ms-reserved',programId:'ms-reserved',label:'Morgan Stanley Reserved',complete:true,
   listedAt:'2026-09-11T00:00:00.000Z',readAt:'2026-09-11T00:00:00.000Z',
@@ -272,7 +272,13 @@ test('a program’s offers are shown beside the wallet, searched with it, and fi
  // Neither offer is new, so there is no New group and the categories are the list.
  assert.deepEqual(groups(),['Home','Travel']);
  assert.equal($('programs-status').textContent,'Morgan Stanley Reserved · 2 offers · read 2026-09-11');
- assert.equal($('programs-status').closest('section').hidden,false);
+ // A catalogue that has been read is a tab; the wallet keeps the lead, because
+ // offers arriving is not the owner asking for them.
+ assert.equal($('rewards-tabs-offers-tab').hidden,false);
+ assert.equal($('rewards-tabs-wallet-tab').getAttribute('aria-selected'),'true');
+ $('rewards-tabs-offers-tab').click();
+ assert.equal($('rewards-tabs-offers-panel').hidden,false);
+ assert.equal($('rewards-tabs-wallet-panel').hidden,true,'one at a time');
  const row=()=>[...h.document.querySelectorAll('#programs-list section')].find(node=>node.textContent.includes('SIXT'));
  // Under the heading that names the category, the row qualifies itself with
  // what the heading does not already say.
@@ -281,16 +287,21 @@ test('a program’s offers are shown beside the wallet, searched with it, and fi
  assert.match(row().textContent,/Save up to 20% off car rentals\./);
  assert.equal(row().querySelector('a').getAttribute('href'),'https://msreserved.com/offer/sixt');
 
- // The wallet's own search box is the one search: it filters both lists.
- $('rewards-search').value='appliances';
- $('rewards-search').dispatchEvent(new h.window.Event('input',{bubbles:true}));
+ // One filter per list: this one narrows what is on offer, and the wallet's own
+ // search narrows what is held.
+ $('programs-search').value='appliances';
+ $('programs-search').dispatchEvent(new h.window.Event('input',{bubbles:true}));
  assert.deepEqual(names(),['LG']);
  assert.deepEqual(groups(),[],'a search has already narrowed the list, so there is nothing to open through');
  // Results span categories, so here the category is what tells them apart.
  assert.match([...h.document.querySelectorAll('#programs-list section')][0].textContent,/New · Home/);
  assert.equal($('programs-status').textContent,'Morgan Stanley Reserved · 1 of 2 offers · read 2026-09-11');
- $('rewards-search').value='';
+ $('rewards-search').value='nothing in the wallet matches this';
  $('rewards-search').dispatchEvent(new h.window.Event('input',{bubbles:true}));
+ assert.deepEqual(names(),['LG'],'the wallet’s search leaves the offers alone');
+ $('rewards-search').value='';
+ $('programs-search').value='';
+ $('programs-search').dispatchEvent(new h.window.Event('input',{bubbles:true}));
 
  const picker=$('programs-category');
  assert.deepEqual([...picker.options].map(option=>option.textContent),['All categories','Home','Travel']);
@@ -300,21 +311,23 @@ test('a program’s offers are shown beside the wallet, searched with it, and fi
  assert.deepEqual(groups(),[],'and neither has a chosen category');
  assert.doesNotMatch(row().textContent,/Travel/,'the picker above the list already says Travel');
 
- // Nothing read yet means no section at all, rather than an empty one.
+ // Nothing read yet means no tab at all, rather than an empty one.
  tool.clear();
- assert.equal($('programs-status').closest('section').hidden,true);
+ assert.equal($('rewards-tabs-offers-tab').hidden,true);
+ assert.equal($('rewards-tabs-wallet-panel').hidden,false,'the reader is handed back to the wallet, not to a blank panel');
  assert.equal(names().length,0);
  tool.stop();h.restore();
 });
 
-test('a host with no catalogue store has no offers section, and a failed load is not an error the owner must act on',async()=>{
+test('a host with no catalogue store has no offers tab, and a failed load is not an error the owner must act on',async()=>{
  const h=harness();
  const entry={id:'one',name:'Synthetic',kind:'balance',source:'Example',value:'5 points',state:'available',revision:'first'};
  const bare=mountRewards(h.document.querySelector('main'),{credentials:{get:async()=>'token'},vault:fakeVault(),
   offline:{request:async()=>({records:[entry]})}});
  await bare.refresh();
  const $=id=>h.document.getElementById(id);
- assert.equal($('programs-status').closest('section').hidden,true,'a host that cannot hold a catalogue does not show an empty section');
+ assert.equal($('rewards-tabs-offers-tab').hidden,true,'a host that cannot hold a catalogue does not show an empty tab');
+ assert.equal(h.document.querySelector('#rewards-tabs .tabs-list').hidden,true,'and one tab is not a choice, so the row is not drawn');
  assert.equal($('programs-list').children.length,0);
  bare.stop();
 
@@ -325,7 +338,7 @@ test('a host with no catalogue store has no offers section, and a failed load is
  await tool.refresh();
  const status=second.document.getElementById('programs-status');
  assert.equal(status.textContent,'');
- assert.equal(status.closest('section').hidden,true);
+ assert.equal(second.document.getElementById('rewards-tabs-offers-tab').hidden,true);
  assert.equal(second.document.getElementById('rewards-status').textContent,'','the wallet does not report a catalogue’s failure as its own');
  tool.stop();second.restore();h.restore();
 });
@@ -354,5 +367,36 @@ test('a balance reads as one line: the program, then what is in it',async()=>{
  const wallet=h.document.getElementById('rewards-list').textContent;
  assert.equal(wallet.includes('Available'),false,'the resting state of every row states nothing');
  assert.equal(wallet.includes(UNREAD_BALANCE),false);
+ tool.stop();h.restore();
+});
+
+// The wallet is the list of programs and cards the owner is in, so every row
+// in it reaches the page it is on: a link the owner typed, and otherwise the
+// page the registries already hold for that program or that institution.
+test('every row in the wallet reaches the page it is on',async()=>{
+ const h=harness();
+ const entry=(id,fields)=>({id,state:'available',card:'',cadence:'',due:'',url:'',notes:'',secret:'',secretHint:'',revision:id,...fields});
+ const records=[
+  entry('a',{kind:'balance',name:'Bonvoy',source:'Marriott',value:'131,581 points'}),
+  entry('b',{kind:'balance',name:'MileagePlus',source:'United Airlines',value:'488,302 miles'}),
+  // A link of the owner's own is theirs, and outranks the registry's.
+  entry('c',{kind:'balance',name:'Guest Rewards',source:'Amtrak',value:'9,400 points',url:'https://example.invalid/mine'}),
+  entry('d',{kind:'card',name:'Platinum Card',source:'American Express',value:'5x flights'}),
+  // A credit is used on the card that carries it, so it goes where the card does.
+  entry('e',{kind:'benefit',name:'Ride credit',source:'Amex Platinum',value:'$15 per month',card:'d'}),
+  // Nothing here knows where a lounge membership is kept.
+  entry('f',{kind:'membership',name:'Priority Pass Select',source:'Lounge access',value:'Member'})
+ ];
+ const tool=mountRewards(h.document.querySelector('main'),{credentials:{get:async()=>'token'},vault:fakeVault(),
+  offline:{request:async()=>({records})}});
+ await tool.refresh();
+ const linkOf=name=>[...h.document.querySelectorAll('#rewards-list a.row-action')]
+  .find(link=>link.getAttribute('aria-label')===`Open the site for ${name}`)?.getAttribute('href')??'';
+ assert.equal(linkOf('Bonvoy'),'https://www.marriott.com/loyalty/myAccount/default.mi');
+ assert.equal(linkOf('MileagePlus'),'https://www.united.com/en/us/myunited');
+ assert.equal(linkOf('Guest Rewards'),'https://example.invalid/mine');
+ assert.equal(linkOf('Platinum Card'),'https://global.americanexpress.com/dashboard');
+ assert.equal(linkOf('Ride credit'),'https://global.americanexpress.com/dashboard');
+ assert.equal(linkOf('Priority Pass Select'),'','a row nothing recognizes carries no link rather than a guess');
  tool.stop();h.restore();
 });

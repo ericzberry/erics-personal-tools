@@ -56,11 +56,18 @@ test('the finance screen leads with its title, status and one action, and has no
   const headings=[...doc.querySelectorAll('.settings-group-title')].map(node=>node.textContent);
   assert.equal(headings.includes('Cloud sync'),false,'connection maintenance no longer trails the page');
   assert.equal(headings.includes('Ledger'),false,'the saved figures are named for what they hold');
-  // One scope per block, and the heading is what says which. These used to
-  // alternate — a site's reading, the whole ledger's totals, the page action
-  // again, the whole ledger's list — so "Position" under "E*TRADE" read as
-  // E*TRADE's position when it was the estate's.
-  assert.deepEqual(headings,['This page','Net worth','Add to the ledger']);
+  // One scope per tab, and the tab's label is what says which — no group under
+  // it repeats the name. These used to run down one page, so reaching the
+  // ledger meant scrolling past a reading that had nothing to do with it, and
+  // "Position" under "E*TRADE" read as E*TRADE's position when it was the
+  // estate's.
+  assert.deepEqual(headings,[]);
+  const tabs=[...doc.querySelectorAll('#finance-tabs [role=tab]')];
+  // Every label names a view. A verb among them reads as a button.
+  assert.deepEqual(tabs.map(node=>node.textContent),['This page','Net worth','New figures']);
+  assert.deepEqual(tabs.map(node=>node.hidden),[true,false,false],'a page to read is a tab only where there is one');
+  assert.deepEqual(tabs.map(node=>node.getAttribute('aria-selected')),['false','true','false']);
+  assert.equal(doc.querySelectorAll('#finance-tabs [role=tabpanel]:not([hidden])').length,1,'one panel at a time');
   assert.equal(headings.includes('Position'),false,'the NET and ASSETS labels already say that');
   const title=doc.querySelector('.tool-title-block');
   assert.equal(title.querySelector('h1').textContent,'Finance');
@@ -96,7 +103,7 @@ test('reading the open page is offered only where there is a page beside the too
   const restore=selectValues(window);
   const plain=financeHost(document);
   await settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet'));
-  assert.equal(document.getElementById('finance-page-block').hidden,true,'a full tab has no page to read, so there is no block about one');
+  assert.equal(document.getElementById('finance-tabs-page-tab').hidden,true,'a full tab has no page to read, so there is no tab about one');
   assert.equal(document.getElementById('finance-actions').textContent,'Refresh');
   plain.stop();
 
@@ -111,10 +118,10 @@ test('reading the open page is offered only where there is a page beside the too
     }
   });
   await settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet'));
-  assert.equal(document.getElementById('finance-page-block').hidden,false);
+  assert.equal(document.getElementById('finance-tabs-page-tab').hidden,false);
   // An unrecognized page names itself, and its reading is offered and reviewed
-  // in its own block rather than down among the ways of adding a figure.
-  assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'This page');
+  // in its own tab rather than down among the ways of adding a figure.
+  assert.equal(document.getElementById('finance-tabs-page-tab').textContent,'This page');
   document.getElementById('finance-page-read').click();
   await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Cash'));
   assert.equal(document.getElementById('finance-drafts').textContent,'','a page reading does not land in the statement block');

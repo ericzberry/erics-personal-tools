@@ -180,14 +180,13 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     picker.addEventListener('change',()=>{programCategory=picker.value;renderPrograms();});
   }
   function renderPrograms(){
-    const section=$('programs-status').closest('section');
-    // No catalogue store, and nothing read yet, come to the same thing: the
-    // section has nothing to say and is not shown at all.
+    // No catalogue store, and nothing read yet, come to the same thing: there
+    // is nothing on offer to show, so the tab is not in the row at all.
     const live=programs?catalogs.filter(catalog=>catalog?.offers?.length):[];
-    section.hidden=!live.length;
+    $('rewards-tabs').show('offers',!!live.length);
     if(!live.length){$('programs-list').replaceChildren();$('programs-filter').replaceChildren();categorySignature='';return;}
     syncCategories([...new Set(live.flatMap(catalogCategories))].sort((a,b)=>a.localeCompare(b)));
-    const query=$('rewards-search').value;
+    const query=$('programs-search').value;
     const groups=live.map(catalog=>({catalog,offers:catalogOffers(catalog,{query,category:programCategory})})).filter(group=>group.offers.length);
     const total=live.reduce((count,catalog)=>count+catalog.offers.length,0);
     const shown=groups.reduce((count,group)=>count+group.offers.length,0);
@@ -231,7 +230,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // the panel is not there to be pressed.
   function renderBalances(){
     const show=!!site&&!!readPage&&!!remote;
-    $('balance-panel').hidden=!show;
+    $('rewards-tabs').show('page',show);
     if(!show){$('balance-body').replaceChildren();setStatus($('balance-status'),'');return;}
     $('balance-body').replaceChildren(BalancePanel({
       site,programs:loyaltySitePrograms(site),rows:balances||[],credits:credits||[],disabled:busy||!loaded,
@@ -450,7 +449,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     if(!remote)throw Error('Looking up a card is not available here.');
     const token=await credentials.get();
     if(!token)throw Error('Open Settings to connect this device.');
-    if(globalThis.navigator?.onLine===false)throw Error('Looking up a card needs internet. Add it by hand below instead.');
+    if(globalThis.navigator?.onLine===false)throw Error('Looking up a card needs internet. Add it by hand instead.');
     const connection=await connections.id(token);
     const result=await remote(token,`/v1/ai-connections/${connection}/card-benefits`,{method:'POST',value:{name},timeoutMs:130000});
     // A rough name can name more than one real card, so research answers with
@@ -494,7 +493,10 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     try{await operation();}catch(error){cardStatus(reason(error),'error');}
     finally{busy=false;render();}
   }
-  $('rewards-search').addEventListener('input',()=>{render();renderPrograms();});
+  // One filter per list, each above the list it narrows: the wallet's search
+  // narrows what you hold, the offers' search narrows what is on offer.
+  $('rewards-search').addEventListener('input',render);
+  $('programs-search').addEventListener('input',renderPrograms);
   $('reward-kind').addEventListener('change',renderKind);
   $('reward-cancel').addEventListener('click',()=>{clearForm();$('reward-editor').open=false;});
   $('reward-card-form').addEventListener('submit',event=>{event.preventDefault();

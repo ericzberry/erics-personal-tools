@@ -1,6 +1,6 @@
 # Shared UI components
 
-All extension UI is built here. `ui.js` owns native DOM construction and reusable presentation. `views.js` composes the shared pieces into screens. `tokens.css` owns the shared design tokens and title typography; `styles.css` owns the main component classes. `file-drop.js` owns reusable upload interaction. `src/app.js` mounts the screens before feature controllers attach.
+All extension UI is built here. `ui.js` owns native DOM construction and reusable presentation. `views.js` composes the shared pieces into screens. `tokens.css` owns the shared design tokens and title typography, and imports `status.css` and `tabs.css` so every host has the status tones and the tab strip; `styles.css` owns the main component classes. `file-drop.js` owns reusable upload interaction. `src/app.js` mounts the screens before feature controllers attach.
 
 | Component | Responsibility |
 | --- | --- |
@@ -10,6 +10,7 @@ All extension UI is built here. `ui.js` owns native DOM construction and reusabl
 | Notice + setStatus, Spinner, ProgressBar | Status in one of four tones, and constant progress indicators |
 | StatusCard, Highlight, Metrics, SourceNote | Compact information |
 | Disclosure, DataTable, List | Expandable and structured information |
+| Tabs | Two concepts on one screen, one at a time, with the row of labels as their heading |
 | PickRow, RecommendationCard | Reusable draft data presentation |
 | UploadField + attachFileDrop | Drop/browse upload with inline feedback |
 | ResultSection | One generated thing: its name, the action that makes it, its status, and the editable result with a copy action |
@@ -72,3 +73,15 @@ saved"; removing a stored value is a separate, explicit action supplied by the
 controller into the field's `-actions` group. Never render a protected value
 through an ordinary `Field` or `RecordRow` detail line.
 
+`Tabs` is how a tool with more than one concept in it stays short. A screen
+answering two questions — what the ledger comes to, and how a figure gets into
+it — is not a longer page: it is a tab per question, and the tab's label is the
+heading for what is under it, so no group inside repeats it. Items are
+`{key,label,content,hidden}`, and the node answers to `select(key)`,
+`show(key,visible)` and `rename(key,text)`, which is what lets a tab exist only
+while it has something to answer — the page in front of the owner is a tab only
+while there is one. Until the owner picks a tab, the leading visible one is
+shown; once they have picked, nothing moves them but a tab disappearing. One
+visible tab draws no row at all. `tabs.css` restates the button geometry each
+host imposes on bare `button` elements, because a tab is a label to be read, not
+a control to be pressed, and every label names a view rather than an action.

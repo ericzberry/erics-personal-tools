@@ -248,11 +248,15 @@ export const ActionGroup=(children,{compact=false,...props}={})=>Stack(children,
 // A group's own actions ride at the end of its heading line, never in a row of
 // words beneath the records they act on. `actionsId` is filled by the feature
 // the same way `ToolTitle` already fills its own.
-export const SettingsGroup=({title,children=[],level=3,actionsId,...props})=>Section([
-  actionsId
+// Inside a tab the row of labels is already the heading, so a group there is
+// given none: it would name the same thing twice. Its own action still applies,
+// and leads the panel the way it led the heading line.
+export const SettingsGroup=({title='',children=[],level=3,actionsId,...props})=>Section([
+  title&&actionsId
     ? Stack([Heading(title,level,{className:'settings-group-title'}),ActionGroup([],{id:actionsId,compact:true})],{className:'settings-group-head'})
-    : Heading(title,level,{className:'settings-group-title'}),
-  ...children],{className:'settings-group','aria-label':title,...props});
+    : title ? Heading(title,level,{className:'settings-group-title'})
+    : actionsId ? ActionGroup([],{id:actionsId,compact:true}) : null,
+  ...children],{className:'settings-group',...(title?{'aria-label':title}:{}),...props});
 
 export function OwnershipActions(player,{owner=null,corrected=false,onSelect}) {
   const actions=ActionGroup(['me','other'].map(value=>{
@@ -268,16 +272,78 @@ export function SelectionRow(player,options) {
 }
 export const SubPage=({id,title,backId,children=[]})=>Section([PageHeader({title,action:Button('← Back',{id:backId})}),Main(children)],{id,hidden:true,className:'sub-page'});
 
-// Shared, keyboard-accessible tabs. Selection is owned here and survives content updates.
-export function Tabs({id,label,items}) {
-  const panels=items.map(item=>Section([item.content],{id:`${id}-${item.key}-panel`,role:'tabpanel','aria-labelledby':`${id}-${item.key}-tab`,tabindex:0}));
-  const buttons=items.map(item=>Button(item.label,{id:`${id}-${item.key}-tab`,className:'tabs-button',role:'tab','aria-controls':`${id}-${item.key}-panel`}));
-  function select(index,focus=false){buttons.forEach((button,i)=>{button.setAttribute('aria-selected',String(i===index));button.setAttribute('tabindex',i===index?'0':'-1');panels[i].hidden=i!==index;});if(focus)buttons[index].focus();}
-  buttons.forEach((button,i)=>{
-    button.addEventListener('click',()=>select(i));
-    button.addEventListener('keydown',event=>{const next={ArrowRight:(i+1)%items.length,ArrowLeft:(i-1+items.length)%items.length,Home:0,End:items.length-1}[event.key];if(next!==undefined){event.preventDefault();select(next,true);}});
+// Two things at once are two tabs, not one longer page. A tool that answers
+// more than one question — what the ledger comes to, and how a figure gets into
+// it; what you hold, and what the programs are offering — asks the questions
+// across the top and answers one at a time, so reaching either one never means
+// scrolling past the other.
+//
+// The tab's label is the heading for what is under it. A panel does not repeat
+// it, and the group filling a panel drops the box it used to need to be told
+// apart from the group below it.
+//
+// A tab can come and go: the page in front of the owner is a tab only while
+// there is one. Until the owner picks a tab for themselves, the leading visible
+// one is shown — so a tab that arrives at the head of the row takes the lead
+// rather than waiting behind a choice nobody made — and a tab that leaves hands
+// the reader to the first one still there rather than to a blank panel.
+//
+// Selection is owned here and survives content updates, because the panels are
+// the same nodes a controller fills by id.
+export function Tabs({id,label,items=[],onSelect=()=>{}}) {
+  const entries=items.map(item=>({
+    key:item.key,
+    button:Button(item.label,{id:`${id}-${item.key}-tab`,className:'tabs-button',role:'tab',
+      'aria-controls':`${id}-${item.key}-panel`,title:item.label,hidden:!!item.hidden}),
+    panel:Section(Array.isArray(item.content)?item.content:[item.content],
+      {id:`${id}-${item.key}-panel`,role:'tabpanel','aria-labelledby':`${id}-${item.key}-tab`,tabindex:0,hidden:true})
+  }));
+  const list=Stack(entries.map(entry=>entry.button),{role:'tablist','aria-label':label,className:'tabs-list'});
+  const node=Stack([list,...entries.map(entry=>entry.panel)],{id,className:'tabs'});
+  const shown=()=>entries.filter(entry=>!entry.button.hidden);
+  let chosen=false,current='';
+  function paint(key,{focus=false}={}){
+    const visible=shown(),target=visible.find(entry=>entry.key===key)||visible[0]||null;
+    current=target?.key||'';
+    for(const entry of entries){
+      const on=entry===target;
+      entry.button.setAttribute('aria-selected',String(on));
+      entry.button.setAttribute('tabindex',on?'0':'-1');
+      entry.panel.hidden=!on;
+    }
+    list.hidden=visible.length<2;
+    if(focus)target?.button.focus();
+  }
+  for(const entry of entries){
+    const move=key=>{chosen=true;paint(key,{focus:true});onSelect(key);};
+    entry.button.addEventListener('click',()=>{chosen=true;paint(entry.key);onSelect(entry.key);});
+    entry.button.addEventListener('keydown',event=>{
+      const visible=shown(),at=visible.indexOf(entry);
+      if(at<0)return;
+      const next={ArrowRight:at+1,ArrowLeft:at-1,Home:0,End:visible.length-1}[event.key];
+      if(next===undefined)return;
+      event.preventDefault();
+      move(visible[(next+visible.length)%visible.length].key);
+    });
+  }
+  paint('');
+  return Object.assign(node,{
+    // The app moving the reader on their behalf — pressing Show net worth is
+    // asking for that tab — counts as the choice being made.
+    select(key){chosen=true;paint(key);},
+    show(key,visible=true){
+      const entry=entries.find(item=>item.key===key);
+      if(!entry||entry.button.hidden===!visible)return;
+      entry.button.hidden=!visible;
+      paint(chosen?current:'');
+    },
+    rename(key,text){
+      const entry=entries.find(item=>item.key===key);
+      if(!entry||entry.button.textContent===text)return;
+      entry.button.textContent=text;entry.button.setAttribute('title',text);
+    },
+    selected:()=>current
   });
-  select(0);return Stack([Stack(buttons,{role:'tablist','aria-label':label,className:'tabs-list'}),...panels],{id,className:'tabs'});
 }
 const statusLabels={available:'Available',mine:'Yours',taken:'Taken',unknown:'Unconfirmed'};
 export const StatusLegend=()=>Stack(['available','mine','taken'].map(status=>Label(statusLabels[status],{className:`availability-label availability-label--${status}`})),{className:'availability-legend','aria-label':'Player status legend'});

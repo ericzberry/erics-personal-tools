@@ -417,15 +417,13 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // interrupted by an unrelated render. `syncReadings` keeps the controls in
   // step with a busy or disconnected tool without replacing them.
   function renderSnapshot(){
-    // The block exists wherever there is a page beside the panel, recognized or
-    // not, and its heading is the scope: the site when one is known, the page
+    // The tab exists wherever there is a page beside the panel, recognized or
+    // not, and its label is the scope: the site when one is known, the page
     // otherwise. A host with no page beside it — a full tab, the phone — has no
-    // such block at all.
-    $('page-block').hidden=!readPage;
+    // such tab at all.
+    $('tabs').show('page',!!readPage);
     if(!readPage){$('snapshot-body').replaceChildren();return;}
-    const label=site?.label||'This page';
-    $('page-block').querySelector('.settings-group-title').textContent=label;
-    $('page-block').setAttribute('aria-label',label);
+    $('tabs').rename('page',site?.label||'This page');
     $('snapshot-body').replaceChildren(PagePanel({
       site,rows:snapshot?.rows||[],editing:snapshotEditing,disabled:busy||!loaded,
       onRead:readOpenPage,onSave:()=>saveReview('snapshot'),
@@ -772,7 +770,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
           ...group.positions.map(position=>investment(portfolio,position,asOf)),
           ...(group.properties.length?[realEstate(portfolio,group.properties,asOf)]:[]),confirm]
       });
-    }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one below.')]));
+    }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one by hand.')]));
     renderPosition();
   }
   // Not hidden figures: figures that were never put on the page.
@@ -784,7 +782,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // What the ledger holds — the totals and the saved figures — waits to be
     // asked for. Putting a figure in does not: the site reading, the statement,
     // the page reading and a figure typed by hand are all ready.
-    $('ledger').hidden=quiet;
+    // Until it has been asked for, the ledger is not a tab standing there empty:
+    // it is not in the row at all.
+    $('tabs').show('ledger',!quiet);
     if(quiet)sealLedger();else renderLedger();
     for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-asOf'])$(key).disabled=busy||!loaded;
@@ -996,6 +996,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     if(!quiet)return;
     quiet=false;gate.automatic(true);
     if(loaded)render();else refresh();
+    // The press was the asking, so the ledger is what comes up — not the tab
+    // the owner happened to be on when they asked.
+    $('tabs').select('ledger');
   }
   // The host says how the tool was arrived at: quietly, because the tab beside
   // the panel is a finance page, or because the owner chose Finance. Choosing it

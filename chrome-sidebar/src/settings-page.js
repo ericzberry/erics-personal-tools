@@ -31,7 +31,7 @@ function controls() {
   for(const node of $('playground-form').querySelectorAll('input,textarea,select,button'))node.disabled=!canRun;
   $('connection-models').disabled=!canRun;
   $('playground-copy').disabled=working||!$('playground-output').textContent;
-  $('playground-context').textContent=dirty?'Save or cancel your changes first.':!selected?'Select a connection above.':!selected.hasApiKey?'Save an API key to try it.':`Using ${selected.name} · billed to that provider.`;
+  $('playground-context').textContent=dirty?'Save or cancel your changes first.':!selected?'Choose a connection under Connections.':!selected.hasApiKey?'Save an API key to try it.':`Using ${selected.name} · billed to that provider.`;
 }
 function endpointHint(){
   const provider=providerFor($('ai-provider').value);

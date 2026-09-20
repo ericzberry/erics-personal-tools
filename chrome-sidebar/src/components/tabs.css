@@ -1,0 +1,40 @@
+/* Tabs: two things at once are two tabs, not one longer page.
+
+   The row of labels is the heading for whatever is under it, so a panel never
+   repeats its own name as a title inside itself, and a group that fills a whole
+   panel gives up the boundary it used to need to be told apart from the group
+   below it — the tab is that boundary now.
+
+   A tab exists only while it has something to answer, and a row left with one
+   tab draws nothing at all: one tab is not a choice.
+
+   A tab is a label to be read, not a button to be pressed. Every host in this
+   repository styles bare `button` elements as outlined controls — the wallet
+   through `.travel-wallet button`, the phone through `button` — so each of
+   those declarations is restated here, under two classes, which is what it
+   takes to out-specify them. Drawn as the hosts would draw it, the row read as
+   two outlined controls stacked over the panel's own action: the loudest thing
+   on the screen, and the one costing the most height.
+
+   The labels take the width of their words and sit against the left edge, so
+   the row reads as a line of text with one of them underlined rather than as a
+   segmented control filling the panel. A third label wraps onto a second line
+   instead of squeezing the others, and a label longer than the panel is cut
+   rather than pushing the row sideways. */
+.tabs-list{display:flex;flex-wrap:wrap;column-gap:12px;row-gap:0;margin:0 0 10px;border-bottom:1px solid var(--line)}
+.tabs .tabs-button{flex:0 0 auto;max-width:100%;min-height:26px;margin:0;padding:3px 0;
+  border:0;border-bottom:2px solid transparent;border-radius:0;
+  background:transparent;color:var(--muted);cursor:pointer;
+  font:500 12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:start;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs .tabs-button:hover:not(:disabled){color:var(--ink);background:transparent}
+.tabs .tabs-button[aria-selected=true]{color:var(--forest);border-bottom-color:var(--forest);font-weight:600}
+.tabs .tabs-button:focus-visible{outline:2px solid var(--forest);outline-offset:-2px}
+.tabs [role=tabpanel]:focus-visible{outline:2px solid var(--forest);outline-offset:2px}
+/* The panel is the boundary, so what fills it does not draw a second one. */
+.tabs [role=tabpanel]>.settings-group{padding:0;border:0;border-radius:0;background:transparent}
+/* A group whose one action does not currently apply leaves no gap where it
+   would have been. */
+.tabs [role=tabpanel] .action-group:empty{display:none}
+/* Where there is no pointer to aim with, the labels keep a touchable line. */
+@media (pointer:coarse){.tabs .tabs-button{min-height:44px;font-size:13px}}

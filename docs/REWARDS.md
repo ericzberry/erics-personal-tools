@@ -81,7 +81,8 @@ pruning brings back only what was never there.
 ### Reading a balance off the program's page
 
 Open a program's own site with the sidebar beside it — united.com, marriott.com,
-americanexpress.com — and Rewards offers to read your balance. One press takes
+americanexpress.com — and Rewards offers to read your balance under **This
+page**, a tab that is there only while such a page is. One press takes
 one text snapshot of the page you are already looking at, turns it into a
 figure per program, and shows it. Nothing is saved by reading: each balance
 names the entry it would land on, and a press of yours saves it.
@@ -210,10 +211,12 @@ its model through the central task policy
 
 A perks portal — Morgan Stanley Reserved — publishes a catalogue of offers that
 changes without notice. Those are not wallet entries: they are read off the
-program's own pages and listed under **Program offers**, below the wallet,
-refreshed whenever the owner visits the site. They are grouped — what is new,
-then one closed line per category — because one program alone publishes well
-over a hundred. The wallet's search filters them alongside your own entries,
-and a category picker narrows them further; either narrowing shows a flat run
+program's own pages and listed under **Offers**, the tab beside **Wallet**,
+refreshed whenever the owner visits the site. The tab is there only once a
+catalogue has been read, and with nothing read the screen is the wallet alone.
+They are grouped — what is new, then one closed line per category — because one
+program alone publishes well over a hundred. Each list has its own search, since
+the wallet's narrows what you hold and this one narrows what is on offer, and a
+category picker narrows the offers further; either narrowing shows a flat run
 of matches instead. See
 [reward programs](REWARD_PROGRAMS.md) for what is read, when, and what is not.

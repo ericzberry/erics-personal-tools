@@ -1,63 +1,78 @@
 import * as UI from './ui.js';
 import {CADENCE_LABELS} from '../rewards-data.js';
 import {formatTotal,programName,unitLabel} from '../balance-data.js';
-const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label}=UI;
+const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label,Tabs}=UI;
 const CADENCE_OPTIONS=[{text:'Does not reset',value:''},...Object.entries(CADENCE_LABELS).map(([value,text])=>({text,value}))];
 export function RewardsView(){
   const field=(key,label,kind='text',options,placeholder)=>UI.FormField({id:`reward-${key}`,label,kind,options,placeholder});
+  // Three things, and they are not the same question: what is on the page in
+  // front of you, what you hold, and what the programs are currently offering.
+  // Run down one page, a catalogue of a hundred offers sat between the wallet
+  // and the drawer that adds to it. Each is a tab now, and the tab's label is
+  // its heading.
   return Stack([ToolTitle('Rewards & benefits',{actionsId:'rewards-connection',statusId:'rewards-status'}),
-    Stack([Stack([],{id:'balance-body'}),Notice('',{id:'balance-status'})],{id:'balance-panel',className:'balance-panel',hidden:true}),
-    UI.SettingsGroup({title:'Next actions',level:2,children:[Stack([],{id:'rewards-actions'})]}),
-    UI.SettingsGroup({title:'Your wallet',level:2,actionsId:'wallet-actions',children:[
-      Stack([],{id:'rewards-totals',className:'reward-totals',hidden:true}),
-      UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
-      Stack([],{id:'rewards-list'})]}),
-    UI.SettingsGroup({title:'Program offers',level:2,children:[
-      Stack([],{id:'programs-filter'}),
-      Notice('',{id:'programs-status'}),
-      Stack([],{id:'programs-list',className:'program-offers'})]}),
-    UI.SettingsGroup({title:'Protected values',level:2,children:[
-      Notice('',{id:'vault-status'}),
-      ActionGroup([],{id:'vault-actions',compact:true}),
-      Stack([],{id:'vault-code'}),
-      Stack([
-        UI.FormField({id:'vault-recovery-code',label:'Recovery code',kind:'text',placeholder:'EV1-…'}),
-        ActionGroup([Button('Unlock with this code',{id:'vault-recovery-submit',variant:'secondary',size:'compact'}),
-          Button('Cancel',{id:'vault-recovery-cancel',variant:'secondary',size:'compact'})],{compact:true})
-      ],{id:'vault-recovery',hidden:true}),
-      Note('',{id:'vault-detail'})
-    ]}),
-    // Naming a card is the whole intake: research reads the issuer's current
-    // pages and brings back the card and every benefit it carries, which is work
-    // no owner finishes by hand.
-    Disclosure('Add a card you hold',[
-      UI.Form([
-        UI.FormField({id:'reward-card-name',label:'Which card do you have?',placeholder:'amex platinum, blue cash, jp morgan reserve'}),
-        ActionGroup([Button('Find card benefits',{id:'reward-card-find',variant:'primary',type:'submit'})]),
-        Notice('',{id:'reward-card-status'}),
-        Stack([],{id:'reward-card-matches'}),
-        Stack([],{id:'reward-card-review'})
-      ],{id:'reward-card-form',className:'form-stack'})
-    ],{id:'reward-card-intake'}),
-    Disclosure('Add or edit a reward',[
-      Note('No passwords or security codes.'),
-      UI.Form([
-        field('kind','Entry type','select',[{text:'Points or miles balance',value:'balance'},{text:'Credit, discount, or offer',value:'benefit'},{text:'Membership or program access',value:'membership'},{text:'Credit card you hold',value:'card'}]),
-        field('name','Program or benefit name',undefined,undefined,'Airline miles, dining credit, or perks program'),
-        field('source','Card, airline, or benefit source',undefined,undefined,'The card, airline, or company that provides it'),
-        field('card','Which of your cards?','select',[{text:'Not a card benefit',value:''}]),
-        field('value','Balance or benefit',undefined,undefined,'42,000 miles · $50 credit · Member offers'),
-        field('due','Expiration or use-by date (optional)','date'),
-        field('cadence','Resets','select',CADENCE_OPTIONS),
-        field('state','Status','select',[{text:'Available',value:'available'},{text:'Needs activation',value:'activation'},{text:'Used',value:'used'}]),
-        field('url','Official account or offer URL (optional)','url'),
-        UI.FormField({id:'reward-notes',label:'Terms, eligibility, and next step (optional)',kind:'textarea',rows:3}),
-        UI.ProtectedField({id:'reward-secret',label:'Card details (optional)',
-          help:'Encrypted on this device. Never the security code.'}),
-        Notice('',{id:'reward-form-status'}),
-        ActionGroup([Button('Save reward',{id:'reward-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'reward-cancel',variant:'secondary'})])
-      ],{id:'reward-form',className:'form-stack'})
-    ],{id:'reward-editor'})
+    Tabs({id:'rewards-tabs',label:'Rewards',items:[
+      {key:'page',label:'This page',hidden:true,content:
+        Stack([Stack([],{id:'balance-body'}),Notice('',{id:'balance-status'})],{id:'balance-panel',className:'balance-panel'})},
+      {key:'wallet',label:'Wallet',content:[
+        UI.SettingsGroup({title:'Next actions',level:2,children:[Stack([],{id:'rewards-actions'})]}),
+        UI.SettingsGroup({actionsId:'wallet-actions',children:[
+          Stack([],{id:'rewards-totals',className:'reward-totals',hidden:true}),
+          UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
+          Stack([],{id:'rewards-list'})]}),
+        UI.SettingsGroup({title:'Protected values',level:2,children:[
+          Notice('',{id:'vault-status'}),
+          ActionGroup([],{id:'vault-actions',compact:true}),
+          Stack([],{id:'vault-code'}),
+          Stack([
+            UI.FormField({id:'vault-recovery-code',label:'Recovery code',kind:'text',placeholder:'EV1-…'}),
+            ActionGroup([Button('Unlock with this code',{id:'vault-recovery-submit',variant:'secondary',size:'compact'}),
+              Button('Cancel',{id:'vault-recovery-cancel',variant:'secondary',size:'compact'})],{compact:true})
+          ],{id:'vault-recovery',hidden:true}),
+          Note('',{id:'vault-detail'})
+        ]}),
+        // Naming a card is the whole intake: research reads the issuer's current
+        // pages and brings back the card and every benefit it carries, which is work
+        // no owner finishes by hand.
+        Disclosure('Add a card you hold',[
+          UI.Form([
+            UI.FormField({id:'reward-card-name',label:'Which card do you have?',placeholder:'amex platinum, blue cash, jp morgan reserve'}),
+            ActionGroup([Button('Find card benefits',{id:'reward-card-find',variant:'primary',type:'submit'})]),
+            Notice('',{id:'reward-card-status'}),
+            Stack([],{id:'reward-card-matches'}),
+            Stack([],{id:'reward-card-review'})
+          ],{id:'reward-card-form',className:'form-stack'})
+        ],{id:'reward-card-intake'}),
+        Disclosure('Add or edit a reward',[
+          Note('No passwords or security codes.'),
+          UI.Form([
+            field('kind','Entry type','select',[{text:'Points or miles balance',value:'balance'},{text:'Credit, discount, or offer',value:'benefit'},{text:'Membership or program access',value:'membership'},{text:'Credit card you hold',value:'card'}]),
+            field('name','Program or benefit name',undefined,undefined,'Airline miles, dining credit, or perks program'),
+            field('source','Card, airline, or benefit source',undefined,undefined,'The card, airline, or company that provides it'),
+            field('card','Which of your cards?','select',[{text:'Not a card benefit',value:''}]),
+            field('value','Balance or benefit',undefined,undefined,'42,000 miles · $50 credit · Member offers'),
+            field('due','Expiration or use-by date (optional)','date'),
+            field('cadence','Resets','select',CADENCE_OPTIONS),
+            field('state','Status','select',[{text:'Available',value:'available'},{text:'Needs activation',value:'activation'},{text:'Used',value:'used'}]),
+            field('url','Official account or offer URL (optional)','url'),
+            UI.FormField({id:'reward-notes',label:'Terms, eligibility, and next step (optional)',kind:'textarea',rows:3}),
+            UI.ProtectedField({id:'reward-secret',label:'Card details (optional)',
+              help:'Encrypted on this device. Never the security code.'}),
+            Notice('',{id:'reward-form-status'}),
+            ActionGroup([Button('Save reward',{id:'reward-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'reward-cancel',variant:'secondary'})])
+          ],{id:'reward-form',className:'form-stack'})
+        ],{id:'reward-editor'})
+      ]},
+      // What the programs publish is its own reading, with its own search: the
+      // wallet's filter narrows what you hold, and this one narrows what is on
+      // offer. The tab is there only while a catalogue has been read.
+      {key:'offers',label:'Offers',hidden:true,content:
+        UI.SettingsGroup({children:[
+          UI.FormField({id:'programs-search',label:'Find an offer',kind:'search',placeholder:'Airline, hotel, merchant…'}),
+          Stack([],{id:'programs-filter'}),
+          Notice('',{id:'programs-status'}),
+          Stack([],{id:'programs-list',className:'program-offers'})]})}
+    ]})
   ],{className:'travel-wallet rewards-wallet'});
 }
 // A card you hold and the benefits filed under it read as one block: the card

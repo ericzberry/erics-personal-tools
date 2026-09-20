@@ -2,7 +2,7 @@ import * as UI from './ui.js';
 import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,classLabel,registrationLabel,vehicleLabel,vehicleShort,valueSourceLabel,classSide,signed} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
 import {FINANCE_SITES} from '../account-sites.js';
-const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link}=UI;
+const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link,Tabs}=UI;
 
 // Where each institution prints its balances. Reaching the figures is its own
 // small errand — a bank's own front page is marketing, and the account summary
@@ -222,109 +222,114 @@ export function PagePanel({site,rows=[],editing=false,disabled=false,onRead,onSa
 export function FinanceView(){
   return Stack([
     ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
-    // Three blocks, one scope each, in this order: the page in front of you,
-    // what the whole ledger comes to, and the ways of putting a figure in. They used to
-    // alternate — a site's reading, the whole ledger's totals, the page action
-    // again, the whole ledger's list — so a reader had to work out which scope
-    // each block meant, and "Position" sitting directly under "E*TRADE" read as
-    // E*TRADE's position when it was the estate's. The heading carries the
-    // scope; nothing explains it in a sentence underneath.
-    SettingsGroup({title:'This page',level:2,id:'finance-page-block',hidden:true,
-      className:'settings-group snapshot-panel',children:[
-        Stack([],{id:'finance-snapshot-body'}),
-        Notice('',{id:'finance-snapshot-status'}),
-        // A capital account statement read off this page is reviewed here,
-        // beside the reading it came from. Sending it one block down to sit
-        // under a heading about something else is the interlacing this layout
-        // exists to stop, in miniature.
-        Stack([],{id:'finance-capital-page'})
-      ]}),
-    // Named for the figure it leads with. "Everything you hold" described the
-    // contents and not the question — the block exists to answer what all of
-    // it comes to, liabilities included, which is the one thing "everything
-    // you hold" cannot say.
-    SettingsGroup({title:'Net worth',level:2,id:'finance-ledger',children:[
-      Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
-      Stack([],{id:'finance-totals',className:'finance-totals'}),
-      Notice('',{id:'finance-stale',hidden:true}),
-      Disclosure('Breakdown',[Stack([],{id:'finance-breakdown'})],{id:'finance-breakdown-panel',className:'ledger-panel'}),
-      // Quarterly or daily is a question about this table and nothing else, so
-      // the choice lives inside it rather than beside the totals.
-      Disclosure('Value over time',[
-        Stack([],{id:'finance-trend-switch',className:'currency-switch trend-switch',hidden:true}),
-        Stack([],{id:'finance-trend'})
-      ],{id:'finance-trend-panel',className:'ledger-panel'}),
-      Stack([],{id:'finance-list',className:'travel-list'})
-    ]}),
-    SettingsGroup({title:'Add to the ledger',level:2,children:[
-      UI.UploadField({id:'finance-drop',inputId:'finance-file',statusId:'finance-file-status',
-        label:'Drop a statement',formats:'PDF, CSV, XLSX or image',accept:ACCEPTED.join(','),
-        status:'',resetId:'finance-file-clear',resetLabel:'Remove file'}),
-      Stack([],{id:'finance-attachment',hidden:true}),
-      Note('',{id:'finance-ai-status',role:'status'}),
-      ActionGroup([Button('Read this',{id:'finance-read',variant:'primary',size:'compact'}),Button('Clear',{id:'finance-intake-clear',variant:'secondary',size:'compact'})],{compact:true}),
-      Notice('',{id:'finance-intake-status',role:'status'}),
-      Stack([],{id:'finance-drafts'}),
-      Stack([],{id:'finance-capital-drafts'}),
-      // Three records, one errand. A figure is a class and an amount; a
-      // private investment is a name, a kind and the four figures a capital
-      // account states; a property is an address and what is owed on it. They
-      // stay three forms, because folding them together would make one form
-      // that is mostly hidden whichever way it is used — but they are not
-      // three separate offers. Stacked as three closed drawers under a fourth,
-      // they read as a run of unexplained boundaries, and the one being looked
-      // for is found only by reading all of them. So which record is being
-      // entered is a switch inside one drawer, chosen where it applies, the way
-      // the currency and the trend period already are.
-      Disclosure('Enter by hand',[
-        Stack([],{id:'finance-entry-switch',className:'currency-switch entry-switch'}),
-        Form([
-        Strong('New figure',{id:'finance-editor-title'}),
-        FormField({id:'finance-portfolio',label:'Portfolio',kind:'select',options:[]}),
-        Stack([
-          FormField({id:'finance-name',label:'Portfolio name',kind:'text',placeholder:'e.g. Eric and Ariana Berry Estate'}),
-          FormField({id:'finance-kind',label:'Registration',kind:'select',options:registrationOptions()}),
-          FormField({id:'finance-currency',label:'Currency',kind:'text',placeholder:'USD'})
-        ],{id:'finance-portfolio-fields',hidden:true}),
-        Stack([
-          FormField({id:'finance-class',label:'Asset class',kind:'select',options:classOptions()}),
-          FormField({id:'finance-amount',label:'Amount',kind:'text',placeholder:'0.00'}),
-          FormField({id:'finance-asOf',label:'As of',kind:'date'})
-        ],{id:'finance-figure-fields'}),
-        Notice('',{id:'finance-form-status',role:'status'}),
-        ActionGroup([Button('Save figure',{id:'finance-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-cancel',variant:'secondary'})])
-        ],{id:'finance-form',className:'form-stack'}),
-        Form([
-        Strong('New investment',{id:'finance-inv-title'}),
-        FormField({id:'finance-inv-portfolio',label:'Portfolio',kind:'select',options:[]}),
-        FormField({id:'finance-inv-name',label:'Investment',kind:'text',placeholder:'e.g. Acme Ventures Fund III, L.P.'}),
-        FormField({id:'finance-inv-vehicle',label:'Kind',kind:'select',options:vehicleOptions()}),
-        FormField({id:'finance-inv-class',label:'Asset class',kind:'select',options:investedClassOptions()}),
-        FormField({id:'finance-inv-commitment',label:'Commitment',kind:'text',placeholder:'0.00'}),
-        FormField({id:'finance-inv-value',label:'Capital account value',kind:'text',placeholder:'0.00'}),
-        FormField({id:'finance-inv-funded',label:'Funded to date',kind:'text',placeholder:'0.00'}),
-        FormField({id:'finance-inv-returned',label:'Returned to date',kind:'text',placeholder:'0.00'}),
-        FormField({id:'finance-inv-asOf',label:'As of',kind:'date'}),
-        Notice('',{id:'finance-inv-status',role:'status'}),
-        ActionGroup([Button('Save investment',{id:'finance-inv-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-inv-cancel',variant:'secondary'})])
-        ],{id:'finance-inv-form',className:'form-stack',hidden:true}),
-        Form([
-        Strong('New property',{id:'finance-prop-title'}),
-        FormField({id:'finance-prop-portfolio',label:'Portfolio',kind:'select',options:[]}),
-        FormField({id:'finance-prop-name',label:'Address',kind:'text',placeholder:'e.g. 123 Example St, Town ST 00000'}),
-        FormField({id:'finance-prop-link',label:'Zillow page',kind:'text',placeholder:'https://www.zillow.com/homedetails/…'}),
-        FormField({id:'finance-prop-value',label:'Market value',kind:'text',placeholder:'0.00'}),
-        FormField({id:'finance-prop-source',label:'Value from',kind:'select',options:sourceOptions()}),
-        FormField({id:'finance-prop-debt',label:'Still owed',kind:'text',placeholder:'0.00'}),
-        FormField({id:'finance-prop-asOf',label:'As of',kind:'date'}),
-        Notice('',{id:'finance-prop-status',role:'status'}),
-        ActionGroup([Button('Save property',{id:'finance-prop-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-prop-cancel',variant:'secondary'})])
-        ],{id:'finance-prop-form',className:'form-stack',hidden:true})
-      ],{id:'finance-entry'}),
-      // Closed until it is wanted. Getting to the figures is a way of putting
-      // one in the ledger, which is the scope this block already has, so it
-      // belongs here rather than as a fourth heading of its own.
-      Disclosure('Open an account page',AccountPages(FINANCE_SITES),{id:'finance-account-pages'})
+    // Three scopes, one at a time: the page in front of you, what the whole
+    // ledger comes to, and the ways of putting a figure in. They used to run
+    // down one page, so reaching the ledger meant scrolling past a reading that
+    // had nothing to do with it, and "Position" sitting under "E*TRADE" read as
+    // E*TRADE's position when it was the estate's. Each is now a tab, and the
+    // tab's label is its heading — nothing inside repeats it.
+    //
+    // This page leads the row, because a panel opened beside a bank page is
+    // there for that page. It appears only where there is a page to read, and
+    // the ledger appears once it has been asked for, so a quiet arrival shows
+    // the reading and the ways in, and nothing of what the owner is worth.
+    //
+    // Every label names a view. "Add" among them named an action instead, and a
+    // row mixing a verb with two nouns read as a row of buttons.
+    Tabs({id:'finance-tabs',label:'Finance',items:[
+      {key:'page',label:'This page',hidden:true,content:
+        SettingsGroup({id:'finance-page-block',className:'settings-group snapshot-panel',children:[
+          Stack([],{id:'finance-snapshot-body'}),
+          Notice('',{id:'finance-snapshot-status'}),
+          // A capital account statement read off this page is reviewed here,
+          // beside the reading it came from, rather than under a heading about
+          // something else.
+          Stack([],{id:'finance-capital-page'})
+        ]})},
+      {key:'ledger',label:'Net worth',content:
+        SettingsGroup({id:'finance-ledger',children:[
+          Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
+          Stack([],{id:'finance-totals',className:'finance-totals'}),
+          Notice('',{id:'finance-stale',hidden:true}),
+          Disclosure('Breakdown',[Stack([],{id:'finance-breakdown'})],{id:'finance-breakdown-panel',className:'ledger-panel'}),
+          // Quarterly or daily is a question about this table and nothing else,
+          // so the choice lives inside it rather than beside the totals.
+          Disclosure('Value over time',[
+            Stack([],{id:'finance-trend-switch',className:'currency-switch trend-switch',hidden:true}),
+            Stack([],{id:'finance-trend'})
+          ],{id:'finance-trend-panel',className:'ledger-panel'}),
+          Stack([],{id:'finance-list',className:'travel-list'})
+        ]})},
+      {key:'add',label:'New figures',content:
+        SettingsGroup({id:'finance-add',children:[
+          UI.UploadField({id:'finance-drop',inputId:'finance-file',statusId:'finance-file-status',
+            label:'Drop a statement',formats:'PDF, CSV, XLSX or image',accept:ACCEPTED.join(','),
+            status:'',resetId:'finance-file-clear',resetLabel:'Remove file'}),
+          Stack([],{id:'finance-attachment',hidden:true}),
+          Note('',{id:'finance-ai-status',role:'status'}),
+          ActionGroup([Button('Read this',{id:'finance-read',variant:'primary',size:'compact'}),Button('Clear',{id:'finance-intake-clear',variant:'secondary',size:'compact'})],{compact:true}),
+          Notice('',{id:'finance-intake-status',role:'status'}),
+          Stack([],{id:'finance-drafts'}),
+          Stack([],{id:'finance-capital-drafts'}),
+          // Three records, one errand. A figure is a class and an amount; a
+          // private investment is a name, a kind and the four figures a capital
+          // account states; a property is an address and what is owed on it. They
+          // stay three forms, because folding them together would make one form
+          // that is mostly hidden whichever way it is used — but they are not
+          // three separate offers. Stacked as three closed drawers under a fourth,
+          // they read as a run of unexplained boundaries, and the one being looked
+          // for is found only by reading all of them. So which record is being
+          // entered is a switch inside one drawer, chosen where it applies, the way
+          // the currency and the trend period already are.
+          Disclosure('Enter by hand',[
+            Stack([],{id:'finance-entry-switch',className:'currency-switch entry-switch'}),
+            Form([
+            Strong('New figure',{id:'finance-editor-title'}),
+            FormField({id:'finance-portfolio',label:'Portfolio',kind:'select',options:[]}),
+            Stack([
+              FormField({id:'finance-name',label:'Portfolio name',kind:'text',placeholder:'e.g. Eric and Ariana Berry Estate'}),
+              FormField({id:'finance-kind',label:'Registration',kind:'select',options:registrationOptions()}),
+              FormField({id:'finance-currency',label:'Currency',kind:'text',placeholder:'USD'})
+            ],{id:'finance-portfolio-fields',hidden:true}),
+            Stack([
+              FormField({id:'finance-class',label:'Asset class',kind:'select',options:classOptions()}),
+              FormField({id:'finance-amount',label:'Amount',kind:'text',placeholder:'0.00'}),
+              FormField({id:'finance-asOf',label:'As of',kind:'date'})
+            ],{id:'finance-figure-fields'}),
+            Notice('',{id:'finance-form-status',role:'status'}),
+            ActionGroup([Button('Save figure',{id:'finance-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-cancel',variant:'secondary'})])
+            ],{id:'finance-form',className:'form-stack'}),
+            Form([
+            Strong('New investment',{id:'finance-inv-title'}),
+            FormField({id:'finance-inv-portfolio',label:'Portfolio',kind:'select',options:[]}),
+            FormField({id:'finance-inv-name',label:'Investment',kind:'text',placeholder:'e.g. Acme Ventures Fund III, L.P.'}),
+            FormField({id:'finance-inv-vehicle',label:'Kind',kind:'select',options:vehicleOptions()}),
+            FormField({id:'finance-inv-class',label:'Asset class',kind:'select',options:investedClassOptions()}),
+            FormField({id:'finance-inv-commitment',label:'Commitment',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-inv-value',label:'Capital account value',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-inv-funded',label:'Funded to date',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-inv-returned',label:'Returned to date',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-inv-asOf',label:'As of',kind:'date'}),
+            Notice('',{id:'finance-inv-status',role:'status'}),
+            ActionGroup([Button('Save investment',{id:'finance-inv-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-inv-cancel',variant:'secondary'})])
+            ],{id:'finance-inv-form',className:'form-stack',hidden:true}),
+            Form([
+            Strong('New property',{id:'finance-prop-title'}),
+            FormField({id:'finance-prop-portfolio',label:'Portfolio',kind:'select',options:[]}),
+            FormField({id:'finance-prop-name',label:'Address',kind:'text',placeholder:'e.g. 123 Example St, Town ST 00000'}),
+            FormField({id:'finance-prop-link',label:'Zillow page',kind:'text',placeholder:'https://www.zillow.com/homedetails/…'}),
+            FormField({id:'finance-prop-value',label:'Market value',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-prop-source',label:'Value from',kind:'select',options:sourceOptions()}),
+            FormField({id:'finance-prop-debt',label:'Still owed',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-prop-asOf',label:'As of',kind:'date'}),
+            Notice('',{id:'finance-prop-status',role:'status'}),
+            ActionGroup([Button('Save property',{id:'finance-prop-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-prop-cancel',variant:'secondary'})])
+            ],{id:'finance-prop-form',className:'form-stack',hidden:true})
+          ],{id:'finance-entry'}),
+          // Closed until it is wanted. Getting to the figures is a way of putting
+          // one in the ledger, which is the scope this tab already has.
+          Disclosure('Open an account page',AccountPages(FINANCE_SITES),{id:'finance-account-pages'})
+        ]})}
     ]})
   ],{className:'finance-ledger'});
 }
