@@ -2081,3 +2081,30 @@ account, at that balance.
 New coverage: nine spellings of a group heading refused, and a heading stripped
 off an account that survives it. Validation: 509 extension and 33 mobile tests
 pass.
+
+## A table is not always a `<table>` (0.6.182 / mobile 0.1.132)
+
+Four readings of the same Chase overview came back with the same thing: the
+totals in its summary panel, and not one of the twenty accounts listed below
+them. The accounts were on the page the whole time. The reader could not see
+them as accounts, because it looked for `<table>` and Chase builds its account
+list out of divs carrying the roles that say what they are — `role="table"` over
+`role="row"` over `role="cell"`, which is what a design system builds and what a
+screen reader is owed.
+
+To `innerText` a grid like that is one line per cell. An account's name, its
+type, its day's change and its balance arrive as four unrelated lines, and the
+rule that reassembles a figure with the line above it then crosses them: a
+balance under a repeat of the name above it, a name under the wrong column,
+`Joint checking (...0823)` labelled Savings. What reached the reading was a heap
+of half-attached figures and one clean summary panel — so the summary panel is
+what came back, every time.
+
+A grid that declares itself a table is now read the way the element would be,
+row by row, with the header saying which column each figure fell out of. Nothing
+widens for it: the same figure and account tests decide which rows are worth
+keeping, and the same limits bound how many.
+
+New coverage: two ARIA grids read as tables, every account travelling with its
+own number and balance, beside a summary panel of totals by kind. Validation:
+511 extension and 33 mobile tests pass.
