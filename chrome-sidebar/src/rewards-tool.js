@@ -1,11 +1,12 @@
-import {RewardsView,RewardGroup,CardBenefits,BalancePanel} from './components/rewards.js';
+import {RewardsView,RewardGroup,CardBenefits,BalancePanel,readingSummary} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
 import {RecordRow,RecordGroup,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl} from './program-data.js';
 import {parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,programShort,walletRun,WALLET_RUNS,UNREAD_BALANCE} from './balance-data.js';
-import {parseCreditReading,matchCredits,creditRecord} from './credit-data.js';
+import {parseCreditReading,parseBenefitReading,matchCredits,creditRecord,benefitRecord} from './credit-data.js';
+import {parseRateReading,matchRates,rateCards,rateCardRecord} from './rate-data.js';
 import {LOYALTY_PROGRAMS,loyaltySitePrograms,loyaltyProgramNamed} from './loyalty-sites.js';
 import {institutionNamed} from './account-sites.js';
 import {aiConnections} from './ai-connection.js';
@@ -28,7 +29,10 @@ const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
 // `readPage` is the host's ability to read the tab the owner is looking at. The
 // sidebar sits beside that tab and supplies it; a full tab and the phone have
 // no such page, so they pass nothing and the balance panel never appears.
-export function mountRewards(root,{credentials,offline,remote=null,programs=null,readPage=null,onSettings=()=>{},onChanged=()=>{},vault=sharedVault()}){
+// `cards` is the Best card store. A rate read off a card's own page is a bonus
+// rule on a card saved there rather than a wallet entry, so the wallet reaches
+// for that store only when a reading actually returns rates.
+export function mountRewards(root,{credentials,offline,remote=null,programs=null,readPage=null,cards=null,onSettings=()=>{},onChanged=()=>{},vault=sharedVault()}){
   root.replaceChildren(RewardsView());
   const $=id=>root.querySelector(`#${id}`);
   let entries=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;
@@ -36,9 +40,12 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // The loyalty program whose site is open beside the panel, and what was read
   // off it. A reading is a proposal until it is saved: the figures are shown as
   // they will be stored, and nothing is written by reading.
-  // `credits` is the other half of the same reading: what the issuer's own
-  // trackers say is left of each recurring credit on the card.
-  let site=null,balances=null,credits=null;
+  // `credits` is the second half of the same reading: what the issuer's own
+  // trackers say is left of each recurring credit on the card. `rates` is what
+  // the card earns, which belongs to its saved terms rather than the wallet,
+  // and `benefits` is everything the page states that carries no figure at all.
+  // `held` is the owner's saved cards, fetched only when a rate needs one.
+  let site=null,balances=null,credits=null,rates=null,benefits=null,held=[];
   let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null,syncFailed=false;
   let found=null,connectionsFor='';
   const connections=aiConnections({load:async token=>(await remote(token,'/v1/ai-connections')).connections,need:'to read a balance off a page or look up a card.'});
@@ -234,26 +241,34 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('rewards-tabs').show('page',show);
     if(!show){$('balance-body').replaceChildren();setStatus($('balance-status'),'');return;}
     $('balance-body').replaceChildren(BalancePanel({
-      site,programs:loyaltySitePrograms(site),rows:balances||[],credits:credits||[],disabled:busy||!loaded,
-      onRead:readBalances,onSave:saveBalances,
-      onDiscard:()=>{balances=null;credits=null;renderBalances();balanceStatus('');}
+      site,programs:loyaltySitePrograms(site),rows:balances||[],credits:credits||[],
+      rates:rates||[],benefits:benefits||[],disabled:busy||!loaded,
+      onRead:readSnapshot,onSave:saveSnapshot,onDiscard:discardSnapshot
     }));
   }
   const balanceStatus=(text,tone='')=>setStatus($('balance-status'),text,tone);
+  const discardSnapshot=()=>{balances=null;credits=null;rates=null;benefits=null;renderBalances();balanceStatus('');};
   // One press does the whole errand: read the page beside the panel, turn it
-  // into one figure per program, and show them. Nothing is saved yet.
-  async function readBalances(){
+  // into the four things such a page states — the balances, the credit
+  // trackers, what the card earns and the benefits carrying no figure — and
+  // show them. Nothing is saved yet.
+  async function readSnapshot(){
     if(!site||!readPage||!remote||busy)return;
-    // Every currency the site states is read in the one press, so the errand is
-    // named after the provider when there is more than one of them.
+    // Every currency the site states is read in the one press, and so is
+    // everything else it states, so the errand is named after the page rather
+    // than after one of the four things that come off it.
     const programs=loyaltySitePrograms(site);
-    busy=true;render();balanceStatus(programs.length>1
-      ?`Reading your ${site.source} balances…`:`Reading your ${site.label} balance…`,'progress');
+    busy=true;render();balanceStatus(`Reading the ${site.source} page…`,'progress');
     try{
       const token=await credentials.get();
       if(!token)throw Error('Open Settings to connect this device.');
       const connection=await connections.id(token);
-      const page=await readPage();
+      // An issuer's own page is read whole rather than for its figures: what
+      // it says about the card — what it earns, what can be enrolled in — is
+      // mostly not a figure, and a snapshot that keeps only figures throws
+      // exactly those away. An airline's or a hotel's page is a balance page
+      // and is read the way the ledger reads one.
+      const page=await readPage({figures:site.kind!=='issuer'});
       const result=await remote(token,`/v1/ai-connections/${connection}/balance-intake`,
         // `program`, `source` and `unit` name the first of them on their own,
         // so a device that is ahead of the Worker still gets a reading.
@@ -261,21 +276,41 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
           programs:programs.map(entry=>({program:entry.label,source:entry.source,unit:entry.unit}))},timeoutMs:130000});
       // Checked here too: the wallet accepts nothing the API has not proved.
       const rows=matchBalances(parseBalanceReading(result,programs),entries);
-      const found=matchCredits(parseCreditReading(result,site.source),entries);
+      // One `taken` set across both lists: a saved benefit may be claimed by a
+      // credit or by an untracked benefit, never by both, or the same entry
+      // would be proposed twice and saved over itself.
+      const claimed=new Set();
+      const found=matchCredits(parseCreditReading(result,site.source),entries,claimed);
+      const extra=matchCredits(parseBenefitReading(result,site.source),entries,claimed);
+      // A rate belongs to a saved card's terms, so the cards are fetched only
+      // when there is a rate to land on one. The device's own copy answers if
+      // the cloud will not.
+      const read=parseRateReading(result,site.source);
+      if(read.length&&cards){
+        try{held=(await cards.request(token,'/v1/cards')).records;}
+        catch{held=await cards.saved(token);}
+      }
+      const rated=matchRates(read,held);
       balances=rows.length?rows:null;credits=found.length?found:null;
-      const read=[rows.length?`${rows.length} balance${rows.length===1?'':'s'}`:'',
-        found.length?`${found.length} credit${found.length===1?'':'s'}`:''].filter(Boolean);
-      balanceStatus(read.length
-        ?`${read.join(' and ')} read. Nothing is saved yet.`
-        :['Nothing to read on that page. Open your account or benefits page and read again.',result.unread||''].filter(Boolean).join(' '),read.length?'success':'alert');
+      rates=rated.length?rated:null;benefits=extra.length?extra:null;
+      // A reading that found something says so by turning the panel into what
+      // it found, which already carries the counts and "nothing saved yet".
+      // Saying it again underneath is the screen telling the reader what they
+      // are looking at. Only a reading that found nothing needs words.
+      balanceStatus(readingSummary({rows,credits:found,rates:rated,benefits:extra}).length?''
+        :['Nothing to read on that page. Open your account or benefits page and read again.',result.unread||''].filter(Boolean).join(' '),'alert');
     }catch(error){balanceStatus(reason(error),'error');}
     finally{busy=false;render();renderBalances();}
   }
   // Saved one at a time through the same validator and queue as a typed edit.
   // A balance that fails leaves itself and the rest in place to be corrected.
-  async function saveBalances(){
-    if(!balances?.length&&!credits?.length)return;
-    let figures=0,tracked=0;
+  async function saveSnapshot(){
+    // Rates are grouped first because a rate with no card of the owner's to
+    // land on is not something to save: a reading left holding only those has
+    // nothing to write, and saying "Saved." would be saying nothing happened.
+    const groups=rateCards(rates||[]);
+    if(!balances?.length&&!credits?.length&&!benefits?.length&&!groups.length)return;
+    let figures=0,tracked=0,kept=0,termed=0;
     while(balances?.length){
       const [row]=balances,match=row.ambiguous?null:row.match;
       const entry=balanceRecord(row,match);
@@ -292,9 +327,50 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent,'error');return;}
       credits=credits.slice(1);tracked++;
     }
-    credits=null;renderBalances();
+    credits=null;
+    // A benefit with no tracker is the same kind of record with one field
+    // fewer, so it goes the same way: one at a time, keeping everything the
+    // owner already put on an entry it matched.
+    while(benefits?.length){
+      const [row]=benefits,match=row.match;
+      const entry=benefitRecord(row,match,row.ambiguous?null:row.holder);
+      if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent,'error');return;}
+      benefits=benefits.slice(1);kept++;
+    }
+    benefits=null;
+    // Rates are not wallet entries. They are bonus rules on a card saved in
+    // Best card, so they go to that store — one card record at a time, through
+    // `normalizeCard` and the same queue a card edited by hand passes.
+    if(groups.length){
+      busy=true;render();
+      for(const group of groups){
+        if(!await saveCardRates(group)){busy=false;render();renderBalances();return;}
+        termed++;
+      }
+      busy=false;render();
+    }
+    // A rate that matched no card of the owner's stays on screen: it changes
+    // nothing, and it is the one line saying what the card earns.
+    rates=rates?.filter(row=>!row.holder)||null;
+    if(!rates?.length)rates=null;
+    renderBalances();
     balanceStatus(`Saved ${[figures?`${figures} balance${figures===1?'':'s'}`:'',
-      tracked?`${tracked} credit${tracked===1?'':'s'}`:''].filter(Boolean).join(' and ')}.`,'success');
+      tracked?`${tracked} credit${tracked===1?'':'s'}`:'',
+      kept?`${kept} benefit${kept===1?'':'s'}`:'',
+      termed?`the terms on ${termed} card${termed===1?'':'s'}`:''].filter(Boolean).join(', ')}.`,'success');
+  }
+  // One card's terms with the page's rates folded in. A rule the card already
+  // holds for the same category and purchase method is that rule at a new rate;
+  // everything else about it stays the owner's.
+  async function saveCardRates({holder,rows}){
+    try{
+      const token=await credentials.get();
+      if(!token)throw Error('Open Settings to connect this device.');
+      const record=rateCardRecord(holder,rows);
+      const result=await cards.request(token,`/v1/cards/${holder.id}`,{method:'PUT',value:{...record,revision:holder.revision??null}});
+      held=result.records||held;
+      return true;
+    }catch(error){balanceStatus(reason(error),'error');return false;}
   }
   function startCard(){$('reward-card-intake').open=true;$('reward-card-name').focus();}
   // The wallet as a directory of programs. Every program this tool recognizes
@@ -460,7 +536,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…','progress');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
-  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;credits=null;connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
+  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;credits=null;rates=null;benefits=null;held=[];connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
   // Whether a connection exists at all is the only thing worth saying, and it
   // is checked once per connected device rather than on every automatic sync.
   async function connectionList(){
@@ -570,7 +646,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     // site has nothing to say beside another's.
     site(program=null){
       if((program?.id||'')===(site?.id||''))return;
-      site=program||null;balances=null;credits=null;
+      site=program||null;balances=null;credits=null;rates=null;benefits=null;
       renderBalances();
     },
     stop(){clearInterval(watch);clearInterval(retry);clearTimeout(revealTimer);}};

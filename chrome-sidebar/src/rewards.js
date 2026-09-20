@@ -2,6 +2,7 @@ import {travelChanges} from './travel-changes.js';
 import {mountRewards} from './rewards-tool.js';
 import {rewardsOffline} from './rewards-offline.js';
 import {programsOffline} from './program-offline.js';
+import {cardsOffline} from './cards-offline.js';
 import {loadRewards} from './rewards-sync.js';
 import {cloudRequest,CONNECTION_KEY} from './cloud-storage.js';
 import {showRewards,onNavigate} from './navigation.js';
@@ -13,13 +14,17 @@ const offline=rewardsOffline({remote:async(token,path,options)=>{
   return cloudRequest(token,path,options);
 }});
 const programs=programsOffline();
+// The Best card store, so a rate read off a card's own page lands on the card
+// the terms belong to. The wallet touches it only when a reading returns a
+// rate; the same adapter and the same lock serve Best card itself.
+const cards=cardsOffline();
 const root=document.getElementById('rewards-root');
 const changes=travelChanges(()=>rewardsTool.refresh({quiet:true}),{resource:'rewards'});
 window.addEventListener('pagehide',()=>changes.close(),{once:true});
 // The page beside the panel is the sidebar's to read; a full tab has no such
 // page, and neither has the phone, so neither is given one.
-const readPage=globalThis.chrome?.scripting&&document.getElementById('rewards-tool')?()=>readOpenAccountPage():null;
-export const rewardsTool=mountRewards(root,{credentials,offline,programs,readPage,remote:cloudRequest,onChanged:()=>changes.publish(),onSettings:()=>document.getElementById('open-settings')?document.getElementById('open-settings').click():location.assign('settings.html')});
+const readPage=globalThis.chrome?.scripting&&document.getElementById('rewards-tool')?options=>readOpenAccountPage(globalThis.chrome,options):null;
+export const rewardsTool=mountRewards(root,{credentials,offline,programs,readPage,cards,remote:cloudRequest,onChanged:()=>changes.publish(),onSettings:()=>document.getElementById('open-settings')?document.getElementById('open-settings').click():location.assign('settings.html')});
 // The sidebar owns the page heading and return navigation.
 root.querySelector('h1').hidden=!!document.getElementById('close-rewards');
 document.getElementById('close-rewards')?.addEventListener('click',()=>showRewards(false));

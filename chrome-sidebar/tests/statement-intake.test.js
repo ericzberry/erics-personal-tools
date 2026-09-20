@@ -653,3 +653,74 @@ test('a grid of accounts is read once, from its rows, and the day’s move is no
   assert.equal(page.text.includes('-$27,467.55'), false, 'a change printed above its own percentage is a move, not a balance');
   assert.ok(page.text.length < 400, `the text beside the rows narrowed to ${page.text.length} characters`);
 });
+// A card's own rewards page states what the card earns, and none of it is
+// money. "8x on Chase Travel" carries no currency symbol, no cents and no
+// grouped thousand, so it was dropped before the reading saw it; "4x on flights
+// and hotels booked direct" survived only by the accident of a comma in the
+// points printed beside it. The one line saying what the card earns reached the
+// reading by luck or not at all.
+test('a rewards page keeps the line that states an earning rate', () => {
+  const page = inPage(pageOf({text: [
+    'J.P. Morgan Reserve (...4411)',
+    'Ultimate Rewards',
+    '204,812 pts',
+    '8x on Chase Travel',
+    '0 pts',
+    '4x on flights and hotels booked direct',
+    '3x on dining',
+    'All other earnings',
+    '1x',
+    'View rewards activity'
+  ].join('\n')}), HERE);
+  assert.equal(page.filtered, true);
+  assert.match(page.text, /8x on Chase Travel/);
+  assert.match(page.text, /4x on flights and hotels booked direct/);
+  assert.match(page.text, /3x on dining/);
+  assert.match(page.text, /^1x$/m, 'and the base rate, which is a number and a letter');
+  assert.match(page.text, /204,812 pts/, 'the points balance still comes with it');
+  assert.equal(page.text.includes('View rewards activity'), false, 'the site’s own links are still furniture');
+  // One program name over a run of rates is a heading said once, not once per
+  // rate under it.
+  assert.equal(page.text.match(/Ultimate Rewards/g).length, 1);
+});
+
+test('a cash back page keeps a percent back, and a bare percentage is still a move', () => {
+  const page = inPage(pageOf({text: [
+    'Blue Cash Preferred', 'Reward Dollars', '$125.49',
+    '6% cash back at U.S. supermarkets',
+    '3% back at U.S. gas stations',
+    '1 point per dollar on everything else'
+  ].join('\n')}), HERE);
+  assert.match(page.text, /6% cash back at U\.S\. supermarkets/);
+  assert.match(page.text, /3% back at U\.S\. gas stations/);
+  assert.match(page.text, /1 point per dollar on everything else/);
+  assert.equal(page.text.match(/6% cash back/g).length, 1,
+    'a rate kept as the name under a balance is not kept a second time as itself');
+});
+
+// The rate test earns its place on the same terms a figure does. A finance page
+// has no rates on it, so it must send exactly what it sent before: a broker
+// dashboard narrowed to its accounts is the case the whole filter exists for.
+test('a rate test does not widen what a finance page sends', () => {
+  const dashboard = () => inPage(pageOf({text: [
+    'Summary', 'Updated: 03:57:45 AM ET, 09/19/2026',
+    'IRA', 'Account number ending in 306', 'IRA $412,880.17 $0.00 0.00%',
+    'Checking', 'Account number ending in 638', 'Checking $8,420.11 $0.00 0.00%',
+    'Portfolio Insights is a snapshot of your portfolio’s performance.',
+    'DJIA', 'Closed', '', '51,682.64', '0.00 (0.00%)',
+    '$0', '$1M', '$2M',
+    'Up to 10x more research than the last platform you used'
+  ].join('\n')}), HERE);
+  const page = dashboard();
+  assert.match(page.text, /IRA \$412,880\.17/);
+  assert.match(page.text, /Checking \$8,420\.11/);
+  assert.equal(page.text.includes('51,682.64'), false, 'an index quote is still not a balance');
+  assert.equal(page.text.includes('Portfolio Insights'), false);
+  assert.equal(/^\$1M$/m.test(page.text), false, 'a chart axis is still not a balance');
+  // Marketing prose is not an earning rate. "Up to 10x more research than the
+  // last platform you used" states the same shape of figure as "4x on flights
+  // and hotels booked direct", and only the second of them is the subject of
+  // its line, so only the second is kept.
+  assert.equal(page.text.includes('10x more research'), false, 'a sentence with a multiplier in it is still prose');
+  assert.ok(page.text.length < 300, `narrowed to ${page.text.length} characters`);
+});

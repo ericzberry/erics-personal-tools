@@ -1,6 +1,7 @@
 import * as UI from './ui.js';
 import {CADENCE_LABELS} from '../rewards-data.js';
 import {programName} from '../balance-data.js';
+import {formatRate} from '../rate-data.js';
 const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label,Tabs}=UI;
 const CADENCE_OPTIONS=[{text:'Does not reset',value:''},...Object.entries(CADENCE_LABELS).map(([value,text])=>({text,value}))];
 export function RewardsView(){
@@ -108,12 +109,20 @@ export function CardBenefits(result,{onSave,onDiscard}){
   ],{className:'reward-ingest'})];
 }
 
-// Offered when the tab beside the panel is a loyalty program's own site.
-// Before anything is read it is one action; afterwards it is what came off the
-// page, because a figure is the owner's to check before it is saved. `programs`
-// is every currency that site prints, which is more than one wherever an issuer
-// runs a currency per kind of card.
-export function BalancePanel({site,programs=[],rows=[],credits=[],disabled=false,onRead,onSave,onDiscard}){
+// What one snapshot of the page came back with, said in one line. A card's own
+// page answers four questions at once, so the counts go here where they can
+// wrap, and the actions below stay two stable words.
+export function readingSummary({rows=[],credits=[],rates=[],benefits=[]}={}){
+  const count=(list,one,many)=>list.length?`${list.length} ${list.length===1?one:many}`:'';
+  return [count(rows,'balance','balances'),count(credits,'credit','credits'),
+    count(rates,'rate','rates'),count(benefits,'benefit','benefits')].filter(Boolean);
+}
+// Offered when the tab beside the panel is a loyalty program's or a card's own
+// site. Before anything is read it is one action; afterwards it is what came
+// off the page, because every figure is the owner's to check before it is
+// saved. `programs` is every currency that site prints, which is more than one
+// wherever an issuer runs a currency per kind of card.
+export function BalancePanel({site,programs=[],rows=[],credits=[],rates=[],benefits=[],disabled=false,onRead,onSave,onDiscard}){
   const action=(label,variant,handler)=>{
     const node=Button(label,{variant,size:'compact',disabled});
     node.addEventListener('click',handler);
@@ -129,24 +138,62 @@ export function BalancePanel({site,programs=[],rows=[],credits=[],disabled=false
   const named=currencies.map(label=>programName(site.source,label));
   const title=named.every((label,i)=>label===currencies[i])
     ?currencies.join(' and '):`${site.source} ${currencies.join(' and ')}`;
-  const found=[rows.length?`${rows.length} balance${rows.length===1?'':'s'}`:'',
-    credits.length?`${credits.length} credit${credits.length===1?'':'s'}`:''].filter(Boolean);
+  const found=readingSummary({rows,credits,rates,benefits});
   const heading=Stack([
     Strong(title),
-    found.length?Label(`${found.join(' and ')} read · nothing saved yet`,{className:'snapshot-meta'}):null
+    found.length?Label(`${found.join(' · ')} read · nothing saved yet`,{className:'snapshot-meta'}):null
   ],{className:'snapshot-heading'});
-  if(!found.length)return Section([heading,ActionGroup([action(`Read my balance${currencies.length>1?'s':''}`,'primary',onRead)],{compact:true})],{className:'record-row'});
+  // One press reads the page for everything it states — the balances, the
+  // credit trackers, what the card earns, the benefits with no figure — so the
+  // action is named after the page rather than after one of the four.
+  if(!found.length)return Section([heading,ActionGroup([action('Read this page','primary',onRead)],{compact:true})],{className:'record-row'});
   // The heading has just named what was read, so a row says only what tells it
   // from its siblings: nothing at all where there is one program, and its own
   // currency where an issuer runs two. A reading from somewhere else than the
   // page's own issuer still names itself in full.
   const rowLabel=row=>programName(row.source,row.name)===title?''
     :row.source===site.source?row.name:programName(row.source,row.name);
+  // The rows above already say what would be saved and that nothing is yet, so
+  // the action is one stable verb rather than a sentence that grows a clause
+  // per kind of row the page turned out to state.
   return Section([heading,...rows.map(row=>BalanceRow(row,rowLabel(row))),
-    ...credits.map(CreditRow),ActionGroup([
-    action(`Save ${found.join(' and ')}`,'primary',onSave),
+    ...credits.map(CreditRow),...rates.map(RateRow),...benefits.map(PageBenefitRow),ActionGroup([
+    action('Save','primary',onSave),
     action('Discard','subtle',onDiscard)
   ],{compact:true})],{className:'record-row'});
+}
+// Where a read row would land, and how sure the reading was. A row that would
+// land nowhere says so here rather than being quietly filed under a card it
+// might not belong to.
+const landing=(row,noun)=>[row.match?`Updates ${row.match.name}`:row.holder?`New ${noun} on ${row.holder.name}`
+  :row.ambiguous?'Several of your cards match — saves without one':row.card?`New ${noun} · ${row.card}`:`New ${noun}`,
+  row.confidence==='high'?'':`${row.confidence} confidence`].filter(Boolean).join(' · ');
+// What the card earns, in the page's own wording, and the rule it would become.
+// A rate with no saved card to land on is shown all the same: the owner can see
+// what the page states and add the card, which is better than dropping the one
+// line that says what it earns.
+function RateRow(row){
+  const target=row.holder?[row.existing?`Updates ${row.holder.name}`:`New rate on ${row.holder.name}`,
+      row.confidence==='high'?'':`${row.confidence} confidence`].filter(Boolean).join(' · ')
+    :row.mismatch?`${row.unit==='cash'?'Percent back':'Points'} on a card saved as ${row.unit==='cash'?'points':'cash back'} — not saved`
+    :row.ambiguous?'Several of your cards match — not saved'
+    :`No saved card matches${row.card?` ${row.card}`:''} — not saved`;
+  return Stack([
+    Stack([Label(row.label),Strong(formatRate(row.rate,row.unit))],{className:'snapshot-figure'}),
+    Note([row.base?'All other purchases':`${row.category}${row.channel==='Any'?'':` · ${row.channel}`}`,target].filter(Boolean).join(' · ')),
+    ...(row.condition?[Note(row.condition)]:[])
+  ],{className:'snapshot-row'});
+}
+// A benefit the page states with no tracker against it — a lounge program,
+// elite status, an included subscription. What it is worth is a sentence rather
+// than a figure, so it reads down the line the way a researched benefit does
+// instead of being squeezed into the column a balance's number sits in.
+function PageBenefitRow(row){
+  return Stack([
+    Strong(row.name),
+    Note([...benefitLine(row).split(' · '),landing(row,row.kind==='membership'?'membership':'benefit')].filter(Boolean).join(' · ')),
+    ...(row.notes?[Note(row.notes)]:[])
+  ],{className:'snapshot-row'});
 }
 // A credit the issuer's own tracker states, and where it would land. What is
 // left in the period is the figure, because it is the one that decides whether
@@ -155,9 +202,7 @@ function CreditRow(row){
   // Which card it belongs to is said once, in the line that says where the
   // credit would land. Carried on the name as well it was the longest thing in
   // the panel, repeated down every row of a card that has a dozen of them.
-  const target=[row.match?`Updates ${row.match.name}`:row.holder?`New credit on ${row.holder.name}`
-    :row.ambiguous?'Several of your cards match — saves without one':row.card?`New credit · ${row.card}`:'New credit',
-    row.confidence==='high'?'':`${row.confidence} confidence`].filter(Boolean).join(' · ');
+  const target=landing(row,'credit');
   return Stack([
     Stack([Label(row.name),Strong(`${row.left} left`)],{className:'snapshot-figure'}),
     Note([CADENCE_LABELS[row.cadence]||'',target].filter(Boolean).join(' · ')),

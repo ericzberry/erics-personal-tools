@@ -4,6 +4,7 @@ import {parseHTML} from 'linkedom';
 import {mountRewards} from '../src/rewards-tool.js';
 import {sealSecret,openSecret} from '../src/secret-vault.js';
 import {UNREAD_BALANCE} from '../src/balance-data.js';
+import {loyaltySite} from '../src/loyalty-sites.js';
 // Waits for the tool to reach an expected state. Sealing and opening a
 // protected value run through real WebCrypto, so a single tick is not enough
 // to observe the result reliably.
@@ -433,5 +434,57 @@ test('every row in the wallet reaches the page it is on',async()=>{
  assert.equal(linkOf('Platinum Card'),'https://global.americanexpress.com/dashboard');
  assert.equal(linkOf('Ride credit'),'https://global.americanexpress.com/dashboard');
  assert.equal(linkOf('Priority Pass Select'),'','a row nothing recognizes carries no link rather than a guess');
+ tool.stop();h.restore();
+});
+
+// One press on a card's own page reads everything that page states, and the
+// review shows all four kinds before any of it is saved. This is the wiring
+// that a bad revert took out once while every data test still passed: the
+// modules were there, the panel simply never asked for them.
+test('one reading brings back balances, credits, rates and benefits, and saving puts each where it belongs',async()=>{
+ const h=harness();
+ const RESERVE='J.P. Morgan Reserve (...4411)';
+ const reading={
+  balances:[{program:'Ultimate Rewards',source:'Chase',amount:61000,unit:'points',confidence:'high'}],
+  credits:[{credit:'$300 travel credit',card:RESERVE,amount:300,remaining:150,cadence:'annual',confidence:'high'}],
+  rates:[{label:'8x on Chase Travel',card:RESERVE,category:'Travel',channel:'Issuer portal',rate:8,unit:'points',
+   condition:'Booked through Chase Travel.',confidence:'high'},
+   {label:'3x on dining',card:RESERVE,category:'Dining',channel:'Any',rate:3,unit:'points',confidence:'high'}],
+  benefits:[{benefit:'Priority Pass Select',card:RESERVE,kind:'membership',value:'Unlimited lounge visits',confidence:'high'}]
+ };
+ const saved=[];
+ const held={id:'11111111-1111-4111-8111-111111111111',name:'J.P. Morgan Reserve',unit:'points',base:1,cpp:1.5,
+  rules:'[]',source:'',checked:'2026-01-01',notes:'',revision:'r1'};
+ const written=[];
+ const tool=mountRewards(h.document.querySelector('main'),{credentials:{get:async()=>'token'},vault:fakeVault(),
+  offline:{request:async(t,p,o)=>{if(o?.method){saved.push(o.value);return {records:[...saved]};}return {records:[...saved]};}},
+  cards:{request:async(t,p,o)=>{if(o?.method){written.push({path:p,value:o.value});return {records:[o.value]};}return {records:[held]};},
+   saved:async()=>[held]},
+  readPage:async()=>({text:'8x on Chase Travel · 3x on dining',host:'chase.com',title:'Ultimate Rewards',trimmed:0,tables:1}),
+  remote:async(t,path)=>path==='/v1/ai-connections'
+   ?{connections:[{id:'c1',name:'Synthetic',provider:'openai',hasApiKey:true}]}:reading});
+ await tool.refresh();
+ tool.site(loyaltySite('https://ultimaterewards.chase.com/'));
+ const press=label=>[...h.document.querySelectorAll('#balance-body button')].find(node=>node.textContent===label);
+ await settle(()=>press('Read this page'));
+ press('Read this page').click();
+ await settle(()=>press('Save'));
+ const panel=h.document.getElementById('balance-body').textContent;
+ assert.match(panel,/1 balance · 1 credit · 2 rates · 1 benefit read · nothing saved yet/);
+ assert.match(panel,/8×/,'what the card earns is shown in the page’s own wording and the rule it becomes');
+ assert.match(panel,/New rate on J.P. Morgan Reserve/);
+ assert.match(panel,/Priority Pass Select/);
+ press('Save').click();
+ await settle(()=>written.length&&saved.length>=3);
+ // The wallet took the balance, the credit and the benefit; the rates went to
+ // the card's own terms in Best card, not into the wallet as entries.
+ assert.deepEqual(saved.map(entry=>[entry.kind,entry.name]),
+  [['balance','Ultimate Rewards'],['benefit','$300 travel credit'],['membership','Priority Pass Select']]);
+ assert.equal(written.length,1);
+ assert.equal(written[0].path,`/v1/cards/${held.id}`);
+ assert.deepEqual(JSON.parse(written[0].value.rules).map(rule=>[rule.category,rule.channel,rule.rate]),
+  [['Travel','Issuer portal',8],['Dining','Any',3]]);
+ await settle(()=>h.document.getElementById('balance-status').textContent.startsWith('Saved'));
+ assert.match(h.document.getElementById('balance-status').textContent,/the terms on 1 card/);
  tool.stop();h.restore();
 });

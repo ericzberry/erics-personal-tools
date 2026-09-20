@@ -2330,3 +2330,47 @@ in `/tests/settings-layout.html` (an open item beside a hovered closed one),
 in `/tests/restaurant-preview.html`, and on the phone at 390px and 320px, where
 no horizontal overflow appears. Native iPhone and installed Chrome behavior were
 not directly tested. Archive: `release/erics-sidebar-0.6.196.zip`.
+
+## The half of the rates feature that never came back (0.6.197 / mobile 0.1.147)
+
+**A bad revert took most of "Read the card's own page for what it earns", and
+the repairs that followed put back everything except the half that shows it.**
+`rate-data.js`, its tests, the Worker's reading and the model budget that pays
+for the extra list were restored a release ago; the wallet never asked for any
+of it. Every data test passed the whole time, because no test mounted the tool
+and looked at the panel. The feature was invisible and nothing said so.
+
+**Restored: the wiring.** `rewards-tool.js` imports `parseRateReading`,
+`matchRates`, `rateCards` and `rateCardRecord` again and carries `rates` and
+`benefits` beside `balances` and `credits`; one press reads the page for all
+four; `components/rewards.js` renders a rate in the page's own wording with the
+rule it would become and where it would land — *8× · Travel · Issuer portal ·
+New rate on J.P. Morgan Reserve* — and a rate that matches no saved card says
+so and is not saved. Saving sends the wallet's three kinds to the wallet and
+the rates to the card's terms in Best card, one card record at a time.
+`rewards.js` hands the wallet the Best card store again, which is what a rate
+lands on.
+
+**Restored: the snapshot's rate test.** `finance-page-read.js` narrows a page
+to lines that state a figure, and a multiplier is not money — "8x on Chase
+Travel" was dropped before the reading saw it. The named `RATE` test is back,
+held to the same short-and-few-words bound the account names are held to, so a
+broker's "Up to 10x more research than the last platform you used" is still
+prose and a finance page sends exactly what it sent before. Its three tests
+came back with it, onto the current reader, so the grid reading released since
+stays.
+
+**And the test that would have caught it.** One mounted-tool test now reads a
+synthetic card page and asserts all four lists reach the panel and that saving
+puts each where it belongs — the wallet's three in the wallet, the rates in the
+card's rules. The mobile offline shell was missing `rate-data.js`, which that
+new import surfaced immediately: a module the shell does not precache is a
+tool that breaks offline, and the shell test named it.
+
+New coverage: the four-list reading through the mounted wallet, the three
+page-reader tests for an earning rate, a percent back, and a finance page that
+must not widen. Validation: 558 extension, 33 mobile and 133 API tests pass
+from an archive of this release. The synthetic preview was reviewed at 380px:
+five rates and three benefits under one reading, each saying where it lands,
+including the one with no saved card to land on. Archive:
+`release/erics-sidebar-0.6.197.zip`.
