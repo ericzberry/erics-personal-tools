@@ -255,8 +255,19 @@ export function FinanceView(){
       Notice('',{id:'finance-intake-status',role:'status'}),
       Stack([],{id:'finance-drafts'}),
       Stack([],{id:'finance-capital-drafts'}),
-      Disclosure('Enter a figure',[
-      Form([
+      // Three records, one errand. A figure is a class and an amount; a
+      // private investment is a name, a kind and the four figures a capital
+      // account states; a property is an address and what is owed on it. They
+      // stay three forms, because folding them together would make one form
+      // that is mostly hidden whichever way it is used — but they are not
+      // three separate offers. Stacked as three closed drawers under a fourth,
+      // they read as a run of unexplained boundaries, and the one being looked
+      // for is found only by reading all of them. So which record is being
+      // entered is a switch inside one drawer, chosen where it applies, the way
+      // the currency and the trend period already are.
+      Disclosure('Enter by hand',[
+        Stack([],{id:'finance-entry-switch',className:'currency-switch entry-switch'}),
+        Form([
         Strong('New figure',{id:'finance-editor-title'}),
         FormField({id:'finance-portfolio',label:'Portfolio',kind:'select',options:[]}),
         Stack([
@@ -271,16 +282,8 @@ export function FinanceView(){
         ],{id:'finance-figure-fields'}),
         Notice('',{id:'finance-form-status',role:'status'}),
         ActionGroup([Button('Save figure',{id:'finance-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-cancel',variant:'secondary'})])
-      ],{id:'finance-form',className:'form-stack'})
-      ],{id:'finance-editor'}),
-      // A second form, because it is a second job, and the two names are what
-    // have to say so: "Enter by hand" and "Record an investment" read as the
-    // same offer twice. A figure is a class and an amount; a private investment
-    // is a name, what kind of thing it is, and the four numbers a capital
-    // account statement states about it. Folding them together would have made
-    // one form that is mostly hidden whichever way it is used.
-      Disclosure('Enter a private investment',[
-      Form([
+        ],{id:'finance-form',className:'form-stack'}),
+        Form([
         Strong('New investment',{id:'finance-inv-title'}),
         FormField({id:'finance-inv-portfolio',label:'Portfolio',kind:'select',options:[]}),
         FormField({id:'finance-inv-name',label:'Investment',kind:'text',placeholder:'e.g. Acme Ventures Fund III, L.P.'}),
@@ -293,14 +296,8 @@ export function FinanceView(){
         FormField({id:'finance-inv-asOf',label:'As of',kind:'date'}),
         Notice('',{id:'finance-inv-status',role:'status'}),
         ActionGroup([Button('Save investment',{id:'finance-inv-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-inv-cancel',variant:'secondary'})])
-      ],{id:'finance-inv-form',className:'form-stack'})
-      ],{id:'finance-investment'})
-      ,
-      // A third form, because it is a third job. A property is an address and
-      // two numbers that belong together — what it is worth and what is owed on
-      // it — and neither of the forms above has anywhere to put an address.
-      Disclosure('Enter a property',[
-      Form([
+        ],{id:'finance-inv-form',className:'form-stack',hidden:true}),
+        Form([
         Strong('New property',{id:'finance-prop-title'}),
         FormField({id:'finance-prop-portfolio',label:'Portfolio',kind:'select',options:[]}),
         FormField({id:'finance-prop-name',label:'Address',kind:'text',placeholder:'e.g. 123 Example St, Town ST 00000'}),
@@ -311,9 +308,8 @@ export function FinanceView(){
         FormField({id:'finance-prop-asOf',label:'As of',kind:'date'}),
         Notice('',{id:'finance-prop-status',role:'status'}),
         ActionGroup([Button('Save property',{id:'finance-prop-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-prop-cancel',variant:'secondary'})])
-      ],{id:'finance-prop-form',className:'form-stack'})
-      ],{id:'finance-property'})
-      ,
+        ],{id:'finance-prop-form',className:'form-stack',hidden:true})
+      ],{id:'finance-entry'}),
       // Closed until it is wanted. Getting to the figures is a way of putting
       // one in the ledger, which is the scope this block already has, so it
       // belongs here rather than as a fourth heading of its own.

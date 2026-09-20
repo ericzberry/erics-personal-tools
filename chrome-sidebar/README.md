@@ -1395,9 +1395,8 @@ there is any — it is not a liability, nobody can demand all of it today — an
 Committed, Funded, Returned, Unfunded and Value sit under **Private
 investments** in the breakdown. Only the parts that have happened are shown: a
 direct purchase has no commitment, and an investment signed last week has none
-of it. **Enter a private investment** is a second form because it is a second
-job — and it is named for the job, because "Record an investment" sitting under
-"Enter by hand" read as the same offer twice — and an investment with no
+of it. **Private investment** is its own form under **Enter by hand** because it is its
+own job, and an investment with no
 statement behind it is a whole record — that is how a
 commitment signed this morning is registered, counting as nothing until a figure
 says otherwise.

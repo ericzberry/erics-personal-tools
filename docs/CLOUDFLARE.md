@@ -120,6 +120,26 @@ The same applies to `scripts/publish-release.js`, which reads local manifests:
 run it against the archive, or it publishes whatever version number another
 session happens to have mid-bump in the tree.
 
+**When the commit is staged hunks rather than whole files, prove the index, not
+the working tree.** `npm test` and `npm run build` read the tree, and in a
+shared checkout the tree is your change plus somebody else's half-finished one —
+so a green run says the two work together, which is not what is about to be
+committed, and a red one is as likely to be their edit against your test as a
+real failure. Extract the index and run the checks there:
+
+```sh
+T=$(mktemp -d)
+git checkout-index -a -f --prefix="$T/"
+cp -R chrome-sidebar/vendor "$T/chrome-sidebar/vendor"
+ln -s "$PWD/chrome-sidebar/node_modules" "$T/chrome-sidebar/node_modules"
+npm --prefix "$T/chrome-sidebar" test && npm --prefix "$T/chrome-sidebar" run build
+```
+
+A failure that appears only in the tree and not in the extracted index is
+usually two sessions disagreeing about one name — a renamed element id against
+the other session's older assertion — rather than a flake. Do not re-run it
+until it passes; find out which of the two trees it is failing in.
+
 The service is [erics-tools-api.ezberry.workers.dev](https://erics-tools-api.ezberry.workers.dev); the mobile entry point is [/app/](https://erics-tools-api.ezberry.workers.dev/app/). A push, deployment, D1 publication, delivered extension directory, and installed client version are separate outcomes. Chrome may still need Reload, and an open mobile client may retain its older service worker. State any live or device verification that could not be completed.
 
 ## The Worker's own hostname

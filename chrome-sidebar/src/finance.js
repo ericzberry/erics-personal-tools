@@ -44,6 +44,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   // `housing` is the property currently open in the third form. A house is an
   // address and a dated pair of numbers, so editing one edits both rows.
   let capital=null,capitalEditing=false,capitalSource='file',investing=null,housing=null;
+  // Which of the three records the one drawer is currently offering to enter.
+  let entering='figure';
   // Arriving because the tab is a finance page is not the owner asking to see
   // what they are worth. Such an arrival is quiet: the intake is ready for what
   // the page in front of them can put into the ledger, and the ledger's own
@@ -71,6 +73,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     button.addEventListener('click',handler);
     return button;
   };
+  // The form's own title, which now says only what the switch above it cannot.
+  // "New figure" under a pressed Figure button is the same word twice; what it
+  // is worth saying is that this form is open on a record that already exists,
+  // and which one. The other tools keep their "New …" line because they have no
+  // switch naming the record for them.
+  const formTitle=(id,text='')=>{const node=$(id);node.textContent=text;node.hidden=!text;};
   const portfolios=()=>portfoliosOf(records);
   const portfolioOf=number=>portfolios().find(entry=>entry.number===number)||null;
   const nextPortfolio=()=>Math.max(0,...portfolios().map(entry=>entry.number))+1;
@@ -102,22 +110,22 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     fillPortfolioChoices();
     $('name').value='';$('kind').value=String(REGISTRATIONS[0].code);$('currency').value=currency;
     $('class').value=String(classById('cash').code);$('amount').value='';$('asOf').value=today();
-    $('editor-title').textContent='New figure';
+    formTitle('editor-title');
     syncForm();status('','form-status');
   }
   function fillFigure(mark){
     editing={row:'mark',id:mark.id,revision:mark.revision};
     fillPortfolioChoices(portfolioRef(mark.portfolio));
     $('class').value=String(mark.class);$('amount').value=String(mark.amount);$('asOf').value=mark.asOf;
-    $('editor-title').textContent=`Editing ${portfolioOf(mark.portfolio)?.name||''} · ${classLabel(mark.class)}`;
-    syncForm();$('editor').open=true;$('amount').focus();
+    formTitle('editor-title',`Editing ${portfolioOf(mark.portfolio)?.name||''} · ${classLabel(mark.class)}`);
+    syncForm();showEntry('figure');$('amount').focus();
   }
   function fillPortfolio(portfolio){
     editing={row:'portfolio',id:portfolio.id,revision:portfolio.revision,number:portfolio.number};
     fillPortfolioChoices(portfolio.id);
     $('name').value=portfolio.name;$('kind').value=String(portfolio.kind);$('currency').value=portfolio.currency;
-    $('editor-title').textContent=`Renaming ${portfolio.name}`;
-    syncForm();$('editor').open=true;$('name').focus();
+    formTitle('editor-title',`Renaming ${portfolio.name}`);
+    syncForm();showEntry('figure');$('name').focus();
   }
 
   // The second form: an investment, and the capital account statement that
@@ -135,7 +143,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('inv-name').value='';$('inv-vehicle').value=String(VEHICLES[0].code);$('inv-class').value=String(classById('pe').code);
     for(const key of ['inv-commitment','inv-value','inv-funded','inv-returned'])$(key).value='';
     $('inv-asOf').value=today();
-    $('inv-title').textContent='New investment';
+    formTitle('inv-title');
     status('','inv-status');
   }
   function fillInvestment(position){
@@ -149,8 +157,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('inv-funded').value=current?String(current.contributed):'';
     $('inv-returned').value=current?String(current.distributed):'';
     $('inv-asOf').value=current?current.asOf:'';
-    $('inv-title').textContent=`Editing ${holding.name}`;
-    $('investment').open=true;$('inv-name').focus();
+    formTitle('inv-title',`Editing ${holding.name}`);
+    showEntry('investment');$('inv-name').focus();
   }
 
   // The third form: a property, and the dated reading that says what it is
@@ -167,7 +175,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     for(const key of ['prop-name','prop-link','prop-value','prop-debt'])$(key).value='';
     $('prop-source').value=String(VALUE_SOURCES[0].code);
     $('prop-asOf').value=today();
-    $('prop-title').textContent='New property';
+    formTitle('prop-title');
     status('','prop-status');
   }
   function fillProperty(entry){
@@ -180,8 +188,32 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('prop-debt').value=current?String(current.debt):'';
     $('prop-source').value=String(current?.source||VALUE_SOURCES[0].code);
     $('prop-asOf').value=current?current.asOf:'';
-    $('prop-title').textContent=`Editing ${property.name}`;
-    $('property').open=true;$('prop-name').focus();
+    formTitle('prop-title',`Editing ${property.name}`);
+    showEntry('property');$('prop-name').focus();
+  }
+
+  // Which record is being entered, chosen where it applies. The three forms
+  // live in one drawer and one of them is shown; the switch is the currency
+  // switch's pattern, because it is the same kind of choice — which of several
+  // things this block is currently about.
+  const ENTRY_KINDS=[['figure','Figure','form'],['investment','Private investment','inv-form'],['property','Property','prop-form']];
+  function renderEntrySwitch(){
+    $('entry-switch').replaceChildren(...ENTRY_KINDS.map(([kind,label])=>{
+      const chosen=kind===entering;
+      const button=Button(label,{variant:chosen?'primary':'secondary',size:'compact',
+        'aria-pressed':String(chosen),disabled:busy||!loaded});
+      button.addEventListener('click',()=>showEntry(kind));
+      return button;
+    }));
+  }
+  // Switching away from a form abandons nothing: each keeps what was typed into
+  // it until it is saved or cancelled, so a half-filled property is still there
+  // after a glance at the figure form.
+  function showEntry(kind){
+    entering=kind;
+    for(const [,,form] of ENTRY_KINDS)$(form).hidden=form!==ENTRY_KINDS.find(entry=>entry[0]===kind)[2];
+    $('entry').open=true;
+    renderEntrySwitch();
   }
 
   function renderPosition(){
@@ -670,6 +702,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['prop-portfolio','prop-name','prop-link','prop-value','prop-source','prop-debt','prop-asOf'])$(key).disabled=busy||!loaded;
+    renderEntrySwitch();
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
     $('inv-save').disabled=busy||!loaded;$('inv-cancel').disabled=busy;
     $('prop-save').disabled=busy||!loaded;$('prop-cancel').disabled=busy;
@@ -717,9 +750,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     // there are any portfolios to offer — must not become the standing answer
     // once there are.
     if(await run(token=>offline.request(token,'/v1/finance'))){
-      fillPortfolioChoices($('editor').open?$('portfolio').value:'');
-      fillInvestmentPortfolios($('investment').open?$('inv-portfolio').value:'');
-      fillPropertyPortfolios($('property').open?$('prop-portfolio').value:'');
+      // A selection made while the drawer is open is kept; a closed drawer
+      // goes back to the default, because the placeholder the form starts on —
+      // before there are any portfolios to offer — must not become the standing
+      // answer once there are.
+      const open=$('entry').open;
+      fillPortfolioChoices(open?$('portfolio').value:'');
+      fillInvestmentPortfolios(open?$('inv-portfolio').value:'');
+      fillPropertyPortfolios(open?$('prop-portfolio').value:'');
       connectionNote();
     }
   }
@@ -755,7 +793,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   $('read').addEventListener('click',read);
   $('intake-clear').addEventListener('click',()=>{fold=null;foldEditing=false;capital=null;capitalEditing=false;capitalSource='file';attachment=null;renderAttachment();renderFold();renderCapital();render();status('','intake-status');status('','file-status');});
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_BYTES});
-  $('cancel').addEventListener('click',()=>{clearForm();$('editor').open=false;});
+  $('cancel').addEventListener('click',()=>{clearForm();$('entry').open=false;});
   $('portfolio').addEventListener('change',syncForm);
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();
@@ -763,7 +801,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     try{
       // Renaming a portfolio is the form's other job and saves nothing else.
       if(editing?.row==='portfolio'){
-        if(await savePortfolio({number:editing.number,name:$('name').value,kind:Number($('kind').value),currency:$('currency').value})){clearForm();$('editor').open=false;onChanged();}
+        if(await savePortfolio({number:editing.number,name:$('name').value,kind:Number($('kind').value),currency:$('currency').value})){clearForm();$('entry').open=false;onChanged();}
         return;
       }
       const fresh=$('portfolio').value==='new';
@@ -775,10 +813,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       // The one it came from is removed, so an edit cannot leave two.
       const moved=editing&&editing.id!==markRef(normalizeFinance({row:'mark',...mark}));
       if(moved)await remove(records.find(record=>record.id===editing.id)||{id:editing.id,revision:editing.revision});
-      clearForm();$('editor').open=false;onChanged();
+      clearForm();$('entry').open=false;onChanged();
     }catch(error){status(vaultReason(error),'form-status','error');}
   });
-  $('inv-cancel').addEventListener('click',()=>{clearInvestmentForm();$('investment').open=false;});
+  $('inv-cancel').addEventListener('click',()=>{clearInvestmentForm();$('entry').open=false;});
   $('inv-form').addEventListener('submit',async event=>{
     event.preventDefault();
     if(busy||!loaded)return;
@@ -804,10 +842,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       // from is removed, so an edit cannot leave two.
       const moved=investing?.capitalId&&asOf&&investing.capitalId!==capitalRef({holding:number,asOf});
       if(moved)await remove(records.find(record=>record.id===investing.capitalId)||{id:investing.capitalId,revision:investing.capitalRevision},'inv-status');
-      clearInvestmentForm();$('investment').open=false;onChanged();
+      clearInvestmentForm();$('entry').open=false;onChanged();
     }catch(error){status(vaultReason(error),'inv-status','error');}
   });
-  $('prop-cancel').addEventListener('click',()=>{clearPropertyForm();$('property').open=false;});
+  $('prop-cancel').addEventListener('click',()=>{clearPropertyForm();$('entry').open=false;});
   $('prop-form').addEventListener('submit',async event=>{
     event.preventDefault();
     if(busy||!loaded)return;
@@ -831,12 +869,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       // from is removed, so an edit cannot leave two.
       const moved=housing?.valuationId&&asOf&&housing.valuationId!==valuationRef({property:number,asOf});
       if(moved)await remove(records.find(record=>record.id===housing.valuationId)||{id:housing.valuationId,revision:housing.valuationRevision},'prop-status');
-      clearPropertyForm();$('property').open=false;onChanged();
+      clearPropertyForm();$('entry').open=false;onChanged();
     }catch(error){status(vaultReason(error),'prop-status','error');}
   });
-  clearForm();clearInvestmentForm();clearPropertyForm();clear();
+  clearForm();clearInvestmentForm();clearPropertyForm();renderEntrySwitch();clear();
   if(gate.unlocked())refresh();
-  const reload=()=>{if(gate.unlocked()&&!$('editor').open&&!$('investment').open&&!$('property').open)refresh();};
+  const reload=()=>{if(gate.unlocked()&&!$('entry').open)refresh();};
   window.addEventListener('online',reload);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reload();});
   credentials.subscribe?.(()=>{clear();if(gate.unlocked())refresh();});

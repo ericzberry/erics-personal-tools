@@ -352,9 +352,10 @@ use. Nothing is saved until the review is applied, and every part of a row —
 the investment, its kind, its class, its portfolio, all four figures and the
 date — is correctable before it is.
 
-**Recording one by hand** is the second form under the ledger, **Record an
-investment**, because it is a second job: a figure is a class and an amount, an
-investment is a name, a kind and the four figures a statement states. An
+**Recording one by hand** is the **Private investment** form under **Enter by
+hand**, and it stays its own form because it is its own job: a figure is a class
+and an amount, an investment is a name, a kind and the four figures a statement
+states. An
 investment with no statement behind it is a whole record — that is how a
 commitment signed this morning is registered, counting as nothing until a figure
 says otherwise — while figures with no as-of date are refused before anything is
@@ -398,8 +399,8 @@ position does not. What the class breakdown cannot say, because the two figures
 sit in two classes and one of them is negative, is shown under **Real estate**
 in the breakdown: Value, and — only when something is owed — Owed and Equity.
 
-**Recording one by hand** is the third form under the ledger, **Enter a
-property**, because it is a third job: neither of the forms above has anywhere
+**Recording one by hand** is the **Property** form under **Enter by hand**, and
+it stays its own form for the same reason: neither of the other two has anywhere
 to put an address. A property with no valuation behind it is a whole record —
 that is how a house bought this morning is recorded, counting as nothing until a
 figure says otherwise — while figures with no as-of date are refused before
@@ -444,10 +445,19 @@ scopes in one:
    the two are one number printed twice under two names. The date the whole
    ledger stands at is stated once here, and a portfolio or a line below repeats
    it only when it is behind that date.
-3. **Add to the ledger** — the statement drop zone, what it read, the two
-   forms — **Enter a figure** and **Enter a private investment** — and
-   **Open an account page**. The two form names have to say they are two jobs;
-   "Enter by hand" beside "Record an investment" read as the same offer twice.
+3. **Add to the ledger** — the statement drop zone, what it read, **Enter by
+   hand** and **Open an account page**. The three records that can be typed in
+   stay three forms, because folding them together would make one form that is
+   mostly hidden whichever way it is used; what they are not is three separate
+   offers. As three closed drawers under a fourth they read as a run of
+   unexplained boundaries, and the one being looked for is found only by reading
+   all of them — so which record is being entered is a switch inside the one
+   drawer, **Figure · Private investment · Property**, chosen where it applies
+   the way the currency and the trend period already are. Switching keeps what
+   was typed into each form, and a row's Edit opens the drawer on the form that
+   record belongs to. The form's own title then says only what the switch
+   cannot — that this is an existing record, and which one — because "New
+   figure" under a pressed **Figure** button is the same word twice.
    **Open an account page** is closed until it is wanted and holds one link per
    institution the tool recognizes, grouped by kind: getting to the figures is a
    way of putting one in the ledger, which is this block's scope, so it belongs

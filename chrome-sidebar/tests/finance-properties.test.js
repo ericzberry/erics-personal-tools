@@ -179,3 +179,55 @@ test('a mortgage on a property is shown against it and counted against net worth
   assert.match(totals,/\$320,000/,'and the debt is named as a liability');
   tool.stop();restore();
 });
+
+// Three records, one drawer. The point of the switch is that a person looking
+// for the property form finds it without reading four closed drawers to see
+// which one it is — and that each form keeps what was typed into it while they
+// look at another.
+test('one drawer offers the three records, and a row action opens it on the right one',async()=>{
+  const {document,restore}=setup();
+  const {tool}=financeHost(document,{saved:[estate,
+    house(1,'456 Second Ave, Town ST 00000'),reading(1,'2026-09-20',610000,320000)]});
+  await ready(document);
+  const drawer=document.getElementById('finance-entry');
+  const forms=['finance-form','finance-inv-form','finance-prop-form'];
+  const showing=()=>forms.filter(id=>!document.getElementById(id).hidden);
+  const chooser=()=>[...document.getElementById('finance-entry-switch').querySelectorAll('button')];
+
+  // One drawer, not three, and the ones that were three are gone.
+  for(const gone of ['finance-editor','finance-investment','finance-property'])
+    assert.equal(document.getElementById(gone),null,gone);
+  assert.deepEqual(chooser().map(node=>node.textContent),['Figure','Private investment','Property']);
+  // `details.open` rather than the attribute throughout: linkedom's setter does
+  // not reflect it, and its getter is undefined until something sets it.
+  assert.ok(!drawer.open,'offered, not opened');
+  assert.deepEqual(showing(),['finance-form'],'a figure is what it opens on');
+  assert.equal(chooser()[0].getAttribute('aria-pressed'),'true');
+
+  // Typing into one form and looking at another does not throw the first away.
+  document.getElementById('finance-prop-name').value='99 Draft Lane';
+  chooser()[1].dispatchEvent(new document.defaultView.Event('click'));
+  assert.deepEqual(showing(),['finance-inv-form']);
+  assert.equal(chooser()[1].getAttribute('aria-pressed'),'true');
+  assert.equal(chooser()[0].getAttribute('aria-pressed'),'false');
+  assert.equal(document.getElementById('finance-prop-name').value,'99 Draft Lane','the half-filled form is still there');
+
+  // Editing a property from its row opens the drawer on the property form,
+  // rather than on whichever one happened to be showing.
+  const edit=[...document.querySelectorAll('#finance-list button')]
+    .find(node=>node.getAttribute('aria-label')?.startsWith('Edit 456 Second Ave'));
+  edit.dispatchEvent(new document.defaultView.Event('click'));
+  assert.equal(drawer.open,true);
+  assert.deepEqual(showing(),['finance-prop-form']);
+  assert.equal(document.getElementById('finance-prop-name').value,'456 Second Ave, Town ST 00000');
+  assert.equal(document.getElementById('finance-prop-debt').value,'320000');
+  // The form's title says only what the switch above it cannot: that this is an
+  // existing record, and which one. On a new record it says nothing at all.
+  assert.equal(document.getElementById('finance-prop-title').textContent,'Editing 456 Second Ave, Town ST 00000');
+  assert.equal(document.getElementById('finance-prop-title').hidden,false);
+  const cancel=[...document.querySelectorAll('#finance-prop-form button')].find(node=>node.textContent==='Cancel edit');
+  cancel.dispatchEvent(new document.defaultView.Event('click'));
+  assert.equal(document.getElementById('finance-prop-title').textContent,'');
+  assert.equal(document.getElementById('finance-prop-title').hidden,true,'no "New property" under a pressed Property button');
+  tool.stop();restore();
+});

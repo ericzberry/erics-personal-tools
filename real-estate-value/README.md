@@ -24,7 +24,8 @@ and the equity left — and the Zillow page the next reading comes from.
 
 ## Adding a property
 
-Either in the app — **Finance → Add to the ledger → Enter a property** — or from
+Either in the app — **Finance → Add to the ledger → Enter by hand → Property** —
+or from
 here, which is the same two records through the same validator:
 
 ```bash

@@ -114,8 +114,8 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
     'one way to read the page, in the block about the page');
   assert.ok(document.getElementById('finance-drop'),'drop a statement');
   assert.equal(document.getElementById('finance-read').disabled,false);
-  assert.equal(document.getElementById('finance-editor').hidden,false,'and a figure typed by hand');
-  assert.equal(document.getElementById('finance-editor').hasAttribute('open'),false,'offered, not opened');
+  assert.equal(document.getElementById('finance-entry').hidden,false,'and a record typed by hand');
+  assert.equal(document.getElementById('finance-entry').hasAttribute('open'),false,'offered, not opened');
   assert.equal(document.getElementById('finance-actions').textContent,'Show net worth','one action, and it is the one that applies');
 
   document.querySelector('#finance-actions button').click();
