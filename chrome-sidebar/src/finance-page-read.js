@@ -36,6 +36,11 @@ export function readAccountPage() {
   const STATUS = /\b(delayed|market (closed|open))\b|\bclosed\b(?=[^\n]*\bET\b)/i;
   // The labels on a chart's axis are not balances.
   const TICK = /^[$€£¥]\s?(0|\d{1,3}(\.\d)?\s?[kmbt])$/i;
+  // A line that is nothing but a percentage is a move, a yield or a weight,
+  // and never an amount of money. It reads as one here because a percentage
+  // carries two decimals — "+1.42%" is the same shape as $1.42 — so a coin's
+  // 24-hour move arrived as a figure of its own, under the coin's name.
+  const PERCENT = /^[^\w$€£¥]*[-+]?\d+(\.\d+)?\s?%$/;
   // A balance and a change are printed in the same shape, and on an exchange's
   // home page the change carries no label to tell them apart: Coinbase sets
   // "↘ $185.01 (1.17%) 24H" directly under the portfolio total, with an arrow
@@ -73,7 +78,21 @@ export function readAccountPage() {
   // figure of its own — a sentence that merely contains the word is prose.
   const ACCOUNT = /\b(brokerage|ira|roth|401\s*\(?k\)?|403\s*\(?b\)?|457|529|hsa|stock plan|espp|rsu|checking|savings|money market|certificate|trust|custodial|utma|ugma|rollover|annuity|individual|joint|margin|cash management)\b/i;
   const names = line => line.length <= 60 && line.split(/\s+/).length <= 8 && ACCOUNT.test(line);
-  const blocked = line => NOISE.test(line) || INDEX.test(line) || STATUS.test(line) || TICK.test(line) || CHANGE.test(line);
+  // A price beside a coin's name is not a balance. An exchange prints its
+  // watchlist, the day's movers and what is trending in the shape it prints
+  // the owner's own money in — a name, a ticker, an amount — and the one line
+  // that says which of the two a run of them is states no figure, so this
+  // filter threw it away before anything else. What reached the reading was a
+  // run of coin names with money under them, which is what a holding looks
+  // like: a page stating $15,584.96 of coin was read as holding $18,161.
+  const MARKET = /^(watchlist|trending|movers|top (movers|gainers|losers|stories)|gainers|losers|most (traded|popular)|popular|new listings|recently viewed|explore|discover|markets|prices|news|portfolio news|learn( ?& ?earn)?)( \(\d+\))?$/i;
+  // Where such a run ends and the page is the owner's again: a line naming
+  // what is held or what it comes to, one naming or dating an account, and the
+  // furniture a card stamps under its own table — the market's hours, a link
+  // to the full portfolio. A run only a heading could close would carry on
+  // past a broker's movers table and take the account's own balance with it.
+  const MINE = /^((your|my|total|net|current|account|available|portfolio) )*(assets|accounts?|balances?|holdings|positions|portfolio|wallets?|cash|crypto|value|worth)\b/i;
+  const blocked = line => NOISE.test(line) || INDEX.test(line) || STATUS.test(line) || TICK.test(line) || CHANGE.test(line) || PERCENT.test(line);
   const wanted = line => !!line && line.length <= 200 && !blocked(line)
     && (MONEY.test(line) || CONTEXT.test(line) || (!MONEY.test(line) && names(line)));
 
@@ -92,6 +111,19 @@ export function readAccountPage() {
   // A figure often sits on its own line under the name it belongs to, so a
   // kept figure brings the short line above it along as its label.
   const lines = (body.innerText || body.textContent || '').split('\n').map(clean);
+  // Which lines are market data, settled once for the page: a run opens at a
+  // heading naming a list of prices and closes at the first line that gives
+  // the page back. The names inside a run go with the figures — a coin's name
+  // is no more the label of the next balance than its price is a balance.
+  const quotes = [];
+  let quoting = false;
+  lines.forEach((line, index) => {
+    if (line) {
+      if (MARKET.test(line)) quoting = true;
+      else if (quoting && (MINE.test(line) || names(line) || STATUS.test(line) || CONTEXT.test(line) || CHROME.test(line))) quoting = false;
+    }
+    quotes[index] = quoting;
+  });
   const seen = new Set(tables.join('\n').split('\n').map(line => line.toLowerCase()));
   const kept = [];
   const push = (line, names = false) => {
@@ -114,7 +146,7 @@ export function readAccountPage() {
   // any of them naming an index means the figure is a quote, not a balance.
   const above = (index, count) => {
     const previous = [];
-    for (let step = index - 1; step >= 0 && previous.length < count; step--) if (lines[step]) previous.push(lines[step]);
+    for (let step = index - 1; step >= 0 && previous.length < count; step--) if (lines[step] && !quotes[step]) previous.push(lines[step]);
     return previous;
   };
   // The nearest line above a figure is usually the name it belongs to — but a
@@ -139,7 +171,7 @@ export function readAccountPage() {
   const repeats = label => kept.length && kept[kept.length - 1].toLowerCase() === label.toLowerCase();
   const fresh = label => !kept.slice(-4).some(entry => entry.toLowerCase() === label.toLowerCase());
   lines.forEach((line, index) => {
-    if (!wanted(line)) return;
+    if (quotes[index] || !wanted(line)) return;
     // Five candidates for two places: a card can print a link, a tag and a
     // disclosure between the name and the number. Market data is still judged
     // on the three nearest lines, because an index named five lines up is on

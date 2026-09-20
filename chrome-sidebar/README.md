@@ -1718,3 +1718,45 @@ exchange's total as Crypto under its own name. Detection was checked against the
 real signed-out `www.coinbase.com/home`, which is what named the log-on host;
 neither the path list nor the page filter has been run against a signed-in
 Coinbase session. Archive: `release/erics-sidebar-0.6.161.zip`.
+
+## A watchlist is a list of prices, not a list of holdings (0.6.162 / mobile 0.1.115)
+
+Read at Coinbase, the ledger came back holding $18,161 of coin against a page
+saying $15,584.96. The cash was right to the cent; the crypto had something
+else added to it. What the page prints under the two balances is a watchlist —
+ten coins, each with a name, a ticker, a price and a move — and it is printed in
+exactly the shape the owner's own money is printed in. The one line that tells
+the two apart is the heading over them, and a heading states no figure, so it
+was the first thing the page filter threw away. What reached the reading was a
+run of coin names with money under them, which is indistinguishable from a list
+of holdings — and a price is read as an amount of money held.
+
+A market list is now recognized and dropped where it is read, before anything
+leaves the browser. A heading naming one — **Watchlist**, **Trending**, **Top
+movers**, **Top gainers**, **Most traded**, **Prices**, **News** — opens a run,
+and the run ends where the page hands itself back to the owner: a line naming
+what is held or what it comes to, a line naming or dating an account, or the
+furniture a card stamps under its own table, such as the market's hours or a
+link to the full portfolio. A run that only a heading could close would carry on
+past a broker's movers table and take the account's balance below it with it,
+which is how E*TRADE prints one. The names inside a run go with the figures: a
+coin's name is no more the label of the next balance than its price is a
+balance.
+
+**A line that is only a percentage is not a figure.** "+1.42%" carries two
+decimals, which is the same shape as $1.42, so every coin's 24-hour move arrived
+as an amount of money under the coin's name. Those are dropped now wherever they
+appear, market list or not.
+
+Both of these are the device's own reading of the page: the figures never reach
+a model, so nothing depends on a model recognizing a watchlist for what it is.
+The last price in a broker's Top Movers table goes the same way, which the
+ledger had been defending against downstream.
+
+New coverage: a watchlist's prices, names and moves kept out of a reading that
+still carries the balances above them; a movers table dropped while the account
+printed under it keeps its name, its label and its balance; and a market word in
+a site's navigation not swallowing the balances below it. Validation: 482
+extension tests pass. The fix was proved against a reconstruction of the page in
+the screenshot rather than a live signed-in session, which is not reachable from
+here. Archive: `release/erics-sidebar-0.6.162.zip`.

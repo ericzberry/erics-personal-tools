@@ -389,6 +389,53 @@ test('an exchange home page keeps the balances and drops the move printed under 
   assert.equal(page.text.includes('Review order'), false, 'the buy panel is a control, not an account');
 });
 
+// What the exchange prints under the balances: ten coins, each with a price
+// and a move, none of them held. The heading over them is the only thing that
+// says so, and it states no figure — so the run arrived as coin names with
+// money under them, and ether nobody owns was added to the crypto that is.
+test('a watchlist is a list of prices, and none of them reach the reading as balances', () => {
+  const page = inPage(pageOf({text: [
+    'Crypto',
+    '$15,584.96',
+    'Cash',
+    '$0.06',
+    'Watchlist',
+    'Bitcoin', 'BTC', '$88,412.30', '+1.42%',
+    'Ethereum', 'ETH', '$2,576.04', '-0.86%',
+    'Solana', 'SOL', '$184.22', '+3.10%'
+  ].join('\n')}), HERE);
+  assert.match(page.text, /Crypto\n\$15,584\.96/, 'what is held is still read');
+  assert.match(page.text, /Cash\n\$0\.06/);
+  assert.equal(page.text.includes('2,576.04'), false, 'a price under a coin\u2019s name is not a holding');
+  assert.equal(page.text.includes('88,412.30'), false);
+  assert.equal(page.text.includes('Ethereum'), false, 'and its name is not the label of anything');
+  assert.equal(page.text.includes('1.42%'), false, 'a line that is only a percentage is not a figure');
+});
+
+// A broker prints the same list under its own name, in the middle of the page,
+// with the account it belongs to directly underneath. The run has to end where
+// the card does, or the movers table takes the balance below it with it.
+test("a movers table is dropped and the account printed under it keeps its balance", () => {
+  const page = inPage(pageOf({text: [
+    'Top Movers (3)',
+    'Symbol', 'Change %', 'Last Price $', "Day's Gain $",
+    'WSTRN ALLIANCE PH...', '-0.01%', '$99.97', '-$1.40',
+    'Market Closed Sep 18, 2026, 4:00 PM ET',
+    'Traditional IRA -4144',
+    'Net Account Value',
+    '$122,666.62'
+  ].join('\n')}), HERE);
+  assert.equal(page.text.includes('99.97'), false, 'a last price is market data, whoever prints it');
+  assert.match(page.text, /Traditional IRA -4144\nNet Account Value\n\$122,666\.62/);
+});
+
+// A site names its market pages in the header of every page it serves, the
+// owner's included. A word in a nav bar cannot swallow the balances under it.
+test('a market word in the navigation does not take the balances below it', () => {
+  const page = inPage(pageOf({text: ['Prices', 'Explore', 'Total balance', '$15,585.02'].join('\n')}), HERE);
+  assert.match(page.text, /Total balance\n\$15,585\.02/);
+});
+
 // The same line under a label, which is how a broker prints it. Dropping the
 // figure must not leave its caption behind to be read as the name of whatever
 // balance comes next.
