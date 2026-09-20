@@ -36,6 +36,10 @@
    line where it was. */
 .snapshot-group>.record-group-title{padding:0 0 2px}
 .snapshot-group+.snapshot-group{margin-block-start:10px}
+/* Ruled off from the figures by a gap. `.settings-group .action-group` sets
+   margin 0 for every action group inside a panel, so this has to out-specify
+   it rather than sit beside it. */
+.settings-group .action-group.review-actions{margin-block-start:10px}
 .snapshot-figure{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
 /* A long account name wraps; the figure beside it never splits across lines. */
 .snapshot-figure span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}

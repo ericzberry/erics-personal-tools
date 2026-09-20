@@ -126,7 +126,7 @@ test('reading the open page is offered only where there is a page beside the too
   assert.equal(sent.path,'/v1/ai-connections/connection-1/finance-intake');
   assert.equal(sent.value.live,true,'an open page is read as today’s balances');
   assert.match(sent.value.text,/Cash 1,200\.00/);
-  assert.match(document.getElementById('finance-snapshot-status').textContent,/1 figure read from example\.invalid, folded into 1/);
+  assert.equal(document.getElementById('finance-snapshot-status').textContent,'','the figure is the answer, not a count of it');
   sidebar.stop();restore();
 });
 

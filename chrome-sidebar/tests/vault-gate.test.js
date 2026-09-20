@@ -114,7 +114,7 @@ test('finance totals and readings stay behind the gate, and a saved figure goes 
   h.document.getElementById('finance-page-read').click();
   await settle(()=>h.document.getElementById('finance-snapshot-body').textContent.includes('Stocks'));
   assert.equal(saved.length,0,'reading a page must not save anything');
-  assert.match(h.document.getElementById('finance-snapshot-status').textContent,/1 figure read(?: from accounts\.example)?, folded into 1/);
+  assert.equal(h.document.getElementById('finance-snapshot-status').textContent,'');
 
   // Saving writes through the same validator and queue as a typed edit, and
   // the figure is addressed by where, what and when — nothing else.

@@ -269,16 +269,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       }
     })]:[]));
   }
-  // What a reading found, in one line, whichever kind of document it was. The
-  // two are counted separately because they are not the same thing: a figure
-  // was folded out of several readings, and a capital account is one statement.
-  const readNote=(result,where)=>{
-    const from=where?` from ${where}`:'';
-    return [
-      result.marks.length?`${result.read} figure${result.read===1?'':'s'} read${from}, folded into ${result.marks.length}`:'',
-      result.capital.rows.length?`${result.capital.rows.length} capital account${result.capital.rows.length===1?'':'s'} read${result.marks.length?'':from}`:''
-    ].filter(Boolean).join(' · ');
-  };
+  // Whether a reading found anything. It used to say how much — "19 figures
+  // read, folded into 3" — under a panel already showing the three, which is
+  // the count of what was thrown away dressed up as news. A reading that found
+  // something says so by showing it; only one that found nothing needs a line.
+  const found=result=>!!(result.marks.length||result.capital.rows.length);
   // Whichever block the reading happened in keeps the review: one statement is
   // under review at a time, and it belongs beside where it came from.
   function showCapital(result,source){
@@ -288,9 +283,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
   function showRead(result,target,{none,where='',extra=''}={}){
     fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
     showCapital(result,'file');
-    const found=readNote(result,where);
-    status([found?`${found}.`:none,extra,result.unread].filter(Boolean).join(' '),target,found?'success':'alert');
-    return !!found;
+    const any=found(result);
+    // Anything the reading could not turn into a figure is still worth saying:
+    // it is a fact about this page, not an explanation of the panel.
+    const say=[any?'':none,extra,result.unread].filter(Boolean).join(' ');
+    status(say,target,say?'alert':'');
+    return any;
   }
   async function read(){
     const text=attachment?.kind==='text'?attachment.text.trim():'';
@@ -345,12 +343,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       const result=await readInto(token,{text:page.text,live:true,...known},{...known,siteKind:site?.kind||''});
       snapshot={rows:result.marks,notes:result.notes};snapshotEditing=false;renderSnapshot();
       showCapital(result,'page');
-      // The heading names a recognized site, so the status does not repeat it;
-      // an ordinary page has no name up there, so its host is worth saying.
-      const found=readNote(result,site?'':page.host);
-      status([found?`${found}.`:`No account figures were found on ${page.host}.`,
+      const any=found(result);
+      const say=[any?'':`No account figures were found on ${page.host}.`,
         page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
-        result.unread].filter(Boolean).join(' '),'snapshot-status',found?'success':'alert');
+        result.unread].filter(Boolean).join(' ');
+      status(say,'snapshot-status',say?'alert':'');
     },'snapshot-status');
   }
 

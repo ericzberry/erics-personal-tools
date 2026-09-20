@@ -378,7 +378,8 @@ Nothing in any of the three explains itself in a sentence underneath. The
 heading says the scope and the button says what it does, and a paragraph
 repeating both is a paragraph nobody reads twice. A reading under review is a
 heading per holder with a line per asset class under it — the shape the ledger
-itself is read in — and nothing beside the figures.
+itself is read in — and nothing beside the figures: no count of them, and no
+line saying they are not saved yet over the button that saves them.
 
 These used to alternate: a site's reading, then the whole ledger's totals under
 a heading that said only *Position*, then the page action again down in *Read an

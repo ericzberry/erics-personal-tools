@@ -151,9 +151,10 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   assert.match(panel.textContent,new RegExp(ESTATE),'a taxable account joins the portfolio it is titled to');
   assert.match(panel.textContent,/Rollover IRA · new/,'the IRA heads its own group and says it would be made');
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save these figures','Edit','Discard']);
-  assert.match(panel.textContent,/2 figures · as of 2026-09-11/,'one shared date is stated once, not on every row');
+  assert.match(panel.textContent,/^as of 2026-09-11/m,'one shared date is stated once, not on every row');
+  assert.equal(/figures? read|folded into/.test(panel.textContent),false,'and the figures are not counted back at you');
   assert.equal(writes.length,0,'reading saves nothing');
-  assert.match(document.getElementById('finance-snapshot-status').textContent,/folded into 2\./);
+  assert.equal(document.getElementById('finance-snapshot-status').textContent,'');
 
   panel.querySelector('button').click();
   await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 figures.'));
@@ -308,7 +309,7 @@ test('a partial list of holdings does not replace the account total it sits unde
   document.querySelector('#finance-snapshot-body button').click();
   await settle(()=>document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'));
   const panel=document.getElementById('finance-snapshot-body');
-  assert.match(panel.textContent,/1 figure · as of 2026-09-11/,'four lines read, one figure kept');
+  assert.match(panel.textContent,/^as of 2026-09-11/m,'four lines read, one figure kept');
   // The review is the figures. What the fold declined to count is not written
   // out beside them; the status line says how many were read and how many kept.
   assert.equal(/do not add up|Left out:/.test(panel.textContent),false);

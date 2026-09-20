@@ -58,11 +58,13 @@ function ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard}){
     node.addEventListener('click',handler);
     return node;
   };
+  // Ruled off from the figures by a gap. Flush against the last amount, Save
+  // read as one more row of the reading rather than what to do about it.
   return ActionGroup([
     action(saveLabel,'primary',onSave),
     ...(editing?[]:[action('Edit','secondary',onEdit)]),
     action('Discard','subtle',onDiscard)
-  ],{compact:true});
+  ],{compact:true,className:'action-group action-group--compact review-actions'});
 }
 // What a reading came to, after the device folded it. A page states an account
 // total and the holdings inside it, and those must never be added together; by
@@ -89,7 +91,9 @@ export function FoldReview({rows=[],editing=false,disabled=false,saveLabel='Save
     else groups.push({portfolio:row.portfolio,name:row.name,isNew:row.isNew,rows:[{row,index}]});
   }
   return Stack([
-    rows.length?Label([`${rows.length} figure${rows.length===1?'':'s'}`,shared?`as of ${shared}`:''].filter(Boolean).join(' · '),{className:'snapshot-meta'}):null,
+    // The date, and only the date: the figures are counted by being visible,
+    // and a row states its own date only when the reading disagreed about one.
+    shared?Label(`as of ${shared}`,{className:'snapshot-meta'}):null,
     ...groups.map(group=>Section([
       GroupTitle(`${group.name}${group.isNew?' · new':''}`,{className:'record-group-title'}),
       ...group.rows.map(({row,index})=>FoldRow(row,{index,editing,dated:!shared,onAmount}))

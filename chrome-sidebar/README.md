@@ -1233,6 +1233,15 @@ nothing says which, and counting them adds a figure the page already counted. A
 broker's top-movers table arrives exactly that way, and a last price is no more a
 holding's value than a day's gain is.
 
+**A reading that found something says so by showing it.** The status under the
+panel used to read "19 figures read, folded into 3" over the three figures it
+had just drawn — the count of what was thrown away, dressed as news. It is empty
+on a reading that found figures now, and keeps only what a reading cannot show:
+that nothing was found, that the page was longer than the limit, or that
+something in it could not be turned into a figure. The review states the date
+once at the top and nothing else about itself, and the actions sit a clear gap
+below the last amount rather than reading as one more row of it.
+
 **A reading is read the way the ledger is:** a heading per holder, and under it
 a line per asset class with its amount. It was a flat run of figures, each
 carrying a line that named the portfolio again and listed the labels it had been

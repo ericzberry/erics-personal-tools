@@ -74,7 +74,7 @@ test('a capital account statement is read into an investment, reviewed, and save
   await settle(()=>document.getElementById('finance-capital-page').textContent.includes('Acme'));
   assert.equal(document.getElementById('finance-capital-drafts').textContent,'');
   const review=document.getElementById('finance-capital-page');
-  assert.match(document.getElementById('finance-snapshot-status').textContent,/1 capital account read from files\.example\./);
+  assert.equal(document.getElementById('finance-snapshot-status').textContent,'','a reading that found something shows it rather than counting it');
   // What is shown is what would be saved: where it lands, what it is worth,
   // and the three flows a value on its own cannot explain.
   assert.match(review.textContent,/Acme Ventures Fund III, L\.P\./);
