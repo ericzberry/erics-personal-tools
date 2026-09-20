@@ -1605,3 +1605,38 @@ with its taxpayer, category and authority answered and the whole path shown
 before it moves, and a year divided twice. Native iPhone and installed Chrome
 behavior were not directly tested. Archive:
 `release/erics-sidebar-0.6.151.zip`.
+
+## Whose birthday it is, before anybody opens a tool (0.6.154 / mobile 0.1.108)
+
+The home screen both hosts open on used to say only *Ready when you are.* It now
+leads with the birthdays inside the next fortnight, read from the reminders
+already saved on the device.
+
+**Today is set apart from the rest**, because it is the only day anything can be
+done about it: its own sage block with a forest edge, above the run that follows.
+That run says how long there is and which day it lands on — *In 4 days · Thu,
+Sep 24* — because a week out there are two Thursdays. Where somebody recorded the
+year, the row says the age; a birthday with no year still has none.
+
+The window is a fixed fourteen days rather than each record's own notice, which
+is what Needs attention reads. A passport renewal wants ninety days of warning,
+and a birthday given ninety would sit on the home screen for three months.
+Anniversaries are left out. A run with nobody in it is hidden rather than headed,
+so a quiet fortnight leaves the home screen exactly as it was.
+
+**It reads and writes nothing** — no action, no status line, no error. A device
+that cannot reach the records shows the home screen it always showed, and
+Reminders is where a connection problem is said out loud. The records are the
+device's own copies, so a phone with no signal still knows whose day it is. On
+the phone the birthdays sit above quick add, and a note typed there that turns
+out to be a birthday appears in them without leaving the screen.
+
+New coverage: the fortnight split today from what is coming and taking only
+birthdays; a birthday queued for deletion left ungreeted; an empty run hidden
+rather than headed; no connection and no records leaving the screen untouched;
+and a refresh picking up a birthday written after the screen was built. Reviewed
+in the new `/tests/home-preview.html` harness at 380px and the 280px minimum —
+one today with three behind it, two today and nothing after, nobody today,
+nothing at all, and not connected — and on the mobile home screen at 375px.
+Native iPhone and installed Chrome behavior were not directly tested. Archive:
+`release/erics-sidebar-0.6.154.zip`.

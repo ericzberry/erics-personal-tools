@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeReminder,nextDue,addMonths,reminderDue,reminderAge,attentionSplit,markedDone,canMarkDone,
   duePhrase,describeReminder,localDate,DEFAULT_NOTICE_DAYS,
-  calendarBirthday,sameBirthday,fromCalendar} from '../src/reminder-data.js';
+  calendarBirthday,sameBirthday,fromCalendar,birthdaysAhead} from '../src/reminder-data.js';
 const birthday={kind:'Birthday',title:'Derek’s birthday',date:'1985-03-04',every:12,since:'1985'};
 const service={kind:'Service',title:'Oil change',subject:'Outback',date:'2026-03-31',every:6};
 
@@ -116,4 +116,35 @@ test('a record remembers where it came from, and an older client editing it does
   // Somewhere this app cannot import from is refused rather than stored.
   assert.throws(()=>normalizeReminder({kind:'Birthday',title:'Ashley',date:'1985-03-04',every:12,source:'somewhere-else'}),/imported from/);
   assert.equal(fromCalendar(normalizeReminder({kind:'Birthday',title:'Typed by hand',date:'1985-03-04',every:12})),false);
+});
+
+test('the home screen’s fortnight separates today from what is coming, and takes only birthdays',()=>{
+  const today='2026-09-20';
+  const records=[
+    normalizeReminder({kind:'Birthday',title:'Maisie',date:'2016-09-20',every:12,since:'2016'}),
+    normalizeReminder({kind:'Birthday',title:'Derek',date:'1985-09-24',every:12,since:'1985'}),
+    normalizeReminder({kind:'Birthday',title:'Ashley',date:'1990-10-04',every:12}),
+    // Fifteen days out: one day past the fortnight, and so not yet on the screen.
+    normalizeReminder({kind:'Birthday',title:'Rune',date:'1979-10-05',every:12}),
+    // Yearly and all-day like a birthday, but not one.
+    normalizeReminder({kind:'Anniversary',title:'Wedding',date:'2011-09-22',every:12}),
+    // Due inside the fortnight, and nobody's birthday.
+    normalizeReminder({kind:'Service',title:'Furnace filter',date:'2026-06-25',every:3})
+  ];
+  const {today:now,upcoming}=birthdaysAhead(records,{today});
+  assert.deepEqual(now.map(record=>record.title),['Maisie']);
+  assert.deepEqual(upcoming.map(record=>record.title),['Derek','Ashley']);
+  // Each row carries what that row is for: the day it lands on and the age,
+  // where somebody recorded the year to count it from.
+  assert.equal(now[0].days,0);
+  assert.equal(reminderAge(now[0]),10);
+  assert.equal(upcoming[0].days,4);
+  assert.equal(reminderAge(upcoming[1]),0,'a birthday with no year still has no age');
+});
+
+test('the home screen does not greet a birthday whose deletion is waiting for a signal',()=>{
+  const queued={...normalizeReminder({kind:'Birthday',title:'Removed',date:'2016-09-20',every:12}),pending:true,deleting:true};
+  const kept={...normalizeReminder({kind:'Birthday',title:'Edited',date:'2016-09-20',every:12}),pending:true};
+  const {today:now}=birthdaysAhead([queued,kept],{today:'2026-09-20'});
+  assert.deepEqual(now.map(record=>record.title),['Edited']);
 });

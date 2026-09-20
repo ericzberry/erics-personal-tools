@@ -117,6 +117,32 @@ The first of those is why a birthday deleted by hand stays deleted instead of
 coming back next month. *Look again from the start* forgets it, which is the
 only way back to one.
 
+## Whose birthday it is, before anybody opens Reminders
+
+A birthday is only useful on the day, so both hosts' home screens lead with the
+fortnight ahead: `birthdaysAhead` in `reminder-data.js`, rendered by
+`components/home.js` and driven by `home.js` — `home-page.js` in the panel,
+`capabilities.js` on the phone.
+
+**Two runs, because they answer two questions.** Whose birthday it is *today*
+is the only day anything can be done about it, so it is set apart on its own
+surface above the rest; the fortnight after it says how long there is. A run
+with nobody in it is hidden rather than headed, and nothing coming leaves the
+home screen exactly as it was.
+
+The window is a fixed fourteen days rather than each record's own `notice`,
+which is what `attentionSplit` reads. A passport renewal wants ninety days of
+warning; a birthday given ninety would sit on the home screen for three months.
+Anniversaries are left out — they roll forward the same way, but the screen says
+birthdays. An age is shown only where somebody recorded the year, by the same
+rule as everywhere else here.
+
+**It reads and writes nothing**, so it has no action, no status line and no
+error to report: a device that cannot reach the records shows the home screen it
+always showed, and Reminders is where a connection problem is said out loud. The
+records are the device's own copies, so a phone with no signal still knows whose
+day it is.
+
 ## Quick add
 
 A typed note can create a reminder without the form. The note field is shared

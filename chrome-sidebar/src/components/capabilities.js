@@ -5,6 +5,9 @@ export function CapabilityPicker({id='capability-picker'}={}) {
 }
 export function CapabilitiesView(){
   return Stack([
+    // Whose birthday it is leads the home screen: it is the one thing here
+    // that is about today, and it is read rather than done.
+    Stack([],{id:'capability-birthdays',hidden:true}),
     // Quick add belongs to the home screen, above the tools themselves: a note
     // is typed before choosing where it goes, which is the point of it.
     Stack([],{id:'capability-capture',hidden:true}),

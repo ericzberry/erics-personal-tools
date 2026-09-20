@@ -88,6 +88,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   the owner — one entry per source, and no page is read to answer it) and
   `page-strip.js` (the controller for the row under the header that offers
   them; `context-panel.js` hands it the tab it already watches).
+- **Home screen** — `home.js` with `components/home.{js,css}`: the birthdays
+  both hosts open on, read from the reminders store and written to nothing.
+  The sidebar mounts it through `home-page.js`; mobile mounts it in its own
+  `capabilities.js`.
 - **Links** — `public-url.js`: the one reading of "a link safe to show and
   open", used by gift links and restaurant booking links alike.
 - **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),
@@ -128,7 +132,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   names),
   `personal-data.js`/`personal-offline.js`,
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
-  computed from an anchor and an interval, never stored),
+  computed from an anchor and an interval, never stored, plus `birthdaysAhead`
+  — the fortnight both hosts' home screens lead with),
   `gift-data.js`/`gifts-offline.js` (gift ideas, grouped by who they are for),
   `size-data.js`/`sizes-offline.js` (clothing sizes and body measurements in one
   record shape, grouped by brand with General first),
@@ -226,8 +231,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - `unlocked.html` → `unlocked.js` — the disposable unlocked frame that actually runs
   the tools; `mobile-session.js` guards access to it, `tool-layout.js` sizes it.
 - `capabilities.js` — mounts capabilities from the shared registry and mirrors the
-  chosen screen to the shell, and mounts the shared quick-add note on the home
-  screen (`#capability-capture`), which is hidden as soon as a tool is open; `tool-navigation.js`/`.css` render the home-screen
+  chosen screen to the shell, and mounts the home screen's own two pieces — the
+  fortnight's birthdays (`#capability-birthdays`) and the shared quick-add note
+  (`#capability-capture`) — both hidden as soon as a tool is open; `tool-navigation.js`/`.css` render the home-screen
   icon grid and, once a tool or Settings is open, the same grid behind the
   hamburger menu.
 - `restaurants.js` + `restaurant-cache.js` — mobile restaurant view and its

@@ -13,6 +13,7 @@ import {mountFinance} from './shared/finance.js';
 import {financeOffline} from './shared/finance-offline.js';
 import {mountPersonal} from './shared/personal.js';
 import {mountReminders} from './shared/reminders.js';
+import {mountHomeBirthdays} from './shared/home.js';
 import {remindersOffline} from './shared/reminders-offline.js';
 import {mountCapture} from './shared/capture.js';
 import {mountPushBridge} from './push-bridge.js';
@@ -65,12 +66,21 @@ const personalTool=mountPersonal(document.getElementById('capability-personal'),
 const reminderTool=mountReminders(document.getElementById('capability-reminders'),{credentials,offline:reminderStore,onSettings:openSettings});
 const giftTool=mountGifts(document.getElementById('capability-gifts'),{credentials,offline:giftStore,onSettings:openSettings});
 const sizeTool=mountSizes(document.getElementById('capability-sizes'),{credentials,offline:sizeStore,onSettings:openSettings});
+// The fortnight's birthdays lead the home screen, read from the same offline
+// copies the tool keeps, so a phone with no signal still knows whose day it is.
+const birthdayRoot=document.getElementById('capability-birthdays');
+const birthdays=mountHomeBirthdays(birthdayRoot,{credentials,offline:reminderStore});
 // Quick add sits on the home screen and writes through the same offline store
 // the tool uses, so a note typed with no signal queues like any other change.
 const captureRoot=document.getElementById('capability-capture');
 captureRoot.className='travel-wallet';
 mountCapture(captureRoot,{credentials,remote:cloudRequest,stores:captureStores({reminders:reminderStore,gifts:giftStore,sizes:sizeStore}),
-  onSaved:capability=>{({gifts:giftTool,sizes:sizeTool,reminders:reminderTool}[capability])?.refresh();}});
+  onSaved:capability=>{
+    ({gifts:giftTool,sizes:sizeTool,reminders:reminderTool}[capability])?.refresh();
+    // A note typed here can be a birthday, and the birthdays are the thing
+    // directly above it on this screen.
+    if(capability==='reminders')birthdays?.refresh();
+  }});
 // Taxes keeps nothing on the device: a document is read here and goes straight
 // to Drive, so it has no offline store to disconnect - only a tool to clear.
 const taxTool=mountTaxes(document.getElementById('capability-taxes'),{credentials,remote:cloudRequest,upload:mobileUpload,
@@ -100,9 +110,13 @@ function showScreen(screen){
   const settings=screen===SETTINGS_SCREEN;
   selectedTool=settings?null:screen;
   connectionRoot.hidden=!settings;
-  // Quick add belongs to the home screen: with a tool open, the tool is what
-  // the page is for.
+  // Quick add and the birthdays belong to the home screen: with a tool open,
+  // the tool is what the page is for.
   captureRoot.hidden=settings||!!selectedTool;
+  birthdayRoot.hidden=settings||!!selectedTool;
+  // Coming back to the home screen is when a birthday added or edited in
+  // Reminders is worth reading again.
+  if(!birthdayRoot.hidden)birthdays?.refresh();
   for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=selectedTool!==capability.id;
   if(selectedTool==='attention')attentionTool.refresh();
   if(selectedTool==='subscriptions')subscriptionTool.refresh();

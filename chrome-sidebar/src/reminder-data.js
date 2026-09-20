@@ -235,3 +235,23 @@ export const describeReminder=record=>[
   intervalLabel(Number(record.every)||0),
   record.every?(rollsForward(record)?record.date:`last done ${record.date}`):record.date
 ].filter(Boolean).join(' · ');
+
+// The fortnight ahead, for a screen that is not the Reminders tool. Two lists
+// rather than one: a birthday today is the only day anything can be done about
+// it, and the rest are something to know is coming. The window is fixed here
+// rather than taken from each record's own `notice`, which is what
+// `attentionSplit` reads — this answers "whose birthday is it", not "what is
+// overdue", so a birthday given ninety days of notice does not sit on the home
+// screen for three months.
+//
+// Anniversaries are left out. They roll forward the same way, but the screen
+// says birthdays and a wedding anniversary is not one.
+export const BIRTHDAY_HORIZON_DAYS=14;
+export function birthdaysAhead(records,{today=localDate(),within=BIRTHDAY_HORIZON_DAYS}={}){
+  const ahead=dueReminders(records,{today}).filter(record=>record.kind==='Birthday'
+    // A record the owner has deleted is not greeted while its deletion waits
+    // for a signal; the tool still lists it, because that is where the queue
+    // is answered for.
+    &&!record.deleting&&record.days!==null&&record.days>=0&&record.days<=within);
+  return {today:ahead.filter(record=>record.days===0),upcoming:ahead.filter(record=>record.days>0)};
+}

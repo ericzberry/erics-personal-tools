@@ -1,0 +1,26 @@
+@import url('./tokens.css');
+/* The home screen's birthdays. Its own small sheet rather than the wallet's:
+   this is a glance at two short runs, with no record to act on and so no row
+   actions, no forms and no controls for the wallet's rules to govern. */
+.home-birthdays{display:grid;gap:12px;overflow-wrap:anywhere;}
+/* Nothing coming leaves the home screen exactly as it was, so the space above
+   belongs to the runs rather than to the empty box that would hold them. */
+.home-birthdays:has(> .home-group:not([hidden])){margin-top:var(--section-gap);}
+.home-group{display:grid;gap:4px;}
+/* A run's label heads it and is never set below it: the rows' own ink, a step
+   more weight, told apart by its letterspacing and the space around it. */
+.home-birthdays .group-title{margin:0;font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);}
+.home-birthday{display:grid;gap:1px;padding:4px 0;}
+.home-birthday > strong{font-size:13px;font-weight:500;}
+.home-birthday > .footnote{margin:0;font-size:12px;color:var(--muted);}
+/* A run is read down, so its rows are ruled apart rather than spaced apart:
+   two names under one heading otherwise read as one record with a second line. */
+.home-birthday + .home-birthday{border-top:1px solid var(--line);}
+/* Today is the one thing here that is about today, so it is the one thing that
+   carries a surface — the sage this app uses for what is current, and a forest
+   edge. It is not a status: nothing has happened and nothing is wrong, so it
+   takes none of the four tones and none of their marks. */
+.home-group--today{padding:8px 10px;border:1px solid var(--line);border-left:3px solid var(--forest);border-radius:8px;background:var(--sage);}
+.home-group--today .group-title,.home-group--today .home-birthday > .footnote{color:var(--forest);}
+/* The shared rule is the paper's, and it disappears on the sage. */
+.home-group--today .home-birthday + .home-birthday{border-top-color:#173e3726;}

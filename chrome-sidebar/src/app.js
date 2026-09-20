@@ -12,5 +12,7 @@ await import('./capability-links.js');
 // Mount once before attaching feature controllers. Components own presentation;
 // controllers own data, events and service integration.
 await Promise.all([import('./sidepanel.js'),import('./context-panel.js'),import('./settings.js'),import('./rewards.js')]);
+// The home screen reads the saved reminders for the fortnight's birthdays.
+await import('./home-page.js').then(({mountPanelBirthdays})=>mountPanelBirthdays());
 
 await import('./release-banner.js');
