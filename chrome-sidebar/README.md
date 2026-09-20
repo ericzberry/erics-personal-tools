@@ -1983,7 +1983,7 @@ New coverage: the dashboard's three kind totals refused with the card's own word
 among them, and a headline total over stated accounts leaving the guidance
 unsaid. Validation: 498 extension and 33 mobile tests pass.
 
-## The accounts are on the overview, and the note stops guessing where (0.6.175 / mobile 0.1.125)
+## The accounts are on the overview, and the note stops guessing where (0.6.176 / mobile 0.1.126)
 
 Chase lists what one password reaches on a hash route of its own,
 `#/dashboard/overview`. The link under **Open an account page** pointed at the
