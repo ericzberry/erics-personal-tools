@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,
   parseFinanceUpdates,foldReadings,financeAttention,legacyLedger,titledOwner,titledHolder,holdsManyTitles,
-  holdsPositionsOnly,managedVehicle,
+  holdsPositionsOnly,managedVehicle,shareText,WHOLE_SHARE,
   institutionName,registrationLabel,registrationFromName,
   markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,
   holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel,
@@ -786,7 +786,13 @@ const capital=(entry)=>({...normalizeFinance({row:'capital',...entry}),id:capita
 
 test('an investment and its capital account are their own rows, addressed apart from every other',()=>{
   const fund=normalizeFinance({row:'holding',number:1,portfolio:3,name:'Acme Ventures Fund III, L.P.',vehicle:1,class:4,stated:3});
-  assert.deepEqual(Object.keys(fund),['row','number','portfolio','name','vehicle','class','stated']);
+  assert.deepEqual(Object.keys(fund),['row','number','portfolio','name','vehicle','class','stated','share']);
+  // Almost every investment is the whole of its vehicle, and an investment
+  // filed before the share existed is one too.
+  assert.equal(fund.share,WHOLE_SHARE);
+  assert.equal(normalizeFinance({row:'holding',number:1,portfolio:3,name:'A fund',vehicle:1,class:4,share:'3500'}).share,3500);
+  for(const bad of [0,-1,10001,'abc'])
+    assert.throws(()=>normalizeFinance({row:'holding',number:1,portfolio:3,name:'A fund',vehicle:1,class:4,share:bad}),undefined,String(bad));
   const statement=normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:'1100000.004',contributed:800000,distributed:250000,commitment:1000000});
   assert.deepEqual(statement,{row:'capital',holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000});
   // A commitment signed with nothing called against it yet is a whole record.
@@ -1197,18 +1203,22 @@ test('a cap-table page states positions, never balances, and the fund he runs is
   // "Eric Berry" still matches the portfolio of that name exactly.
   assert.equal(foldCapital([fund('C2V Tributary Fund II, LP','Eric Berry')],ledger(),{today:'2026-09-20'}).rows[0].portfolio,2);
 
-  // The management company and the general partner of the fund he manages are
-  // left out by name: his share of a GP's commitment is not on the page, and
-  // the GP's own figures are the fund investors' money, not his.
+  // The general partner of a fund he manages arrives at his share of it. The
+  // statement states the GP's whole capital account and no page says what part
+  // of the GP is his, so the row carries the standing answer and says so.
   const runs=foldCapital([
     fund('Averin Health Opportunities GP I LLC','Eric Berry',{commitment:2119150,contributed:850000,value:850000}),
-    fund('Averin Capital, LLC','Eric Berry',{commitment:0.5,contributed:0.5,value:0.5}),
     fund('C2V Tributary Fund II, LP','Eric Berry')
   ],ledger(),{institution:'Carta',today:'2026-09-20'});
-  assert.deepEqual(runs.rows.map(row=>row.name),['C2V Tributary Fund II, LP']);
-  assert.match(runs.notes.join(' '),/Left out: Averin Capital, which you manage rather than hold\./);
-  assert.equal(runs.holdings.length,1,'nothing is proposed for a vehicle that was refused');
-  // And the same vehicle on a page of balances is refused there too.
+  assert.deepEqual(runs.rows.map(row=>row.name),['Averin Health Opportunities GP I LLC','C2V Tributary Fund II, LP']);
+  assert.equal(runs.rows[0].share,3500,'a vehicle he manages arrives at his share of it');
+  assert.equal(runs.rows[1].share,WHOLE_SHARE,'and a fund he simply bought into is the whole of one');
+  // The statement is still the statement: the share scales the position, and
+  // nothing rewrites what the vehicle reported.
+  assert.equal(runs.rows[0].commitment,2119150);
+  assert.match(runs.notes.join(' '),/Averin Health Opportunities GP I LLC at 35% — a vehicle you manage/);
+  // On a page of balances there is no commitment or called capital for a share
+  // to be a share of, so a managed vehicle is refused there instead.
   const beside=foldReadings([reading('Averin Health Opportunities GP I LLC','Total','liquid',850000),
     reading('Individual Brokerage -4049','Net Account Value','liquid',1000)],
     [estate,ira],{institution:'Schwab',today:'2026-09-20'});
@@ -1216,6 +1226,88 @@ test('a cap-table page states positions, never balances, and the fund he runs is
   assert.match(beside.notes.join(' '),/Averin Capital, which you manage/);
   assert.equal(managedVehicle('Averin Health Opportunities GP I LLC')?.name,'Averin Capital');
   assert.equal(managedVehicle('C2V Tributary Fund II, LP'),null);
+});
+
+// iCapital is the second of them, and the platform the owner's fund
+// commitments are actually administered on. Its reporting page states one
+// investment at a time — committed, called, distributed, the net asset value
+// and the multiple on it — and none of those is an account balance either.
+test('a fund administrator states a capital account, and the investor named on it is not the IRA of that name',()=>{
+  const reading=(account,label,cls,value)=>({account,label,class:classById(cls).code,registration:'',
+    scope:'account',value,asOf:'2026-09-20',confidence:'high',reason:''});
+  assert.equal(holdsPositionsOnly('iCapital'),true);
+  // The fund's own net asset value, read as though it were an account, is the
+  // several-digits-larger figure the refusal exists for.
+  const page=foldReadings([reading('Eric Berry','NAV','unclassified',392000)],[estate,ira],
+    {institution:'iCapital',today:'2026-09-20'});
+  assert.deepEqual(page.marks,[]);
+  assert.match(page.notes.join(' '),/Left out: 1 figure this page states about a company or a fund rather than about you\./);
+
+  // The position itself, titled to the estate: the investor and the account
+  // both say "Eric Berry" and the portfolio of that name is his IRA, which a
+  // feeder into a buyout fund cannot sit inside.
+  const held=foldCapital(parseFinanceUpdates({readings:[],unread:'',capital:[
+    {fund:'iCapital-Vista Equity Partners Fund VIII U.S. Access Fund, L.P.',holder:'Eric Berry',
+      vehicle:'fund',asOf:'2026-06-30',value:392000,commitment:500000,contributed:341000,
+      distributed:4000,confidence:'high',reason:'The tiles state the commitment, the contributions and the net asset value.'}]}).capital,
+    ledger(),{institution:'iCapital',today:'2026-09-20'});
+  assert.equal(held.rows.length,1);
+  assert.equal(held.rows[0].name,'iCapital-Vista Equity Partners Fund VIII U.S. Access Fund, L.P.');
+  assert.equal(held.rows[0].portfolioName,ESTATE);
+  assert.equal(classLabel(held.rows[0].class),'Fund investments');
+  // The value is the net asset value and nothing is derived from it: what is
+  // still owed on the commitment is the ledger's arithmetic, not the page's.
+  assert.equal(held.rows[0].value,392000);
+  assert.equal(held.rows[0].commitment,500000);
+  assert.equal(held.rows[0].contributed,341000);
+  assert.equal(held.rows[0].distributed,4000);
+});
+
+// A general partner is rarely one person's. The owner holds part of the GP of
+// each fund he runs and one or more trusts hold the rest, while the statement
+// the fund sends states the GP's whole capital account — so the position is
+// that statement scaled, and the same vehicle is a separate position in every
+// portfolio that holds a piece of it.
+test('a position is this portfolio’s share of a vehicle, and the statement still states all of it',()=>{
+  assert.equal(shareText(WHOLE_SHARE),'100%');
+  assert.equal(shareText(3500),'35%');
+  assert.equal(shareText(1250),'12.5%');
+  const statement={asOf:'2026-09-20',value:850000,contributed:850000,distributed:0,commitment:2119150};
+  const records=ledger({...trust,id:'p3'},
+    holding(1,'Averin Health Opportunities GP I LLC',1,1,{share:3500}),
+    holding(2,'Averin Health Opportunities GP I LLC',1,3,{share:6500}),
+    holding(3,'C2V Tributary Fund II, LP',1,1),
+    capital({holding:1,...statement}),capital({holding:2,...statement}),
+    capital({holding:3,asOf:'2026-09-20',value:150000,contributed:150000,distributed:0,commitment:150000}));
+  const held=portfolio=>positionsOn(records,'2026-09-20').find(position=>position.holding.portfolio===portfolio);
+  const his=held(1),hers=held(3);
+  assert.equal(his.share,3500);
+  assert.equal(his.commitment,741702.5);
+  assert.equal(his.contributed,297500);
+  assert.equal(his.value,297500);
+  assert.equal(his.unfunded,444202.5);
+  // The two shares are the vehicle between them, and neither restates it.
+  assert.equal(Math.round((his.value+hers.value)*100)/100,850000);
+  assert.equal(his.current.commitment,2119150,'the statement is untouched');
+  // A multiple is a ratio, so a share cannot move it.
+  assert.equal(his.multiple,1);
+  // An investment with no share is the whole of its vehicle, which is what
+  // every position filed before the share existed is.
+  const c2v=positionsOn(records,'2026-09-20').find(position=>position.holding.number===3);
+  assert.equal(c2v.share,WHOLE_SHARE);
+  assert.equal(c2v.value,150000);
+
+  // A statement for the trust's piece lands on the trust's position, not on
+  // his: matched across the whole ledger it would overwrite the wrong one.
+  const arriving=parseFinanceUpdates({readings:[],unread:'',capital:[
+    {fund:'Averin Health Opportunities GP I LLC',holder:'Berry Family Trust',vehicle:'fund',
+      asOf:'2026-12-31',value:900000,commitment:2119150,contributed:900000,distributed:0,
+      confidence:'high',reason:'The statement states the period end.'}]}).capital;
+  const filed=foldCapital(arriving,records,{institution:'Carta',today:'2027-01-05'});
+  assert.equal(filed.rows.length,1);
+  assert.equal(filed.rows[0].holding,2);
+  assert.equal(filed.rows[0].isNew,false);
+  assert.equal(filed.rows[0].share,6500,'the share already recorded against that portfolio’s position');
 });
 
 // Stocks and bonds are both Liquid securities. The ledger asks how much could

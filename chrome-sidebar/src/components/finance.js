@@ -1,5 +1,5 @@
 import * as UI from './ui.js';
-import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,classLabel,registrationLabel,vehicleLabel,vehicleShort,valueSourceLabel,classSide,signed} from '../finance-data.js';
+import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,classLabel,registrationLabel,vehicleLabel,vehicleShort,valueSourceLabel,classSide,signed,shareText} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
 import {FINANCE_SITES} from '../account-sites.js';
 const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link,Tabs,Amount}=UI;
@@ -41,6 +41,10 @@ export const investedClassOptions=()=>ASSET_CLASSES.filter(entry=>entry.side==='
 // signed last week has none of it — three zeros in a row would say only that
 // this is a shape with four slots in it.
 export const positionDetail=(position,currency)=>[
+  // Said first, because it changes what every figure after it means: these are
+  // this portfolio's share of the vehicle, not the vehicle. A position that is
+  // the whole of one says nothing, which is almost all of them.
+  (position.share??WHOLE_SHARE)===WHOLE_SHARE?'':`${shareText(position.share)} of the vehicle`,
   position.commitment?`Commitment ${money(position.commitment,currency)}`:'',
   position.contributed?`Funded ${money(position.contributed,currency)}`:'',
   position.distributed?`Returned ${money(position.distributed,currency)}`:'',
@@ -150,9 +154,17 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
   ].filter(Boolean).join(' · ');
   // An edited field is whatever was typed into it, so every figure is read as
   // a number here rather than assumed to be one.
+  //
+  // The fields hold the statement — the whole vehicle — and the review shows
+  // the position, which is this portfolio's share of it. Showing the statement
+  // would put a general partner's whole capital account on the screen as the
+  // owner's, which is exactly the reading this share exists to correct.
   const num=key=>Number(row[key])||0;
-  const commitment=num('commitment'),contributed=num('contributed'),distributed=num('distributed'),value=num('value');
-  const flows=positionDetail({commitment,contributed,distributed,
+  const share=Number(row.share)||WHOLE_SHARE;
+  const part=figure=>Math.round(figure*share/100)/100;
+  const commitment=part(num('commitment')),contributed=part(num('contributed'));
+  const distributed=part(num('distributed')),value=part(num('value'));
+  const flows=positionDetail({share,commitment,contributed,distributed,
     unfunded:Math.max(0,Math.round((commitment-contributed)*100)/100),
     multiple:contributed>0?Math.round(((value+distributed)/contributed)*100)/100:null},row.currency);
   // Recorded as one kind, sold as another. Said plainly on the row, because
@@ -171,11 +183,21 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
     input.addEventListener(kind==='select'?'change':'input',()=>onField(index,key,input.value));
     return node;
   };
+  // A share is typed as a percentage and stored in basis points, so it is the
+  // one field that is not simply the row's value in a box.
+  const shareField=()=>{
+    const node=FormField({id:`finance-capital-share-${index}`,label:'Share held here (%)',kind:'text'});
+    const input=node.querySelector('input');
+    input.value=shareText(row.share).replace('%','');
+    input.addEventListener('input',()=>onField(index,'share',input.value));
+    return node;
+  };
   return Stack([
     field('name','Investment'),
     field('vehicle','Kind','select',vehicleOptions()),
     field('class','Asset class','select',investedClassOptions()),
     field('portfolio','Portfolio','select',portfolios),
+    shareField(),
     field('value','Capital account value'),
     field('commitment','Commitment'),
     field('contributed','Funded to date'),
@@ -338,6 +360,7 @@ export function FinanceView(){
             FormField({id:'finance-inv-name',label:'Investment',kind:'text',placeholder:'e.g. Acme Ventures Fund III, L.P.'}),
             FormField({id:'finance-inv-vehicle',label:'Kind',kind:'select',options:vehicleOptions()}),
             FormField({id:'finance-inv-class',label:'Asset class',kind:'select',options:investedClassOptions()}),
+            FormField({id:'finance-inv-share',label:'Share held here (%)',kind:'text',placeholder:'100'}),
             FormField({id:'finance-inv-commitment',label:'Commitment',kind:'text',placeholder:'0.00'}),
             FormField({id:'finance-inv-value',label:'Capital account value',kind:'text',placeholder:'0.00'}),
             FormField({id:'finance-inv-funded',label:'Funded to date',kind:'text',placeholder:'0.00'}),

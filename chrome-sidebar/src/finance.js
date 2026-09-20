@@ -3,7 +3,7 @@ import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 const today=()=>new Date().toISOString().slice(0,10);
 
@@ -141,7 +141,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     investing=null;
     fillInvestmentPortfolios();
     $('inv-name').value='';$('inv-vehicle').value=String(VEHICLES[0].code);$('inv-class').value=String(classById('funds').code);
-    for(const key of ['inv-commitment','inv-value','inv-funded','inv-returned'])$(key).value='';
+    // Left empty rather than filled in with 100: almost every investment is the
+    // whole of its vehicle, and a field nobody has to touch says so best by
+    // being blank under a placeholder.
+    for(const key of ['inv-commitment','inv-value','inv-funded','inv-returned','inv-share'])$(key).value='';
     $('inv-asOf').value=today();
     formTitle('inv-title');
     status('','inv-status');
@@ -152,6 +155,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       capitalId:current?.id||'',capitalRevision:current?.revision??null};
     fillInvestmentPortfolios(portfolioRef(holding.portfolio));
     $('inv-name').value=holding.name;$('inv-vehicle').value=String(holding.vehicle);$('inv-class').value=String(holding.class);
+    $('inv-share').value=(holding.share??WHOLE_SHARE)===WHOLE_SHARE?'':shareText(holding.share).replace('%','');
+    // The statement, not the position: these boxes hold what the vehicle
+    // reported, and the share above says how much of it is this portfolio's.
     $('inv-commitment').value=current?String(current.commitment):'';
     $('inv-value').value=current?String(current.value):'';
     $('inv-funded').value=current?String(current.contributed):'';
@@ -212,6 +218,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   function showEntry(kind){
     entering=kind;
     for(const [,,form] of ENTRY_KINDS)$(form).hidden=form!==ENTRY_KINDS.find(entry=>entry[0]===kind)[2];
+    // The forms live under Figures and the records are read under Net worth, so
+    // opening a record for editing has to bring the reader to the form as well
+    // as fill it. Without this, pressing Edit on a position filled a form on a
+    // tab nobody was looking at and the screen did not change at all.
+    $('tabs').select('add');
     $('entry').open=true;
     renderEntrySwitch();
   }
@@ -363,6 +374,15 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
           Object.assign(row,existing
             ?{portfolio:number,portfolioName:existing.name,portfolioKind:existing.kind,portfolioIsNew:false,currency:existing.currency||'USD'}
             :{portfolio:number});
+          return;
+        }
+        // A percentage on the way in, basis points in the row. An entry that is
+        // not yet a usable share — an empty box, a lone decimal point — leaves
+        // the last one standing rather than snapping the figures to the whole
+        // vehicle while somebody is still typing.
+        if(key==='share'){
+          const points=Math.round(Number(String(value).trim())*100);
+          if(Number.isFinite(points)&&points>=1&&points<=WHOLE_SHARE)row.share=points;
           return;
         }
         row[key]=['vehicle','class'].includes(key)?Number(value):value;
@@ -520,9 +540,18 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         if(madeHoldings.has(row.holding))holding=madeHoldings.get(row.holding);
         else{
           holding=nextHolding();
-          if(!await saveHolding({number:holding,portfolio,name:row.name,vehicle:row.vehicle,class:row.class,stated:row.stated},target))break;
+          if(!await saveHolding({number:holding,portfolio,name:row.name,vehicle:row.vehicle,class:row.class,
+            stated:row.stated,share:row.share},target))break;
           madeHoldings.set(row.holding,holding);
         }
+      }
+      else{
+        // A share changed on the row is a change to the investment rather than
+        // to the statement, and it is written first: a statement saved against
+        // the old share would be counted at it until the next render.
+        const current=holdingOf(holding);
+        if(current&&(current.share??WHOLE_SHARE)!==(row.share??WHOLE_SHARE)
+          &&!await saveHolding({...current,share:row.share},target))break;
       }
       if(!await saveCapital({holding,asOf:row.asOf,value:row.value,contributed:row.contributed,
         distributed:row.distributed,commitment:row.commitment},target))break;
@@ -538,7 +567,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     const id=holdingRef(holding.number),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',
       value:normalizeAndStamp({row:'holding',number:holding.number,portfolio:holding.portfolio,name:holding.name,
-        vehicle:holding.vehicle,class:holding.class,stated:holding.stated??0},id,existing)}),target);
+        vehicle:holding.vehicle,class:holding.class,stated:holding.stated??0,
+        share:holding.share??WHOLE_SHARE},id,existing)}),target);
   }
   function saveCapital(entry,target='inv-status'){
     const value={row:'capital',holding:entry.holding,asOf:entry.asOf,value:entry.value,
@@ -944,8 +974,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       const asOf=$('inv-asOf').value.trim();
       const figures=['inv-value','inv-commitment','inv-funded','inv-returned'].map(key=>$(key).value.trim());
       if(!asOf&&figures.some(Boolean)){status('Give the date these figures are as of, or clear them.','inv-status','alert');return;}
+      // A blank share is the whole vehicle. Anything else is a percentage,
+      // kept as basis points so twelve and a half per cent is a whole number.
+      const typed=$('inv-share').value.trim();
       if(!await saveHolding({number,portfolio,name:$('inv-name').value,vehicle:Number($('inv-vehicle').value),
-        class:Number($('inv-class').value),stated:holdingOf(number)?.stated??0}))return;
+        class:Number($('inv-class').value),stated:holdingOf(number)?.stated??0,
+        share:typed===''?WHOLE_SHARE:Math.round(Number(typed)*100)}))return;
       if(asOf&&!await saveCapital({holding:number,asOf,value:$('inv-value').value||0,
         contributed:$('inv-funded').value||0,distributed:$('inv-returned').value||0,commitment:$('inv-commitment').value||0}))return;
       // A statement moved to another date is a different row. The one it came

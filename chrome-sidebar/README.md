@@ -3042,3 +3042,67 @@ release. The synthetic ledger was measured at 374px and at 280px with the
 owner's own longest trust name and its real total substituted in, confirming
 one right edge and no overflow. Native iPhone and installed Chrome behavior
 were not directly tested. Archive: `release/erics-sidebar-0.6.222.zip`.
+
+## A general partner is rarely one person’s (0.6.223 / mobile 0.1.173)
+
+A position was all of its vehicle or it was nothing, and the funds the owner
+runs are neither. He holds part of the general partner of each of his two
+funds, one or more trusts hold the rest, and Carta prints the GP's whole
+capital account — $2,119,150 committed, $850,000 called — under his own
+investor account, beside a fund he simply bought into. Filed whole it is the
+fund investors' money in his net worth; refused, as the last release refused
+it, a real position disappears.
+
+**An investment now records what share of its vehicle this portfolio holds.**
+`WHOLE_SHARE` is 10,000 basis points, because 12.5% is a real answer and a
+percentage with a decimal point is not an integer, and a position with no
+share is the whole of its vehicle — which is what every investment filed
+before this field existed is. One number, on the investment rather than on
+each statement: changing it restates every figure the position has reported,
+which is right for a correction and is the whole of what it can say. A share
+that changed on a date would be a column on the statement, and nothing yet
+asks for one.
+
+`positionsOn` scales the statement figure by figure, rounded to cents, so the
+capital account keeps saying what the vehicle reported while the ledger counts
+what is this portfolio's: a GP at 35% carries $741,702.50 committed and
+$297,500 called into Fund investments, and the row says **35% of the vehicle**
+in front of them so no figure after it can be misread. A multiple is a ratio
+and a share cannot move it. Nothing else in the ledger had to learn anything —
+a position still reaches every total as a named class figure.
+
+**Which means the same vehicle can be held twice.** `foldCapital` now matches a
+statement to a holding *within the portfolio it resolved*, because his 35% and
+a trust's 65% are two positions under one name; matched across the whole
+ledger the trust's statement landed on his position and overwrote it at his
+share. And a vehicle named in `MANAGED_VEHICLES` arrives at the share recorded
+beside it — 35% for Averin — rather than being left out: *Averin Health
+Opportunities GP I LLC at 35% — a vehicle you manage, so the statement states
+the whole of it and this is your share. Change the share on the row if that is
+wrong.* On a page of balances a managed vehicle is still refused outright,
+because a GP's balance read as an account total has no called capital beside it
+for a share to be a share of.
+
+The share is editable in both places it can be met: **Share held here (%)** on
+the investment form, between the asset class and the figures it scales, and on
+the capital account review row, where the preview shows the position rather
+than the statement so a general partner's whole account is never on the screen
+as the owner's.
+
+**And Edit now takes you to the form.** The records are read under Net worth
+and the forms live under Figures, so pressing Edit on a position filled a form
+on a tab nobody was looking at and the screen did not change at all — the share
+this release adds would have been unreachable by the one path anybody would
+take to it. `showEntry` selects the tab it opens the drawer on.
+
+Validation: 593 extension, 33 mobile and 134 API tests pass, and both apps
+build. New coverage: the share stored, defaulted and refused outside 0.01–100%;
+a GP at 35% and a trust at 65% summing to the vehicle with the statement
+untouched behind them; a multiple unmoved by a share; a statement landing on
+the portfolio's own position rather than the other holder's; and Averin filed
+at its share with the row saying so. Reviewed in the ledger harness at 380px
+and 280px, where a part-held GP sits directly above a position that is the
+whole of its fund and says nothing: no page overflow at 280px, and the edit
+form was driven in the browser to confirm it opens on the tab it lives on with
+the share filled in.
+Archive: `release/erics-sidebar-0.6.223.zip`.

@@ -132,6 +132,22 @@ export const VEHICLES=[
   {code:2,id:'equity',label:'Direct Equity Investment',short:'Equity'},
   {code:3,id:'spv',label:'SPV Investment',short:'SPV'}
 ];
+// How much of a vehicle is this portfolio's. Most positions are all of one and
+// say nothing about it, but a general partner rarely is: the owner holds part
+// of the GP of each fund he runs and one or more trusts hold the rest, while
+// the statement states the GP's whole capital account. The position is that
+// statement scaled by the share recorded here, so the same vehicle can be held
+// in three portfolios at three shares without any of them restating its
+// figures.
+//
+// Basis points, because a share of 12.5% is a real answer and a percentage with
+// a decimal point is not an integer. One number on the investment, not on each
+// statement: changing it restates every figure the position has ever reported,
+// which is right for a correction and is the whole of what this field can say.
+// A share that genuinely changed on a date would be a column on the statement
+// instead, and nothing yet asks for one.
+export const WHOLE_SHARE=10000;
+export const shareText=share=>`${Number(((share??WHOLE_SHARE)/100).toFixed(2))}%`;
 // Where a property's value came from. The Zestimate is the standing answer —
 // it is public, it is dated, it costs nothing to look up, and it is the number
 // the owner would reach for anyway — so anything else is a deliberate override
@@ -334,6 +350,17 @@ export const ACCOUNT_TITLES=[
     {owner:'Eric and Ariana Berry Estate',registration:'taxable',
       match:['ericberry','ericzberry','ericandariana','arianacooperberry']},
     {owner:'Celsie LLC',registration:'entity',match:['celsie']}
+  ]},
+  // The same distinction, for the same reason, one platform over. iCapital
+  // names the investor and the account in the selectors above the figures and
+  // again at the head of the fund’s own title, and on the owner’s page all
+  // three say “Eric Berry” — which is also the name of the portfolio holding
+  // his IRA. A feeder into a buyout fund cannot sit inside one, so the name is
+  // titled to the estate here rather than matched against the portfolios.
+  {institution:'iCapital',match:['icapital'],holders:[
+    {owner:'Eric and Ariana Berry Estate',registration:'taxable',
+      match:['ericberry','ericzberry','ericandariana','arianacooperberry']},
+    {owner:'Celsie LLC',registration:'entity',match:['celsie']}
   ]}
 ];
 export const titledAccount=institution=>{
@@ -369,12 +396,19 @@ export const holdsManyTitles=institution=>!!titledAccount(institution)?.holders?
 // nothing on the page says which kind it is.
 //
 // What is his inside a general partner is a share of that partner's own
-// commitment, and no page states the share. Filing the GP's figures as his puts
-// other people's money in his net worth; leaving them out silently loses a
-// position. So a vehicle named here is never filed by a reading — it is left
-// out, by name, and what he holds of it is entered deliberately.
+// commitment, and the page states the GP's whole figures: he holds part of the
+// GP of each fund he runs and one or more trusts hold the rest. Filing the
+// whole as his would put other people's money in his net worth, so a vehicle
+// named here arrives at the share recorded beside it rather than at all of it,
+// and the review says which share it used. The number is a standing estimate
+// and expected to be corrected — it lives on the position, editable, and the
+// same vehicle held in a trust is that trust's own position at its own share.
+//
+// On a page of balances a managed vehicle is refused outright instead. A GP's
+// balance read as an account total has no commitment or called capital beside
+// it, so there is nothing for a share to be a share of.
 export const MANAGED_VEHICLES=[
-  {name:'Averin Capital',match:['averin']}
+  {name:'Averin Capital',match:['averin'],share:3500}
 ];
 export const managedVehicle=said=>{
   const key=matchKey(said);
@@ -393,7 +427,11 @@ export const managedVehicle=said=>{
 // owner holds there reaches the ledger the way every other private investment
 // does — as a capital account, carrying the commitment and the called capital
 // beside the value — which is the shape the page was already printing it in.
-const PRIVATE_MARKETS=new Set(['carta']);
+// A fund administrator's page is the same kind of page. iCapital states one
+// investment's committed, called and distributed capital beside the fund's own
+// net asset value and the multiple on it, and not one of those is a balance of
+// an account the owner could draw on.
+const PRIVATE_MARKETS=new Set(['carta','icapital']);
 export const holdsPositionsOnly=institution=>PRIVATE_MARKETS.has(matchKey(institution));
 // A title that states its own registration. A trust is a trust and an LLC is an
 // entity wherever they are read, so a holder the roster does not name still
@@ -507,10 +545,15 @@ export function normalizeFinance(input,previous={}){
     const cls=Number(get('class'));
     if(!assetClass(cls)||classSide(cls)!=='asset')fail('Choose an asset class for this investment.');
     const claimed=Number(get('stated')??0);
+    // A position with no share recorded is the whole of the vehicle, which is
+    // what every investment filed before this field existed was.
+    const held=get('share');
+    const share=held===undefined||held===null||held===''?WHOLE_SHARE:Math.round(Number(held));
+    if(!Number.isFinite(share)||share<1||share>WHOLE_SHARE)fail('Enter the share of this investment held here, between 0.01% and 100%.');
     return {row:'holding',number:counting(get('number'),'an investment number',MAX_HOLDINGS),
       portfolio:counting(get('portfolio'),'a portfolio number',MAX_PORTFOLIOS),
       name:text(get('name'),120,'an investment name',true),vehicle:kind,class:cls,
-      stated:vehicleOf(claimed)?claimed:0};
+      stated:vehicleOf(claimed)?claimed:0,share};
   }
   // One capital account statement. Contributions and distributions are held
   // inception-to-date rather than per period, because that is what a statement
@@ -602,9 +645,14 @@ export function positionsOn(records,when){
     const history=statements.filter(entry=>entry.holding===holding.number&&(!when||entry.asOf<=when))
       .sort((a,b)=>b.asOf.localeCompare(a.asOf));
     const current=history[0]||null;
-    const commitment=current?.commitment||0,contributed=current?.contributed||0;
-    const distributed=current?.distributed||0,value=current?.value||0;
-    return {holding,current,history,commitment,contributed,distributed,value,
+    // The statement states the vehicle; the position is this portfolio's share
+    // of it. Rounded to cents figure by figure, so a share never leaves a total
+    // carrying fractions of a cent.
+    const share=holding.share??WHOLE_SHARE;
+    const part=figure=>Math.round(figure*share/100)/100;
+    const commitment=part(current?.commitment||0),contributed=part(current?.contributed||0);
+    const distributed=part(current?.distributed||0),value=part(current?.value||0);
+    return {holding,current,history,share,commitment,contributed,distributed,value,
       // What is still owed on the commitment. A fund that has called more than
       // it committed is at zero rather than at a negative obligation.
       unfunded:Math.max(0,Math.round((commitment-contributed)*100)/100),
@@ -1401,11 +1449,17 @@ export function foldCapital(statements,records,{institution='',today=new Date().
   // Which investment this statement belongs to. The fund's own name is the tie,
   // and it is the one thing every capital account statement prints.
   const resolveHolding=(statement,portfolio)=>{
+    // Within the portfolio that holds it, because one vehicle is held in
+    // several: the owner holds part of a general partner and a trust holds
+    // another part, and they are two positions under one name. Matched across
+    // the whole ledger, the trust's statement would land on his holding and
+    // overwrite the figures at his share.
+    const mine=entry=>entry.portfolio===portfolio.number;
     // The same rule, and it matters as much here: "Acme Fund" must not swallow
     // a statement for "Acme Fund III".
-    const found=bestMatch(statement.name,holdings);
+    const found=bestMatch(statement.name,holdings.filter(mine));
     if(found)return found;
-    const already=bestMatch(statement.name,madeHoldings);
+    const already=bestMatch(statement.name,madeHoldings.filter(mine));
     if(already)return already;
     const said=vehicleById(statement.stated);
     const fresh={row:'holding',number:nextNumber(holdings,madeHoldings),portfolio:portfolio.number,
@@ -1416,7 +1470,9 @@ export function foldCapital(statements,records,{institution='',today=new Date().
       // Fund investments is the class a private position lands in, because
       // splitting venture from buyout off a fund's name would be a guess. One
       // edit moves it, and the row is where that edit is offered.
-      class:classById('funds').code,isNew:true};
+      class:classById('funds').code,
+      // All of it, unless this is a vehicle the owner runs rather than owns.
+      share:managedVehicle(statement.name)?.share??WHOLE_SHARE,isNew:true};
     madeHoldings.push(fresh);
     return fresh;
   };
@@ -1425,13 +1481,13 @@ export function foldCapital(statements,records,{institution='',today=new Date().
   // landed on the first time, or the write stops being idempotent.
   const preceding=(holding,asOf)=>filed.filter(entry=>entry.holding===holding&&entry.asOf<asOf)
     .sort((a,b)=>b.asOf.localeCompare(a.asOf))[0]||null;
-  // Vehicles the owner runs, gathered as they are refused and named once at the
-  // end. A statement for one of them is not a statement of his position: it is
-  // the general partner's own, and his share of it is not on the page.
+  // Vehicles the owner runs, gathered as they are filed and named once at the
+  // end. A statement for one of them states the general partner's own capital
+  // account rather than his position in it, and the share that makes it his is
+  // not on the page — so the row says which share was used, where it can be
+  // changed before anything is saved.
   const runs=[];
   for(const statement of statements){
-    const managed=managedVehicle(`${statement.name} ${statement.holder||''}`);
-    if(managed){runs.push(managed.name);continue;}
     const portfolio=resolvePortfolio(statement.holder);
     const holding=resolveHolding(statement,portfolio);
     const previous=holding.isNew?null:preceding(holding.number,statement.asOf);
@@ -1453,14 +1509,16 @@ export function foldCapital(statements,records,{institution='',today=new Date().
       notes.push(`${statement.name}: no portfolio matched “${statement.holder}” closely enough to be sure, so a new one is proposed. Change it on the row if it belongs to one you already have.`);
     if(!holding.isNew&&vehicleById(statement.stated)&&vehicleById(statement.stated).code!==holding.vehicle)
       notes.push(`${statement.name}: the statement calls this ${vehicleById(statement.stated).label.toLowerCase()} and it is filed as ${vehicleLabel(holding.vehicle).toLowerCase()}. Saving does not change how it is filed.`);
+    if(managedVehicle(statement.name))runs.push(`${statement.name} at ${shareText(holding.share??WHOLE_SHARE)}`);
     rows.push({holding:holding.number,name:holding.name,vehicle:holding.vehicle,class:holding.class,
+      share:holding.share??WHOLE_SHARE,
       stated:vehicleById(statement.stated)?.code||0,isNew:!!holding.isNew,
       portfolio:portfolio.number,portfolioName:portfolio.name,portfolioKind:portfolio.kind,
       portfolioIsNew:!!portfolio.isNew,currency:portfolio.currency||'USD',
       asOf:statement.asOf,value:statement.value,contributed,distributed,commitment,
       confidence:statement.confidence,from:statement.reason?[statement.reason]:[]});
   }
-  if(runs.length)notes.unshift(`Left out: ${[...new Set(runs)].join(', ')}, which you manage rather than hold.`);
+  if(runs.length)notes.unshift(`${[...new Set(runs)].join('; ')} — a vehicle you manage, so the statement states the whole of it and this is your share. Change the share on the row if that is wrong.`);
   return {rows,portfolios:madePortfolios,holdings:madeHoldings,notes,today};
 }
 

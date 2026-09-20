@@ -13,7 +13,7 @@ const mark=(portfolio,cls,asOf,amount)=>{
   const value={row:'mark',portfolio,class:cls,asOf,amount};
   return {...value,id:markRef(value),revision:String(amount)};
 };
-const holding=(number,portfolio,name,vehicle,cls)=>({id:holdingRef(number),row:'holding',revision:'r1',number,portfolio,name,vehicle,class:cls,stated:0});
+const holding=(number,portfolio,name,vehicle,cls,share=10000)=>({id:holdingRef(number),row:'holding',revision:'r1',number,portfolio,name,vehicle,class:cls,stated:0,share});
 const capital=(entry)=>({...entry,row:'capital',id:capitalRef(entry),revision:String(entry.value)});
 const property=(number,portfolio,name,link='')=>({id:propertyRef(number),row:'property',revision:'r1',number,portfolio,name,link});
 const valuation=(entry)=>({...entry,row:'valuation',id:valuationRef(entry),revision:String(entry.value)});
@@ -50,6 +50,11 @@ const SETTLED=[
   mark(3,10,'2026-03-31',41250),
   holding(1,1,'Vantage Point Partners Fund IV, L.P.',1,4),
   capital({holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000}),
+  // A general partner held in part: the statement states the whole vehicle and
+  // the row has to say which share of it these figures are, beside a position
+  // that is the whole of its fund and says nothing.
+  holding(2,1,'Synthetic Health Opportunities GP I LLC',1,4,3500),
+  capital({holding:2,asOf:'2026-09-20',value:850000,contributed:850000,distributed:0,commitment:2119150}),
   // Two houses: one owned outright, one with a mortgage against it, so the
   // row that has an equity to state sits beside the one that does not.
   property(1,1,'118 Riverside Drive, Apt 7B, New York, NY 10024','https://www.zillow.com/homedetails/synthetic/1234_zpid/'),

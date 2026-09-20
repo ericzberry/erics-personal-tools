@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Eric's Personal Tools",
-  "version": "0.6.222",
+  "version": "0.6.223",
   "description": "Personal records and reminders in the sidebar, and help with the page in front of you.",
   "minimum_chrome_version": "116",
   "permissions": [
