@@ -1,7 +1,7 @@
 import {RewardsView,RewardGroup,CardBenefits,BalancePanel,readingSummary} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
 import {RecordRow,RecordGroup,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
-import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
+import {validateReward,nextActions,luhnValid,parseCardBenefits,unheldBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl,rewardProgram,parseOfferReading,validateProgramCatalog,MAX_CATALOG_BYTES,READ_TEXT} from './program-data.js';
 import {parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,programShort,walletRun,WALLET_RUNS,UNREAD_BALANCE} from './balance-data.js';
@@ -47,7 +47,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // `held` is the owner's saved cards, fetched only when a rate needs one.
   let site=null,balances=null,credits=null,rates=null,benefits=null,held=[];
   let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null,syncFailed=false;
-  let found=null,connectionsFor='';
+  let found=[],connectionsFor='';
   const connections=aiConnections({load:async token=>(await remote(token,'/v1/ai-connections')).connections,need:'to read a balance off a page or look up a card.'});
   const revealed=new Map();
   const status=(text,tone='')=>setStatus($('rewards-status'),text,tone);
@@ -500,6 +500,10 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const query=$('rewards-search').value.trim().toLowerCase();
     const hit=e=>[e.name,e.source,e.notes,e.value].join(' ').toLowerCase().includes(query);
     const cards=entries.filter(e=>e.kind==='card'),held=new Set(cards.map(card=>card.id));
+    // Looking up the cards the wallet holds is an action about those cards, so
+    // it is there while there are some and gone while there are none.
+    $('reward-card-sweep').hidden=!remote||!cards.length;
+    $('reward-card-sweep').disabled=busy||!loaded;
     // Benefits live inside the card that carries them; a search opens the groups
     // it matched so a benefit is never hidden behind a closed card.
     const groups=cards.map(card=>{
@@ -565,7 +569,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…','progress');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
-  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;credits=null;rates=null;benefits=null;held=[];connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
+  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=[];catalogs=[];balances=null;credits=null;rates=null;benefits=null;held=[];connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
   // Whether a connection exists at all is the only thing worth saying, and it
   // is checked once per connected device rather than on every automatic sync.
   async function connectionList(){
@@ -578,47 +582,101 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       if(note)cardStatus(note,'alert');
     }catch(error){cardStatus(error.message,'error');}
   }
-  async function researchCard(name){
+  // What every lookup needs and neither of them should ask twice for.
+  async function lookupReady(){
     if(!remote)throw Error('Looking up a card is not available here.');
     const token=await credentials.get();
     if(!token)throw Error('Open Settings to connect this device.');
     if(globalThis.navigator?.onLine===false)throw Error('Looking up a card needs internet. Add it by hand instead.');
-    const connection=await connections.id(token);
-    const result=await remote(token,`/v1/ai-connections/${connection}/card-benefits`,{method:'POST',value:{name},timeoutMs:130000});
+    return {token,connection:await connections.id(token)};
+  }
+  const lookupCard=(token,connection,name)=>
+    remote(token,`/v1/ai-connections/${connection}/card-benefits`,{method:'POST',value:{name},timeoutMs:130000});
+  // Every card the wallet already holds, looked up in one press. The intake
+  // beside this is for a card the wallet has never heard of; this is for the
+  // ones it has, where what is missing is what they give — and what it proposes
+  // is only what is missing, because a card filled in by hand or read off its
+  // own page already carries some of it.
+  //
+  // A name that fits more than one real product is the one thing this cannot
+  // settle, because settling it means asking, and a sweep that stopped to ask
+  // six times is six presses again. Those cards are named at the end and left
+  // to the intake, which is where choosing between products belongs.
+  async function sweepCards(){
+    const cards=entries.filter(entry=>entry.kind==='card'&&!entry.deleting);
+    if(!cards.length)throw Error('No saved cards to look up yet. Name one below and it will be researched as it is added.');
+    const {token,connection}=await lookupReady();
+    const results=[],asked=[];
+    for(const [index,card] of cards.entries()){
+      cardStatus(`Looking up ${card.name} · ${index+1} of ${cards.length}…`,'progress');
+      const result=await lookupCard(token,connection,card.name);
+      if(result.matches){asked.push(card.name);continue;}
+      const read=parseCardBenefits(result);
+      const fresh=unheldBenefits(read.benefits,entries.filter(entry=>entry.card===card.id&&!entry.deleting));
+      // The card itself is saved again only where research fills a blank in it:
+      // what it earns, said in the issuer's words, on a card that never said.
+      const value=card.value||read.card.value;
+      if(fresh.length||value!==card.value)
+        results.push({card:{...card,value,url:card.url||read.card.url,notes:card.notes||read.card.notes},
+          benefits:fresh,cardSaved:value===card.value});
+    }
+    found=results;
+    $('reward-card-matches').replaceChildren();
+    showFound();
+    const total=results.reduce((sum,result)=>sum+result.benefits.length,0);
+    const named=asked.length?` ${asked.join(' and ')} fits more than one card — name it below to choose.`:'';
+    cardStatus(total
+      ?`Found ${total} benefit${total===1?'':'s'} your wallet does not have. Review them, then save.${named}`
+      :`Nothing new for ${cards.length===1?'that card':'those cards'}.${named}`,total?'success':'alert');
+  }
+  async function researchCard(name){
+    const {token,connection}=await lookupReady();
+    const result=await lookupCard(token,connection,name);
     // A rough name can name more than one real card, so research answers with
     // the products it could be. Choosing one is the only way a card is read.
     if(result.matches){
-      found=null;$('reward-card-review').replaceChildren();
+      found=[];$('reward-card-review').replaceChildren();
       $('reward-card-matches').replaceChildren(...CardMatches(result.matches,choice=>cardRun(()=>researchCard(choice))));
       cardStatus('That name fits more than one card. Choose the one you hold.','alert');
       return;
     }
     // Validated again here: the wallet accepts nothing the API has not proved,
     // and nothing it stores was shaped by a response it did not check.
-    found=parseCardBenefits(result);
+    const read=parseCardBenefits(result);
+    found=[read];
     $('reward-card-matches').replaceChildren();
     showFound();
-    cardStatus(`Found ${found.benefits.length} benefit${found.benefits.length===1?'':'s'}. Review them, then save.`,'success');
+    cardStatus(`Found ${read.benefits.length} benefit${read.benefits.length===1?'':'s'}. Review them, then save.`,'success');
   }
   function showFound(){$('reward-card-review').replaceChildren(...CardBenefits(found,{onSave:saveFound,onDiscard:discardFound}));}
-  function discardFound(){found=null;$('reward-card-review').replaceChildren();$('reward-card-matches').replaceChildren();cardStatus('');}
+  function discardFound(){found=[];$('reward-card-review').replaceChildren();$('reward-card-matches').replaceChildren();cardStatus('');}
   // The card is saved first so its benefits can name it. A failure part way
   // through keeps the benefits that are left in the review list, so nothing
   // researched is lost and saving again finishes the job.
   async function saveFound(){
-    if(!found||busy)return;
-    const {card,benefits,cardSaved}=found;
-    if(!cardSaved&&!await save(card)){cardStatus($('reward-form-status').textContent,'error');return;}
-    for(const [index,benefit] of benefits.entries()){
-      cardStatus(`Saving benefit ${index+1} of ${benefits.length}…`,'progress');
-      if(!await save({...benefit,card:card.id})){
-        found={card,benefits:benefits.slice(index),cardSaved:true};showFound();
-        cardStatus($('reward-form-status').textContent,'error');return;
+    if(!found?.length||busy)return;
+    const total=found.reduce((sum,result)=>sum+result.benefits.length,0);
+    let saved=0;
+    for(const [position,result] of found.entries()){
+      const {card,benefits,cardSaved}=result;
+      // What is left when a save stops part way: this card from where it
+      // stopped, and every card after it untouched. Nothing researched is lost,
+      // and saving again finishes the job.
+      const remaining=(index,done)=>{
+        found=[{card,benefits:benefits.slice(index),cardSaved:done},...found.slice(position+1)];
+        showFound();cardStatus($('reward-form-status').textContent,'error');
+      };
+      if(!cardSaved&&!await save(card)){remaining(0,false);return;}
+      for(const [index,benefit] of benefits.entries()){
+        cardStatus(`Saving benefit ${saved+1} of ${total}…`,'progress');
+        if(!await save({...benefit,card:card.id})){remaining(index,true);return;}
+        saved++;
       }
     }
-    const saved=benefits.length;
+    const cards=found.length,only=cards===1?found[0].card.name:'';
     discardFound();$('reward-card-name').value='';
-    cardStatus(`Saved ${card.name} and ${saved} benefit${saved===1?'':'s'}.`,'success');
+    cardStatus(only?`Saved ${only} and ${saved} benefit${saved===1?'':'s'}.`
+      :`Saved ${saved} benefit${saved===1?'':'s'} across ${cards} cards.`,'success');
   }
   async function cardRun(operation){
     if(busy)return;
@@ -632,6 +690,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   $('programs-search').addEventListener('input',renderPrograms);
   $('reward-kind').addEventListener('change',renderKind);
   $('reward-cancel').addEventListener('click',()=>{clearForm();$('reward-editor').open=false;});
+  $('reward-card-sweep').addEventListener('click',()=>cardRun(sweepCards));
   $('reward-card-form').addEventListener('submit',event=>{event.preventDefault();
     const name=$('reward-card-name').value.trim();
     if(!name){cardStatus('Say which card you have. A rough name is enough.','alert');return;}

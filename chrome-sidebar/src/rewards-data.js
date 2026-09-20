@@ -129,6 +129,22 @@ export function parseCardBenefits(input,now=new Date().toISOString()){
     source:card.name,card:'',secret:'',secretHint:''},now));
   return {card,benefits};
 }
+// Which of the benefits research came back with the wallet does not already
+// hold under that card. A card filled in by hand, or read off the issuer's own
+// page, already carries some of what research finds, and proposing those again
+// would save one credit twice under two wordings of the same name. The test is
+// the one a credit reading uses: one name containing the other is the same
+// benefit, because a page writes the amount into the title and research does
+// not.
+const benefitKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+export function unheldBenefits(found=[],held=[]){
+  const have=held.map(entry=>benefitKey(entry?.name)).filter(Boolean);
+  return (found||[]).filter(benefit=>{
+    const name=benefitKey(benefit?.name);
+    return name&&!have.some(other=>other===name||other.includes(name)||name.includes(other));
+  });
+}
+
 // Typo check for a card number entered by hand. The API never sees the digits,
 // so this is the only chance to catch a mistyped number before it is sealed.
 export function luhnValid(digits){

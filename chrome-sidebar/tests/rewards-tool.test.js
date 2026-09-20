@@ -488,3 +488,71 @@ test('one reading brings back balances, credits, rates and benefits, and saving 
  assert.match(h.document.getElementById('balance-status').textContent,/the terms on 1 card/);
  tool.stop();h.restore();
 });
+
+// Every card the wallet already holds, looked up in one press.
+test('one press looks up every saved card, proposes only what is missing, and saves it under each',async()=>{
+ const h=harness();
+ const replies={
+  'Synthetic Platinum Card':{card:{name:'Synthetic Platinum Card',source:'Synthetic Bank',value:'5x flights, 1x everything else',url:'',notes:''},
+   benefits:[{kind:'benefit',name:'Ride credit',value:'$15 per month',state:'activation',cadence:'monthly',notes:''},
+     {kind:'membership',name:'Lounge access',value:'Priority Pass Select',state:'available',cadence:''}]},
+  'Synthetic Cash Card':{card:{name:'Synthetic Cash Card',source:'Synthetic Bank',value:'6% groceries, 1% everything else',url:'',notes:''},
+   benefits:[{kind:'benefit',name:'Streaming credit',value:'$7 per month',state:'available',cadence:'monthly',notes:''}]},
+  'Synthetic Blue':{matches:[{name:'Synthetic Blue Everyday',note:'No annual fee'},{name:'Synthetic Blue Preferred',note:'$95 a year'}]}
+ };
+ const records=[],asked=[];
+ const remote=async(token,path,options)=>{
+  if(path==='/v1/ai-connections')return {connections:[{id:CONNECTION,name:'Synthetic',provider:'openai',hasApiKey:true}]};
+  asked.push(options?.value?.name);
+  return replies[options.value.name];
+ };
+ // Two cards the owner holds, one of them already carrying a lounge benefit,
+ // and a third whose name fits two real products.
+ const saved=[
+  {id:'c1',kind:'card',name:'Synthetic Platinum Card',source:'Synthetic Bank',value:'',state:'available',card:'',updatedAt:new Date().toISOString(),revision:'r1'},
+  {id:'c2',kind:'card',name:'Synthetic Cash Card',source:'Synthetic Bank',value:'6% groceries, 1% everything else',state:'available',card:'',updatedAt:new Date().toISOString(),revision:'r2'},
+  {id:'c3',kind:'card',name:'Synthetic Blue',source:'Synthetic Bank',value:'',state:'available',card:'',updatedAt:new Date().toISOString(),revision:'r3'},
+  {id:'b1',kind:'membership',name:'Lounge access',source:'Synthetic Platinum Card',value:'Priority Pass Select',state:'available',card:'c1',updatedAt:new Date().toISOString(),revision:'r4'}
+ ];
+ const offline={request:async(token,path,options)=>{
+  if(options?.method){
+   const id=path.split('/').at(-1),index=records.findIndex(record=>record.id===id);
+   const record={...options.value,revision:'saved'};
+   if(index>=0)records[index]=record;else records.push(record);
+  }
+  return {records:[...saved.filter(entry=>!records.some(written=>written.id===entry.id)),...records]};
+ }};
+ const tool=mountRewards(h.document.querySelector('main'),{credentials:{get:async()=>'token'},vault:fakeVault(),offline,remote});
+ await tool.refresh();
+ const $=id=>h.document.getElementById(id);
+ // The press is there because there are cards to look up.
+ assert.equal($('reward-card-sweep').hidden,false);
+ $('reward-card-sweep').click();
+ await settle(()=>$('reward-card-status').textContent.includes('Review them'));
+ // Every saved card is looked up by the name the wallet holds, and nothing else
+ // about the wallet is sent.
+ assert.deepEqual(asked,['Synthetic Platinum Card','Synthetic Cash Card','Synthetic Blue']);
+ const review=$('reward-card-review').textContent;
+ assert.match(review,/Ride credit/);
+ assert.match(review,/Streaming credit/);
+ // A benefit the wallet already holds under that card is not proposed again.
+ assert.equal((review.match(/Lounge access/g)||[]).length,0);
+ // A name that fits two products is left to the intake, and said so.
+ assert.match($('reward-card-status').textContent,/Synthetic Blue fits more than one card/);
+ assert.equal(records.length,0,'reviewing saves nothing');
+ const save=[...h.document.querySelectorAll('#reward-card-review button'),...h.document.querySelectorAll('#reward-card-form button')]
+   .find(button=>button.textContent.startsWith('Save'));
+ assert.equal(save.textContent,'Save 2 benefits across 2 cards');
+ save.click();
+ await settle(()=>$('reward-card-status').textContent.startsWith('Saved'));
+ // Each benefit is filed under the card it came from, and the card that never
+ // said what it earns now says it.
+ const filed=records.filter(record=>record.kind!=='card');
+ assert.deepEqual(filed.map(record=>[record.name,record.card]),[['Ride credit','c1'],['Streaming credit','c2']]);
+ const card=records.find(record=>record.kind==='card');
+ assert.equal(card.id,'c1');
+ assert.equal(card.value,'5x flights, 1x everything else');
+ assert.equal(records.filter(record=>record.id==='c2').length,0,'a card with nothing to fill in is not written again');
+ assert.match($('reward-card-status').textContent,/Saved 2 benefits across 2 cards/);
+ tool.stop();h.restore();
+});

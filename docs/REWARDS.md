@@ -51,6 +51,31 @@ research is lost and saving again finishes the job.
 
 Benefits entered by hand work the same way; pick the card in the editor.
 
+### The cards you already hold
+
+**Look up my saved cards** does the same research for every card in the wallet,
+in one press. It is there only once there is a card to look up, and it proposes
+only what is missing: a card filled in by hand, or one whose benefits were read
+off the issuer's own page, already carries some of what research finds, and a
+benefit the wallet has under that card is not offered again. Where a card never
+said what it earns, the issuer's own line for it — `6% at U.S. supermarkets,
+3% at U.S. gas stations, 1% on everything else` — fills that blank and nothing
+else about the card is touched.
+
+One review holds every card it found something for, one block each, and one
+**Save N benefits across N cards** writes them all, filing each under the card
+it came from. A save that stops part way keeps what is left, including the cards
+it had not reached.
+
+The one thing a sweep cannot settle is a name that fits more than one real
+product: choosing between them means asking, and a sweep that stopped to ask
+would be the presses it replaced. Those cards are named when it finishes and
+left to the intake above, which is where choosing belongs.
+
+Earning rates are Best card's, not the wallet's: [BEST_CARD.md](BEST_CARD.md)
+lists the cards this wallet holds and finds the rates for one with a press of
+its own.
+
 ## Points and miles
 
 The wallet opens with the programs themselves: one row each, the program on the

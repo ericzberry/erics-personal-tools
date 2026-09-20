@@ -37,7 +37,11 @@ export function RewardsView(){
         Disclosure('Add a card you hold',[
           UI.Form([
             UI.FormField({id:'reward-card-name',label:'Which card do you have?',placeholder:'amex platinum, blue cash, jp morgan reserve'}),
-            ActionGroup([Button('Find card benefits',{id:'reward-card-find',variant:'primary',type:'submit'})]),
+            // Two ways in, one row: a card the wallet has never heard of is
+            // named here, and the cards it already holds are looked up in one
+            // press. The second appears only once there are cards to look up.
+            ActionGroup([Button('Find card benefits',{id:'reward-card-find',variant:'primary',type:'submit'}),
+              Button('Look up my saved cards',{id:'reward-card-sweep',variant:'secondary',type:'button',hidden:true})]),
             Notice('',{id:'reward-card-status'}),
             Stack([],{id:'reward-card-matches'}),
             Stack([],{id:'reward-card-review'})
@@ -90,23 +94,30 @@ const benefitLine=benefit=>[benefit.value,CADENCE_LABELS[benefit.cadence]||'',
   benefit.state==='activation'?'needs enrollment':'',benefit.due?`by ${benefit.due}`:''].filter(Boolean).join(' · ');
 // What research found, laid out the way it will be saved, so every benefit can
 // be read before any of it reaches the wallet.
-export function CardBenefits(result,{onSave,onDiscard}){
-  if(!result)return [];
-  const {card,benefits,cardSaved}=result;
-  const count=`${benefits.length} benefit${benefits.length===1?'':'s'}`;
+// What research came back with, for one card or for every card the owner holds.
+// A card is a block of its own — its name, what it earns, and each benefit
+// under it — and the actions are one row under all of them, because a sweep of
+// six cards reviewed with six Save buttons is six decisions where the owner
+// made one.
+export function CardBenefits(input,{onSave,onDiscard}){
+  const results=(Array.isArray(input)?input:[input]).filter(Boolean);
+  if(!results.length)return [];
+  const total=results.reduce((sum,result)=>sum+result.benefits.length,0);
+  const count=`${total} benefit${total===1?'':'s'}`;
   // After a save that stopped part way the card is already in the wallet, so the
   // action says what is actually left to do.
-  const save=Button(cardSaved?`Save the remaining ${count}`:`Save this card and ${count}`,{variant:'primary',size:'compact'});
+  const [only]=results.length===1?results:[];
+  const save=Button(only?(only.cardSaved?`Save the remaining ${count}`:`Save this card and ${count}`)
+    :`Save ${count} across ${results.length} cards`,{variant:'primary',size:'compact'});
   const discard=Button('Discard',{variant:'subtle',size:'compact'});
   save.addEventListener('click',onSave);discard.addEventListener('click',onDiscard);
-  return [Section([
+  return [...results.map(({card,benefits})=>Section([
     Strong(card.name),
-    Note(`${card.source} · ${card.value}`),
+    Note([card.source,card.value].filter(Boolean).join(' · ')),
     ...(card.notes?[Note(card.notes)]:[]),
     ...benefits.map(benefit=>Stack([Strong(benefit.name),Note(benefitLine(benefit)),...(benefit.notes?[Note(benefit.notes)]:[])],{className:'reward-found'})),
-    ...(card.url?[Link('Issuer page used',card.url)]:[]),
-    ActionGroup([save,discard],{compact:true})
-  ],{className:'reward-ingest'})];
+    ...(card.url?[Link('Issuer page used',card.url)]:[])
+  ],{className:'reward-ingest'})),ActionGroup([save,discard],{compact:true})];
 }
 
 // What one snapshot of the page came back with, said in one line. A card's own

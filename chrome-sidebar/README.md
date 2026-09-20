@@ -2908,3 +2908,39 @@ portfolio name still measures 50.2 × 19px with the same border, radius,
 padding and ink. UI-6's budget for `styles.css` drops 92 → 91. Native iPhone
 and installed Chrome behavior were not directly tested. Archive:
 `release/erics-sidebar-0.6.218.zip`.
+
+## Every card you hold, looked up in one press (0.6.220 / mobile 0.1.170)
+
+**Research knew one card at a time.** Naming a card brought back everything it
+carries — the credits, what resets when, what has to be enrolled in — and that
+is work nobody finishes by hand. But it only ever answered about the card just
+typed, so a wallet holding six of them was six names to type, six waits, and six
+reviews, and the cards that were already saved were the ones it could not be
+asked about at all.
+
+**Look up my saved cards** asks about every one of them. It appears beside the
+intake once there is a card to look up, names each card as it goes, and comes
+back with one review: a block per card, the benefits under it, and one **Save N
+benefits across N cards** that files each under the card it came from.
+
+**It proposes only what is missing.** A card filled in by hand, or one whose
+benefits were read off the issuer's own page, already carries some of what
+research finds — so a benefit the wallet holds under that card is not offered
+again under another wording of the same name. Where a card never said what it
+earns, the issuer's own line for it fills that blank, and nothing else about the
+card is touched.
+
+**And it does not stop to ask.** A name that fits more than one real product is
+the one thing a sweep cannot settle, because settling it means asking, and a
+sweep that stopped six times is the six presses it replaced. Those cards are
+named when it finishes and left to the intake above, where choosing between
+products belongs.
+
+New coverage: a sweep looking up every saved card by the name the wallet holds,
+proposing nothing the wallet already has under that card, leaving an ambiguous
+name to the intake and saying which, filling in what a card earns only where it
+said nothing, and one save filing each benefit under its own card. Validation:
+583 extension, 33 mobile and 134 API tests pass from an archive of HEAD. The
+sweep was reviewed at 380px against a synthetic wallet of two cards: the press
+beside the intake, the progress it names, the review a block per card, and the
+one action across them. Archive: `release/erics-sidebar-0.6.220.zip`.
