@@ -33,7 +33,7 @@ export const SCAN_EVERY_DAYS=30;
 // so it is counted directly rather than guessed at from a number of calendars.
 // A sweep that runs out says so instead of quietly reporting a short answer.
 const MAX_REQUESTS=32;
-const MAX_CALENDARS=10;
+const MAX_CALENDARS=12;
 const PAGE_SIZE=250;
 // One sweep should never be able to fill the reminder list on its own.
 const MAX_ADDED=200;
@@ -105,11 +105,19 @@ function budget(){
   return {get exhausted(){return left<=0;},spend(){if(left<=0)return false;left--;return true;}};
 }
 
+// Which calendars to read, and in which order. The order is the point: a
+// subscription to every national holiday and two sports teams can easily push
+// the calendar that holds nothing but birthdays past whatever cap the request
+// budget sets, and losing that one loses almost everything worth finding. So
+// the birthday calendar goes first, the owner's own calendar next, and the
+// rest in whatever order Google gives them.
+export const calendarOrder=items=>[...items].sort((a,b)=>rank(a)-rank(b)).slice(0,MAX_CALENDARS);
+const rank=calendar=>CONTACTS.test(String(calendar?.id||''))?0:calendar?.primary?1:2;
 async function calendars(env,request,fetcher,spend){
   if(!spend.spend())return [];
   const list=await calendarFetch(env,request,fetcher,
     `/users/me/calendarList?${new URLSearchParams({maxResults:'250',minAccessRole:'reader',fields:'items(id,summary,primary)'})}`);
-  return (Array.isArray(list.items)?list.items:[]).slice(0,MAX_CALENDARS);
+  return calendarOrder(Array.isArray(list.items)?list.items:[]);
 }
 
 // One calendar's birthdays. The free-text search is what keeps a calendar of

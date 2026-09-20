@@ -67,8 +67,11 @@ like one from both sides — an all-day date that repeats every year *and* a nam
 that says birthday — because a wedding anniversary is yearly and all-day too. A
 calendar that holds nothing but birthdays is read whole; every other one is
 searched, because a calendar of ten thousand meetings cannot be read whole
-inside a Worker's request budget. A sweep that runs out of budget says so
-instead of reporting a short answer as a complete one.
+inside a Worker's request budget. That budget also caps how many calendars one
+sweep reads, so they are ordered before it spends any of it — the birthday
+calendar first, the owner's own next — because a subscription to every national
+holiday is enough to push the one that matters past the cap. A sweep that runs
+out of budget says so instead of reporting a short answer as a complete one.
 
 **The year is the only judgement.** A yearly birthday event starts on the date
 of birth when the calendar knows the year and on a placeholder when it does not,

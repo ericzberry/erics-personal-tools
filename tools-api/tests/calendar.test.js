@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import worker from '../src/index.js';
-import {scanBirthdays,dueForScan,isBirthdayEvent,SCAN_EVERY_DAYS} from '../src/calendar.js';
+import {scanBirthdays,dueForScan,isBirthdayEvent,calendarOrder,SCAN_EVERY_DAYS} from '../src/calendar.js';
 import {CALENDAR_SCOPE,DRIVE_SCOPE} from '../src/drive.js';
 import {encryptSettings,decryptSettings} from '../src/ai-settings.js';
 import {normalizeReminder} from '../../chrome-sidebar/src/reminder-data.js';
@@ -188,4 +188,16 @@ test('Google refusing the calendar is written down, so the screen stops offering
     fetcher:google.fetcher,now:new Date('2026-09-20T12:00:00Z')}),error=>error.status===409);
   const status=await (await call(env,'/v1/calendar/birthdays')).json();
   assert.equal(status.google.calendar,false,'the panel’s next question is what this connection can do');
+});
+
+test('the birthday calendar is read first, however far down the list Google puts it',()=>{
+  // A subscription to every national holiday and two sports teams is enough to
+  // push the one calendar that matters past any cap.
+  const noise=Array.from({length:20},(_,index)=>({id:`feed-${index}@group.calendar.google.com`,summary:`Feed ${index}`}));
+  const ordered=calendarOrder([...noise,
+    {id:'owner@example.com',summary:'Eric',primary:true},
+    {id:'addressbook#contacts@group.v.calendar.google.com',summary:'Birthdays'}]);
+  assert.equal(ordered[0].id,'addressbook#contacts@group.v.calendar.google.com');
+  assert.equal(ordered[1].id,'owner@example.com');
+  assert.ok(ordered.length<=12,'and the list is still bounded by the request budget');
 });
