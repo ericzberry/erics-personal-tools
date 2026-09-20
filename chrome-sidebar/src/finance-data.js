@@ -997,7 +997,13 @@ const PLAN_VALUE=/\b(unvested|potential|projected|unexercis\w*)\b[^\n]*\b(value|
 // page beneath it breaks the two apart, so the choice is between filing the
 // whole balance as funds and filing it as marketable securities. Funds is wrong
 // by the three per cent; liquid securities is wrong by the other ninety-seven.
-const FUND_ACCOUNTS={ubs:/\bbrokerage\b/i};
+// One of them carries no description at all: UBS prints Y1 63541 with an empty
+// name column, so there is no word on the page to recognize it by and the
+// account is named here instead. That is as specific as the fact is — the owner
+// is the only source for what is inside an account the page declines to
+// describe — and it is the reason this map holds accounts rather than a rule
+// about the word "brokerage".
+const FUND_ACCOUNTS={ubs:/\bbrokerage\b|\b63541\b/i};
 export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
   const CASH=classById('cash').code,LIQUID=classById('liquid').code;
   // What a figure is in, when the reading did not say. A site answers for its

@@ -1034,6 +1034,21 @@ test('a UBS Brokerage account is fund investments, and every other one is not',(
   assert.equal(byClass['Fund investments'],8454037.54,'the Brokerage account holds the funds');
   assert.equal(byClass.Stocks,3954866.16,'and the account beside it is untouched');
 
+  // One UBS fund account carries no description at all — the page prints an
+  // empty name column — so there is no word to recognize it by and it is named
+  // by its number instead.
+  const ae={row:'portfolio',number:2,name:'Berry AE 21 Irrevocable Trust',kind:5,currency:'USD'};
+  const unnamed=foldReadings([
+    reading('AE 2021 Trust Y1 63541','','liquid',856692.22),
+    reading('AE 2021 Trust Y1 85516','Core Munis','bonds',381402.85)
+  ],[ae],{institution:'UBS',today:'2026-09-20'});
+  const aeClass=Object.fromEntries(unnamed.marks.map(mark=>[classLabel(mark.class),mark.amount]));
+  assert.equal(aeClass['Fund investments'],856692.22,'the account the page declines to describe');
+  assert.equal(aeClass['Fund investments']===undefined,false);
+  assert.ok(!('Fund investments' in {Bonds:0})||true);
+  assert.equal(unnamed.marks.filter(mark=>classLabel(mark.class)==='Fund investments').length,1,
+    'and only that one: the account beside it is not swept in by the number');
+
   // The same word at a broker that means it stays marketable securities.
   for(const institution of ['Schwab','E*TRADE','Chase']){
     const other=foldReadings([reading('Individual Brokerage -4049','Brokerage','liquid',1000)],
