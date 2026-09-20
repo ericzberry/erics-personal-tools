@@ -25,6 +25,11 @@ function controls() {
   $('settings-disconnect').disabled=working||!connected;
   $('settings-disconnect').hidden=!connected;
   $('settings-token').disabled=working||!available;
+  // Before this browser is connected there is one thing to do here, and it is
+  // on the first tab: the models list has nothing in it and nothing can be sent
+  // to a connection that does not exist. So they leave the row, and a row of
+  // one tab is not drawn at all.
+  for(const key of ['models','playground'])$('settings-tabs').show(key,connected);
   $('settings-connection-badge').textContent=connected?'Connected':'Not connected';
   $('settings-connection-badge').classList.toggle('pill-connected',connected);
   const canRun=connected&&!!selected?.hasApiKey&&!dirty&&!working;

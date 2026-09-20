@@ -794,8 +794,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // asked for. Putting a figure in does not: the site reading, the statement,
     // the page reading and a figure typed by hand are all ready.
     // Until it has been asked for, the ledger is not a tab standing there empty:
-    // it is not in the row at all.
-    $('tabs').show('ledger',!quiet);
+    // it is not in the row at all. Nor is it one while it holds nothing — a
+    // ledger with no figures in it is not a second view to switch to, the tool
+    // is simply the ways of putting a figure in, and a row of one tab is a row
+    // that should not be drawn. A device that has not loaded keeps the tab,
+    // because what that panel has to say is how to connect.
+    $('tabs').show('ledger',!quiet&&(!loaded||records.length>0));
     if(quiet)sealLedger();else renderLedger();
     for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-asOf'])$(key).disabled=busy||!loaded;

@@ -104,6 +104,12 @@ test('reading the open page is offered only where there is a page beside the too
   const plain=financeHost(document);
   await settle(()=>document.getElementById('finance-list').textContent.includes('No figures yet'));
   assert.equal(document.getElementById('finance-tabs-page-tab').hidden,true,'a full tab has no page to read, so there is no tab about one');
+  // Two views are worth a row of labels; one is not. A ledger holding nothing
+  // is not a second view to switch to — the tool is the ways of putting a
+  // figure in — so the row is not drawn over them at all.
+  assert.equal(document.getElementById('finance-tabs-ledger-tab').hidden,true,'nothing saved is not a view to switch to');
+  assert.equal(document.getElementById('finance-tabs-add-tab').getAttribute('aria-selected'),'true');
+  assert.equal(document.querySelector('#finance-tabs .tabs-list').hidden,true,'one tab draws no row');
   assert.equal(document.getElementById('finance-actions').textContent,'Refresh');
   plain.stop();
 

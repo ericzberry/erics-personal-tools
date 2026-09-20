@@ -42,8 +42,17 @@ test('page connects, saves, preserves a masked key on edit, and removes through 
  const settle=async()=>{for(let i=0;i<12;i++)await new Promise(resolve=>setImmediate(resolve));};
  await import('../src/settings-page.js');
  assert.equal($('connection-save').disabled,true);
+ // Before this browser is connected there is one thing to do here, so the
+ // models list and the playground are not tabs to switch to and no row of
+ // labels is drawn over the single one that is left.
+ await settle();
+ for(const key of ['models','playground'])assert.equal($(`settings-tabs-${key}-tab`).hidden,true);
+ assert.equal(document.querySelector('#settings-tabs .tabs-list').hidden,true);
  $('settings-token').value='private-extension-token';$('settings-connect').click();await settle();
  assert.equal($('settings-token').value,'');assert.equal($('connection-save').disabled,false);
+ for(const key of ['connections','models','playground'])assert.equal($(`settings-tabs-${key}-tab`).hidden,false,key);
+ assert.equal(document.querySelector('#settings-tabs .tabs-list').hidden,false);
+ assert.equal($('settings-tabs-connections-tab').getAttribute('aria-selected'),'true','connecting does not move the reader off the connections');
  $('ai-name').value='My AI';$('ai-key').value='provider-secret';
  $('connection-form').dispatchEvent(new window.Event('submit',{cancelable:true}));await settle();
  assert.equal(connections.length,1);assert.equal(connections[0].model,undefined);assert.equal($('ai-model'),null);assert.equal(connections[0].hasApiKey,true);assert.equal($('ai-key').value,'');assert.equal(document.body.textContent.includes('provider-secret'),false);

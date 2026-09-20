@@ -123,6 +123,15 @@ scrolling past the other. This is inside a tool and has nothing to do with
 choosing one: the shell's function still follows the browser tab, and no tool
 becomes a tab in the header.
 
+Do not overdo it. A row of labels earns its place only where each tab holds
+something worth a screen of its own and the concepts would otherwise bury each
+other: a ledger of a dozen portfolios and the ways of adding to it, a wallet and
+a catalogue of a hundred offers. A short section, an editor drawer, a group that
+fits under what it follows, or a second view that is empty stays where it is —
+the row would cost a press and save no scrolling. Most tools hold one thing and
+have no row at all, and a tool that has one today gets none the moment its
+second tab has nothing to answer.
+
 A tab's label is the heading for what is under it, so nothing inside repeats it
 and a group filling a whole panel drops the boundary it needed when it sat above
 another group. Every label names a view — `Net worth`, `Offers`, `This page` —
