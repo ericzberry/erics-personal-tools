@@ -265,8 +265,10 @@ test('positions no account claimed are counted alone and refused beside a balanc
 });
 
 // E*TRADE calls a stock plan's vested half "Current Account Value", which says
-// nothing about vesting at all, so the account is what settles the class.
-test('a stock plan is vested and unvested whatever the reading called the halves',()=>{
+// nothing about vesting at all, so the account is what settles the class. What
+// has vested is marketable stock and needs no class of its own; only the
+// schedule beside it does.
+test('a stock plan states marketable stock and a schedule, and only the schedule is its own class',()=>{
   const dated={asOf:'2026-09-20',confidence:'high',reason:'',registration:'',scope:'account',
     account:'Stock Plan (DSP) -7605',class:classById('unclassified').code};
   const folded=foldReadings([
@@ -274,7 +276,7 @@ test('a stock plan is vested and unvested whatever the reading called the halves
     {...dated,label:'Potential Benefit Value',value:248422.68}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
   assert.deepEqual(folded.marks.map(row=>[classLabel(row.class),row.amount]),
-    [['Vested stock',5000],['Unvested stock',248422.68]]);
+    [['Liquid securities',5000],['Unvested stock',248422.68]]);
 });
 
 // Liquid against illiquid is the question the class list cannot answer on its
@@ -282,15 +284,16 @@ test('a stock plan is vested and unvested whatever the reading called the halves
 test('every asset class rolls up to liquid or illiquid, and only unplaced value to neither',()=>{
   const records=[
     {row:'portfolio',id:'p1',number:1,name:ESTATE,kind:1,currency:'USD'},
-    ...['cash','stocks','bonds','liquid','vested','pe','property','unvested','unclassified']
-      .map((id,index)=>({row:'mark',id:`1-${classById(id).code}-20260919`,portfolio:1,
-        class:classById(id).code,asOf:'2026-09-19',amount:(index+1)*1000}))
+    ...[['cash',1000],['stocks',2000],['bonds',3000],['liquid',4000],
+        ['pe',5000],['property',6000],['unvested',7000],['unclassified',9000]]
+      .map(([id,amount])=>({row:'mark',id:`1-${classById(id).code}-20260919`,portfolio:1,
+        class:classById(id).code,asOf:'2026-09-19',amount}))
   ];
   const {byGroup}=financeSummary(records,{today:'2026-09-19'});
   // Largest first, like every other breakdown in the panel.
   assert.deepEqual(byGroup.map(row=>[row.label,row.total]),[
-    ['Illiquid securities',21000],
-    ['Liquid securities',15000],
+    ['Illiquid securities',18000],
+    ['Liquid securities',10000],
     ['Unclassified',9000]
   ]);
 });

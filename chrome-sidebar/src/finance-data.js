@@ -61,11 +61,12 @@ export const ASSET_CLASSES=[
   // that much truthfully without inventing a stocks-and-bonds split.
   {code:UNCLASSIFIED,id:'unclassified',label:'Unclassified',side:'asset',group:''},
   {code:10,id:'liquid',label:'Liquid securities',side:'asset',group:'liquid'},
-  // A stock plan holds two different things under one account number, and the
-  // difference is the only thing worth knowing about it: what has vested is
-  // ordinary marketable stock, and what has not is a schedule. Both count, and
-  // the class is what says which is which.
-  {code:11,id:'vested',label:'Vested stock',side:'asset',group:'liquid'},
+  // A stock plan holds two different things under one account number, and only
+  // one of them is worth a class. What has vested is ordinary marketable stock
+  // that could be sold this week, so it is Liquid securities like any other;
+  // what has not vested is a schedule, and nothing else in the list says so.
+  // Code 11 was Vested stock for part of a day and is retired rather than
+  // reused, because a code is what is stored.
   {code:12,id:'unvested',label:'Unvested stock',side:'asset',group:'illiquid'},
   {code:21,id:'mortgage',label:'Mortgage',side:'liability',group:''},
   {code:22,id:'loan',label:'Loan',side:'liability',group:''},
@@ -647,11 +648,12 @@ const NOT_A_VALUE=/\b(gains?|loss|losses|change|returns?|performance|cost basis|
 // called $248,422 of unvested stock an ordinary holding would bury it.
 const UNVESTED=/\b(unvested|potential|projected|unexercis\w*)\b/i;
 const VESTED=/\bvested\b/i;
-// The account that says which of the two a figure is by what it is. Only a
-// stock plan states a current value and a potential one side by side, and
-// E*TRADE calls the vested half "Current Account Value" — a name with nothing
-// in it about vesting at all, which left the class to whatever the reading
-// happened to say.
+// The account that says which half of it a figure is. Only a stock plan states
+// a current value and a potential one side by side, and E*TRADE calls the
+// vested half "Current Account Value" — a name with nothing in it about vesting
+// at all, which left the class to whatever the reading happened to say. What
+// has vested is marketable stock and files as Liquid securities; only the
+// schedule beside it needs a class of its own.
 const STOCK_PLAN=/\b(stock plan|dsp|espp|rsu|equity (award|plan)|restricted stock)\b/i;
 export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
   const CASH=classById('cash').code,LIQUID=classById('liquid').code;
@@ -666,7 +668,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // value in it would turn the vested balance beside it into a schedule.
     const own=reading.label||'';
     if(UNVESTED.test(own))return classById('unvested').code;
-    if(VESTED.test(own)||STOCK_PLAN.test(said))return classById('vested').code;
+    if(VESTED.test(own)||STOCK_PLAN.test(said))return LIQUID;
     if(reading.class!==UNCLASSIFIED)return reading.class;
     if(INVESTED.test(said))return defaultClass===CASH||!defaultClass?LIQUID:defaultClass;
     return defaultClass??reading.class;
