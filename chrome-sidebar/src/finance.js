@@ -3,7 +3,7 @@ import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,Note,St
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,LEGACY_CLASSES,REGISTRATIONS,VEHICLES} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,SITE_CLASSES,REGISTRATIONS,VEHICLES} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 const today=()=>new Date().toISOString().slice(0,10);
 
@@ -225,7 +225,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{today:today(),...input},timeoutMs:130000});
     const parsed=parseFinanceUpdates(result);
     const folded=foldReadings(parsed.readings,portfolios(),{institution,
-      defaultClass:classById(LEGACY_CLASSES[siteKind]||'')?.code??null});
+      defaultClass:classById(SITE_CLASSES[siteKind]||'')?.code??null});
     // A dropped file is one errand, whatever kind of document it turns out to
     // be. The owner should not have to say "this one is a capital account
     // statement" — the reading says which of the two it found, and each is

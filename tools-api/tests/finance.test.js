@@ -271,6 +271,10 @@ test('a live account page dates its own balances, and its furniture is left out'
   // Eric's on one E*TRADE card — so it is classified rather than discarded.
   assert.match(prompt,/what it calls a potential, projected or unvested benefit is not yet/);
   assert.match(prompt,/marketable securities whether or not the page breaks it down/);
+  // Coin has a class of its own, so the reading is told what belongs in it
+  // rather than leaving an exchange balance to land in Other.
+  assert.match(prompt,/crypto \(Crypto\)/);
+  assert.match(prompt,/a coin, a token or an exchange's own balance in one/);
   assert.match(prompt,/market or index quote/);
   assert.match(prompt,/news, education or promotional panel/);
   assert.match(prompt,/asOf 2026-09-11/,'an undated balance on a live page is today, not a dropped update');

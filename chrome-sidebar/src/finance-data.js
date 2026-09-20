@@ -38,12 +38,13 @@ export const UNCLASSIFIED=9;
 //
 // Every asset class belongs to one of two groups, and the groups are the
 // question actually being asked of the ledger: how much of this could be sold
-// this week, and how much is locked up. Cash, stocks and bonds are liquid
-// together — cash is not a security, but it answers the same question, and
-// splitting it off would leave the heading meaning less than it says. Anything
-// held through a vehicle, a property or a vesting schedule is illiquid. Only
-// Unclassified belongs to neither, because value nobody has placed cannot be
-// called either one; that is the whole of what the name means.
+// this week, and how much is locked up. Cash, stocks, bonds and crypto are
+// liquid together — neither cash nor a coin is a security, but both answer the
+// same question, and splitting them off would leave the heading meaning less
+// than it says. Anything held through a vehicle, a property or a vesting
+// schedule is illiquid. Only Unclassified belongs to neither, because value
+// nobody has placed cannot be called either one; that is the whole of what the
+// name means.
 export const ASSET_CLASSES=[
   {code:1,id:'stocks',label:'Stocks',side:'asset',group:'liquid'},
   {code:2,id:'bonds',label:'Bonds',side:'asset',group:'liquid'},
@@ -68,6 +69,14 @@ export const ASSET_CLASSES=[
   // Code 11 was Vested stock for part of a day and is retired rather than
   // reused, because a code is what is stored.
   {code:12,id:'unvested',label:'Unvested stock',side:'asset',group:'illiquid'},
+  // Coin, held at an exchange or in a wallet. It was filed under Other until
+  // now, which is where a vehicle and a piece of furniture go: a balance at
+  // Coinbase could not be told from either, and Other is the one class nobody
+  // reads a number out of. It sells in a day like a listed share, so it is
+  // liquid, and it is its own class because the thing an owner most wants to
+  // know about it — how much of the pile is in coin — is exactly what being
+  // filed with the furniture took away.
+  {code:13,id:'crypto',label:'Crypto',side:'asset',group:'liquid'},
   {code:21,id:'mortgage',label:'Mortgage',side:'liability',group:''},
   {code:22,id:'loan',label:'Loan',side:'liability',group:''},
   {code:23,id:'credit',label:'Credit',side:'liability',group:''}
@@ -946,6 +955,14 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
 export const LEGACY_CLASSES={bank:'cash',brokerage:'liquid',retirement:'liquid',
   private:'pe',business:'pe',realestate:'property',crypto:'other',vehicle:'other','other-asset':'other',
   mortgage:'mortgage',loan:'loan',credit:'credit','other-liability':'loan'};
+// What a site's own kind says a figure is when the reading did not say. It is
+// the map above with one answer changed, and it is a second map rather than an
+// edit to the first because the two are asked different questions. A migration
+// is re-runnable only while it writes the same portfolio, class and date twice;
+// moving a legacy crypto record from Other to Crypto would write a second row
+// beside the one already migrated and count the coin twice. A page being read
+// today has no such history, so Coinbase and Kraken answer Crypto.
+export const SITE_CLASSES={...LEGACY_CLASSES,crypto:'crypto'};
 // A brokerage or retirement account states a total and not what is inside it,
 // so it arrives Unclassified rather than guessed into stocks. Reading the
 // account's own page is what splits it, and until then the figure is counted in

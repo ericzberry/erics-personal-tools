@@ -4,7 +4,8 @@ import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFi
   parseFinanceUpdates,foldReadings,financeAttention,legacyLedger,titledOwner,titledHolder,holdsManyTitles,
   institutionName,registrationLabel,registrationFromName,
   markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,
-  holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel} from '../src/finance-data.js';
+  holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel,
+  LEGACY_CLASSES,SITE_CLASSES} from '../src/finance-data.js';
 
 const ESTATE='Eric and Ariana Berry Estate';
 const estate={row:'portfolio',number:1,name:ESTATE,kind:1,currency:'USD'};
@@ -313,7 +314,7 @@ test('a stock plan states marketable stock and a schedule, and only the schedule
 test('every asset class rolls up to liquid or illiquid, and only unplaced value to neither',()=>{
   const records=[
     {row:'portfolio',id:'p1',number:1,name:ESTATE,kind:1,currency:'USD'},
-    ...[['cash',1000],['stocks',2000],['bonds',3000],['liquid',4000],
+    ...[['cash',1000],['stocks',2000],['bonds',3000],['liquid',4000],['crypto',500],
         ['pe',5000],['property',6000],['unvested',7000],['unclassified',9000]]
       .map(([id,amount])=>({row:'mark',id:`1-${classById(id).code}-20260919`,portfolio:1,
         class:classById(id).code,asOf:'2026-09-19',amount}))
@@ -322,9 +323,28 @@ test('every asset class rolls up to liquid or illiquid, and only unplaced value 
   // Largest first, like every other breakdown in the panel.
   assert.deepEqual(byGroup.map(row=>[row.label,row.total]),[
     ['Illiquid securities',18000],
-    ['Liquid securities',10000],
+    ['Liquid securities',10500],
     ['Unclassified',9000]
   ]);
+});
+
+// Coin was filed under Other, which is also where a car and a piece of
+// furniture go, so the one thing worth knowing about it — how much of the pile
+// is in coin — was the thing the ledger could not say.
+test('coin is its own liquid class, and the exchange it was read at places a figure the page did not',()=>{
+  const crypto=classById('crypto');
+  assert.deepEqual([crypto.code,crypto.side,crypto.group],[13,'asset','liquid']);
+  assert.equal(classById(SITE_CLASSES.crypto).code,crypto.code,'a page read at Coinbase or Kraken is coin');
+  // The migration keeps the answer it gave: it is re-runnable only while it
+  // writes the same portfolio, class and date twice, and a legacy record moved
+  // to a new class would be counted again beside the row already there.
+  assert.equal(LEGACY_CLASSES.crypto,'other');
+
+  const folded=foldReadings([
+    {account:'Coinbase Portfolio',label:'Total balance',class:classById('unclassified').code,
+      registration:'',scope:'account',asOf:'2026-09-19',value:41200.55,confidence:'high',reason:''}
+  ],[{...estate,id:'p1'}],{institution:'Coinbase',defaultClass:classById(SITE_CLASSES.crypto).code});
+  assert.deepEqual(folded.marks.map(row=>[classLabel(row.class),row.amount]),[['Crypto',41200.55]]);
 });
 
 test('a reading lands in the portfolio its registration and institution settle, and proposes one only when it must',()=>{

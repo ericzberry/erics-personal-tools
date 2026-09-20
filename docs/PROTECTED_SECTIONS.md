@@ -169,7 +169,7 @@ date, and the amount in whole cents — and nothing else. The words live in two
 registries in `finance-data.js` and are written once rather than copied onto
 every entry: `ASSET_CLASSES` (stocks, bonds, cash, private equity, venture
 capital, hedge funds, real estate, other, unclassified, liquid securities,
-unvested stock; mortgage, loan, credit) and `REGISTRATIONS`
+unvested stock, crypto; mortgage, loan, credit) and `REGISTRATIONS`
 (taxable, IRA, Roth IRA, 401(k), trust, entity, custodial). Each asset class
 names the group it rolls up to — liquid or illiquid — and only unclassified
 belongs to neither.

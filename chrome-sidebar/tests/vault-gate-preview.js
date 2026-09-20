@@ -28,6 +28,9 @@ const records=[
   figure(1,1,'2026-08-31',1284000),
   figure(1,2,'2026-08-31',412500.25),
   figure(1,3,'2026-08-31',18400.12),
+  // Coin, so the class that used to be filed under Other can be read in the
+  // breakdown and in the group it now rolls up to.
+  figure(1,13,'2026-08-31',64250.4),
   figure(1,1,'2026-05-31',1150000),
   figure(1,21,'2026-08-31',412500),
   figure(2,9,'2026-08-31',622450),

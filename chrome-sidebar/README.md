@@ -1277,10 +1277,10 @@ drops its holdings: nothing is left saying which account a position sits in.
 
 **Liquid against illiquid is the question the classes answer together.** Every
 asset class names its group, and the Breakdown leads with the two of them: cash,
-stocks, bonds, vested stock and an unsplit securities total are liquid; private
-equity, venture capital, hedge funds, real estate, other and unvested stock are
-not. Only Unclassified belongs to neither, because value nobody has placed
-cannot be called either one — that is the whole of what the name means, and the
+stocks, bonds, crypto, vested stock and an unsplit securities total are liquid;
+private equity, venture capital, hedge funds, real estate, other and unvested
+stock are not. Only Unclassified belongs to neither, because value nobody has
+placed cannot be called either one — that is the whole of what the name means, and the
 review row now says so in four words rather than leaving it to be guessed.
 
 **Reading a reading twice must not change it.** The Worker reads the model's
@@ -1308,6 +1308,18 @@ page calls a current or vested value is marketable stock and joins **Liquid
 securities**, and what it calls a potential, projected or unvested benefit is
 **Unvested stock**. Figures saved before this stay Unclassified; nothing
 rewrites a figure already filed.
+
+**Coin is its own class.** It used to be Other, which is where a car and a
+piece of furniture go, so the one thing worth knowing about it — how much of the
+pile is in coin — was the thing the ledger could not say. **Crypto** is liquid:
+it sells in a day like a listed share, and neither a coin nor cash is a security
+but both answer what the heading asks. A page read at Coinbase or Kraken files
+its figures there when the page does not place them itself, and the reading is
+told what belongs in the class. Figures already saved under Other stay where
+they are, and the migration from the old record-per-account ledger still files a
+legacy crypto account under Other: it is re-runnable only while it writes the
+same portfolio, class and date twice, and moving one would count the coin again
+beside the row already there.
 
 **A change is not a value.** A day's gain, a return, a cost basis and an
 unrealized figure are printed in the same column shape as a balance, and the
