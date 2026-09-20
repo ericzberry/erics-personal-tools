@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,
   parseFinanceUpdates,foldReadings,financeAttention,legacyLedger,titledOwner,titledHolder,holdsManyTitles,
-  institutionName,registrationLabel,
+  institutionName,registrationLabel,registrationFromName,
   markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,
   holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel} from '../src/finance-data.js';
 
@@ -268,6 +268,24 @@ test('positions no account claimed are counted alone and refused beside a balanc
 // nothing about vesting at all, so the account is what settles the class. What
 // has vested is marketable stock and needs no class of its own; only the
 // schedule beside it does.
+// A retirement account says so in its own name, and that has to be enough: the
+// reading does not always fill the registration field in, and an IRA filed as
+// taxable joins a joint estate, which no IRA can be in.
+test('an account states its own registration when the reading did not',()=>{
+  const dated={label:'Net Account Value',class:9,scope:'account',asOf:'2026-09-20',confidence:'high',reason:'',registration:''};
+  const folded=foldReadings([
+    {...dated,account:'Individual Brokerage -4049',value:1668402.54},
+    {...dated,account:'Traditional IRA -4144',value:122666.62}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
+  assert.deepEqual(folded.marks.map(row=>[row.name,registrationLabel(row.kind),row.amount]),
+    [['Eric and Ariana Berry Estate','Taxable',1668402.54],['Traditional IRA -4144','IRA',122666.62]]);
+  // Roth before IRA, because a Roth IRA is both.
+  assert.equal(registrationFromName('Roth IRA -8820').id,'roth');
+  assert.equal(registrationFromName('Traditional IRA -4144').id,'ira');
+  assert.equal(registrationFromName('Company 401(k) Plan').id,'401k');
+  assert.equal(registrationFromName('Individual Brokerage -4049'),null);
+});
+
 test('a stock plan states marketable stock and a schedule, and only the schedule is its own class',()=>{
   const dated={asOf:'2026-09-20',confidence:'high',reason:'',registration:'',scope:'account',
     account:'Stock Plan (DSP) -7605',class:classById('unclassified').code};
@@ -276,6 +294,17 @@ test('a stock plan states marketable stock and a schedule, and only the schedule
     {...dated,label:'Potential Benefit Value',value:248422.68}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
   assert.deepEqual(folded.marks.map(row=>[classLabel(row.class),row.amount]),
+    [['Liquid securities',5000],['Unvested stock',248422.68]]);
+
+  // Read as a position inside the account rather than a figure the account
+  // states about itself, the potential benefit was compared against the vested
+  // balance, failed to reconcile with it — which it never could, being the
+  // other half of the same account — and $248,422 was dropped.
+  const scoped=foldReadings([
+    {...dated,label:'Current Account Value',value:5000},
+    {...dated,label:'Potential Benefit Value',scope:'holding',value:248422.68}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
+  assert.deepEqual(scoped.marks.map(row=>[classLabel(row.class),row.amount]),
     [['Liquid securities',5000],['Unvested stock',248422.68]]);
 });
 

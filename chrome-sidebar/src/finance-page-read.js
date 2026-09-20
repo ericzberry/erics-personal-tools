@@ -24,11 +24,16 @@ export function readAccountPage() {
   // cents, or a grouped thousand.
   const MONEY = /[$€£¥]\s?-?\d|-?\d[\d,]*\.\d{2}(?!\d)|-?\d{1,3}(?:,\d{3})+/;
   // Figures that are never the owner's: the legal furniture every broker
-  // prints beside the accounts, and the market data it prints above them. An
-  // index quote is usually a bare number under its name, so a line is read as
-  // market data when the lines just above it are.
+  // prints beside the accounts, and the market data it prints above them.
   const NOISE = /\b(disclosure|disclaimer|terms of use|privacy policy|member sipc|prospectus|advertisement)\b/i;
-  const MARKET = /\b(djia|nasdaq|dow jones|s ?& ?p 500|russell \d|ftse|nikkei|indexes|indices|closed|delayed)\b/i;
+  // An index names itself, and the number under it is a quote rather than a
+  // balance, so a figure is dropped when the lines just above it name one.
+  const INDEX = /\b(djia|nasdaq|dow jones|s ?& ?p 500|russell \d|ftse|nikkei|indexes|indices)\b/i;
+  // Whether the market is open is not a figure and not an index. E*TRADE
+  // stamps "Market Closed Sep 18, 2026, 4:00 PM ET" across the foot of every
+  // account card, and treating that the way an index name is treated threw
+  // away the account's own balance for sitting near it.
+  const STATUS = /\b(delayed|market (closed|open))\b|\bclosed\b(?=[^\n]*\bET\b)/i;
   // The labels on a chart's axis are not balances.
   const TICK = /^[$€£¥]\s?(0|\d{1,3}(\.\d)?\s?[kmbt])$/i;
   // The site's own furniture, sitting between an account's name and its
@@ -41,8 +46,18 @@ export function readAccountPage() {
   // No figure of its own, but it names the account or the date the figures
   // around it belong to.
   const CONTEXT = /\b(as of|updated|statement period|period ending|closing date|account (number|no\.?|#)|ending in)\b|\.{3}\s?\d{3}/i;
-  const blocked = line => NOISE.test(line) || MARKET.test(line) || TICK.test(line);
-  const wanted = line => !!line && line.length <= 200 && !blocked(line) && (MONEY.test(line) || CONTEXT.test(line));
+  // A line that names an account, kept for its own sake rather than only when
+  // it happens to sit within two lines of a figure. Whether the name survives
+  // cannot depend on how many links a card prints between the heading and the
+  // numbers under it: at E*TRADE it did not, the reading had nothing saying
+  // which balance was the IRA, and the account went into a joint taxable estate
+  // twice over. A heading is short, names a kind of account, and states no
+  // figure of its own — a sentence that merely contains the word is prose.
+  const ACCOUNT = /\b(brokerage|ira|roth|401\s*\(?k\)?|403\s*\(?b\)?|457|529|hsa|stock plan|espp|rsu|checking|savings|money market|certificate|trust|custodial|utma|ugma|rollover|annuity|individual|joint|margin|cash management)\b/i;
+  const names = line => line.length <= 60 && line.split(/\s+/).length <= 8 && ACCOUNT.test(line);
+  const blocked = line => NOISE.test(line) || INDEX.test(line) || STATUS.test(line) || TICK.test(line);
+  const wanted = line => !!line && line.length <= 200 && !blocked(line)
+    && (MONEY.test(line) || CONTEXT.test(line) || (!MONEY.test(line) && names(line)));
 
   // Tables carry the balances on most account pages, and innerText alone
   // collapses their columns into an unreadable run. Rendering them row by row
@@ -102,7 +117,7 @@ export function readAccountPage() {
     // on the three nearest lines, because an index named five lines up is on
     // the other side of the page, not over this figure.
     const previous = above(index, 5);
-    if (previous.slice(0, 3).some(entry => MARKET.test(entry))) return;
+    if (previous.slice(0, 3).some(entry => INDEX.test(entry))) return;
     const labels = previous.filter(entry => entry.length <= 80 && !MONEY.test(entry) && !blocked(entry) && !CHROME.test(entry))
       .slice(0, 2).reverse();
     for (const label of labels) if (fresh(label)) push(label, true);

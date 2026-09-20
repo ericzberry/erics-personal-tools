@@ -314,6 +314,47 @@ test("a card's own links do not stand in for the name of the account", () => {
   assert.equal(page.text.includes('Show more'), false);
 });
 
+// E*TRADE's own IRA card, in the order the page reads it. The account is named
+// in one column and its balance sits in another, with a contribution banner,
+// three rows of links and a table of holdings between the two — so the name is
+// nowhere near the figure and cannot travel to it as a label. It has to be kept
+// for its own sake, or nothing downstream says which balance is the IRA, and a
+// retirement account ends up inside a joint taxable estate.
+test('a line that names an account is kept however far it sits from the figures', () => {
+  const page = inPage(pageOf({text: [
+    'Traditional IRA -4144',
+    'Show number',
+    'You can make a 2026 contribution until 4/15/2027*.',
+    'Contribute now.',
+    'Portfolio snapshot', 'Open orders (0)', 'Quick links',
+    'Top Movers (3)', 'Portfolio News',
+    'Symbol', 'Change %', 'Last Price $', "Day's Gain $",
+    'WSTRN ALLIANCE PH...', '-0.01%', '$99.97', '-$1.40',
+    '3 Total', 'View full portfolio',
+    // Stamped across the foot of every card, and not an index quote.
+    'Market Closed Sep 18, 2026, 4:00 PM ET',
+    'Net Account Value',
+    '$122,666.62'
+  ].join('\n')}), HERE);
+  assert.match(page.text, /^Traditional IRA -4144$/m, 'the account names itself once, in place');
+  assert.match(page.text, /Net Account Value\n\$122,666\.62/, 'and its balance survives the line about the market');
+  assert.equal(page.text.includes('Market Closed'), false, 'whether the market is open is not a figure');
+  assert.equal(page.text.includes('contribution until'), false, 'nor is what the site is inviting you to do');
+});
+
+// The market being shut is not an index quote. Both used to be caught by the
+// same pattern, and a balance printed under "Market Closed Sep 18, 2026" was
+// thrown away as market data.
+test('an index quote is dropped and a market-status line takes no balance with it', () => {
+  const page = inPage(pageOf({text: [
+    'DJIA', 'Closed', '', '51,682.64',
+    'Market Closed Sep 18, 2026, 4:00 PM ET',
+    'Net Account Value', '$1,668,402.54'
+  ].join('\n')}), HERE);
+  assert.equal(page.text.includes('51,682.64'), false, 'an index quote is not one of the owner\u2019s accounts');
+  assert.match(page.text, /Net Account Value\n\$1,668,402\.54/);
+});
+
 test('a page whose figures this filter cannot see is sent whole rather than gutted', () => {
   const page = inPage(pageOf({text: 'Balance\nabout a thousand pounds\nSettings'}), HERE);
   assert.equal(page.filtered, false);

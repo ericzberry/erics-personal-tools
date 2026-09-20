@@ -1194,6 +1194,27 @@ add up to it, so three CDs beside a $1.6M net account value no longer claim the
 account holds $300: the total is kept whole as **Unclassified**, which counts in
 full and whose name asks to be corrected. The panel says which of these it did.
 
+**A line that names an account is kept for its own sake.** E*TRADE's IRA card
+names the account in one column and prints its balance in another, with a
+contribution banner, three rows of links and a table of holdings between the two
+in reading order — so the name cannot reach the figure as the label above it,
+however many links are skipped. A short line that names a kind of account and
+states no figure is kept where it stands, which gives every figure under a card
+the account it belongs to. The account's own name then settles its registration
+when the reading left that blank: an IRA is one person's by law, and it must not
+take a joint estate's titling for want of a field being filled in.
+
+**The market being shut is not an index quote.** Both were caught by one
+pattern, so "Market Closed Sep 18, 2026, 4:00 PM ET" — stamped across the foot
+of every E*TRADE card — made the balances near it read as market data and threw
+them away. An index name still vetoes the figures under it; a market-status line
+is simply dropped and takes nothing with it.
+
+**A stock plan's potential benefit is the account's, not a position in it.**
+Read as a holding it was compared against the vested balance, could not
+reconcile with it — being the other half of the same account — and $248,422 was
+dropped. The wording says which it is, so the device says it.
+
 **A card's own links are not the name of the account.** The snapshot keeps the
 two lines above a figure as what names it. E*TRADE prints "Show number" between
 an account's name and its balances, so those two lines were "Net Account Value"

@@ -196,8 +196,21 @@ export const holdsManyTitles=institution=>!!titledAccount(institution)?.holders?
 const TRUST=/\b(trust|irrevocable|revocable)\b/i;
 const ENTITY=/\b(llc|lp|llp|inc|corp|ltd)\b/i;
 const CUSTODIAL=/\b(utma|ugma|custodial|custodian)\b/i;
+// A retirement account says so in its own name, and that outranks a reading
+// that forgot to fill the field in. An IRA is registered to one person by law
+// and cannot sit inside a joint estate, so "Traditional IRA -4144" must not
+// depend on the model having also said "ira" to be filed as one. Roth is tested
+// before IRA because a Roth IRA is both.
+const ROTH=/\broth\b/i;
+const IRA=/\b(ira|sep|simple)\b/i;
+const WORKPLACE=/\b(401\s*\(?k\)?|403\s*\(?b\)?|457)\b/i;
 export const registrationFromName=name=>registrationById(
-  CUSTODIAL.test(name||'')?'custodial':TRUST.test(name||'')?'trust':ENTITY.test(name||'')?'entity':'')||null;
+  CUSTODIAL.test(name||'')?'custodial'
+  :ROTH.test(name||'')?'roth'
+  :WORKPLACE.test(name||'')?'401k'
+  :IRA.test(name||'')?'ira'
+  :TRUST.test(name||'')?'trust'
+  :ENTITY.test(name||'')?'entity':'')||null;
 // The name to record for a place, whatever the page in front of the owner calls
 // it. One institution, one spelling.
 export const institutionName=institution=>titledAccount(institution)?.institution||String(institution||'').trim().slice(0,120);
@@ -590,8 +603,14 @@ const INVESTED=/\b(invest\w*|brokerage|securities|managed|advisory|portfolio|ira
 const ACCOUNT_DIGITS=/(?:ending in|account(?: number| no\.?| ?#)?|[-–—#]|\bx|\*+|\.{2,}|…)\s*(\d{3,})(?!\d)/gi;
 // What a page says about which account a figure belongs to, beyond the name it
 // was filed under: the registration it states, and the account number it shows.
-const accountMark=reading=>
-  `${reading.registration||''}#${[...`${reading.account||''} ${reading.label||''}`.matchAll(ACCOUNT_DIGITS)].map(found=>found[1]).join(',')}`;
+const accountMark=reading=>{
+  const said=`${reading.account||''} ${reading.label||''}`;
+  // The registration the reading states, or the one its own name states when
+  // it stated none: a taxable brokerage and a traditional IRA listed under one
+  // name are two accounts whether or not the reading filled the field in.
+  const kind=reading.registration||registrationFromName(said)?.id||'';
+  return `${kind}#${[...said.matchAll(ACCOUNT_DIGITS)].map(found=>found[1]).join(',')}`;
+};
 
 // One name, several accounts.
 //
@@ -655,6 +674,13 @@ const VESTED=/\bvested\b/i;
 // has vested is marketable stock and files as Liquid securities; only the
 // schedule beside it needs a class of its own.
 const STOCK_PLAN=/\b(stock plan|dsp|espp|rsu|equity (award|plan)|restricted stock)\b/i;
+// A stock plan's potential benefit is something the account states about
+// itself, never a position held inside it. Read as a holding it was compared
+// against the account's vested balance, failed to reconcile with it — which it
+// never could, being the other half of the same account — and $248,422 was
+// dropped. The wording is what says so, so the device says it rather than
+// hoping the reading scoped it right.
+const PLAN_VALUE=/\b(unvested|potential|projected|unexercis\w*)\b[^\n]*\b(value|benefit|balance|amount)\b/i;
 export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
   const CASH=classById('cash').code,LIQUID=classById('liquid').code;
   // What a figure is in, when the reading did not say. A site answers for its
@@ -687,7 +713,8 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   for(const reading of usable){
     const key=accountKey(reading);
     if(!accounts.has(key))accounts.set(key,{name:reading.account||institutionName(institution),totals:[],holdings:[]});
-    accounts.get(key)[reading.scope==='holding'?'holdings':'totals'].push(reading);
+    const holding=reading.scope==='holding'&&!PLAN_VALUE.test(reading.label||'');
+    accounts.get(key)[holding?'holdings':'totals'].push(reading);
   }
   // A portfolio is chosen, never invented on a hunch: an account says how it is
   // registered, and the institution says what a new portfolio would be called.
