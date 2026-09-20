@@ -1056,7 +1056,10 @@ untouched for anyone who does want in.
 **What is ready is everything that puts a figure in.** The site's own reading
 where the page can be read, the statement drop zone, **Read the accounts on the
 open page**, and a record typed by hand. One action sits beside the title —
-**Show position** — and one press makes it the ledger it always was. That press
+**Show everything you hold**, named for the section it opens, because "Show
+position" named neither what it would show nor how much of it, and a position
+here is one investment's capital account — and one press makes it the ledger it
+always was. That press
 is remembered for the sitting and forgotten when the section locks, so the next
 institution's page does not cover everything up and ask again. Choosing Finance
 from Tools is itself the asking and opens it whole; the row under the header now
@@ -1069,7 +1072,7 @@ New coverage: the registry recognizing a marketing page, a log-on page and an
 institution with no reader while refusing look-alike and unencrypted hosts, one
 entry per institution and per host, the readable four still derived from it; the
 quiet surface built with no figure anywhere in the page and every intake path
-live, **Show position** revealing the ledger, and a second arrival not covering
+live, **Show everything you hold** revealing the ledger, and a second arrival not covering
 it up again; and the gate raising no sheet for a section the sidebar opened on
 its own, then asking once when the owner does. Reviewed at 380px and 280px in
 the passkey-gate harness, which gained a quiet state with a readable site and
@@ -1253,15 +1256,20 @@ device filled in afterwards. Both forms are accepted now.
 **Only a stock plan states a current value and a potential one side by side**,
 and E*TRADE calls the vested half "Current Account Value" — a name with nothing
 in it about vesting — so the account settles the class rather than the reading.
+What has vested is marketable stock that could be sold this week, so it is
+Liquid securities like any other; only the schedule beside it needs a class of
+its own. Code 11 was a Vested stock class for part of a day and is retired
+rather than reused.
 
 **A securities total is not unplaced value.** A brokerage, IRA or 401(k) total
 that the page never split is marketable securities whether or not it says so, so
 it is filed as **Liquid securities** rather than Unclassified. Unclassified is
 left for a figure whose kind of account is genuinely unstated. A stock plan is
 the one account holding two different things at once, and both count: what the
-page calls a current or vested value is **Vested stock**, and what it calls a
-potential, projected or unvested benefit is **Unvested stock**. Figures saved
-before this stay Unclassified; nothing rewrites a figure already filed.
+page calls a current or vested value is marketable stock and joins **Liquid
+securities**, and what it calls a potential, projected or unvested benefit is
+**Unvested stock**. Figures saved before this stay Unclassified; nothing
+rewrites a figure already filed.
 
 **A change is not a value.** A day's gain, a return, a cost basis and an
 unrealized figure are printed in the same column shape as a balance, and the

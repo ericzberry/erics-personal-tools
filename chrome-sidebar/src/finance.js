@@ -541,9 +541,15 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     $('drop').disabled=busy||!loaded;
     // Beside the title, only what applies: a quiet arrival can be asked for the
-    // position, a loaded ledger can be refreshed, and one that never loaded
-    // needs the connection rather than a dead Refresh.
-    $('actions').replaceChildren(quiet?toolAction('Show position',showPosition)
+    // ledger, a loaded one can be refreshed, and one that never loaded needs
+    // the connection rather than a dead Refresh.
+    //
+    // The action is named for the section it opens. "Show position" named
+    // neither what it would show nor how much of it, and position already means
+    // something narrower here — one investment's capital account, on a row that
+    // says Position — so the one button on a quiet arrival read as an offer to
+    // open a single holding.
+    $('actions').replaceChildren(quiet?toolAction('Show everything you hold',showPosition)
       :loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
     syncReadings();
   }

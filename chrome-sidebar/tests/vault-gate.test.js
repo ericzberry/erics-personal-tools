@@ -151,7 +151,7 @@ test('a section the sidebar opened on its own raises no passkey sheet until it i
   // question it was asked. The figures still wait to be sent for.
   h.document.querySelector('#finance-vault-actions button').click();
   await settle(()=>prompts>0&&h.document.getElementById('finance-vault-content').hidden===false);
-  await settle(()=>h.document.getElementById('finance-actions').textContent==='Show position');
+  await settle(()=>h.document.getElementById('finance-actions').textContent==='Show everything you hold');
   assert.equal(h.document.getElementById('finance-ledger').hidden,true);
   tool.quiet(false);
   assert.equal(h.document.getElementById('finance-ledger').hidden,false);

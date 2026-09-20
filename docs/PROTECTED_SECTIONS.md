@@ -394,7 +394,8 @@ What it does not do is answer a question nobody asked. An arrival like that is
 **quiet**: **Everything you hold** is not hidden but unbuilt — no balance is
 anywhere in the page — while the two blocks around it are ready at once: the
 page in front of the owner, and the ways of adding a figure. One action sits beside the
-title, **Show position**, and one press makes it the ledger it always was.
+title, **Show everything you hold** — named for the section it opens — and one
+press makes it the ledger it always was.
 Visiting a bank should not put a net worth on a shared screen, and it does not
 raise a passkey sheet either.
 
