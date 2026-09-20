@@ -2940,7 +2940,7 @@ New coverage: a sweep looking up every saved card by the name the wallet holds,
 proposing nothing the wallet already has under that card, leaving an ambiguous
 name to the intake and saying which, filling in what a card earns only where it
 said nothing, and one save filing each benefit under its own card. Validation:
-583 extension, 33 mobile and 134 API tests pass from an archive of HEAD. The
+587 extension, 33 mobile and 134 API tests pass from an archive of HEAD. The
 sweep was reviewed at 380px against a synthetic wallet of two cards: the press
 beside the intake, the progress it names, the review a block per card, and the
 one action across them. Archive: `release/erics-sidebar-0.6.220.zip`.
