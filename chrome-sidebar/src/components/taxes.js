@@ -1,5 +1,5 @@
 import * as UI from './ui.js';
-import {TAX_DOCUMENT_TYPES,TAX_TAXPAYERS,TAX_JURISDICTIONS,TAX_QUARTERS,taxYears,defaultTaxYear,TAX_ROOT_FOLDER_URL,MAX_DOCUMENT_BYTES} from '../tax-data.js';
+import {TAX_DOCUMENT_TYPES,TAX_TAXPAYERS,TAX_CATEGORIES,TAX_JURISDICTIONS,TAX_QUARTERS,taxYears,defaultTaxYear,TAX_ROOT_FOLDER_URL,MAX_DOCUMENT_BYTES} from '../tax-data.js';
 import {ACCEPTED} from '../statement-text.js';
 const {Stack,Section,Note,Notice,Button,ActionGroup,SettingsGroup,FormField,Strong,Label,Text,Link,ToolTitle,GroupTitle}=UI;
 
@@ -29,13 +29,16 @@ export function TaxesView({today=new Date()}={}){
       FormField({id:'taxes-type',label:'Document type',kind:'select',
         options:[{text:'Choose a type',value:''},...TAX_DOCUMENT_TYPES.map(type=>({text:type.label,value:type.id}))]}),
       FormField({id:'taxes-issuer',label:'What it is',kind:'text',placeholder:'e.g. Schwab'}),
-      // Whose document this is. It decides the year's subfolder as well as the
-      // name, so a return and the estimates that paid it end up together.
+      // Whose document this is, and what it is for. Together they are the two
+      // folders inside the year, so a taxpayer's return, the instalments that
+      // paid it and the K-1s behind it each sit where they belong.
       FormField({id:'taxes-taxpayer',label:'Taxpayer',kind:'select',
         options:TAX_TAXPAYERS.map(who=>({text:who.label,value:who.id}))}),
+      FormField({id:'taxes-category',label:'Filed under',kind:'select',
+        options:TAX_CATEGORIES.map(category=>({text:category.label,value:category.id}))}),
       // Only for what the household filed or paid: which government, and which
       // instalment of the year.
-      FormField({id:'taxes-jurisdiction',label:'Filed with',kind:'select',
+      FormField({id:'taxes-jurisdiction',label:'Tax authority',kind:'select',
         options:[{text:'Choose Federal or New York',value:''},...TAX_JURISDICTIONS.map(place=>({text:place.label,value:place.id}))]}),
       FormField({id:'taxes-quarter',label:'Quarter',kind:'select',
         options:[{text:'Choose a quarter',value:''},...TAX_QUARTERS.map(quarter=>({text:quarter.label,value:quarter.id}))]}),
@@ -125,22 +128,29 @@ export function ConflictPanel({existing,keepBothName,onKeepBoth,onReplace,onCanc
 // nothing else on it. A date and a size on every row doubled the length of a
 // list whose whole job is to answer "is this one already filed?".
 //
-// `groups` are the year's subfolders — one per taxpayer, from 2026 — each
-// named above the documents inside it. Loose documents in the year itself come
-// first, which is every document of 2025 and earlier.
+// `groups` are the year's folders — from 2026 one per taxpayer, each divided
+// again by what a document is for. Loose documents come before the folders at
+// whichever level they sit at, which is where every document of 2025 and
+// earlier is.
+const countIn=group=>group.files.length+(group.groups||[]).reduce((count,inner)=>count+countIn(inner),0);
 export function FiledList(year,files,groups=[]){
-  const total=files.length+groups.reduce((count,group)=>count+group.files.length,0);
+  const total=files.length+groups.reduce((count,group)=>count+countIn(group),0);
   if(!total)return Stack([GroupTitle(year,{className:'record-group-title'}),Note('Nothing filed yet.')],{className:'record-group'});
-  const row=file=>file.webViewLink
-    ?Link(file.name,file.webViewLink,{className:'tax-filed-row'})
-    :Strong(file.name,{className:'tax-filed-row'});
+  // The list is one flat run of lines, so how deep a row sits is carried on the
+  // row itself rather than inferred from what precedes it.
+  const row=depth=>file=>{
+    const props={className:`tax-filed-row tax-filed-row--${depth}`};
+    return file.webViewLink?Link(file.name,file.webViewLink,props):Strong(file.name,props);
+  };
+  const under=(group,depth)=>[
+    Strong(group.name,{className:`tax-filed-group tax-filed-group--${depth}`}),
+    ...group.files.map(row(depth)),
+    ...(group.groups||[]).flatMap(inner=>under(inner,depth+1))
+  ];
   return Section([
     GroupTitle(`${year} · ${total} document${total===1?'':'s'}`,{className:'record-group-title'}),
-    ...files.map(row),
-    ...groups.flatMap(group=>[
-      Strong(group.name,{className:'tax-filed-group'}),
-      ...group.files.map(row)
-    ])
+    ...files.map(row(0)),
+    ...groups.flatMap(group=>under(group,1))
   ],{className:'record-group tax-filed-list'});
 }
 

@@ -1548,3 +1548,39 @@ key and that the key refuses to be exported. Reloading the installed extension
 in the owner's own Chrome was not directly tested. Archive:
 `release/erics-sidebar-0.6.146.zip`, which carries the two releases committed
 alongside this one.
+
+## A taxpayer's year, divided by what a document is for (0.6.151 / mobile 0.1.105)
+
+A taxpayer's 2026 folder was a single pile again as soon as it filled: a return,
+four instalments, their receipts and every K-1 behind them, all side by side.
+From 2026 each taxpayer's year now divides once more, into **Filings** for what
+went to a tax authority, **Payments** for the instalments and the receipts
+proving they were paid, and **Supporting Documents** for everything that
+arrived:
+
+```
+2026 / Berry EA 2024 Family Trust / Filings / Return - Federal - Berry EA 2024 Family Trust.pdf
+```
+
+The document type settles which of the three it is, so choosing the type answers
+it. It stays a field — *Filed under* — because the cases the type cannot settle
+are real ones: an extension request, a notice, anything filed as "Other
+document". It decides where a document lands and never what it is called, and
+2025 and earlier are untouched.
+
+**Already filed** nests to match, each taxpayer's rows gathered under what they
+are for. Reading a year is now its folder and one request per level below it,
+whatever it holds, because each level asks Drive for all of its parents at once
+instead of one folder at a time — a year with five taxpayers costs four
+requests rather than twenty.
+
+*Tax authority* is what the Federal-or-New-York field is called now. Beside
+*Filed under* it had been *Filed with*, and two labels that near each other are
+one label read twice.
+
+Validation: 452 extension, 120 Worker and 33 mobile tests pass. The synthetic Taxes states
+were reviewed in the sidebar harness at 380px and the 280px minimum: a return
+with its taxpayer, category and authority answered and the whole path shown
+before it moves, and a year divided twice. Native iPhone and installed Chrome
+behavior were not directly tested. Archive:
+`release/erics-sidebar-0.6.151.zip`.

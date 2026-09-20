@@ -14,13 +14,21 @@ const FILED=[
 // From 2026 a year is divided by taxpayer, so the list is a run of rows under
 // the name they belong to.
 const GROUPS=[
-  {name:'Eric & Ariana Berry',folderId:'a',files:[
-    {name:'Return - Federal - Eric & Ariana Berry.pdf',webViewLink:'#'},
-    {name:'Estimated payment - Q3 Federal - Eric & Ariana Berry.pdf',webViewLink:'#'},
-    {name:'Proof of payment - Q3 New York - Eric & Ariana Berry.pdf',webViewLink:'#'}]},
-  {name:'Berry EA 2024 Family Trust',folderId:'b',files:[
-    {name:'Return - Federal - Berry EA 2024 Family Trust.pdf',webViewLink:'#'},
-    {name:'K-1 - Averin Capital Fund I, LP.pdf',webViewLink:'#'}]}
+  {name:'Eric & Ariana Berry',folderId:'a',files:[],groups:[
+    {name:'Filings',folderId:'a1',files:[
+      {name:'Return - Federal - Eric & Ariana Berry.pdf',webViewLink:'#'},
+      {name:'Return - New York - Eric & Ariana Berry.pdf',webViewLink:'#'}]},
+    {name:'Payments',folderId:'a2',files:[
+      {name:'Estimated payment - Q3 Federal - Eric & Ariana Berry.pdf',webViewLink:'#'},
+      {name:'Proof of payment - Q3 New York - Eric & Ariana Berry.pdf',webViewLink:'#'}]},
+    {name:'Supporting Documents',folderId:'a3',files:[
+      {name:'Form 1099 - Schwab.pdf',webViewLink:'#'},
+      {name:'K-1 - Averin Capital Fund I, LP.pdf',webViewLink:'#'}]}]},
+  {name:'Berry EA 2024 Family Trust',folderId:'b',files:[],groups:[
+    {name:'Filings',folderId:'b1',files:[
+      {name:'Return - Federal - Berry EA 2024 Family Trust.pdf',webViewLink:'#'}]},
+    {name:'Supporting Documents',folderId:'b2',files:[
+      {name:'K-1 - Averin Capital Fund I, LP.pdf',webViewLink:'#'}]}]}
 ];
 // One synthetic Worker per state, so the states can sit side by side.
 const api=({connected=true,filed=FILED,groups=[],existing=null}={})=>async(_token,path,options={})=>{
@@ -51,7 +59,7 @@ const states=[
   ['That name is already filed',{existing:{name:'Form 1099 - Schwab.pdf',modifiedTime:'2026-02-14T00:00:00.000Z',size:184000}},'conflict'],
   ['A return, named from who filed it and where',{},'return'],
   ['The document needs a password',{},'locked'],
-  ['A year divided by taxpayer',{filed:[],groups:GROUPS}]
+  ['A year divided by taxpayer and by what a document is for',{filed:[],groups:GROUPS}]
 ];
 for(const [label,options,step] of states){
   const heading=document.createElement('h2');

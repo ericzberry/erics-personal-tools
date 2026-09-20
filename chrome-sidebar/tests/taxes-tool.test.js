@@ -28,8 +28,12 @@ function setup(){
   return {document,window,restore:selectValues(window)};
 }
 const FILED=[{name:'K-1 - Averin Capital LLC.pdf',modifiedTime:'2026-03-02T00:00:00.000Z',size:2240000,webViewLink:'https://drive.example/k1'}];
-const GROUPS=[{name:'Berry EA 2024 Family Trust',folderId:'trust',
-  files:[{name:'Return - Federal - Berry EA 2024 Family Trust.pdf',modifiedTime:'2026-04-10T00:00:00.000Z',size:4100000,webViewLink:'https://drive.example/return'}]}];
+const GROUPS=[{name:'Berry EA 2024 Family Trust',folderId:'trust',files:[],groups:[
+  {name:'Filings',folderId:'filings',
+    files:[{name:'Return - Federal - Berry EA 2024 Family Trust.pdf',modifiedTime:'2026-04-10T00:00:00.000Z',size:4100000,webViewLink:'https://drive.example/return'}]},
+  {name:'Payments',folderId:'payments',
+    files:[{name:'Estimated payment - Q3 Federal - Berry EA 2024 Family Trust.pdf',modifiedTime:'2026-09-15T00:00:00.000Z',size:90000,webViewLink:'https://drive.example/q3'}]}
+]}];
 // One synthetic Worker, recording what the tool asked it for.
 function worker({connected=true,groups=[],connections=[{id:'newest',name:'Newest',hasApiKey:true},{id:'older',name:'Older',hasApiKey:true}]}={}){
   const asked=[];
@@ -102,16 +106,22 @@ test('what is already filed is one line per document, under the taxpayer it belo
   const {document,window,restore}=setup();
   const root=document.querySelector('main');
   mountTaxes(root,{credentials:{get:async()=>'token'},remote:worker({groups:GROUPS}).remote,upload:async()=>({filed:{name:'x',year:'2025'}})});
-  await settle(()=>root.querySelectorAll('.tax-filed-row').length===2);
+  await settle(()=>root.querySelectorAll('.tax-filed-row').length===3);
 
   const rows=[...root.querySelectorAll('.tax-filed-row')].map(node=>node.textContent);
-  assert.deepEqual(rows,['K-1 - Averin Capital LLC.pdf','Return - Federal - Berry EA 2024 Family Trust.pdf']);
+  assert.deepEqual(rows,['K-1 - Averin Capital LLC.pdf',
+    'Return - Federal - Berry EA 2024 Family Trust.pdf',
+    'Estimated payment - Q3 Federal - Berry EA 2024 Family Trust.pdf']);
   // Neither the date it was filed nor how large it is appears anywhere in it.
   const listed=document.getElementById('taxes-filed').textContent;
-  assert.doesNotMatch(listed,/Mar 2|Apr 10|MB|KB/);
-  // The taxpayer names the rows under it, so it is set above them, not inside.
-  assert.equal(root.querySelector('.tax-filed-group').textContent,'Berry EA 2024 Family Trust');
-  assert.match(listed,/2025 · 2 documents/);
+  assert.doesNotMatch(listed,/Mar 2|Apr 10|Sep 15|MB|KB/);
+  // Each heading names what is under it, the taxpayer above what it is for.
+  assert.deepEqual([...root.querySelectorAll('.tax-filed-group')].map(node=>node.textContent),
+    ['Berry EA 2024 Family Trust','Filings','Payments']);
+  assert.equal(root.querySelector('.tax-filed-group--1').textContent,'Berry EA 2024 Family Trust');
+  assert.equal(root.querySelector('.tax-filed-group--2').textContent,'Filings');
+  // A document counts wherever in the year it sits, however deep that is.
+  assert.match(listed,/2025 · 3 documents/);
   restore();
 });
 
@@ -125,17 +135,25 @@ test('a return is asked who filed it and where, not who issued it',async()=>{
   await settle(()=>document.getElementById('taxes-destination').hidden===false);
 
   const shown=id=>!document.getElementById(`taxes-${id}`).closest('.form-field').hidden;
-  // A document that arrived is named by its issuer and asked nothing else.
-  assert.deepEqual([shown('issuer'),shown('taxpayer'),shown('jurisdiction'),shown('quarter')],[true,true,false,false]);
+  // A document that arrived is named by its issuer and asked nothing else. The
+  // year on the drop is 2025, which is not divided, so nothing asks what it is
+  // for either.
+  assert.deepEqual([shown('issuer'),shown('taxpayer'),shown('jurisdiction'),shown('quarter'),shown('category')],
+    [true,true,false,false,false]);
 
   const type=document.getElementById('taxes-type');
+  const category=document.getElementById('taxes-category');
+  assert.equal(category.value,'supporting');
   type.value='return';
   type.dispatchEvent(new window.Event('change',{bubbles:true}));
   assert.deepEqual([shown('issuer'),shown('jurisdiction'),shown('quarter')],[false,true,false]);
+  // Choosing the type answers what the document is for.
+  assert.equal(category.value,'filings');
   const estimate=document.getElementById('taxes-quarter');
   type.value='estimated-payment';
   type.dispatchEvent(new window.Event('change',{bubbles:true}));
   assert.equal(shown('quarter'),true);
+  assert.equal(category.value,'payments');
 
   // Named and placed from the answers: from 2026 the year is divided by
   // taxpayer, and the destination says so before anything moves.
@@ -146,8 +164,14 @@ test('a return is asked who filed it and where, not who issued it',async()=>{
   document.getElementById('taxes-year').value='2026';
   estimate.value='';
   document.getElementById('taxes-jurisdiction').dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.equal(shown('category'),true,'a divided year asks what the document is for');
   assert.match(document.getElementById('taxes-destination').textContent,
-    /2026 \/ Berry EA 2024 Family Trust \/ Return - Federal - Berry EA 2024 Family Trust\.txt/);
+    /2026 \/ Berry EA 2024 Family Trust \/ Filings \/ Return - Federal - Berry EA 2024 Family Trust\.txt/);
+  // Answering over it moves the document without renaming it.
+  category.value='supporting';
+  category.dispatchEvent(new window.Event('change',{bubbles:true}));
+  assert.match(document.getElementById('taxes-destination').textContent,
+    /2026 \/ Berry EA 2024 Family Trust \/ Supporting Documents \/ Return - Federal - /);
   restore();
 });
 

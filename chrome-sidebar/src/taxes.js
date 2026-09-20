@@ -2,8 +2,8 @@ import {TaxesView,DocumentCard,Destination,ConflictPanel,PasswordPanel,FiledList
 import {Button,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED} from './statement-text.js';
-import {taxFileName,taxFolderPath,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,
-  needsIssuer,needsJurisdiction,needsQuarter,DEFAULT_TAXPAYER,MAX_DOCUMENT_BYTES,extensionOf} from './tax-data.js';
+import {taxFileName,taxFolderPath,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,filesIntoSubfolder,
+  needsIssuer,needsJurisdiction,needsQuarter,defaultCategoryFor,DEFAULT_TAXPAYER,MAX_DOCUMENT_BYTES,extensionOf} from './tax-data.js';
 
 const today=()=>new Date().toISOString().slice(0,10);
 // Google's consent page is a round trip through another tab, so the tool waits
@@ -183,7 +183,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
       const result=await remote(token,`/v1/ai-connections/${id}/tax-intake`,{method:'POST',
         value:{...(reading.text?{text:reading.text}:{}),...(reading.image?{image:reading.image.dataUrl}:{}),today:today()},timeoutMs:130000});
       const proposal=parseTaxReading(result);
-      if(proposal.type)$('type').value=proposal.type;
+      if(proposal.type){$('type').value=proposal.type;$('category').value=defaultCategoryFor(proposal.type);}
       if(proposal.issuer)$('issuer').value=proposal.issuer;
       if(proposal.taxpayer)$('taxpayer').value=proposal.taxpayer;
       if(proposal.jurisdiction)$('jurisdiction').value=proposal.jurisdiction;
@@ -201,7 +201,8 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   // --- Filing
   function currentFiling(){
     return normalizeTaxFiling({type:$('type').value,issuer:$('issuer').value,taxpayer:$('taxpayer').value,
-      jurisdiction:$('jurisdiction').value,quarter:$('quarter').value,year:$('year').value,fileName:dropped?.name||''});
+      category:$('category').value,jurisdiction:$('jurisdiction').value,quarter:$('quarter').value,
+      year:$('year').value,fileName:dropped?.name||''});
   }
   async function file(){
     if(!dropped){status('Drop a document first.','file-form-status','alert');return;}
@@ -230,7 +231,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     dropped=null;original=null;reading=null;plan=null;locked='';typed='';
     if(!keepFields){
       $('type').value='';$('issuer').value='';$('jurisdiction').value='';$('quarter').value='';
-      $('taxpayer').value=DEFAULT_TAXPAYER;
+      $('taxpayer').value=DEFAULT_TAXPAYER;$('category').value=defaultCategoryFor('');
     }
     setStatus($('file-status'),'');
     renderDocument();renderPassword();renderConflict();renderDestination();
@@ -252,7 +253,8 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     }catch{name='';}
     $('destination').hidden=!name;
     $('destination').replaceChildren(...(name
-      ?[Destination({path:taxFolderPath({year:$('year').value,taxpayer:$('taxpayer').value}),name})]:[]));
+      ?[Destination({path:taxFolderPath({year:$('year').value,taxpayer:$('taxpayer').value,
+        category:$('category').value}),name})]:[]));
   }
   // A locked document is the only thing being asked about while it is locked:
   // nothing below it can be answered until the file has been opened.
@@ -297,7 +299,10 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     // also says which year's folder is listed below.
     const type=$('type').value,naming=!!dropped&&!locked;
     const shown={type:naming,taxpayer:naming,issuer:naming&&needsIssuer(type),
-      jurisdiction:naming&&needsJurisdiction(type),quarter:naming&&needsQuarter(type)};
+      jurisdiction:naming&&needsJurisdiction(type),quarter:naming&&needsQuarter(type),
+      // What a document is for only decides anything in a year that is divided
+      // by it, so before 2026 there is nothing for this answer to change.
+      category:naming&&filesIntoSubfolder($('year').value)};
     for(const [key,visible] of Object.entries(shown)){
       $(key).closest('.form-field').hidden=!visible;
       $(key).disabled=busy;
@@ -324,8 +329,14 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
 
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_DOCUMENT_BYTES});
   $('file-clear').addEventListener('click',()=>{clearFiling({keepFields:false});status('','file-form-status');render();});
-  for(const key of ['type','issuer','taxpayer','jurisdiction','quarter'])
-    $(key).addEventListener(key==='issuer'?'input':'change',()=>{plan=null;renderConflict();renderDestination();render();});
+  for(const key of ['type','issuer','taxpayer','category','jurisdiction','quarter'])
+    $(key).addEventListener(key==='issuer'?'input':'change',()=>{
+      // The type almost always settles what a document is for, so choosing one
+      // answers that too — and the answer stays a field, because an extension,
+      // a notice or anything filed as "Other document" is the owner's to place.
+      if(key==='type')$('category').value=defaultCategoryFor($('type').value);
+      plan=null;renderConflict();renderDestination();render();
+    });
   $('year').addEventListener('change',()=>{
     plan=null;renderConflict();renderDestination();
     run(loadFiled,'status').then(render);

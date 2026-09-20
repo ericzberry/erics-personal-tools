@@ -157,16 +157,23 @@ async function resolveFolder(env,request,fetcher,path,{create=false}={}){
   return folder;
 }
 
-const folderContents=(env,request,fetcher,folderId)=>driveFetch(env,request,fetcher,listing({
-  q:`'${quote(folderId)}' in parents and trashed = false`,
-  fields:'files(id,name,mimeType,modifiedTime,size,webViewLink)',pageSize:'1000',orderBy:'name'
+// Drive takes several parents in one query, which is what keeps a year that is
+// divided twice — by taxpayer, then by what a document is for — to one request
+// per level rather than one per folder.
+const childrenOf=(env,request,fetcher,folderIds)=>driveFetch(env,request,fetcher,listing({
+  q:`(${folderIds.map(id=>`'${quote(id)}' in parents`).join(' or ')}) and trashed = false`,
+  fields:'files(id,name,mimeType,modifiedTime,size,webViewLink,parents)',pageSize:'1000',orderBy:'name'
 }));
+const folderContents=(env,request,fetcher,folderId)=>childrenOf(env,request,fetcher,[folderId]);
 const isFolder=file=>file.mimeType===FOLDER_TYPE;
+const parentOf=file=>file.parents?.[0]||'';
 const documentsIn=contents=>(contents.files||[]).filter(file=>!isFolder(file)).map(file=>({
   name:file.name,modifiedTime:file.modifiedTime,size:Number(file.size)||0,webViewLink:file.webViewLink
 }));
-// A year is divided by taxpayer, and there are five of those. The cap is what
-// keeps one listing from turning into an unbounded run of requests.
+const documentsUnder=(files,folderId)=>documentsIn({files:files.filter(file=>parentOf(file)===folderId)});
+const foldersUnder=(files,folderId,limit)=>files.filter(file=>isFolder(file)&&parentOf(file)===folderId).slice(0,limit);
+// Five taxpayers, three things a document can be for. The caps are what keep
+// one listing from turning into an unbounded run of requests.
 const MAX_GROUPS=12;
 
 // Drive's one-request upload: the metadata and the file in one multipart body.
@@ -261,15 +268,21 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
     if(!/^\d{4}$/.test(year))fail(400,'Choose a tax year.');
     const folder=await resolveFolder(env,request,fetcher,[year]);
     if(!folder)return json({year,files:[],groups:[]});
-    const contents=await folderContents(env,request,fetcher,folder.id);
-    // A year's own documents, then each taxpayer's, so what is already filed
-    // answers "is this one in there?" wherever in the year it actually sits.
-    const groups=[];
-    for(const sub of (contents.files||[]).filter(isFolder).slice(0,MAX_GROUPS)){
-      groups.push({name:sub.name,folderId:sub.id,webViewLink:sub.webViewLink,
-        files:documentsIn(await folderContents(env,request,fetcher,sub.id))});
-    }
-    return json({year,folderId:folder.id,files:documentsIn(contents),groups});
+    // A year's own documents, then each taxpayer's, then each of theirs by what
+    // it is for — so what is already filed answers "is this one in there?"
+    // wherever in the year it actually sits. Two further requests however much
+    // the year holds, because each level is asked for all its parents at once.
+    const top=(await childrenOf(env,request,fetcher,[folder.id])).files||[];
+    const people=foldersUnder(top,folder.id,MAX_GROUPS);
+    const inside=people.length?(await childrenOf(env,request,fetcher,people.map(one=>one.id))).files||[]:[];
+    const kinds=people.flatMap(person=>foldersUnder(inside,person.id,MAX_GROUPS));
+    const deepest=kinds.length?(await childrenOf(env,request,fetcher,kinds.map(one=>one.id))).files||[]:[];
+    const named=one=>({name:one.name,folderId:one.id,webViewLink:one.webViewLink});
+    const groups=people.map(person=>({...named(person),
+      files:documentsUnder(inside,person.id),
+      groups:foldersUnder(inside,person.id,MAX_GROUPS)
+        .map(kind=>({...named(kind),files:documentsUnder(deepest,kind.id)}))}));
+    return json({year,folderId:folder.id,files:documentsUnder(top,folder.id),groups});
   }
 
   fail(404,'Unknown Drive request.');

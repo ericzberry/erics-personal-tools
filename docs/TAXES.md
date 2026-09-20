@@ -34,10 +34,25 @@ field, and a document it cannot read still files — you name it yourself.
 **Whose it is, and what that decides.** Five taxpayers file here: Eric & Ariana
 Berry and the four trusts, listed in `tax-data.js`. Every document names one,
 which the reading proposes and you correct. It decides two things: from tax year
-2026 it is the subfolder inside the year the document lands in, and for a return
-or an instalment it is part of the filed name. 2025 and earlier were filed
-straight into the year folder and stay that way, so nothing already filed moves.
-A subfolder you made by hand is filed into rather than duplicated.
+2026 it is the first subfolder inside the year the document lands in, and for a
+return or an instalment it is part of the filed name. 2025 and earlier were
+filed straight into the year folder and stay that way, so nothing already filed
+moves. A subfolder you made by hand is filed into rather than duplicated.
+
+**What it is for, and what that decides.** Inside a taxpayer's year, from 2026,
+a document sits under one of three things — what went to a tax authority, what
+was paid, and everything backing the two up:
+
+| Filed under | What goes there |
+| --- | --- |
+| `Filings` | A filed return, and anything else sent to a tax authority |
+| `Payments` | Quarterly estimates and the receipts proving they were paid |
+| `Supporting Documents` | K-1s, 1099s, W-2s, statements, receipts — everything that arrives |
+
+The document type settles this in every ordinary case, so choosing the type
+answers it. It stays a field because the cases it does not settle are real: an
+extension request, a notice, anything filed as "Other document". It changes
+where a document lands and never what it is called.
 
 **A return, an instalment and its receipt are named from their own facts.** They
 have no issuer, so they are not asked for one; they are asked which government —
@@ -69,9 +84,9 @@ document the reading thinks is older than that window is reported rather than
 filed somewhere convenient.
 
 **The name is settled before the bytes move.** `POST /v1/drive/plan` resolves
-the folders — the year, and from 2026 the taxpayer inside it, creating whichever
-of them is not there yet — checks whether the name is taken, and returns a
-ticket standing for that destination. The upload carries the file and the ticket, so the destination
+the folders — the year, and from 2026 the taxpayer and then what the document is
+for, creating whichever of them is not there yet — checks whether the name is
+taken, and returns a ticket standing for that destination. The upload carries the file and the ticket, so the destination
 shown to you is the destination the file reaches, and no firm or fund name ever
 travels in a URL that request logs would keep. A ticket is good once and for
 fifteen minutes.
@@ -184,20 +199,29 @@ disconnecting means calling `POST /v1/drive/disconnect`.
 
 `TAX_ROOT_FOLDER_ID` in `chrome-sidebar/src/tax-data.js` is the top-level tax
 folder. Year subfolders are named by the four-digit year and are created on
-first use. From `TAX_SUBFOLDER_FROM_YEAR` — 2026 — each year is divided again by
-taxpayer, named by the taxpayer's own label. The Worker walks that path from the
-tax folder down, using each folder it finds and making each one it does not. Two
-folders of the same name in the same place is reported rather than guessed at.
+first use. From `TAX_SUBFOLDER_FROM_YEAR` — 2026 — each year is divided again:
 
-**Already filed** lists a year's own documents and then each taxpayer's, one
-line per document. It is read to answer one question — is this one already in
-there? — so a row is the name and nothing else.
+```
+2026 / Berry EA 2024 Family Trust / Filings / Return - Federal - Berry EA 2024 Family Trust.pdf
+```
+
+Folders are named by the taxpayer's own label and the category's. The Worker
+walks that path from the tax folder down, using each folder it finds and making
+each one it does not. Two folders of the same name in the same place is reported
+rather than guessed at.
+
+**Already filed** lists a year's own documents, then each taxpayer's, then each
+of theirs by what it is for — one line per document, wherever in the year it
+sits. It is read to answer one question — is this one already in there? — so a
+row is the name and nothing else. Reading a year is finding its folder and one
+Drive request per level below it, because each level is asked for all of its
+parents at once rather than one folder at a time.
 
 ## Where the code is
 
 | Piece | File |
 | --- | --- |
-| Types, taxpayers, years, naming, folders, validation | `chrome-sidebar/src/tax-data.js` |
+| Types, taxpayers, categories, years, naming, folders, validation | `chrome-sidebar/src/tax-data.js` |
 | The tool, shared by both hosts | `chrome-sidebar/src/taxes.js` |
 | Its DOM | `chrome-sidebar/src/components/taxes.js` / `.css` |
 | Extension page | `chrome-sidebar/taxes.html` → `src/taxes-page.js`; also mounted into the side panel by `capability-links.js` |

@@ -43,15 +43,17 @@ function fakeGoogle({refreshToken='synthetic-refresh-token',email='owner@example
     // List.
     if(url.pathname==='/drive/v3/files'&&(init.method||'GET')==='GET'){
       const q=url.searchParams.get('q')||'';
-      const parent=(q.match(/^'([^']+)' in parents/)||[])[1];
+      // Drive takes any number of parents in one query, and the listing says
+      // which one each file came from.
+      const parents=[...q.matchAll(/'([^']+)' in parents/g)].map(match=>match[1]);
       const name=(q.match(/name = '([^']*)'/)||[])[1];
       const wantsFolder=q.includes(`mimeType = 'application/vnd.google-apps.folder'`);
       // Drive answers with the mimeType when it is asked for, which is how a
       // folder is told from a document in a listing that holds both.
-      return reply({files:[...files.values()].filter(file=>file.parent===parent
+      return reply({files:[...files.values()].filter(file=>parents.includes(file.parent)
         &&(name===undefined||file.name===name)
         &&(!wantsFolder||file.folder))
-        .map(file=>({...file,...(file.folder?{mimeType:'application/vnd.google-apps.folder'}:{})}))});
+        .map(file=>({...file,parents:[file.parent],...(file.folder?{mimeType:'application/vnd.google-apps.folder'}:{})}))});
     }
     // Create a folder.
     if(url.pathname==='/drive/v3/files'&&init.method==='POST'){
@@ -262,31 +264,44 @@ test('a revoked connection is cleared rather than retried forever',async()=>{
   });
 });
 
-// From 2026 the year is divided by taxpayer. What is already in Drive is used
-// rather than duplicated, and 2025 and earlier stay flat.
+// From 2026 the year is divided by taxpayer and then by what a document is for.
+// What is already in Drive is used rather than duplicated, and 2025 and earlier
+// stay flat.
 test('a 2026 filing lands in the taxpayer folder, making it only when it is missing',async()=>{
   const {env}=environment();
   const fake=fakeGoogle();
+  const folders=()=>[...fake.files.values()].filter(file=>file.folder);
   await withGoogle(fake,async()=>{
     await connect(env);
     const filing={type:'return',taxpayer:'ea-2024',jurisdiction:'federal',year:'2026',fileName:'return.pdf'};
     const plan=await (await call(env,'/v1/drive/plan','POST',filing)).json();
     assert.equal(plan.name,'Return - Federal - Berry EA 2024 Family Trust.pdf');
-    assert.deepEqual(plan.path,['2026','Berry EA 2024 Family Trust']);
+    assert.deepEqual(plan.path,['2026','Berry EA 2024 Family Trust','Filings']);
     const filed=await (await send(env,`/v1/drive/upload?ticket=${plan.ticket}&mode=new`,new Uint8Array([37,80,68,70]))).json();
-    assert.deepEqual(filed.filed.path,['2026','Berry EA 2024 Family Trust']);
-    const year=[...fake.files.values()].find(file=>file.name==='2026');
-    const trust=[...fake.files.values()].find(file=>file.name==='Berry EA 2024 Family Trust');
-    assert.deepEqual([year.parent,trust.parent],[ROOT,year.id]);
-    assert.equal([...fake.files.values()].find(file=>!file.folder).parent,trust.id);
+    assert.deepEqual(filed.filed.path,['2026','Berry EA 2024 Family Trust','Filings']);
+    const year=folders().find(file=>file.name==='2026');
+    const trust=folders().find(file=>file.name==='Berry EA 2024 Family Trust');
+    const filings=folders().find(file=>file.name==='Filings');
+    assert.deepEqual([year.parent,trust.parent,filings.parent],[ROOT,year.id,trust.id]);
+    assert.equal([...fake.files.values()].find(file=>!file.folder).parent,filings.id);
 
-    // A second document for the same taxpayer reuses both folders; another
-    // taxpayer gets a sibling rather than sharing one.
+    // The same taxpayer's instalment reuses the year and the taxpayer, and gets
+    // its own Payments beside Filings rather than landing in it.
     await (await call(env,'/v1/drive/plan','POST',{...filing,type:'estimated-payment',quarter:'q3'})).json();
-    assert.equal([...fake.files.values()].filter(file=>file.folder).length,2);
+    assert.deepEqual(folders().map(file=>file.name).sort(),
+      ['2026','Berry EA 2024 Family Trust','Filings','Payments']);
+    assert.equal(folders().find(file=>file.name==='Payments').parent,trust.id);
+    // Another taxpayer divides their own year, not this one's.
     await (await call(env,'/v1/drive/plan','POST',{...filing,taxpayer:'berry'})).json();
-    assert.deepEqual([...fake.files.values()].filter(file=>file.folder).map(file=>file.name).sort(),
-      ['2026','Berry EA 2024 Family Trust','Eric & Ariana Berry']);
+    const berry=folders().find(file=>file.name==='Eric & Ariana Berry');
+    assert.equal(berry.parent,year.id);
+    assert.equal(folders().filter(file=>file.name==='Filings').length,2);
+    // A K-1 is nobody's filing and nobody's payment.
+    const support=await (await call(env,'/v1/drive/plan','POST',{type:'k1',issuer:'Averin',taxpayer:'berry',year:'2026',fileName:'k1.pdf'})).json();
+    assert.deepEqual(support.path,['2026','Eric & Ariana Berry','Supporting Documents']);
+    // The owner's own answer outranks the one the type proposes.
+    const moved=await (await call(env,'/v1/drive/plan','POST',{...filing,category:'supporting'})).json();
+    assert.deepEqual(moved.path,['2026','Berry EA 2024 Family Trust','Supporting Documents']);
     // The same document filed for 2025 stays in the year folder itself.
     const older=await (await call(env,'/v1/drive/plan','POST',{...filing,year:'2025'})).json();
     assert.deepEqual(older.path,['2025']);
@@ -307,9 +322,15 @@ test('what is already filed for a year covers the taxpayer folders inside it',as
     const flat=await (await call(env,'/v1/drive/filed?year=2025')).json();
     assert.deepEqual([flat.files.map(file=>file.name),flat.groups],[['Form 1099 - Schwab.pdf'],[]]);
     const divided=await (await call(env,'/v1/drive/filed?year=2026')).json();
-    // A folder is not a document, so it never appears as one in the year.
-    assert.deepEqual(divided.files,[]);
-    assert.deepEqual(divided.groups.map(group=>[group.name,group.files.map(file=>file.name)]),
-      [['Berry 2020 Irrevocable Family Trust',['Return - New York - Berry 2020 Irrevocable Family Trust.pdf']]]);
+    // A folder is not a document, so it never appears as one at any level.
+    assert.deepEqual([divided.files,divided.groups.map(group=>group.files)],[[],[[]]]);
+    assert.deepEqual(divided.groups.map(group=>[group.name,group.groups.map(kind=>[kind.name,kind.files.map(file=>file.name)])]),
+      [['Berry 2020 Irrevocable Family Trust',
+        [['Filings',['Return - New York - Berry 2020 Irrevocable Family Trust.pdf']]]]]);
+    // However much a year holds, reading it is finding the year folder and one
+    // request per level below it — never one per folder.
+    const before=fake.calls.length;
+    await call(env,'/v1/drive/filed?year=2026');
+    assert.equal(fake.calls.length-before,4);
   });
 });

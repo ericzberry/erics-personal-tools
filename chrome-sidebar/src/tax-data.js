@@ -68,6 +68,21 @@ export const TAX_QUARTERS=[{id:'q1',label:'Q1'},{id:'q2',label:'Q2'},{id:'q3',la
 export const quarterFor=id=>TAX_QUARTERS.find(quarter=>quarter.id===id)||null;
 export const quarterLabel=id=>quarterFor(id)?.label||'';
 
+// What a document is for, which is how a taxpayer's year is divided: what was
+// sent to a tax authority, what was paid, and everything that backs the two up.
+// Every document has one, and the type it is almost always settles it — so it
+// is proposed from the type and stays a field, because a notice, an extension
+// or anything filed under "Other document" is only the owner's to place.
+export const TAX_CATEGORIES=[
+  {id:'supporting',label:'Supporting Documents'},
+  {id:'payments',label:'Payments'},
+  {id:'filings',label:'Filings'}
+];
+export const categoryFor=id=>TAX_CATEGORIES.find(category=>category.id===id)||null;
+export const categoryLabel=id=>categoryFor(id)?.label||'';
+const CATEGORY_BY_TYPE={'return':'filings','estimated-payment':'payments','payment-proof':'payments'};
+export const defaultCategoryFor=type=>CATEGORY_BY_TYPE[type]||'supporting';
+
 // Three kinds of document the household produces rather than receives: the
 // return itself, the voucher that goes with an instalment, and the receipt
 // proving the instalment was paid. They are named from who filed them and
@@ -84,14 +99,17 @@ export const needsQuarter=type=>QUARTERLY.has(type);
 // folder is the year that stops being readable.
 export const TAX_SUBFOLDER_FROM_YEAR=2026;
 export const filesIntoSubfolder=year=>Number(year)>=TAX_SUBFOLDER_FROM_YEAR;
-// The folders a filing lands in, outermost first, under the tax root. The
-// Worker walks this, making each one it does not find and reusing each one it
-// does, so a subfolder made by hand is used rather than duplicated.
-export function taxFolderPath({year,taxpayer}={}){
+// The folders a filing lands in, outermost first, under the tax root: the year,
+// then — from 2026 — whose it is and what it is for. The Worker walks this,
+// making each one it does not find and reusing each one it does, so a subfolder
+// made by hand is used rather than duplicated.
+export function taxFolderPath({year,taxpayer,category}={}){
   const path=[String(year)];
   if(filesIntoSubfolder(year)){
     const who=taxpayerLabel(taxpayer||DEFAULT_TAXPAYER);
+    const what=categoryLabel(categoryFor(category)?category:'supporting');
     if(who)path.push(who);
+    if(who&&what)path.push(what);
   }
   return path;
 }
@@ -141,14 +159,16 @@ export function availableName(name,taken=[]){
 // One validator for the tool and the Worker. It answers the question both have
 // to ask: is this a filing that can be given a name and a destination?
 //
-// A filing that names no taxpayer is the household's own, which is what every
-// filing meant before there was a choice: an extension still on the previous
-// version files exactly where it always did.
+// A filing that names no taxpayer is the household's own, and one that names no
+// category is whatever its type is usually for — so an extension still on a
+// previous version files where that version meant it to.
 export function normalizeTaxFiling(input={},{today=new Date()}={}){
   const type=String(input.type??'').trim();
   if(!taxTypeFor(type))fail('Choose a document type.');
   const taxpayer=String(input.taxpayer??'').trim()||DEFAULT_TAXPAYER;
   if(!taxpayerFor(taxpayer))fail('Choose whose document this is.');
+  const category=String(input.category??'').trim()||defaultCategoryFor(type);
+  if(!categoryFor(category))fail('Choose what this document is for.');
   const issuer=needsIssuer(type)?cleanName(input.issuer):'';
   if(needsIssuer(type)&&!issuer)fail('Say what this document is, such as the firm or fund that issued it.');
   if(issuer.length>MAX_ISSUER)fail(`Keep the name under ${MAX_ISSUER} characters.`);
@@ -159,8 +179,8 @@ export function normalizeTaxFiling(input={},{today=new Date()}={}){
   const year=String(input.year??'').trim();
   if(!taxYears(today).includes(year))fail(`Choose a tax year: ${taxYears(today).join(', ')}.`);
   const extension=extensionOf(input.fileName);
-  return {type,issuer,taxpayer,jurisdiction,quarter,year,
-    path:taxFolderPath({year,taxpayer}),
+  return {type,issuer,taxpayer,category,jurisdiction,quarter,year,
+    path:taxFolderPath({year,taxpayer,category}),
     name:taxFileName({type,issuer,taxpayer,jurisdiction,quarter,extension})};
 }
 
