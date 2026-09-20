@@ -235,9 +235,18 @@ export function FinanceView(){
 // One portfolio, its own total, and a line per asset class. The date sits with
 // the figure it belongs to, because a portfolio whose cash was marked last week
 // and whose stocks were marked last year is two different ages of information.
-export function PortfolioGroup({name,meta,total,currency,rows}){
+// The portfolio's own verbs ride on its heading line beside the total, the way
+// a figure's do on its own line, rather than trailing the run as a stray row of
+// words that reads as one more figure.
+export function PortfolioGroup({name,meta,total,currency,rows,actions=[]}){
   return Section([
-    Stack([GroupTitle(name,{className:'record-group-title'}),Strong(money(total,currency))],{className:'breakdown-row'}),
+    Stack([GroupTitle(name,{className:'record-group-title'}),
+      // The total and the portfolio's verbs are one block, so a narrow sidebar
+      // drops them under the name together instead of stranding the actions on
+      // a line of their own.
+      Stack([Strong(money(total,currency)),
+        ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})],{className:'group-figure'})
+    ],{className:'breakdown-row group-line'}),
     meta?Note(meta):null,
     ...rows
   ],{className:'record-group'});

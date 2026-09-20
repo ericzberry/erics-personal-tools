@@ -1,6 +1,6 @@
 import {RewardsView,RewardGroup,CardBenefits,BalancePanel,BalanceTotals} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
-import {RecordRow,Button,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
+import {RecordRow,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogCategories,offerUrl} from './program-data.js';
@@ -43,6 +43,11 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   const action=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:busy||!loaded});b.addEventListener('click',fn);return b;};
   const connectAction=()=>{const b=Button('Connection settings',{variant:'secondary',size:'compact',disabled:busy});b.addEventListener('click',onSettings);return b;};
   const vaultAction=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:vaultBusy});b.addEventListener('click',fn);return b;};
+  // A reward's own verbs, at the end of its line and named for the reward they
+  // would act on. The two that reach the vault answer to the vault's own busy
+  // state rather than to the list's.
+  const rowAction=(glyph,label,fn,danger=false)=>RowAction(glyph,label,fn,{danger,disabled:busy||!loaded});
+  const vaultRowAction=(glyph,label,fn)=>RowAction(glyph,label,fn,{disabled:vaultBusy});
   function forget(){revealed.clear();clearTimeout(revealTimer);revealTimer=null;$('vault-code').replaceChildren();}
   function hold(){clearTimeout(revealTimer);revealTimer=setTimeout(()=>{forget();renderVault();render();},REVEAL_MS);}
   function edit(entry){
@@ -197,7 +202,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
         return RecordRow({title:offer.name,
           detail:[offer.badge,offer.category,offer.dates].filter(Boolean).join(' · '),
           notes:offer.summary,
-          actions:url?[Link('Open offer',url)]:[]});
+          actions:url?[RowLink(OPEN_GLYPH,`Open the ${offer.name} offer`,url)]:[]});
       })
     ].filter(Boolean)):[Note('No matching offers. Clear the search to see all of them.')]));
   }
@@ -256,19 +261,26 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     e.conflict?'Conflict':'',e.deleting?'Pending deletion':''].filter(Boolean).join(' · ');
   function row(e){
     const filed=e.kind==='card'?entries.filter(other=>other.card===e.id).length:0;
-    const remove=action('Delete',()=>{confirmation.hidden=false;yes.focus();},'danger-subtle');
+    const remove=rowAction(DELETE_GLYPH,`Delete ${e.name}`,()=>{confirmation.hidden=false;yes.focus();},true);
     const yes=action('Delete reward',()=>save(e,'DELETE'),'danger');
     const no=action('Keep reward',()=>{confirmation.hidden=true;remove.focus();});
     // Deleting a card leaves its benefits in the wallet rather than taking them
     // with it, which the confirmation has to say before the choice is made.
     const confirmation=Stack([Note(`Delete “${e.name}” from your connected devices?${filed?` Its ${filed} benefit${filed===1?'':'s'} stay in your wallet.`:''}`),ActionGroup([yes,no],{compact:true})],{hidden:true});
     const shown=revealed.get(e.id);
-    const actions=[action('Edit',()=>edit(e),'subtle'),
-      ...(e.secret?[shown?vaultAction('Hide number',()=>{revealed.delete(e.id);render();renderSecret();}):vaultAction('Show number',()=>reveal(e))]:[]),
-      ...(e.state!=='used'&&e.kind==='benefit'?[action('Mark used',()=>save({...e,state:'used',updatedAt:new Date().toISOString()}))]:[]),
-      ...(e.url?[Link('Open source',e.url)]:[]),remove];
-    if(e.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(e.id,choice))));
-    return Stack([RecordRow({title:e.name,detail:detailOf(e),notes:e.notes,actions}),shown?MaskedValue(shown):null,confirmation]);
+    const actions=[rowAction(EDIT_GLYPH,`Edit ${e.name}`,()=>edit(e)),
+      ...(e.secret?[shown
+        ?vaultRowAction(HIDE_GLYPH,`Hide the number for ${e.name}`,()=>{revealed.delete(e.id);render();renderSecret();})
+        :vaultRowAction(SHOW_GLYPH,`Show the number for ${e.name}`,()=>reveal(e))]:[]),
+      ...(e.state!=='used'&&e.kind==='benefit'?[rowAction(DONE_GLYPH,`Mark ${e.name} used`,()=>save({...e,state:'used',updatedAt:new Date().toISOString()}))]:[]),
+      ...(e.url?[RowLink(OPEN_GLYPH,`Open the source for ${e.name}`,e.url)]:[]),remove];
+    // A conflict is a question this reward is asking; it waits in words under
+    // the line rather than becoming one more glyph on it.
+    const decide=e.conflict
+      ?[ActionGroup(['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(e.id,choice))),{compact:true})]
+      :[];
+    return RecordRow({title:e.name,detail:detailOf(e),notes:e.notes,actions,
+      extra:[shown?MaskedValue(shown):null,...decide,confirmation]});
   }
   function render(){
     const query=$('rewards-search').value.trim().toLowerCase();
@@ -294,7 +306,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     picker.replaceChildren(Option('Not a card benefit',''),...cards.map(card=>Option(card.name,card.id)));
     picker.value=cards.some(card=>card.id===chosen)?chosen:'';
     const next=nextActions(entries.filter(e=>!e.deleting&&!e.conflict));
-    $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,detail:`${e.name} · ${e.source} · ${e.value}`,actions:[action('Review',()=>edit(e))]})));
+    $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,detail:`${e.name} · ${e.source} · ${e.value}`,actions:[rowAction(EDIT_GLYPH,`Review ${e.name}`,()=>edit(e))]})));
     $('rewards-actions').closest('section').hidden=!next.length;
     // What the owner came to the wallet to know: how many miles and how many
     // points they hold, counted separately and never added together.

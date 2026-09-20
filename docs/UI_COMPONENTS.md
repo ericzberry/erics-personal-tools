@@ -28,7 +28,8 @@ The catalogue below describes existing exports, not a promise that each componen
 | Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceFlow`, `FieldGrid` | Compose layout before introducing new wrappers; a full-tab workspace runs down the page rather than into a side column |
 | Text and supporting detail | `Title`, `Text`, `Note`, `Strong`, `Label` | `Heading` aliases `Title`; `Label` is a text span, not an input label |
 | Form and labeled inputs | `Form`, `FormStack`, `FormField`, `Field` | `Field` supplies an associated label and control |
-| Actions and links | `Button`, `Link`, `CopyIconButton`, `IconButton` | Choose role and density explicitly; use real links for navigation. `IconButton` is a record row's own action where the row is one line: the glyph carries the verb, and the label it is given names the record it acts on |
+| Actions and links | `Button`, `Link`, `CopyIconButton`, `IconButton` | Choose role and density explicitly; use real links for navigation |
+| A record's or group's own action | `RowAction`, `RowLink`, `CopyIconButton` | At the end of the record's line, never in a row of words under it. The glyph carries the verb and the label names the record it acts on; a decision that needs a sentence is not a row action |
 | Select or editable suggestions | `Select`, `Field` with `kind: 'select'` or `list` | Shared formatted trigger and open menu; keep custom text for suggestions |
 | Choice of two or three | `SegmentedField` | Show the options side by side instead of behind a menu; it is a radio group exposing `value` like a select |
 | Boolean choice | `Toggle`, `ChoiceRow` | Keep the explanation and click target together |
@@ -68,6 +69,8 @@ Preserve keyboard navigation, type-ahead, Escape, outside dismissal, disabled op
 ## Records, tables, and disclosure
 
 Keep names and primary values readable at normal body size. Put brief metadata close to its record, with secondary content under disclosure. Use one boundary for one relationship; avoid a card inside a card solely to restyle the contents. Distinguish status from ordinary facts using text and existing semantics, not arbitrary badge colors.
+
+A group's label is never set below the records it heads, and a record's own actions never form a row of words beneath it: both rules are in [DESIGN.md](DESIGN.md#row-actions), and `GroupTitle`, `RecordRow`, `RowAction` and `RowLink` implement them. `RecordRow` puts its `actions` on the record's name line and its `extra` — a confirmation, a conflict, a revealed value — inside the row under that line.
 
 Use a table when column comparison matters. `DataTable` is a simple rendering component; it does not provide sorting, paging, stacked mobile rows, or a keyboard-accessible scrolling wrapper automatically. If those behaviors are needed, add them to the shared layer and verify them before use. Prefer readable stacked records in narrow hosts. For an essential wide comparison, provide a labeled, keyboard-accessible table scroll region rather than clipping columns or making the whole page scroll horizontally.
 

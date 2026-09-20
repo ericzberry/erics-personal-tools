@@ -47,11 +47,15 @@ test('ideas sit under the person they are for, and one action moves each along',
   assert.match(document.getElementById('gifts-bought-view').querySelector('summary').textContent,/Bought · 1/);
   assert.match(document.getElementById('gifts-bought').textContent,/Telescope/);
   assert.equal([...document.querySelectorAll('#gifts-list a')].some(link=>link.href==='https://example.com/pan'),true);
-  const buttons=[...document.querySelectorAll('#gifts-list button')].map(button=>button.textContent);
-  assert.ok(buttons.includes('Bought'),'an idea offers the one step that applies');
-  assert.equal(buttons.includes('Back to ideas'),false,'that belongs to the bought view');
-  [...document.querySelectorAll('#gifts-list button')].find(button=>button.textContent==='Bought')
-    .dispatchEvent(new document.defaultView.Event('click',{bubbles:true}));
+  // A row's own verbs are glyphs at the end of its line, found by the name a
+  // screen reader is given rather than by a word in a row under the record.
+  const rowAction=(scope,verb)=>[...document.querySelectorAll(`${scope} button`)]
+    .find(button=>button.getAttribute('aria-label')?.startsWith(verb));
+  const markBought=rowAction('#gifts-list','Mark Cast iron pan bought');
+  assert.ok(markBought,'an idea offers the one step that applies');
+  assert.ok(markBought.querySelector('svg'),'the verb is carried by a glyph on the line');
+  assert.equal(!!rowAction('#gifts-list','Put '),false,'putting one back belongs to the bought view');
+  markBought.dispatchEvent(new document.defaultView.Event('click',{bubbles:true}));
   await settle(()=>store.writes.length>0);
   assert.equal(store.writes[0].value.status,'Bought');
   await settle(()=>document.getElementById('gifts-bought-view').querySelector('summary').textContent==='Bought · 2');

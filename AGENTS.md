@@ -66,12 +66,15 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Keep the most important action visually dominant; normally use one primary action per form or task group.
 - Use progressive disclosure for secondary detail. Keep current status and necessary actions discoverable.
 - Put the selected tool and saved information first on mobile. Keep device and connection maintenance secondary, omit unlocked-state banners and manual lock controls, and let tool content use the page scroll instead of a small nested scrolling box.
+- A heading is never set below what it heads. A label naming a group — a category over a run of records, a section over a grid of tiles — carries at least the size and the ink of the things inside it, and is told apart from them by weight, by a rule, or by the space around it. Shrinking a category into a pale eyebrow under the records it names inverts the hierarchy, and the group then reads as rows with a caption stuck above them.
 - Avoid redundant cards inside cards, gratuitous shadows, decorative icons, and oversized headings. Every visual boundary should explain a relationship. Capability launcher icons are navigation, not decoration, and are the exception.
 
 ## Controls and interaction
 
 - Follow the action roles, density sizes, and state rules in [docs/DESIGN.md](docs/DESIGN.md). Use shared component variants; do not independently resize feature buttons.
 
+- A record's own actions ride at the end of its line, and a group's at the end of its heading line — never in a row of words underneath. Edit and Delete repeated below every record double the length of a list and become the loudest thing in it, when the list is there to be read down. A row action is a verb that repeats down every row and is understood from its glyph alone, so it is carried by the shared glyph with the record it acts on as its accessible name, not by the word "Edit" twelve times. A record that opens into a block of its own keeps its actions inside that block.
+- What one record is asking to have decided is not a row action: a delete confirmation, a sync conflict, a decision only some records are raising. It needs a sentence, so it stays in words under the record that raised it, and only for that record.
 - Make buttons visibly interactive. Use consistent primary, secondary, quiet, and destructive variants; reserve quiet text actions for clearly established contexts.
 - Keep related buttons adjacent with a consistent gap. Use content-width actions unless equal widths serve a deliberate choice or layout.
 - Label actions with concrete verbs. Keep labels stable and distinguish disconnecting a device from deleting stored data.

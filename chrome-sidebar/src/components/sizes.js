@@ -40,10 +40,10 @@ export function SizeGroup(garment,rows){
 export function SizeRow({name,size,note,actions,extra=[],confirmation}){
   return Section([
     Stack([
-      Strong(name,{className:'size-name'}),
+      Strong(name,{className:'record-name size-name'}),
       Label(size,{className:'size-value'}),
-      ActionGroup(actions,{compact:true,className:'action-group action-group--compact size-actions'})
-    ],{className:'size-line'}),
+      ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})
+    ],{className:'record-line size-line'}),
     note?Note(note):null,
     ...extra,
     confirmation

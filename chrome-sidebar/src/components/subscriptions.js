@@ -1,4 +1,4 @@
-import {Stack,ToolTitle,SettingsGroup,Disclosure,Form,FormField,Notice,ActionGroup,Button,Note,UploadField,RecordRow,Link} from './ui.js';
+import {Stack,ToolTitle,SettingsGroup,Disclosure,Form,FormField,Notice,ActionGroup,Button,Note,UploadField,RecordRow,RowLink,OPEN_GLYPH} from './ui.js';
 import {BILLING_CYCLES,SUBSCRIPTION_STATES,annualCost,money} from '../subscription-data.js';
 export const subscriptionFields=['name','account','amount','currency','cycle','state','canceledOn','renewal','notice','url','notes'];
 export function SubscriptionsView(){
@@ -41,6 +41,6 @@ export function SubscriptionResearch(record){
   const current=annualCost(record);
   return Disclosure(`Alternatives · checked ${r.checked}`,[Note(`${r.country} · ${r.summary}`),...(r.requirements?[Note(`Required features: ${r.requirements}`)]:[]),...r.options.map(o=>{
     const alternative=annualCost(o),saving=current===null?null:Math.round((current-alternative)*100)/100;
-    return RecordRow({title:o.name,detail:`${money(o.amount,o.currency)} · ${BILLING_CYCLES[o.cycle]}${saving>0?` · Potential ${money(saving,o.currency)}/year less`:saving!==null?' · No annual price saving':''}`,notes:o.terms,actions:[Link('View pricing',o.url,{rel:'noopener noreferrer'})]});
+    return RecordRow({title:o.name,detail:`${money(o.amount,o.currency)} · ${BILLING_CYCLES[o.cycle]}${saving>0?` · Potential ${money(saving,o.currency)}/year less`:saving!==null?' · No annual price saving':''}`,notes:o.terms,actions:[RowLink(OPEN_GLYPH,`Open the pricing page for ${o.name}`,o.url,{rel:'noopener noreferrer'})]});
   }),Note('Compare required features, taxes, eligibility and switching costs before changing plans. Savings compare listed ongoing prices; annual plans may require upfront payment.')]);
 }

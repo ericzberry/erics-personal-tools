@@ -53,9 +53,12 @@
 .tool-title-block .notice:empty{display:none}
 .finance-ledger .notice:empty,.finance-ledger .footnote:empty,.personal-records .notice:empty,.personal-records .footnote:empty{display:none}
 .travel-wallet .record-group{display:grid;gap:0}
-/* Category labels head each run of records. They are quiet, uppercase, and
-   ruled so a group reads as one block instead of a floating serif heading. */
-.travel-wallet .group-title{font:600 11px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--wallet-muted)}
+/* A group's label heads its records, so it is never set below them: it carries
+   the rows' own size and ink and one step more weight, and is told apart from
+   them by its rule and by the space around it rather than by being shrunk and
+   greyed. A category in smaller, paler type than the records inside it inverts
+   the hierarchy, and the run reads as rows with a caption stuck above them. */
+.travel-wallet .group-title{font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--wallet-ink)}
 .travel-wallet .record-group-title{padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
 .travel-wallet .record-search{display:grid;gap:12px}
 /* Matches the shared .form-field input specificity so the compact size applies. */
@@ -63,6 +66,28 @@
 .travel-wallet .record-search .form-field>input:hover:not(:disabled){border-color:var(--wallet-control-line)}
 .travel-wallet .record-search .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .travel-wallet .record-row{padding:0;border-bottom:1px solid var(--wallet-line);min-width:0}
+/* One record is one line: its name along the left, and its own actions at the
+   end of that line. They wait out of sight until the row is pointed at or
+   reached by keyboard; where there is no pointer to hover with they are simply
+   there. A word-wide row of Edit and Delete under every record would double the
+   length of the list and outshout the records in it. */
+.travel-wallet .record-line{display:flex;align-items:center;gap:8px;min-height:30px}
+.travel-wallet .record-name{flex:1;min-width:0;font-size:13px;font-weight:500}
+.travel-wallet .record-line>.action-group{flex:none;gap:0;margin:0}
+.travel-wallet .record-line>.action-group:empty{display:none}
+.travel-wallet .row-action{width:26px;min-height:26px;padding:5px;border:0;background:transparent;display:grid;place-items:center;opacity:0;transition:opacity .12s ease;color:var(--wallet-muted)}
+.travel-wallet a.row-action{text-decoration:none}
+.travel-wallet .row-action--danger{color:var(--wallet-danger)}
+/* A group's own verbs ride on its heading line and answer to that line alone,
+   so pointing at a group does not light up every record inside it. */
+.travel-wallet .group-line{display:flex;align-items:center;gap:8px}
+.travel-wallet .group-line>.action-group{flex:none;gap:0;margin:0}
+.travel-wallet .group-line>.action-group:empty{display:none}
+.travel-wallet .record-row:hover .row-action,.travel-wallet .record-row:focus-within .row-action,
+.travel-wallet .group-line:hover .row-action,.travel-wallet .group-line:focus-within .row-action,
+.travel-wallet .row-action:focus-visible{opacity:1}
+.travel-wallet .row-action:disabled{opacity:0}
+@media(prefers-reduced-motion:reduce){.travel-wallet .row-action{transition:none}}
 /* A separator sits between records, never after the last one: a closing rule
    would land a gap above the rule that opens whatever follows the run, and the
    pair reads as two bars with nothing between them. Which element carries that
@@ -103,6 +128,9 @@
   .travel-wallet .form-stack button{min-height:44px}
   .travel-wallet .record-row-content button{min-height:28px}
   .travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]) .row-copy{opacity:1}
+  .travel-wallet .record-line{min-height:36px}
+  .travel-wallet .row-action{opacity:1;width:32px;min-height:32px}
+  .travel-wallet .row-action:disabled{opacity:.4}
 }
 /* Unlocked mobile records keep the number and its copy action together. */
 .travel-wallet .record-number-line{display:flex;align-items:center;gap:4px;padding:0 0 4px}.travel-wallet .record-number-line .travel-number{font-size:15px;font-weight:500;letter-spacing:.01em}.travel-wallet .record-number-line .row-copy{opacity:1}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle{min-height:22px;padding:4px 18px 0 0}.travel-wallet .record-row:has(.record-number-line) .record-row-toggle strong{font-size:12px;color:var(--wallet-muted)}

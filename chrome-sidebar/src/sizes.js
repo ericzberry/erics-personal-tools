@@ -1,5 +1,5 @@
 import {SizesView,SizeGroup,SizeRow} from './components/sizes.js';
-import {Button,IconButton,EDIT_GLYPH,DELETE_GLYPH,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
+import {Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
 import {normalizeSize,groupSizes,classifySize,sizeParts,brandNames} from './size-data.js';
 const fields=['brand','item','size','fit'];
 
@@ -13,14 +13,10 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
     button.addEventListener('click',handler);
     return button;
   };
-  // A row's own action. The glyph is the verb and the label is what a screen
-  // reader and a paused pointer are told, so it names the size it would act on
-  // rather than saying "Edit" twelve times down the list.
-  const rowAction=(glyph,label,handler,className='')=>{
-    const button=IconButton(glyph,label,{className:`size-action ${className}`.trim(),disabled:busy||!loaded});
-    button.addEventListener('click',handler);
-    return button;
-  };
+  // A row's own action, named for the size it would act on rather than saying
+  // "Edit" twelve times down the list.
+  const rowAction=(glyph,label,handler,danger=false)=>
+    RowAction(glyph,label,handler,{danger,disabled:busy||!loaded});
   function clearForm(){
     editing=null;
     for(const key of fields)$(key).value='';
@@ -36,7 +32,7 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
   function row(record,names){
     const {name,size}=sizeParts(record,names);
     const line=[name,size].filter(Boolean).join(' · ');
-    const remove=rowAction(DELETE_GLYPH,`Delete ${line}`,()=>{confirmation.hidden=false;yes.focus();},'size-action--danger');
+    const remove=rowAction(DELETE_GLYPH,`Delete ${line}`,()=>{confirmation.hidden=false;yes.focus();},true);
     const yes=action('Delete from all devices',()=>save(record,'DELETE'),'danger');
     const no=action('Keep size',()=>{confirmation.hidden=true;remove.focus();});
     // The question names the row as the list reads it, not the word the record

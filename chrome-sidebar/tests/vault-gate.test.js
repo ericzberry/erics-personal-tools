@@ -85,7 +85,10 @@ test('personal information loads nothing while locked and opens a value only thr
   await settle(()=>requests>0&&h.document.body.textContent.includes('Synthetic passport'));
   assert.equal(vault.prompts(),asked+1,'arriving asks for the passkey once, without a button press');
   assert.equal(h.document.body.textContent.includes('X1234567'),false,'the value stays sealed until it is revealed');
-  [...h.document.querySelectorAll('#personal-list button')].find(button=>button.textContent==='Show value').click();
+  // The record's own verbs are glyphs at the end of its line, so the action is
+  // found by the name it gives a screen reader rather than by a word under it.
+  [...h.document.querySelectorAll('#personal-list button')]
+    .find(button=>button.getAttribute('aria-label')==='Show the value of Synthetic passport').click();
   await settle(()=>h.document.body.textContent.includes('X1234567'));
   assert.match(h.document.getElementById('personal-list').textContent,/X1234567 · Synthetic notes/);
   tool.stop();h.restore();

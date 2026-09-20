@@ -1,5 +1,5 @@
 import {SubscriptionsView,SubscriptionEvidence,SubscriptionResearch,subscriptionFields} from './components/subscriptions.js';
-import {Button,RecordRow,Stack,Note,ActionGroup,Link,setStatus} from './components/ui.js';
+import {Button,RecordRow,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,OPEN_GLYPH,Stack,Note,ActionGroup,setStatus} from './components/ui.js';
 import {normalizeSubscription,parseSubscriptionReading,mergeSubscriptionReading,subscriptionKey,annualCost,money,BILLING_CYCLES,estimatedRenewal,subscriptionAlerts,chargeKey} from './subscription-data.js';
 import {mountVaultGate} from './vault-gate.js';
 import {attachFileDrop} from './components/file-drop.js';
@@ -16,6 +16,10 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
   const researcher=aiConnections({load:async token=>(await remote(token,'/v1/ai-connections')).connections,provider:'openai',need:'to research prices.'});
   const status=(message,target='status',tone='')=>setStatus($(target),message,tone);
   const action=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:busy||!loaded});b.addEventListener('click',fn);return b;};
+  // A subscription's own verbs, at the end of its line. What a record is asking
+  // to have decided — terms to review, charges to confirm, a conflict — needs a
+  // sentence, so it is not a row verb and waits in words under the record.
+  const rowAction=(glyph,label,fn,danger=false)=>RowAction(glyph,label,fn,{danger,disabled:busy||!loaded});
   function resetForm(){editing=null;for(const key of subscriptionFields)$(key).value='';$('currency').value='USD';$('cycle').value='unknown';$('state').value='Active';$('notice').value='14';status('','form-status');}
   function edit(record){editing=record;for(const key of subscriptionFields)$(key).value=record[key]??'';$('editor').open=true;$('name').focus();}
   function render(){
@@ -23,15 +27,21 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
     for(const r of records.filter(r=>r.state==='Active'&&!r.deleting&&!r.conflict)){const n=annualCost(r);if(n===null)unknown++;else totals.set(r.currency,(totals.get(r.currency)||0)+n);}
     $('total').textContent=[...totals].map(([c,n])=>`${money(n,c)}/year confirmed`).concat(unknown?[`${unknown} active with unknown cost`]:[]).join(' · ');
     const rows=records.map(r=>{
-      const remove=action('Delete',()=>{confirm.hidden=false;},'danger-subtle');
+      const remove=rowAction(DELETE_GLYPH,`Delete ${r.name}`,()=>{confirm.hidden=false;},true);
       const confirm=Stack([Note(`Delete ${r.name} and its saved charge evidence from all devices?`),ActionGroup([action('Delete record',()=>save(r,'DELETE'),'danger'),action('Keep record',()=>{confirm.hidden=true;})],{compact:true})],{hidden:true});
       const due=['Canceled','Not recurring'].includes(r.state)?'':r.renewal||estimatedRenewal(r);
       const alerts=subscriptionAlerts(r);
-      const controls=[...(r.state!=='Review'||r.conflict?[action('Edit',()=>edit(r),'subtle')]:[]),...(!r.conflict&&!r.deleting?[action('Find alternatives',()=>research(r))]:[]),remove];
-      if(!r.conflict&&!r.deleting&&r.state==='Review')controls.unshift(action('Review terms',()=>edit(r),'primary'),action('Not recurring',()=>save({...r,state:'Not recurring'})));
-      if(alerts.length)controls.unshift(action('Mark charges reviewed',()=>save({...r,reviewedCharges:r.charges.map(chargeKey)})));
-      if(r.conflict)controls.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>run(token=>offline.resolve(token,r.id,choice)))));
-      return Stack([RecordRow({title:r.name,detail:[r.state,money(r.amount,r.currency),BILLING_CYCLES[r.cycle],r.account,r.state==='Canceled'?(r.canceledOn?`Cancellation effective ${r.canceledOn}`:'Add the cancellation date to check later charges'):'',due?`${r.renewal?'Renewal':'Estimated next charge'} ${due}`:'',r.pending?(r.conflict?'Conflict':r.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · '),notes:[...alerts.map(a=>a.reason),r.notes].filter(Boolean).join('\n'),actions:controls}),...(r.url?[Link('Open account',r.url,{rel:'noopener noreferrer'})]:[]),SubscriptionEvidence(r),SubscriptionResearch(r),confirm].filter(Boolean));
+      const controls=[...(r.state!=='Review'||r.conflict?[rowAction(EDIT_GLYPH,`Edit ${r.name}`,()=>edit(r))]:[]),
+        ...(r.url?[RowLink(OPEN_GLYPH,`Open the ${r.name} account`,r.url,{rel:'noopener noreferrer'})]:[]),remove];
+      // What this record is asking to have decided, for this record only.
+      const decisions=[
+        ...(!r.conflict&&!r.deleting&&r.state==='Review'?[action('Review terms',()=>edit(r),'primary'),action('Not recurring',()=>save({...r,state:'Not recurring'}))]:[]),
+        ...(alerts.length?[action('Mark charges reviewed',()=>save({...r,reviewedCharges:r.charges.map(chargeKey)}))]:[]),
+        ...(!r.conflict&&!r.deleting?[action('Find alternatives',()=>research(r))]:[]),
+        ...(r.conflict?['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>run(token=>offline.resolve(token,r.id,choice)))):[])
+      ];
+      return RecordRow({title:r.name,detail:[r.state,money(r.amount,r.currency),BILLING_CYCLES[r.cycle],r.account,r.state==='Canceled'?(r.canceledOn?`Cancellation effective ${r.canceledOn}`:'Add the cancellation date to check later charges'):'',due?`${r.renewal?'Renewal':'Estimated next charge'} ${due}`:'',r.pending?(r.conflict?'Conflict':r.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · '),notes:[...alerts.map(a=>a.reason),r.notes].filter(Boolean).join('\n'),actions:controls,
+        extra:[decisions.length?ActionGroup(decisions,{compact:true}):null,SubscriptionEvidence(r),SubscriptionResearch(r),confirm].filter(Boolean)});
     });
     $('records').replaceChildren(...(rows.length?rows:loaded?[Note('No subscriptions saved yet. Read a statement or add one below.')]:[]));
     for(const key of [...subscriptionFields,'import-account','text','country','requirements','file','read','save','cancel','drop','clear-statement'])$(key).disabled=busy||!loaded;

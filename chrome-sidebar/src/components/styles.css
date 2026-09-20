@@ -366,7 +366,8 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
 
 /* Bounded settings sections keep status, fields, and their actions together. */
 .settings-group { display: grid; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
-.settings-group-title { font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+/* A section's name is never set below the rows it heads. */
+.settings-group-title { font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
 .settings-group > .form-stack { padding-bottom: 0; }
 .settings-group .action-group { margin: 0; }
 .action-group--compact { flex-wrap: wrap; justify-content: flex-start; margin: 0; }
@@ -397,6 +398,14 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
 .record-row { padding: 12px 0; border-bottom: 1px solid var(--line, #d9ded5); overflow-wrap: anywhere; }
 .record-row > p { margin: 5px 0; }
 .record-row .action-group { margin-top: 8px; }
+/* A record's own actions sit at the end of its name's line, never in a row of
+   their own under it. See DESIGN.md; the wallet sets the sizes. */
+.record-line { display: flex; align-items: center; gap: 8px; }
+.record-line > .record-name { flex: 1; min-width: 0; }
+.record-line > .action-group { flex: none; margin: 0; }
+.record-line > .action-group:empty { display: none; }
+.icon-button, .row-action { display: grid; place-items: center; }
+a.row-action { text-decoration: none; color: inherit; }
 .app-header { flex-wrap: wrap; }
 .app-header .button-secondary { font-size: 11px; padding: 5px 8px; }
 

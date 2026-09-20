@@ -1,5 +1,5 @@
 import {PersonalView,PersonalGroup} from './components/personal.js';
-import {RecordRow,Button,Note,Stack,ActionGroup,MaskedValue,setStatus} from './components/ui.js';
+import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,COPY_GLYPH,Note,Stack,ActionGroup,MaskedValue,setStatus} from './components/ui.js';
 import {normalizePersonal,validatePersonalPayload,groupPersonalRecords,expiringPersonal} from './personal-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {sealSecret} from './secret-vault.js';
@@ -20,6 +20,10 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,revealTimer=null;
   const revealed=new Map();
   const status=(text,tone='')=>setStatus($('status'),text,tone);
+  // A record's own verbs, named for the record they would act on rather than
+  // repeating one word down a list of them.
+  const rowAction=(glyph,label,handler,danger=false)=>
+    RowAction(glyph,label,handler,{danger,disabled:busy||!loaded});
   const action=(label,handler,variant='secondary',{enabled=false}={})=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||(!loaded&&!enabled)});
     button.addEventListener('click',handler);
@@ -69,19 +73,25 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
     const visible=records.filter(record=>[record.label,record.category,record.person,record.hint].join(' ').toLowerCase().includes(query));
     const row=record=>{
       const shown=revealed.get(record.id);
-      const remove=action('Delete',()=>{confirmation.hidden=false;yes.focus();},'danger-subtle');
+      const remove=rowAction(DELETE_GLYPH,`Delete ${record.label}`,()=>{confirmation.hidden=false;yes.focus();},true);
       const yes=action('Delete from all devices',()=>save(record,'DELETE'),'danger');
       const no=action('Keep record',()=>{confirmation.hidden=true;remove.focus();});
       const confirmation=Stack([Note(`Permanently delete “${record.label}” from all devices?`),ActionGroup([yes,no],{compact:true})],{hidden:true});
       const actions=[
-        shown?action('Hide value',()=>{revealed.delete(record.id);render();}):action('Show value',()=>reveal(record)),
-        action('Copy value',()=>copy(record),'subtle'),
-        action('Edit',()=>run(()=>edit(record)),'subtle'),
+        shown
+          ?rowAction(HIDE_GLYPH,`Hide the value of ${record.label}`,()=>{revealed.delete(record.id);render();})
+          :rowAction(SHOW_GLYPH,`Show the value of ${record.label}`,()=>reveal(record)),
+        rowAction(COPY_GLYPH,`Copy the value of ${record.label}`,()=>copy(record)),
+        rowAction(EDIT_GLYPH,`Edit ${record.label}`,()=>run(()=>edit(record))),
         remove
       ];
-      if(record.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))));
+      // A conflict is a question this record is asking, so it stays in words
+      // under it until one of the two answers is chosen.
+      const decide=record.conflict
+        ?[ActionGroup(['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))),{compact:true})]
+        :[];
       const detail=[record.person,record.hint,record.expires?`Expires ${record.expires}`:'',record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
-      return Stack([RecordRow({title:record.label,detail,actions}),shown?MaskedValue(shown):null]);
+      return RecordRow({title:record.label,detail,actions,extra:[shown?MaskedValue(shown):null,...decide,confirmation]});
     };
     $('list').replaceChildren(...(visible.length
       ?groupPersonalRecords(visible).map(group=>PersonalGroup(group.category,group.records.map(row)))
@@ -90,7 +100,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
     $('expiring').replaceChildren(...expiring.map(record=>RecordRow({
       title:record.label,
       detail:record.days<0?`Expired ${record.expires}`:record.days===0?'Expires today':`Expires in ${record.days} day${record.days===1?'':'s'} · ${record.expires}`,
-      actions:[action('Review',()=>run(()=>edit(record)),'subtle')]
+      actions:[rowAction(EDIT_GLYPH,`Review ${record.label}`,()=>run(()=>edit(record)))]
     })));
     $('expiring').closest('section').hidden=!expiring.length;
     for(const key of [...fields,'value','notes'])$(key).disabled=busy||!loaded;

@@ -86,8 +86,11 @@ export function setProgress(bar,value=null) {
   else bar.removeAttribute('aria-valuenow');
   return bar;
 }
-// Small label heading a run of records. Sans-serif and quiet on purpose so it
-// reads as a divider between groups rather than competing with record names.
+// The label heading a run of records. It is never set below the records it
+// names: a category in smaller, paler type than its own rows inverts the
+// hierarchy, and the list then reads as rows with a caption stuck above them.
+// It is told apart from them by weight, by its rule, and by the space around
+// it. Sans-serif keeps it out of the way of the serif page title.
 export const GroupTitle=(text,{className='',...props}={})=>element('h2',{text,...props,className:`group-title ${className}`.trim()});
 export const SectionTitle=(title,action,props={})=>Stack([Heading(title,props.level||2,{id:props.titleId}),action],{className:'section-title'});
 // A tool's own title line: the name, the whole-tool actions that currently
@@ -359,11 +362,21 @@ export const SettingsItem=(title,children=[])=>Disclosure(title,children,{classN
 export const SettingsLink=(title,href)=>Link(title,href,{className:'settings-link'});
 
 // Flat saved-record pattern shared by personal trackers.
-// `notes` takes one line or several. Several stay inside the row rather than
-// being stacked under it, where the last one reads as the next record's first.
-export function RecordRow({title,detail,notes='',actions=[]}) {
+// The record's own actions ride at the end of its name's line, not in a row of
+// words under it: Edit and Delete repeated beneath every record double the
+// length of a list and end up the loudest thing in it, when the list is there
+// to be read down. `notes` takes one line or several. Several stay inside the
+// row rather than being stacked under it, where the last one reads as the next
+// record's first. `extra` is what this record raised and only it can answer — a
+// delete confirmation, a sync conflict, a revealed value — kept inside the row
+// so it stays visibly attached to the record that asked.
+export function RecordRow({title,detail,notes='',actions=[],extra=[]}) {
   const lines=(Array.isArray(notes)?notes:[notes]).filter(Boolean);
-  return Section([Strong(title),Note(detail),...lines.map(line=>Text(line)),ActionGroup(actions,{compact:true})],{className:'record-row'});
+  return Section([
+    Stack([Strong(title,{className:'record-name'}),
+      ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})],{className:'record-line'}),
+    Note(detail),...lines.map(line=>Text(line)),...extra.filter(Boolean)
+  ],{className:'record-row'});
 }
 
 export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true});
@@ -396,6 +409,32 @@ export function IconButton(path,label,{className='',...props}={}){
   const button=Button('',{className:`icon-button ${className}`.trim(),'aria-label':label,title:label,...props});
   button.append(Glyph(path,{size:16}));
   return button;
+}
+// The verbs a record's own line carries. A row action is one of these: a verb
+// that repeats down every row and is understood from its glyph alone. Anything
+// that needs a sentence to be understood — a confirmation, a sync conflict, a
+// decision only some records are asking for — is not a row action, and belongs
+// in words under the record that raised it.
+export const DONE_GLYPH='M5 12.5 10.5 18 19 6.5';
+export const UNDO_GLYPH='M4.5 10h10a4.5 4.5 0 0 1 0 9H9 M4.5 10l4-4 M4.5 10l4 4';
+export const SHOW_GLYPH='M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z';
+export const HIDE_GLYPH='M4 4l16 16 M9.8 5.9A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.6 4.3 M6.5 7.9A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1 0 2-.2 2.9-.5 M10.2 10.2a2.5 2.5 0 0 0 3.6 3.6';
+export const COPY_GLYPH='M9.5 8.5h9v11h-9z M14.5 8.5v-4h-9v11h4';
+export const OPEN_GLYPH='M14 4h6v6 M20 4l-8.5 8.5 M18 14.5V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10';
+export const HISTORY_GLYPH='M12 7.5V12l3.2 1.9 M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z';
+// A record's own action, at the end of its line. The glyph is the verb and the
+// label is what a screen reader and a paused pointer are told, so it names the
+// record it would act on rather than saying "Delete" twelve times down a list.
+export function RowAction(glyph,label,handler,{danger=false,className='',...props}={}){
+  const button=IconButton(glyph,label,{className:['row-action',danger?'row-action--danger':'',className].filter(Boolean).join(' '),...props});
+  if(handler)button.addEventListener('click',handler);
+  return button;
+}
+// The same action where it is a link: opening the record's own page elsewhere.
+export function RowLink(glyph,label,href,{className='',...props}={}){
+  const link=Link('',href,{className:`row-action ${className}`.trim(),'aria-label':label,title:label,...props});
+  link.append(Glyph(glyph,{size:16}));
+  return link;
 }
 
 // Values that stay sealed until the device vault is unlocked. The masked form

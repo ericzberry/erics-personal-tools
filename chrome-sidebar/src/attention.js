@@ -1,5 +1,5 @@
 import {AttentionView} from './components/attention.js';
-import {Button,RecordRow,Note,setStatus} from './components/ui.js';
+import {Button,RecordRow,RowAction,OPEN_GLYPH,Note,setStatus} from './components/ui.js';
 import {attentionItems,ATTENTION_SOURCES} from './attention-data.js';
 import {mountVaultGate} from './vault-gate.js';
 export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings=()=>{},vault}={}){
@@ -21,7 +21,7 @@ export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings
       const items=attentionItems(data);
       $('coverage').replaceChildren(...coverage.map(text=>Note(text)));
       $('records').replaceChildren(...(items.length?items.map(item=>{
-        const open=Button(`Open ${ATTENTION_SOURCES[item.tool]}`,{variant:'secondary',size:'compact'});open.addEventListener('click',()=>onOpen(item.tool,item.recordId));
+        const open=RowAction(OPEN_GLYPH,`Open ${item.title} in ${ATTENTION_SOURCES[item.tool]}`,()=>onOpen(item.tool,item.recordId));
         return RecordRow({title:item.title,detail:[item.reason,item.due,item.pending?'Waiting to sync':''].filter(Boolean).join(' · '),actions:[open]});
       }):[Note(failures?'No attention items in the sources that could be checked. Other sources are unavailable.':'Nothing needs attention in the saved records checked.')]));
       // Items waiting and sources that could not be checked are both things to

@@ -1,5 +1,5 @@
 import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionDetail} from './components/finance.js';
-import {RecordRow,Button,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
+import {RecordRow,Button,RowAction,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
@@ -55,6 +55,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     button.addEventListener('click',handler);
     return button;
   };
+  // A figure's own verbs, named for the figure they would act on: a list of
+  // portfolios is read down, and "Edit" repeated under every line is not.
+  const rowAction=(glyph,label,handler,danger=false)=>
+    RowAction(glyph,label,handler,{danger,disabled:busy||!loaded});
   const toolAction=(label,handler)=>{
     const button=Button(label,{variant:'secondary',size:'compact',disabled:busy});
     button.addEventListener('click',handler);
@@ -453,18 +457,23 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         action('Keep it',()=>{confirm.hidden=true;})
       ],{compact:true})],{hidden:true});
       const past=Stack(row.history.slice(0,8).map(entry=>Note(`${entry.asOf} · ${money(signed(entry),portfolio.currency)}`)),{hidden:true});
+      const named=`${row.label} in ${portfolio.name}`;
       const actions=[
-        action('Edit',()=>fillFigure(mark),'subtle'),
-        ...(row.history.length>1?[action('History',()=>{past.hidden=!past.hidden;},'subtle')]:[]),
-        action('Delete',()=>{confirm.hidden=false;},'danger-subtle')
+        rowAction(EDIT_GLYPH,`Edit ${named}`,()=>fillFigure(mark)),
+        ...(row.history.length>1?[rowAction(HISTORY_GLYPH,`Earlier figures for ${named}`,()=>{past.hidden=!past.hidden;})]:[]),
+        rowAction(DELETE_GLYPH,`Delete ${named}`,()=>{confirm.hidden=false;},true)
       ];
-      if(mark.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(mark.id,choice))));
+      // A conflict is a question, not a row verb: it stays in words under the
+      // figure that raised it until one of the two answers is chosen.
+      const decide=mark.conflict
+        ?[ActionGroup(['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(mark.id,choice))),{compact:true})]
+        :[];
       // A liability is shown as what it does to the total. Without the sign a
       // mortgage reads like another asset, and only the portfolio's own figure
       // further down would say otherwise.
       const detail=[money(signed(mark),portfolio.currency),row.side==='liability'?'liability':'',`as of ${mark.asOf}`,
         mark.pending?(mark.conflict?'Conflict':mark.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
-      return Stack([RecordRow({title:row.label,detail,actions}),past,confirm]);
+      return RecordRow({title:row.label,detail,actions,extra:[past,...decide,confirm]});
     };
     // A position reads as what it is: a name, what kind of vehicle it is, what
     // it is worth, and underneath, the three flows the value alone cannot
@@ -480,9 +489,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         `${entry.asOf} · ${money(entry.value,portfolio.currency)} · funded ${money(entry.contributed,portfolio.currency)} · returned ${money(entry.distributed,portfolio.currency)}`
       )),{hidden:true});
       const actions=[
-        action('Edit',()=>fillInvestment(position),'subtle'),
-        ...(position.history.length>1?[action('History',()=>{past.hidden=!past.hidden;},'subtle')]:[]),
-        action('Delete',()=>{confirm.hidden=false;},'danger-subtle')
+        rowAction(EDIT_GLYPH,`Edit ${holding.name}`,()=>fillInvestment(position)),
+        ...(position.history.length>1?[rowAction(HISTORY_GLYPH,`Earlier figures for ${holding.name}`,()=>{past.hidden=!past.hidden;})]:[]),
+        rowAction(DELETE_GLYPH,`Delete ${holding.name}`,()=>{confirm.hidden=false;},true)
       ];
       const detail=[money(position.value,portfolio.currency),
         current?`as of ${current.asOf}`:'no statement yet',
@@ -492,7 +501,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       // paperwork calls it. Run into the figures it reads as one of them.
       const notes=[positionDetail(position,portfolio.currency),
         position.disputed?`The statement calls this a ${vehicleLabel(holding.stated)}.`:''];
-      return Stack([RecordRow({title:`${holding.name} · ${vehicleShort(holding.vehicle)}`,detail,notes,actions}),past,confirm]);
+      return RecordRow({title:`${holding.name} · ${vehicleShort(holding.vehicle)}`,detail,notes,actions,extra:[past,confirm]});
     };
     $('list').replaceChildren(...(groups.length?groups.map(group=>{
       const portfolio=group.portfolio;
@@ -500,13 +509,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
         action('Delete portfolio',async()=>{if(await remove(portfolio))onChanged();},'danger'),
         action('Keep it',()=>{confirm.hidden=true;})
       ],{compact:true})],{hidden:true});
-      return Stack([PortfolioGroup({
+      return PortfolioGroup({
         name:portfolio.name,currency:portfolio.currency,total:group.total,
         meta:[registrationLabel(portfolio.kind),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
+        actions:[rowAction(EDIT_GLYPH,`Rename ${portfolio.name}`,()=>fillPortfolio(portfolio)),
+          rowAction(DELETE_GLYPH,`Delete ${portfolio.name}`,()=>{confirm.hidden=false;},true)],
         rows:[...group.rows.map(row=>figure(portfolio,row)),
-          ...group.positions.map(position=>investment(portfolio,position)),
-          ActionGroup([action('Rename',()=>fillPortfolio(portfolio),'subtle'),action('Delete portfolio',()=>{confirm.hidden=false;},'danger-subtle')],{compact:true})]
-      }),confirm]);
+          ...group.positions.map(position=>investment(portfolio,position)),confirm]
+      });
     }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one below.')]));
     renderPosition();
   }

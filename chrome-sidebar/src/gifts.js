@@ -1,5 +1,5 @@
 import {GiftsView,GiftGroup} from './components/gifts.js';
-import {RecordRow,Button,Note,Stack,ActionGroup,Link,setStatus} from './components/ui.js';
+import {RecordRow,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,UNDO_GLYPH,OPEN_GLYPH,Note,Stack,ActionGroup,setStatus} from './components/ui.js';
 import {normalizeGift,groupGifts,isBought,bought,unbought} from './gift-data.js';
 const fields=['person','idea','link'];
 
@@ -8,6 +8,9 @@ export function mountGifts(root,{credentials,offline,onSettings=()=>{},onChanged
   const $=id=>root.querySelector(`#gifts-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;
   const status=(text,tone='')=>setStatus($('status'),text,tone);
+  // An idea's own verbs, named for the idea they would act on.
+  const rowAction=(glyph,label,handler,danger=false)=>
+    RowAction(glyph,label,handler,{danger,disabled:busy||!loaded});
   const action=(label,handler,variant='secondary',{enabled=false}={})=>{
     const button=Button(label,{variant,size:'compact',disabled:busy||(!loaded&&!enabled)});
     button.addEventListener('click',handler);
@@ -26,16 +29,22 @@ export function mountGifts(root,{credentials,offline,onSettings=()=>{},onChanged
     $('editor').open=true;$('idea').focus();
   }
   function row(record){
-    const remove=action('Delete',()=>{confirmation.hidden=false;yes.focus();},'danger-subtle');
+    const remove=rowAction(DELETE_GLYPH,`Delete ${record.idea}`,()=>{confirmation.hidden=false;yes.focus();},true);
     const yes=action('Delete from all devices',()=>save(record,'DELETE'),'danger');
     const no=action('Keep idea',()=>{confirmation.hidden=true;remove.focus();});
     const confirmation=Stack([Note(`Permanently delete “${record.idea}” from all devices?`),ActionGroup([yes,no],{compact:true})],{hidden:true});
-    const actions=[action(isBought(record)?'Back to ideas':'Bought',()=>save(isBought(record)?unbought(record):bought(record)))];
-    if(record.link)actions.push(Link('Open',record.link));
-    actions.push(action('Edit',()=>edit(record),'subtle'),remove);
-    if(record.conflict)actions.push(...['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))));
+    const actions=[isBought(record)
+      ?rowAction(UNDO_GLYPH,`Put ${record.idea} back among the ideas`,()=>save(unbought(record)))
+      :rowAction(DONE_GLYPH,`Mark ${record.idea} bought`,()=>save(bought(record)))];
+    if(record.link)actions.push(RowLink(OPEN_GLYPH,`Open the page for ${record.idea}`,record.link));
+    actions.push(rowAction(EDIT_GLYPH,`Edit ${record.idea}`,()=>edit(record)),remove);
+    // A conflict is a question this idea is asking, so it waits in words under
+    // it rather than becoming another glyph on the line.
+    const decide=record.conflict
+      ?[ActionGroup(['local','cloud'].map(choice=>action(choice==='local'?'Keep my change':'Use cloud version',()=>resolve(record.id,choice))),{compact:true})]
+      :[];
     const detail=record.pending?(record.conflict?'Conflict':record.deleting?'Pending deletion':'Waiting to sync'):'';
-    return Stack([RecordRow({title:record.idea,detail,actions}),confirmation]);
+    return RecordRow({title:record.idea,detail,actions,extra:[...decide,confirmation]});
   }
   function render(){
     const query=$('search').value.trim().toLowerCase();
