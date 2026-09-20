@@ -27,12 +27,14 @@ function environment(extra = {}) {
   };
 }
 
-// Cloudflare's own shape: a listing that already carries each database's size,
-// and a detail call for one that did not.
-const cloudflare = (databases, {calls = [], detailOnly = false} = {}) => async (url, options) => {
+// Cloudflare's own shapes. Its real listing carries file_size and no
+// num_tables, which is `full: false`; `detailOnly` is a listing with neither;
+// the default is a listing that happens to carry both.
+const cloudflare = (databases, {calls = [], detailOnly = false, full = true} = {}) => async (url, options) => {
   calls.push({url: String(url), auth: options?.headers?.Authorization});
   const path = String(url).split('/accounts/acct')[1];
-  const strip = database => detailOnly ? {uuid: database.uuid, name: database.name} : database;
+  const strip = database => detailOnly ? {uuid: database.uuid, name: database.name}
+    : full ? database : {uuid: database.uuid, name: database.name, file_size: database.file_size};
   if (path.startsWith('/d1/database?')) return Response.json({success: true, result: databases.map(strip)});
   const found = databases.find(database => path === `/d1/database/${database.uuid}`);
   return found ? Response.json({success: true, result: found})
@@ -55,6 +57,16 @@ test('a reading names every database, sorts by size, and measures the worse of t
   // One listing is enough when the listing already carries the sizes.
   assert.equal(calls.length, 1);
   assert.equal(calls[0].auth, 'Bearer cf-read-token');
+});
+
+// Cloudflare's own listing gives a size and no table count, so a size alone is
+// not enough to skip the detail call: taking it would report every database as
+// having no tables.
+test('a listing without a table count is not mistaken for a complete one', async () => {
+  const calls = [];
+  const usage = await measureUsage(environment(), {fetcher: cloudflare([db('erics-personal-tools', 311296, 25)], {calls, full: false})});
+  assert.equal(calls.length, 2);
+  assert.deepEqual(usage.databases, [{name: 'erics-personal-tools', bytes: 311296, tables: 25}]);
 });
 
 test('a database the listing did not size is asked for by itself, and nothing beyond the cap is asked for at all', async () => {

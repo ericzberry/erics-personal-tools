@@ -59,9 +59,12 @@ export async function measureUsage(env, {fetcher = fetch, now = new Date()} = {}
   const listed = (await cloudflare(env, '/d1/database?per_page=100', fetcher) || []).slice(0, MAX_DATABASES);
   const databases = [];
   for (const entry of listed) {
-    // The listing usually carries the size already; only ask again for the ones
-    // where it did not, so the common case is a single request.
-    const detail = Number.isFinite(entry?.file_size) ? entry : await cloudflare(env, `/d1/database/${entry.uuid}`, fetcher);
+    // The listing carries the size but not the table count, so a database is
+    // asked about by itself unless a listing turns up with both. Checking for
+    // both is the point: reading only `file_size` here is what put "0 tables"
+    // on the screen, because a missing field is not a zero.
+    const complete = Number.isFinite(entry?.file_size) && Number.isFinite(entry?.num_tables);
+    const detail = complete ? entry : await cloudflare(env, `/d1/database/${entry.uuid}`, fetcher);
     databases.push({
       name: String(detail?.name || entry?.name || 'database').slice(0, 80),
       bytes: Number(detail?.file_size) || 0,
