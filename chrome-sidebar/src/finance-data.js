@@ -61,9 +61,15 @@ export const ASSET_CLASSES=[
   {code:1,id:'stocks',label:'Stocks',side:'asset',group:'liquid'},
   {code:2,id:'bonds',label:'Bonds',side:'asset',group:'liquid'},
   {code:3,id:'cash',label:'Cash',side:'asset',group:'liquid'},
-  {code:4,id:'pe',label:'Private equity',side:'asset',group:'illiquid'},
-  {code:5,id:'vc',label:'Venture capital',side:'asset',group:'illiquid'},
-  {code:6,id:'hedge',label:'Hedge funds',side:'asset',group:'illiquid'},
+  // One class for everything held through a fund. It was three — private
+  // equity, venture capital, hedge funds — and the split asked a question the
+  // owner does not ask: what is in funds, and what can be sold this week. A
+  // commitment to a venture fund and one to a buyout fund behave the same way
+  // in this ledger, and telling them apart cost a decision on every figure that
+  // arrived. Code 4 is kept rather than replaced because every figure already
+  // stored under it was private equity, which is a fund investment: the name
+  // widens, so nothing already written becomes untrue.
+  {code:4,id:'funds',label:'Fund investments',side:'asset',group:'illiquid'},
   {code:7,id:'property',label:'Real estate',side:'asset',group:'illiquid'},
   {code:8,id:'other',label:'Other',side:'asset',group:'illiquid'},
   // Value that is here but not yet placed at all — an account total read off a
@@ -143,7 +149,15 @@ export const MAX_DATES=240;
 export const MAX_PORTFOLIOS=200;
 export const MAX_HOLDINGS=400;
 export const MAX_PROPERTIES=200;
-export const assetClass=code=>ASSET_CLASSES.find(entry=>entry.code===Number(code))||null;
+// Venture capital and hedge funds, merged into Fund investments. The codes are
+// retired rather than reused — a code is what is stored — and they resolve here
+// so that a figure written before the merge reads as what it always was instead
+// of as "Class 5". The marks table is migrated; a holding carries its class
+// inside an encrypted blob that no SQL pass can reach, so this is the only
+// thing standing between such a holding and a name nobody can read.
+const MERGED_CLASSES={5:4,6:4};
+export const canonicalClass=code=>MERGED_CLASSES[Number(code)]??Number(code);
+export const assetClass=code=>ASSET_CLASSES.find(entry=>entry.code===canonicalClass(code))||null;
 export const classById=id=>ASSET_CLASSES.find(entry=>entry.id===id)||null;
 export const classLabel=code=>assetClass(code)?.label||`Class ${code}`;
 export const classSide=code=>assetClass(code)?.side||'asset';
@@ -527,7 +541,7 @@ export function positionsOn(records,when){
 // A position counts exactly like a class figure, because that is what it is —
 // a named one. Everything that groups, signs, totals or dates a figure works on
 // it unchanged, which is why positions needed no second set of any of that.
-const positionFigure=position=>({portfolio:position.holding.portfolio,class:position.holding.class,
+const positionFigure=position=>({portfolio:position.holding.portfolio,class:canonicalClass(position.holding.class),
   asOf:position.current.asOf,amount:position.value,holding:position.holding.number});
 const livePositions=(records,mine,when)=>positionsOn(records,when)
   .filter(position=>position.current&&mine.has(position.holding.portfolio));
@@ -971,6 +985,19 @@ const STOCK_PLAN=/\b(stock plan|dsp|espp|rsu|equity (award|plan)|restricted stoc
 // dropped. The wording is what says so, so the device says it rather than
 // hoping the reading scoped it right.
 const PLAN_VALUE=/\b(unvested|potential|projected|unexercis\w*)\b[^\n]*\b(value|benefit|balance|amount)\b/i;
+// What an account called Brokerage holds depends on who is holding it. At a
+// wealth manager it is where the fund investments sit — the dashboard prints
+// one total and never says so — while everywhere else the word means what it
+// sounds like. So this is asked per institution rather than of the word, and
+// only institutions whose Brokerage accounts have actually been looked at are
+// listed here.
+//
+// Such an account is not purely funds: a few per cent of it is treasuries held
+// against the calls. The dashboard states one figure for the account and no
+// page beneath it breaks the two apart, so the choice is between filing the
+// whole balance as funds and filing it as marketable securities. Funds is wrong
+// by the three per cent; liquid securities is wrong by the other ninety-seven.
+const FUND_ACCOUNTS={ubs:/\bbrokerage\b/i};
 export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
   const CASH=classById('cash').code,LIQUID=classById('liquid').code;
   // What a figure is in, when the reading did not say. A site answers for its
@@ -998,6 +1025,11 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // one group, the words "credit cards" were somewhere in it, and $16.4M of
     // assets was offered as -$18,537,244 owed. A card says so on its own row.
     if(CARD.test(`${reading.account||''} ${own}`)&&classSide(reading.class)!=='liability')return classById('credit').code;
+    // Forced, like the stock plan above and for the same reason: the page says
+    // Brokerage and means funds, so a reading that reports marketable
+    // securities is reporting the page faithfully and the ledger wrongly.
+    const holds=FUND_ACCOUNTS[matchKey(institution)];
+    if(holds&&holds.test(`${reading.account||''} ${own}`))return classById('funds').code;
     if(reading.class===BONDS)return LIQUID;
     if(reading.class!==UNCLASSIFIED)return reading.class;
     if(INVESTED.test(said))return defaultClass===CASH||!defaultClass?LIQUID:defaultClass;
@@ -1259,10 +1291,10 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
       // What it says it is, until the owner says otherwise. Nothing here
       // second-guesses the paperwork; the disagreement is recorded, not decided.
       vehicle:(said||vehicleById('fund')).code,stated:said?said.code:0,
-      // Private equity is the class a private position lands in, because
+      // Fund investments is the class a private position lands in, because
       // splitting venture from buyout off a fund's name would be a guess. One
       // edit moves it, and the row is where that edit is offered.
-      class:classById('pe').code,isNew:true};
+      class:classById('funds').code,isNew:true};
     madeHoldings.push(fresh);
     return fresh;
   };
@@ -1309,7 +1341,7 @@ export function foldCapital(statements,records,{today=new Date().toISOString().s
 // reduces to a portfolio and a class — two codes — and the record's whole
 // history comes across rather than only its newest figure.
 export const LEGACY_CLASSES={bank:'cash',brokerage:'liquid',retirement:'liquid',
-  private:'pe',business:'pe',realestate:'property',crypto:'other',vehicle:'other','other-asset':'other',
+  private:'funds',business:'funds',realestate:'property',crypto:'other',vehicle:'other','other-asset':'other',
   mortgage:'mortgage',loan:'loan',credit:'credit','other-liability':'loan'};
 // What a site's own kind says a figure is when the reading did not say. It is
 // the map above with one answer changed, and it is a second map rather than an

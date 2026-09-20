@@ -145,7 +145,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   function clearInvestmentForm(){
     investing=null;
     fillInvestmentPortfolios();
-    $('inv-name').value='';$('inv-vehicle').value=String(VEHICLES[0].code);$('inv-class').value=String(classById('pe').code);
+    $('inv-name').value='';$('inv-vehicle').value=String(VEHICLES[0].code);$('inv-class').value=String(classById('funds').code);
     for(const key of ['inv-commitment','inv-value','inv-funded','inv-returned'])$(key).value='';
     $('inv-asOf').value=today();
     formTitle('inv-title');

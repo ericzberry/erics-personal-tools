@@ -109,7 +109,7 @@ test('a capital account statement is read into an investment, reviewed, and save
   assert.match(document.getElementById('finance-breakdown').textContent,/Private investments/);
   // A breakdown line carries its own share of the group it is in, between the
   // class and the amount.
-  assert.match(document.getElementById('finance-breakdown').textContent,/Private equity100%\$1,100,000/);
+  assert.match(document.getElementById('finance-breakdown').textContent,/Fund investments100%\$1,100,000/);
   tool.stop();restore();
 });
 

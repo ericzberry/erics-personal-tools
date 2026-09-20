@@ -5,7 +5,7 @@ import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFi
   institutionName,registrationLabel,registrationFromName,
   markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,
   holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel,
-  LEGACY_CLASSES,SITE_CLASSES} from '../src/finance-data.js';
+  LEGACY_CLASSES,SITE_CLASSES,ASSET_CLASSES,classGroup,classSide,canonicalClass} from '../src/finance-data.js';
 
 const ESTATE='Eric and Ariana Berry Estate';
 const estate={row:'portfolio',number:1,name:ESTATE,kind:1,currency:'USD'};
@@ -319,7 +319,7 @@ test('every asset class rolls up to liquid or illiquid, and only unplaced value 
   const records=[
     {row:'portfolio',id:'p1',number:1,name:ESTATE,kind:1,currency:'USD'},
     ...[['cash',1000],['stocks',2000],['bonds',3000],['liquid',4000],['crypto',500],
-        ['pe',5000],['property',6000],['unvested',7000],['unclassified',9000]]
+        ['funds',5000],['property',6000],['unvested',7000],['unclassified',9000]]
       .map(([id,amount])=>({row:'mark',id:`1-${classById(id).code}-20260919`,portfolio:1,
         class:classById(id).code,asOf:'2026-09-19',amount}))
   ];
@@ -760,7 +760,7 @@ test('the record-per-account ledger migrates to portfolios and classes, keeping 
     ['Brokerage',ESTATE,'Liquid securities',2],
     ['Checking',ESTATE,'Cash',1],
     ['IRA','Eric Berry','Liquid securities',1],
-    ['Fund II','Berry Family Trust','Private equity',1]
+    ['Fund II','Berry Family Trust','Fund investments',1]
   ]);
 });
 
@@ -776,7 +776,7 @@ test('a record with no owner is titled by its institution on the way across',()=
 const TRUST='Berry Family Trust';
 const trust={row:'portfolio',number:3,name:TRUST,kind:5,currency:'USD'};
 const holding=(number,name,vehicle,portfolio,extra={})=>({
-  ...normalizeFinance({row:'holding',number,portfolio,name,vehicle,class:classById('pe').code,...extra}),id:holdingRef(number)});
+  ...normalizeFinance({row:'holding',number,portfolio,name,vehicle,class:classById('funds').code,...extra}),id:holdingRef(number)});
 const capital=(entry)=>({...normalizeFinance({row:'capital',...entry}),id:capitalRef(entry)});
 
 test('an investment and its capital account are their own rows, addressed apart from every other',()=>{
@@ -822,7 +822,7 @@ test('a position states what it cost as well as what it is worth, and counts as 
 
   const summary=financeSummary(records,{currency:'USD',today:'2026-07-01'});
   assert.equal(summary.net,1100000,'a position is an asset in its portfolio like any other figure');
-  assert.deepEqual(summary.byClass.map(row=>[row.label,row.total]),[['Private equity',1100000]]);
+  assert.deepEqual(summary.byClass.map(row=>[row.label,row.total]),[['Fund investments',1100000]]);
   assert.deepEqual(summary.byPortfolio.map(row=>[row.label,row.total]),[[TRUST,1100000]]);
   assert.deepEqual(summary.byRegistration.map(row=>row.label),['Trust']);
   assert.deepEqual(summary.positions,{count:1,committed:1000000,contributed:800000,distributed:250000,value:1100000,unfunded:200000});
@@ -991,4 +991,53 @@ test('a UBS heading is the title it abbreviates, and its accounts join the trust
   // The two 2020 trusts are the pair that has been folded into each other
   // before, so they are checked apart rather than merely present.
   assert.notEqual(filed[family.number],filed[descendants.number]);
+});
+
+// One class for everything held through a fund. The split into private equity,
+// venture capital and hedge funds asked a question the owner does not ask, and
+// cost a decision on every figure that arrived.
+test('the three fund classes are one, and a figure stored under a retired code still reads',()=>{
+  assert.equal(classById('pe'),null,'the old ids are gone');
+  assert.equal(classById('vc'),null);
+  assert.equal(classById('hedge'),null);
+  const funds=classById('funds');
+  assert.equal(funds.code,4,'code 4 is kept: everything stored under it was already a fund investment');
+  assert.equal(funds.label,'Fund investments');
+  assert.equal(funds.group,'illiquid');
+  // Retired, not reused — and still resolved, because a figure written before
+  // the merge is in the ledger until it is migrated, and a holding carries its
+  // class inside a blob no SQL pass can reach.
+  for(const retired of [5,6]){
+    assert.equal(classLabel(retired),'Fund investments',`class ${retired} reads as what it always was`);
+    assert.equal(classGroup(retired),'illiquid');
+    assert.equal(classSide(retired),'asset');
+    assert.equal(canonicalClass(retired),4);
+  }
+  assert.equal(canonicalClass(1),1,'a class that was not merged is left alone');
+  // And the list offered for choosing has one fund line, not three.
+  assert.equal(ASSET_CLASSES.filter(entry=>entry.label.toLowerCase().includes('fund')).length,1);
+});
+
+// At a wealth manager, "Brokerage" is where the fund investments sit; the
+// dashboard prints one total and never says so. Everywhere else the word means
+// what it sounds like.
+test('a UBS Brokerage account is fund investments, and every other one is not',()=>{
+  const estate={row:'portfolio',number:1,name:'Eric and Ariana Berry Estate',kind:1,currency:'USD'};
+  const reading=(account,label,cls,value)=>({account,label,class:classById(cls).code,registration:'',
+    scope:'account',value,asOf:'2026-09-20',confidence:'high',reason:''});
+
+  const ubs=foldReadings([
+    reading('Joint Accounts Y1 60033','Brokerage','liquid',8454037.54),
+    reading('Joint Accounts Y1 60185','Global Equity','stocks',3954866.16)
+  ],[estate],{institution:'UBS',today:'2026-09-20'});
+  const byClass=Object.fromEntries(ubs.marks.map(mark=>[classLabel(mark.class),mark.amount]));
+  assert.equal(byClass['Fund investments'],8454037.54,'the Brokerage account holds the funds');
+  assert.equal(byClass.Stocks,3954866.16,'and the account beside it is untouched');
+
+  // The same word at a broker that means it stays marketable securities.
+  for(const institution of ['Schwab','E*TRADE','Chase']){
+    const other=foldReadings([reading('Individual Brokerage -4049','Brokerage','liquid',1000)],
+      [estate],{institution,today:'2026-09-20'});
+    assert.notEqual(classLabel(other.marks[0].class),'Fund investments',institution);
+  }
 });

@@ -1292,8 +1292,16 @@ drops its holdings: nothing is left saying which account a position sits in.
 **Liquid against illiquid is the question the classes answer together.** Every
 asset class names its group, and the Breakdown leads with the two of them: cash,
 stocks, bonds, crypto, vested stock and an unsplit securities total are liquid;
-private equity, venture capital, hedge funds, real estate, other and unvested
-stock are not. Only Unclassified belongs to neither, because value nobody has
+fund investments, real estate, other and unvested stock are not.
+
+**Everything held through a fund is one class.** It was three — private equity,
+venture capital, hedge funds — and the split asked a question the owner does not
+ask, while costing a decision on every figure that arrived. `Fund investments`
+keeps code 4, because every figure already stored under it was private equity,
+which is a fund investment: the name widens and nothing already written becomes
+untrue. Codes 5 and 6 are retired rather than reused, and still resolve to the
+merged class, so a figure written before the merge reads as what it always was
+instead of as "Class 5". Only Unclassified belongs to neither, because value nobody has
 placed cannot be called either one — that is the whole of what the name means, and the
 review row now says so in four words rather than leaving it to be guessed.
 
@@ -2552,7 +2560,6 @@ successes.
 
 Validation: 565 extension tests pass.
 
-<<<<<<< HEAD
 ## Reading past the shadow boundary, and showing its work (0.6.207 / mobile 0.1.157)
 
 `The page gave 0 account tables and 32 lines` — said on a Chase page holding two
@@ -2580,7 +2587,6 @@ rendered before the reading is attempted, because a reading that fails outright
 is the case it exists for.
 
 Validation: 566 extension and 33 mobile tests pass.
-=======
 ## A number is not a headline (0.6.206 / mobile 0.1.156)
 
 The record's number came out one step *over* the program it belongs to — 14px
@@ -2599,7 +2605,6 @@ Validation: 560 extension, 33 mobile and 134 API tests pass. Reviewed in the
 sidebar harness and the phone shell: the name leads its record in both, and the
 computed sizes were read off the rendered rows rather than the stylesheet.
 Archive: `release/erics-sidebar-0.6.206.zip`.
->>>>>>> origin/main
 
 ## Four corrections to a reading that finally worked (0.6.209 / mobile 0.1.159)
 
