@@ -2185,3 +2185,43 @@ points. Validation: 533 extension and 33 mobile tests pass. The synthetic
 wallet was reviewed at 380px in the standalone harness: no totals block, the
 rows at 33px each, and the two-line and metadata rows still legible. Archive:
 `release/erics-sidebar-0.6.190.zip`.
+
+## Money the quarter takes back, under the birthdays (0.6.187 / mobile 0.1.137)
+
+**A card credit stops being spendable when its period closes, and nobody opens
+the wallet to find that out.** The home screen both hosts open on led with
+birthdays and nothing else. A third run now follows the fortnight: every benefit
+with real money left whose deadline — its own date, or the close of the period it
+repeats on — lands inside the quarter you are in now, largest first.
+`creditsThisQuarter` in `rewards-data.js` decides it, beside the Next actions
+rule it is not.
+
+**A $50 floor is what earns a place here.** A $15 ride credit resetting on
+Tuesday is true and not worth interrupting anybody for, and Next actions in the
+wallet still lists every one of them. What the issuer's own tracker says is
+*left* wins over what the card gives, so a credit half spent reads `$62.50 left ·
+Synthetic Gold · In 10 days`; one already used, one worth something that is not
+money — four lounge visits — and one whose period closes next quarter are all
+left off. Six rows is what a glance holds, and the rest are counted under them
+with what they come to: `3 more · $405`.
+
+**Today's birthdays keep the top of the screen**, on the surface they always
+had. The two stores are read independently, so a wallet that will not open
+leaves the birthdays exactly where they were, and neither run reports a
+connection problem — Reminders and Rewards are where that is said out loud. The
+records are the device's own copies, so a phone with no signal still knows what
+is about to reset.
+
+New coverage: the quarter's run ordered by money with a small credit, a used
+one, a balance, a card and a period closing next quarter all left off; a tracker
+figure winning over the card's terms and nothing left counting as nothing; a
+deadline already past belonging to the wallet; the floor itself; six rows and
+the rest counted; and a wallet that cannot be read leaving the birthdays alone.
+Validation: 536 extension, 33 mobile and 130 API tests pass from an archive of
+HEAD. Reviewed in `/tests/home-preview.html` at 380px and the 280px minimum —
+one birthday today with three behind it and three credits before the quarter
+closes, nobody today with money about to reset, more credits than a glance
+holds, and nothing in either — and on the mobile home screen at 375px, where the
+tracker figure reads back off the phone's own copy. Native iPhone and installed
+Chrome behavior were not directly tested. Archive:
+`release/erics-sidebar-0.6.187.zip`.
