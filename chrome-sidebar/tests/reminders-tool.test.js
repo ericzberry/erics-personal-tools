@@ -49,7 +49,10 @@ test('the list separates what needs attention, and marking a service done re-anc
   assert.ok(attention.querySelector('.record-row--overdue'),'an overdue row is marked as well as worded');
   // The birthday is 52 days out with a fortnight of notice, so it waits below.
   assert.match(document.querySelector('#reminders-later').textContent,/Celeste/);
-  assert.match(document.querySelector('#reminders-later').textContent,/turns 10/);
+  // The day it falls on, said as a day and without the year nobody reads.
+  assert.match(document.querySelector('#reminders-later').textContent,/In 52 days · Nov 2/);
+  assert.equal(/turns|2016|2026/.test(document.querySelector('#reminders-later').textContent),false,
+    'no age, and no year on a date the row already places in words');
   // A row's own verbs are glyphs at the end of its line, so they are found by
   // the name a screen reader is given rather than by a word under the record.
   const rowAction=(node,verb)=>[...node.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')?.startsWith(verb));
@@ -176,9 +179,9 @@ test('what a sweep wrote is in the list before the sentence about it, and each r
   await settle(()=>document.querySelector('#reminders-later').textContent.includes('Ashley Bell'));
   assert.match(status().textContent,/added 1 · 1 already written down/);
   assert.match(status().className,/success/,'a finished sweep reports as one');
-  assert.match(document.querySelector('#reminders-later').textContent,/turns 37/);
-  assert.equal(/From your calendar|Every year/.test(document.querySelector('#reminders-later').textContent),false,
-    'a row says who and when, not where it came from or how often it repeats');
+  assert.match(document.querySelector('#reminders-later').textContent,/Ashley Bell/);
+  assert.equal(/From your calendar|Every year|turns/.test(document.querySelector('#reminders-later').textContent),false,
+    'a row says who and when, not where it came from, how often it repeats or what age it makes anybody');
   assert.ok(buttons().includes('Look again from the start'),'starting over is offered once there is something to forget');
   tool.clear();restore();
 });

@@ -198,6 +198,15 @@ export const reminderAge=record=>record.since&&record.due?Number(record.due.slic
 export const isDueSoon=record=>record.days!==null&&record.days<=(record.notice??DEFAULT_NOTICE_DAYS);
 export const intervalLabel=months=>REMINDER_INTERVALS.find(interval=>interval.months===months)?.label
   ||`Every ${months} month${months===1?'':'s'}`;
+// The day a record lands, in words and without its year: how far off it is is
+// already said beside it, and a year repeated down every row is four characters
+// that are the same on nearly all of them. Read at midday, so a date turned
+// back into a day in the device's own timezone cannot slip either side of it.
+export const dueDay=(due,{weekday=false}={})=>{
+  const day=new Date(`${due}T12:00:00`);
+  return Number.isNaN(day.getTime())?String(due??'')
+    :day.toLocaleDateString(undefined,{...(weekday?{weekday:'short'}:{}),month:'short',day:'numeric'});
+};
 export function duePhrase(record){
   if(record.days===null)return 'Completed';
   if(record.days<0)return `${-record.days} day${record.days===-1?'':'s'} overdue`;

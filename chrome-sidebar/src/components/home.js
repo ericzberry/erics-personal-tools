@@ -1,5 +1,5 @@
 import {Stack,Section,Strong,Note,GroupTitle} from './ui.js';
-import {duePhrase,reminderAge} from '../reminder-data.js';
+import {duePhrase,reminderAge,dueDay} from '../reminder-data.js';
 
 // The birthdays on a home screen. Two runs, because they are answers to two
 // different questions: whose birthday it is today, which is the only day
@@ -22,14 +22,9 @@ export const BirthdaysView=()=>Stack([
 // year has no age, and never grows one here.
 export function birthdayDetail(record){
   const age=reminderAge(record);
-  return [record.days?`${duePhrase(record)} · ${dayName(record.due)}`:'',record.subject,age?`turns ${age}`:'']
+  return [record.days?`${duePhrase(record)} · ${dueDay(record.due,{weekday:true})}`:'',record.subject,age?`turns ${age}`:'']
     .filter(Boolean).join(' · ');
 }
-// Midday, so a date read back in the device's own timezone cannot slip a day.
-const dayName=due=>{
-  const day=new Date(`${due}T12:00:00`);
-  return Number.isNaN(day.getTime())?due:day.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
-};
 const BirthdayRow=record=>{
   const detail=birthdayDetail(record);
   return Section([Strong(record.title),...(detail?[Note(detail)]:[])],{className:'home-birthday'});
