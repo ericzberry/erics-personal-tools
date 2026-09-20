@@ -40,8 +40,13 @@ const message=(index)=>({
 
 // Google and OpenAI, both answering only what these routes actually ask for,
 // and both recording what they were asked.
+// `gmailRefusal` refuses every Gmail call, `once` only the first, and `when`
+// decides from the URL and how many Gmail calls have gone before — which is how
+// a limit that lands in the middle of a page is written down. `retryAfter` is
+// the header Google sends when it says how long to wait, and a synthetic zero
+// keeps a test of the waiting from actually waiting.
 function fakeCloud({total=60,scopes=[GMAIL_SCOPE,'https://www.googleapis.com/auth/drive'],profile,gmailRefusal}={}){
-  const calls=[],prompts=[];let refused=0;
+  const calls=[],prompts=[];let seen=0;
   const idToken=`x.${Buffer.from(JSON.stringify({email:'owner@example.com'})).toString('base64url')}.y`;
   const fetcher=async(input,init={})=>{
     const url=new URL(typeof input==='string'?input:input.url);
@@ -49,9 +54,14 @@ function fakeCloud({total=60,scopes=[GMAIL_SCOPE,'https://www.googleapis.com/aut
     if(url.origin==='https://oauth2.googleapis.com')
       return Response.json({access_token:'synthetic-access',expires_in:3600,refresh_token:'synthetic-refresh-token',id_token:idToken,scope:scopes.join(' ')});
     if(url.origin==='https://gmail.googleapis.com'){
-      if(gmailRefusal&&!(gmailRefusal.once&&refused++)){
+      const before=seen++;
+      const refuse=!gmailRefusal?false
+        :gmailRefusal.when?gmailRefusal.when(url,before)
+        :gmailRefusal.once?before===0:true;
+      if(refuse){
         const status=gmailRefusal.status||403;
-        return Response.json({error:{code:status,message:gmailRefusal.message,errors:[{reason:gmailRefusal.reason}]}},{status});
+        const headers=gmailRefusal.retryAfter===undefined?undefined:{'Retry-After':String(gmailRefusal.retryAfter)};
+        return Response.json({error:{code:status,message:gmailRefusal.message,errors:[{reason:gmailRefusal.reason}]}},{status,headers});
       }
       if(init.headers?.Authorization!=='Bearer synthetic-access')return Response.json({error:{message:'bad token'}},{status:401});
       if(url.pathname.endsWith('/messages')){
@@ -303,19 +313,53 @@ test('reading too fast is said to be that, and a token that goes stale early is 
   // recorded against the connection and the panel is not sent back to consent.
   {
     const {env}=environment();
-    const fake=fakeCloud({gmailRefusal:{reason:'rateLimitExceeded',message:'User-rate limit exceeded.'}});
+    const fake=fakeCloud({gmailRefusal:{reason:'rateLimitExceeded',message:'User-rate limit exceeded.',retryAfter:0}});
     await withCloud(fake,async()=>{
       await connect(env);
       await saveConnection(env);
       const response=await call(env,'/v1/voice/scan','POST',{connectionId:CONNECTION});
       assert.equal(response.status,429);
       assert.match((await response.json()).error,/limiting how fast|Resume in a minute/);
-      // Waited out once before it was reported: a limit the page can read
-      // around is not the owner's to hear about, and one that outlasts a wait
-      // is not a pace this request can fix.
-      assert.equal(fake.calls.filter(entry=>entry.includes('gmail.googleapis.com')).length,2);
+      // Waited out, again and again, before it was reported: a limit the page
+      // can read around is not the owner's to hear about, and only one that
+      // outlasts the page's whole allowance for waiting is.
+      assert.equal(fake.calls.filter(entry=>entry.includes('gmail.googleapis.com')).length,11);
       const state=await (await call(env,'/v1/voice')).json();
       assert.deepEqual([state.google.connected,state.google.sentMail],[true,true]);
+    });
+  }
+  // A limit that outlasts the waiting partway through a page costs the rest of
+  // that page and nothing else: what it read is kept, its place moves on, and
+  // the study finishes with fewer messages rather than stopping on a refusal.
+  {
+    const {env}=environment();
+    const fake=fakeCloud({total:50,gmailRefusal:{status:429,reason:'rateLimitExceeded',message:'User-rate limit exceeded.',retryAfter:0,
+      when:url=>{
+        const id=url.pathname.match(/\/messages\/m(\d+)$/);
+        return !!id&&Number(id[1])>=3&&Number(id[1])<25;
+      }}});
+    await withCloud(fake,async()=>{
+      await connect(env);
+      await saveConnection(env);
+      const turns=await study(env);
+      assert.equal(turns[0].status,200);
+      assert.equal(turns[0].scan.sampled,3);
+      assert.equal(turns.at(-1).done,true);
+      assert.equal(turns.at(-1).profile.sampled,28);
+    });
+  }
+  // The day's quota is not a pace, so it is not waited on at all, and it says
+  // the one thing there is to do about it.
+  {
+    const {env}=environment();
+    const fake=fakeCloud({gmailRefusal:{status:429,reason:'dailyLimitExceeded',message:'Daily Limit Exceeded'}});
+    await withCloud(fake,async()=>{
+      await connect(env);
+      await saveConnection(env);
+      const response=await call(env,'/v1/voice/scan','POST',{connectionId:CONNECTION});
+      assert.equal(response.status,429);
+      assert.match((await response.json()).error,/resume tomorrow/);
+      assert.equal(fake.calls.filter(entry=>entry.includes('gmail.googleapis.com')).length,1);
     });
   }
   // And a limit that clears is never seen at all: the page waits, carries on
@@ -326,9 +370,14 @@ test('reading too fast is said to be that, and a token that goes stale early is 
     await withCloud(fake,async()=>{
       await connect(env);
       await saveConnection(env);
+      const started=Date.now();
       const turns=await study(env);
       assert.equal(turns.at(-1).done,true);
       assert.equal(turns.at(-1).profile.sampled,25);
+      // Google sent no Retry-After, so the wait is the Worker's own second —
+      // and an absent header reads as no answer rather than as a zero, which
+      // would retry straight back into the limit.
+      assert.ok(Date.now()-started>=900,'a limit with no Retry-After was retried without waiting');
     });
   }
   // One 401 is worth one fresh token before it is read as the connection

@@ -25,7 +25,11 @@ const GMAIL='https://gmail.googleapis.com/gmail/v1/users/me';
 // One page per request: 25 messages is 26 requests to Google, which leaves a
 // Worker's subrequest budget room for the reading that may follow.
 const PAGE_SIZE=25;
-const FETCH_AT_ONCE=5;
+// Three messages in the air at once, not five. The pace below is what sets the
+// speed, so a wider burst buys no time — and Gmail keeps a second limit on how
+// many requests one account may have open at the same moment, which it refuses
+// in the same words as reading too fast.
+const FETCH_AT_ONCE=3;
 // How fast Gmail may be read. Google gives an account 250 quota units a second
 // — a moving average, so a short burst above it is allowed — and both of the
 // calls made here, a page of ids and one message, cost five of them. A page of
@@ -41,24 +45,52 @@ const FETCH_AT_ONCE=5;
 // starts at full speed and only a loop is slowed, to a rate it can hold all
 // day. The reckoning lasts as long as the isolate, which is as long as the loop
 // does.
+//
+// A refusal despite all of that says this pace was still too fast for the
+// account as it is today, so the pace itself answers: every limit halves the
+// rate, and every call that goes through earns a little of it back. Waiting and
+// then setting off again at the speed that was just refused is how the same
+// limit gets met twice.
 const PER_REQUEST=5,PER_SECOND=200;
-const SPACING_MS=1000*PER_REQUEST/PER_SECOND;
-const CREDIT_MS=SPACING_MS*(PAGE_SIZE+1);
+const SPACING_MS=1000*PER_REQUEST/PER_SECOND,SLOWEST_MS=SPACING_MS*8;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-let paidOff=0;
+let paidOff=0,spacing=SPACING_MS;
 async function spend(){
   const at=Date.now();
-  paidOff=Math.max(paidOff,at-CREDIT_MS)+SPACING_MS;
+  paidOff=Math.max(paidOff,at-spacing*(PAGE_SIZE+1))+spacing;
   if(paidOff>at)await sleep(paidOff-at);
 }
+// Halve the rate on a refusal; earn it back slowly enough that the recovery
+// outlasts the page the limit was met on, or the next page sets off at the
+// speed that was just refused. A clean page of twenty-five takes back three
+// quarters of it, so even the slowest pace is its own again inside two pages.
+const slower=()=>{spacing=Math.min(spacing*2,SLOWEST_MS);};
+const faster=()=>{spacing=Math.max(SPACING_MS,spacing*0.95);};
 // The limit reached anyway — the account is busy elsewhere, or a panel on an
-// older version is asking — is waited out rather than reported. Google says how
-// long when it knows; a second is its own advice when it does not.
-const RATE_REASONS=['rateLimitExceeded','userRateLimitExceeded','quotaExceeded','dailyLimitExceeded'];
-const WAIT_MS=1000,LONGEST_WAIT_MS=8000;
-function rateWait(response){
-  const after=Number(response.headers?.get('Retry-After'));
-  return Math.min(Number.isFinite(after)&&after>0?after*1000:WAIT_MS,LONGEST_WAIT_MS);
+// older version is asking — is waited out rather than reported, and waited out
+// longer each time, which is the only thing Google says to do about it. Google's
+// own Retry-After is used when it sends one.
+//
+// The waiting is one allowance for the whole page rather than one wait per
+// call, because a page reads three messages at a time: a single busy moment
+// comes back as three refusals at once, and an allowance of one wait was taken
+// by the first of them and denied to the other two, which is how one busy
+// second was ending a whole study.
+const PACE_REASONS=['rateLimitExceeded','userRateLimitExceeded','quotaExceeded'];
+// A day's quota is not a pace. No wait inside this request can clear it, so it
+// is not waited on and it says something a person can act on.
+const DAY_REASONS=['dailyLimitExceeded'];
+// Ten retries at most: a page already spends twenty-six of the fifty
+// subrequests a Worker gets, and the reading that may follow needs one too.
+const RETRY_CALLS=10,WAIT_BUDGET_MS=30000,WAIT_MS=1000,LONGEST_WAIT_MS=8000;
+const TOO_FAST='Google is limiting how fast its mail can be read. Resume in a minute — the study keeps its place.';
+function rateWait(response,attempt){
+  // Google's own answer where it gives one. A header that is missing, empty or
+  // not a number is not an answer, and `Number('')` is zero, so the absence is
+  // told from a zero before it is read as one.
+  const after=(response.headers?.get('Retry-After')||'').trim();
+  const asked=after?Number(after):NaN;
+  return Number.isFinite(asked)&&asked>=0?asked*1000:Math.min(WAIT_MS*2**attempt,LONGEST_WAIT_MS);
 }
 // Each account of a batch is kept short because every one of them has to fit,
 // together, inside the single prompt that combines them.
@@ -81,13 +113,13 @@ async function storeVoice(env,value){
 // --- Gmail, read-only.
 //
 // One mailbox for the span of one request. What a page of messages shares is
-// held here: the pace above, and the single wait a rate limit is worth, so
+// held here: the pace above, and the allowance for waiting out a rate limit, so
 // twenty-five messages keep one budget between them rather than each taking its
 // own — twenty-five waits would be both a quarter of a minute and more requests
 // than a Worker is allowed.
 function mailbox(env,request,fetcher){
-  let waits=1;
-  async function read(path,fresh=false){
+  let retries=RETRY_CALLS,budget=WAIT_BUDGET_MS,stalled=false;
+  async function read(path,{fresh=false,attempt=0}={}){
     const account=await storedAccount(env);
     if(!account?.refreshToken)fail(409,'Connect Google first, then study your sent mail.');
     if(!(account.scopes||[]).includes(GMAIL_SCOPE))fail(409,'This Google connection cannot read your sent mail yet. Connect Google again and approve reading mail.');
@@ -102,29 +134,36 @@ function mailbox(env,request,fetcher){
     if(response.status===401&&!fresh){
       await response.body?.cancel();
       forgetAccessToken();
-      return read(path,true);
+      return read(path,{fresh:true});
     }
     if(response.status===429||response.status===401||response.status===403){
-      // Three different refusals wear these codes, and they need three different
+      // Four different refusals wear these codes, and they need four different
       // things done about them. Google's own sentence says which this is, so it
       // is passed on rather than replaced with a guess.
       const detail=await response.json().catch(()=>({}));
       const reason=detail?.error?.errors?.[0]?.reason||'';
       const said=String(detail?.error?.message||'').slice(0,300);
+      // The day's quota, which is not a pace: waiting inside this request would
+      // only spend the study's time to arrive at the same refusal.
+      if(DAY_REASONS.includes(reason)||/daily limit|per day/i.test(said))
+        fail(429,'Google will read no more mail for this account today. The study keeps its place — resume tomorrow.');
       // Read too fast. Nothing is wrong with the connection and nothing is lost,
-      // so the page waits it out once and carries on, reading from the far side
-      // of the wait. A limit that outlasts that is not a pace this request can
-      // fix, and then it is the owner's to hear about — and the study still
-      // holds its place, so there is one thing to do about it and it is later.
-      if(response.status===429||RATE_REASONS.includes(reason)){
-        if(waits){
-          waits--;
-          const wait=rateWait(response);
+      // so the page waits it out and carries on from the far side of the wait,
+      // waiting longer each time and slowing everything after it. Only when the
+      // page's whole allowance is gone does it stop asking — and then what it
+      // has already read is still the study's, so the refusal that reaches the
+      // owner is one that left a page with nothing at all.
+      if(response.status===429||PACE_REASONS.includes(reason)){
+        const wait=rateWait(response,attempt);
+        if(!stalled&&retries&&wait<=budget){
+          retries--;budget-=wait;
+          slower();
           paidOff=Date.now()+wait;
           await sleep(wait);
-          return read(path,fresh);
+          return read(path,{fresh,attempt:attempt+1});
         }
-        fail(429,'Google is limiting how fast its mail can be read. Resume in a minute — the study keeps its place.');
+        stalled=true;
+        fail(429,TOO_FAST);
       }
       // A project that never switched the Gmail API on is fixed in the Google
       // console, and no amount of consenting again will touch it.
@@ -136,6 +175,7 @@ function mailbox(env,request,fetcher){
       fail(409,`Google would not allow reading your sent mail. Connect Google again and approve reading mail.${said?` Google said: ${said}`:''}`);
     }
     if(!response.ok){await response.body?.cancel();fail(502,`Gmail is unavailable (${response.status}).`);}
+    faster();
     return response.json();
   }
   // A single message that will not load is skipped rather than ending the scan:
@@ -144,10 +184,13 @@ function mailbox(env,request,fetcher){
     try{
       return await read(`/messages/${encodeURIComponent(id)}?format=full&fields=id,internalDate,payload`);
     }catch(error){
-      // A refusal about the connection, or about reading too fast, is the whole
+      // A refusal about the connection, or about the day's quota, is the whole
       // study's news and not this message's: skipping it would throw away the
-      // page it belongs to and call the loss a mailbox with nothing in it.
-      if(error?.status===409||error?.status===429)throw error;
+      // page it belongs to and call the loss a mailbox with nothing in it. A
+      // pace the waiting could not outlast is the page's news — it is skipped
+      // here and `stalled` stops the rest of the page being asked for.
+      if(error?.status===409)throw error;
+      if(error?.status===429&&!stalled)throw error;
       return null;
     }
   }
@@ -156,15 +199,17 @@ function mailbox(env,request,fetcher){
     if(pageToken)query.set('pageToken',pageToken);
     const list=await read(`/messages?${query}`);
     const ids=(Array.isArray(list.messages)?list.messages:[]).map(entry=>entry?.id).filter(id=>typeof id==='string');
-    const samples=[];
-    for(let index=0;index<ids.length;index+=FETCH_AT_ONCE){
+    const samples=[];let taken=0;
+    for(let index=0;index<ids.length&&!stalled;index+=FETCH_AT_ONCE){
       const batch=await Promise.all(ids.slice(index,index+FETCH_AT_ONCE).map(id=>message(id)));
       for(const loaded of batch){
-        const sample=loaded&&voiceSample(loaded);
+        if(!loaded)continue;
+        taken++;
+        const sample=voiceSample(loaded);
         if(sample)samples.push(sample);
       }
     }
-    return {samples,read:ids.length,pageToken:typeof list.nextPageToken==='string'?list.nextPageToken:''};
+    return {samples,read:taken,stalled,pageToken:typeof list.nextPageToken==='string'?list.nextPageToken:''};
   }
   return {page};
 }
@@ -260,6 +305,12 @@ export async function voice(request,env,readValue,json,fetcher=fetch){
       :stored.scan;
 
     const page=await mailbox(env,request,fetcher).page(scan.pageToken);
+    // A page the limit cut short gives up the rest of itself, not the study:
+    // its place moves on, the pace above has already slowed for the next one,
+    // and a study missing a few of a thousand messages is still the voice. A
+    // page that could read nothing at all is the owner's to hear about, and it
+    // holds its place because nothing has been written down yet.
+    if(page.stalled&&!page.read)fail(429,TOO_FAST);
     scan.pending=[...scan.pending,...page.samples];
     scan.sampled+=page.samples.length;
     scan.scanned+=page.read;

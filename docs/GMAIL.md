@@ -66,7 +66,13 @@ so the Worker keeps that budget itself rather than trusting the loop that is
 asking. A page's worth of credit may be spent at once — a study starts at full
 speed — and the page after it has to be earned, which is what stops the panel,
 which asks again the moment a page lands, from spending three pages of quota
-inside one second. Each message is reduced to the part Eric typed —
+inside one second. Messages are read three at a time rather than five, because
+the pace is what sets the speed and a wider burst only meets Gmail's other
+limit, on how many requests one account may have open at once. A refusal
+despite all of that halves the rate, and every call that goes through earns a
+little of it back, so a study that meets a busy account slows to what the
+account allows instead of waiting and then setting off again at the speed that
+was just refused. Each message is reduced to the part Eric typed —
 `writtenPortion` in `voice-data.js` cuts at the quote, the forward header, the
 `From:`/`Sent:` block and the signature delimiter, and drops `>` lines — and a
 message with nothing of his own left in it is skipped. Samples accumulate until
@@ -105,26 +111,34 @@ approving once. Until then the section offers one action and nothing else:
 mail** when there is one Google will not let read mail. The study is refused
 before Gmail is touched, saying what is missing.
 
-**Google refuses in three different ways, and they need different repairs.**
+**Google refuses in four different ways, and they need different repairs.**
 Reading too fast is the commonest and the least serious, and the pace above is
 there so it does not arise. One that arises anyway — the account is busy
-elsewhere, or a panel on an older version is asking — is waited out once and
-read around, for as long as Google asks or a second when it does not say, so the
-owner never hears about it. Only a limit that outlasts that wait reaches the
-screen, and then the study holds its place, so it says to resume in a minute and
-nothing is recorded. A project that never switched the Gmail API on is fixed in
-the Google console and no amount of consenting again will touch it, so that
-refusal says so and passes on Google's own sentence, which carries the project
-and the link. What is left is the grant itself: the Worker writes that down
-against the connection, so the next thing the panel asks reports a connection
-that cannot read mail and offers the consent again instead of a *Resume* that
-would fail the same way. Reconnecting replaces that record, which is what clears
-it.
+elsewhere, or a panel on an older version is asking — is waited out and read
+around, for as long as Google asks or a second doubling to eight when it does
+not say, so the owner never hears about it. The waiting is one allowance for the
+whole page rather than one wait per call: a page reads three messages at a time,
+so a busy moment comes back as three refusals at once, and an allowance of one
+wait was taken by the first of them and denied to the other two — which is how a
+single busy second was ending a whole study. When the allowance is gone the page
+stops asking and gives up the rest of itself rather than the study: what it read
+is kept, its place moves on, and a study missing a few of a thousand messages is
+still the voice. Only a page that could read nothing at all reaches the screen,
+and then the study holds its place, so it says to resume in a minute and nothing
+is recorded. The day's quota is not a pace and no wait inside one request will
+clear it, so it is not waited on at all and says to resume tomorrow. A project
+that never switched the Gmail API on is fixed in the Google console and no
+amount of consenting again will touch it, so that refusal says so and passes on
+Google's own sentence, which carries the project and the link. What is left is
+the grant itself: the Worker writes that down against the connection, so the
+next thing the panel asks reports a connection that cannot read mail and offers
+the consent again instead of a *Resume* that would fail the same way.
+Reconnecting replaces that record, which is what clears it.
 
-A single 401 is none of the three. A held access token can go stale early, so
-one is worth one fresh token and one retry before it is read as the connection,
-and a message that will not load is skipped — but a refusal about the connection
-or about reading too fast ends the page rather than being skipped, because that
+A single 401 is none of the four. A held access token can go stale early, so one
+is worth one fresh token and one retry before it is read as the connection, and
+a message that will not load is skipped — but a refusal about the connection, or
+about the day's quota, ends the page rather than being skipped, because that
 would throw away the samples it belongs to.
 
 ### One-time setup (owner)
