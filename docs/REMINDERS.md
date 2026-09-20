@@ -73,11 +73,24 @@ calendar first, the owner's own next — because a subscription to every nationa
 holiday is enough to push the one that matters past the cap. A sweep that runs
 out of budget says so instead of reporting a short answer as a complete one.
 
-**The year is the only judgement.** A yearly birthday event starts on the date
-of birth when the calendar knows the year and on a placeholder when it does not,
-so a start year outside a human lifespan becomes the day alone and no `since` at
-all. That is the rule above, applied to an import: a birthday with no year has
-no age rather than an invented one.
+**The year is the only judgement, and it turns on who wrote the event.** Google's
+own contact birthdays carry `eventType: "birthday"` and start on the date of
+birth, so that year is a year somebody was born in. An event made by hand does
+not: its series starts the day it was created, so "every October 3rd from 2024"
+says the event is two years old, not the person. Only Google's own are trusted
+with a year; everything else keeps the day and gets no `since`, which is the
+rule above applied to an import — a birthday with no year has no age rather
+than an invented one.
+
+This was got wrong once, and the first real sweep gave forty-five people an age
+counted from the day their reminder was created. *Look again from the start* is
+the repair: a sweep that starts over brings `since` back into line with what the
+calendar says, and touches nothing else on the record, because a name tidied up
+or a note added since the import is the owner's and not the calendar's.
+
+**A title that names nobody** — one that is nothing but the word birthday — is
+still saved, because the day is real, but the sweep reports it so somebody can
+say whose it is.
 
 **Nothing is written twice and nothing already there is touched.** Three things
 are checked in order for each event: the sweep's own record of every event it

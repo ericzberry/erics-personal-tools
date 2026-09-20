@@ -35,6 +35,9 @@ export const MAX_SOURCE_ID=200;
 // Nobody in a calendar was born more than this long ago, and a start year
 // outside that range is a placeholder rather than a date of birth.
 export const MAX_AGE_YEARS=120;
+// What Google calls an event it made from a contact's date of birth. It is the
+// only kind whose start year is a birth year rather than a creation date.
+export const GOOGLE_BIRTHDAY='birthday';
 
 // The device's own day, not UTC: "today is Derek's birthday" is said in the
 // owner's timezone, and a UTC date would move it by one for half of each day.
@@ -102,19 +105,24 @@ export function normalizeReminder(input,previous={}){
 
 // A birthday as a calendar keeps it, turned into the record this app keeps.
 //
-// The one judgement here is the year. A calendar's yearly birthday event
-// starts on the date of birth when the year is known, and on a placeholder
-// when it is not — so a year that is not a year someone could have been born
-// in is dropped rather than shown as an age. That is the same rule the form
-// follows: a birthday with no year simply has no age, rather than an invented
-// one counted from when it was first written down.
+// The one judgement here is the year, and it turns on who wrote the event.
+// Google's own contact birthdays carry `eventType: "birthday"` and take their
+// start date from the contact's date of birth, so that year is a year somebody
+// was born in. An event somebody made by hand does not: its series starts the
+// day it was created, so "every October 3rd from 2024" means the event is two
+// years old, not the person. Reading that as a birth year is how a grown adult
+// ends up turning two, so it is never read as one.
+//
+// What is left is the day, which is the part a calendar always knows — and a
+// birthday with no year simply has no age, which is the same rule the form
+// follows for one typed in without one.
 export function calendarBirthday(event,{today=localDate()}={}){
   const title=String(event?.summary??'').trim().slice(0,120);
   const start=String(event?.start??'');
   const sourceId=String(event?.id??'').slice(0,MAX_SOURCE_ID);
   if(!title||!isDate(start)||!sourceId)return null;
   const thisYear=Number(today.slice(0,4)),startYear=Number(start.slice(0,4));
-  const born=startYear<thisYear&&startYear>=thisYear-MAX_AGE_YEARS;
+  const born=event?.eventType===GOOGLE_BIRTHDAY&&startYear<thisYear&&startYear>=thisYear-MAX_AGE_YEARS;
   return normalizeReminder({
     kind:'Birthday',title,subject:'',
     date:born?start:thisYearsDate(start,thisYear),

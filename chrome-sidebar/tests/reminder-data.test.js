@@ -65,27 +65,42 @@ test('the validator refuses what the tool could not show, and defaults the rest'
 
 test('a calendar birthday keeps its day, and only keeps an age when the calendar knew one',()=>{
   const today='2026-09-20';
-  // A year somebody could have been born in is the date of birth, and the age
+  // Google's own contact birthdays start on the date of birth, and the age
   // follows from it.
-  const known=calendarBirthday({id:'evt-1',summary:'Ashley’s birthday',start:'1985-03-04'},{today});
+  const known=calendarBirthday({id:'evt-1',summary:'Ashley’s birthday',start:'1985-03-04',eventType:'birthday'},{today});
   assert.equal(known.date,'1985-03-04');
   assert.equal(known.since,'1985');
   assert.equal(known.every,12);
   assert.equal(known.kind,'Birthday');
   assert.equal(reminderAge(reminderDue(known,today)),42,'the next birthday is the one being counted to');
   // A placeholder year is not one. The day survives; the age does not appear.
-  const unknown=calendarBirthday({id:'evt-2',summary:'Mom',start:'2026-11-02'},{today});
+  const unknown=calendarBirthday({id:'evt-2',summary:'Mom',start:'2026-11-02',eventType:'birthday'},{today});
   assert.equal(unknown.date,'2026-11-02');
   assert.equal(unknown.since,'','a year that is not a birth year must not become an age');
   assert.equal(reminderAge(reminderDue(unknown,today)),0);
   // February 29th stays February 29th rather than being moved to the 28th.
-  const leap=calendarBirthday({id:'evt-3',summary:'Leap day birthday',start:'2028-02-29'},{today});
+  const leap=calendarBirthday({id:'evt-3',summary:'Leap day birthday',start:'2028-02-29',eventType:'birthday'},{today});
   assert.equal(leap.date,'2024-02-29');
   assert.equal(nextDue(leap,today),'2027-02-28','a 29th clamps on the way out, not on the way in');
   // Nothing usable is nothing, not a guess.
   assert.equal(calendarBirthday({id:'evt-4',summary:'',start:'1985-03-04'},{today}),null);
   assert.equal(calendarBirthday({id:'evt-5',summary:'No date',start:''},{today}),null);
   assert.equal(calendarBirthday({summary:'Nameless event',start:'1985-03-04'},{today}),null);
+});
+
+test('an event somebody made by hand dates the event, not the person',()=>{
+  const today='2026-09-20';
+  // This is what a real calendar is mostly full of: a yearly reminder created
+  // the year somebody got round to making it. Its start year is the age of the
+  // event. Reading it as a birth year is how a grown adult turns two.
+  const typed=calendarBirthday({id:'evt-9',summary:'Maisie’s Birthday',start:'2025-01-10',eventType:'default'},{today});
+  assert.equal(typed.since,'','a creation date is never an age');
+  assert.equal(typed.date.slice(5),'01-10','but the day it falls on is still the day it falls on');
+  assert.equal(reminderAge(reminderDue(typed,today)),0);
+  // An event with no type at all is not Google's, so it is read the same way.
+  assert.equal(calendarBirthday({id:'evt-10',summary:'Derek’s birthday',start:'2024-10-03'},{today}).since,'');
+  // Only Google's own contact birthdays are trusted with a year.
+  assert.equal(calendarBirthday({id:'evt-11',summary:'Derek',start:'1984-10-03',eventType:'birthday'},{today}).since,'1984');
 });
 
 test('the same birthday written twice is recognized by its day and its name, whatever year each carries',()=>{

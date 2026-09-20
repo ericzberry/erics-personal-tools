@@ -113,7 +113,7 @@ test('a sweep writes each birthday once, leaves what was typed by hand alone, an
   assert.equal(derek.source,'');
   // The imported ones carry the year only where the calendar knew it.
   const ashley=after.find(record=>record.title==='Ashley Bell');
-  assert.equal(ashley.since,'1990');
+  assert.equal(ashley.since,'1990','Google’s own contact birthday knows the year');
   assert.equal(ashley.sourceId,'contact-1');
   assert.equal(after.find(record=>record.title==='Celeste').since,'','a placeholder year is not an age');
 
@@ -200,4 +200,48 @@ test('the birthday calendar is read first, however far down the list Google puts
   assert.equal(ordered[0].id,'addressbook#contacts@group.v.calendar.google.com');
   assert.equal(ordered[1].id,'owner@example.com');
   assert.ok(ordered.length<=12,'and the list is still bounded by the request budget');
+});
+
+test('starting over corrects an age an earlier reading got wrong, and leaves everything else alone',async()=>{
+  const {env}=environment();
+  await connectGoogle(env);
+  const google=fakeGoogle({calendars:CALENDARS,events:EVENTS});
+  const run=(restart=false)=>scanBirthdays(env,{request:new Request('https://example.com/v1/calendar/birthdays'),
+    fetcher:google.fetcher,now:new Date('2026-09-20T12:00:00Z'),restart});
+  await run();
+
+  // An earlier version of this module read a hand-made event's creation year as
+  // a birth year. Put that mistake back, by hand, exactly as it reached D1.
+  const [ashley]=(await savedReminders(env)).filter(record=>record.title==='Ashley Bell');
+  const wrong={...ashley,since:'2024',notes:'renamed and annotated since it was imported'};
+  await env.DB.prepare('UPDATE reminder_records SET value = ? WHERE id = ?')
+    .bind(await encryptSettings((({id,...rest})=>rest)(wrong),`reminders:${ashley.id}`,env),ashley.id).run();
+
+  // A routine sweep does not touch it: everything but the year may have been
+  // edited by hand, and a monthly sweep that overwrote that would make editing
+  // an imported birthday pointless.
+  await run();
+  assert.equal((await savedReminders(env)).find(r=>r.id===ashley.id).since,'2024');
+
+  // Starting over is the repair, and it repairs only the year.
+  const repaired=await run(true);
+  assert.equal(repaired.corrected,1);
+  assert.deepEqual(repaired.correctedTitles,['Ashley Bell']);
+  const fixed=(await savedReminders(env)).find(record=>record.id===ashley.id);
+  assert.equal(fixed.since,'1990','the year comes back from the calendar');
+  assert.equal(fixed.notes,'renamed and annotated since it was imported','and nothing else is disturbed');
+  assert.equal((await savedReminders(env)).length,3,'repairing is not re-importing');
+});
+
+test('an event whose title is only the word birthday names nobody, and is flagged for a person to look at',async()=>{
+  const {env}=environment();
+  await connectGoogle(env);
+  const google=fakeGoogle({calendars:[CALENDARS[0]],events:{'owner@example.com':[
+    {id:'nameless',summary:'Happy birthday!',eventType:'default',recurrence:['RRULE:FREQ=YEARLY'],start:{date:'2024-05-02'}},
+    {id:'named',summary:'Priya’s birthday',eventType:'default',recurrence:['RRULE:FREQ=YEARLY'],start:{date:'2024-06-09'}}
+  ]}});
+  const result=await scanBirthdays(env,{request:new Request('https://example.com/v1/calendar/birthdays'),
+    fetcher:google.fetcher,now:new Date('2026-09-20T12:00:00Z')});
+  assert.equal(result.added,2,'the day is real, so the record is still kept');
+  assert.deepEqual(result.flagged,['Happy birthday!'],'but one of them cannot say whose it is');
 });
