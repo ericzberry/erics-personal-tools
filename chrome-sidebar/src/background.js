@@ -5,7 +5,12 @@ import {registerSettingsBridge} from './settings-bridge.js';
 import {validateSnapshot, mergeSnapshot, sessionKey} from './draft-state.js';
 import {watchRewardPrograms} from './reward-programs.js';
 import {travelChanges} from './travel-changes.js';
+import {forgetCarriedSession} from './secret-vault.js';
 chrome.sidePanel.setPanelBehavior({openPanelOnActionClick: true}).catch(console.error);
+// An unlocked vault outlives this extension being reloaded, deliberately; it
+// must not outlive the browser. This is the one event that fires exactly once
+// per browser session, so it is where the carried copy is thrown away.
+chrome.runtime.onStartup.addListener(() => { forgetCarriedSession().catch(console.error); });
 registerSettingsBridge(chrome);
 // A reward program's catalogue is read here rather than in the side panel, so
 // visiting the program's site keeps the offers current whether or not the panel

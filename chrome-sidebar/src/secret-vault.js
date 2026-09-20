@@ -113,6 +113,120 @@ export function vaultSessionStore(area=globalThis.chrome?.storage?.session,chang
   };
 }
 
+// Surviving the extension's own reload. `chrome.storage.session` is memory that
+// belongs to the extension, so Chrome empties it whenever the extension is
+// unloaded — which is every update and every press of Reload. The reader meets
+// that as a passkey prompt minutes after they answered one, for a session that
+// never ended and a reason nothing on screen explains.
+//
+// So the same record is kept a second time, somewhere a reload cannot reach,
+// sealed rather than written down. The sealing key is generated here, marked
+// non-extractable and left in IndexedDB: this extension's pages can seal and
+// open with it, and no code — theirs included — can read it back out. The
+// sealed record sits in `chrome.storage.local` beside it. Neither half opens
+// anything alone.
+//
+// What this does not do is lengthen the unlock. The record carries the same
+// stamp every other copy carries, so it expires on the one idle window, Lock
+// now clears it, and the browser starting up clears it (`forgetCarriedSession`,
+// from the service worker's `onStartup`). The trade is that for the remainder
+// of an idle window the key exists on disk, sealed, where before it existed
+// only in memory; a reader of the profile directory alone cannot use it.
+export const CARRY_KEY='vault-carry';
+export const CARRY_DB='erics-tools-vault';
+const CARRY_STORE='seal';
+const CARRY_ID='session-seal';
+const settle=query=>new Promise((resolve,reject)=>{query.onsuccess=()=>resolve(query.result);query.onerror=()=>reject(query.error);});
+function openCarry(indexedDB){
+  return new Promise((resolve,reject)=>{
+    const opening=indexedDB.open(CARRY_DB,1);
+    opening.onupgradeneeded=()=>{opening.result.createObjectStore(CARRY_STORE);};
+    opening.onsuccess=()=>resolve(opening.result);
+    opening.onblocked=opening.onerror=()=>reject(opening.error||Error('The vault store could not be opened.'));
+  });
+}
+// Two pages unlocking at once must end up sealing with one key, or the record
+// one of them wrote is unreadable to the other. Whichever key is stored first
+// wins, decided inside a single transaction, and the loser's is discarded.
+async function sealingKey(indexedDB,subtle,make){
+  const db=await openCarry(indexedDB);
+  try{
+    const held=await settle(db.transaction(CARRY_STORE,'readonly').objectStore(CARRY_STORE).get(CARRY_ID));
+    if(held||!make)return held||null;
+    const fresh=await subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+    return await new Promise((resolve,reject)=>{
+      const transaction=db.transaction(CARRY_STORE,'readwrite');
+      const store=transaction.objectStore(CARRY_STORE);
+      const existing=store.get(CARRY_ID);
+      let chosen=null;
+      existing.onsuccess=()=>{chosen=existing.result||fresh;if(!existing.result)store.put(fresh,CARRY_ID);};
+      transaction.oncomplete=()=>resolve(chosen);
+      transaction.onabort=transaction.onerror=()=>reject(transaction.error||Error('The vault store could not be written.'));
+    });
+  }finally{db.close();}
+}
+export function vaultCarriedStore(area=globalThis.chrome?.storage?.local,{indexedDB=globalThis.indexedDB,subtle=globalThis.crypto?.subtle}={}){
+  if(!area?.get||!indexedDB?.open||!subtle?.generateKey)return null;
+  return {
+    async read(){
+      try{
+        const saved=(await area.get(CARRY_KEY))[CARRY_KEY];
+        if(!saved||typeof saved.at!=='number'||typeof saved.iv!=='string'||typeof saved.sealed!=='string')return null;
+        const seal=await sealingKey(indexedDB,subtle,false);
+        if(!seal)return null;
+        return {key:encode(await subtle.decrypt({name:'AES-GCM',iv:decode(saved.iv)},seal,decode(saved.sealed))),at:saved.at};
+      }catch{return null;}
+    },
+    // A record that cannot be sealed is simply not carried: the session store
+    // still holds it, and the reload it would have survived asks again.
+    async write(value){
+      try{
+        const seal=await sealingKey(indexedDB,subtle,true);
+        const iv=random(12);
+        const sealed=await subtle.encrypt({name:'AES-GCM',iv},seal,decode(value.key));
+        await area.set({[CARRY_KEY]:{v:1,iv:encode(iv),sealed:encode(sealed),at:value.at}});
+      }catch{}
+    },
+    async clear(){try{await area.remove(CARRY_KEY);}catch{}}
+  };
+}
+// The browser closing ends the session, and the carried copy has to end with
+// it. Chrome empties its own session area; this one is on disk, so it is
+// emptied here. The sealing key goes too, so nothing sealed under it can be
+// opened again even if the record were somehow to survive.
+export async function forgetCarriedSession({storage=globalThis.chrome?.storage?.local,indexedDB=globalThis.indexedDB}={}){
+  try{await storage?.remove?.(CARRY_KEY);}catch{}
+  try{
+    const deleting=indexedDB?.deleteDatabase?.(CARRY_DB);
+    if(deleting)await new Promise(resolve=>{deleting.onsuccess=deleting.onerror=deleting.onblocked=()=>resolve();});
+  }catch{}
+}
+// One record in two places: the browser's session memory, which every page of
+// this extension reads at once and which ends with the browser, and the sealed
+// copy that outlives a reload. Reading prefers the live one and falls back to
+// the sealed one; writing and clearing reach both, so locking in any page
+// closes the carried session as well.
+export function vaultStore(live=vaultSessionStore(),carried=vaultCarriedStore()){
+  if(!live||!carried)return live;
+  return {
+    // The first page after a reload puts what it unsealed back into session
+    // memory, so the pages that follow it find the record the ordinary way and
+    // a change to it is announced to all of them again. Chrome says nothing
+    // about a key being removed that was not there, and Lock now in one page
+    // has to reach the rest.
+    async read(){
+      const current=await live.read();
+      if(current)return current;
+      const kept=await carried.read();
+      if(kept)await live.write(kept);
+      return kept;
+    },
+    async write(value){await Promise.all([live.write(value),carried.write(value)]);},
+    async clear(){await Promise.all([live.clear(),carried.clear()]);},
+    subscribe(callback){live.subscribe(callback);}
+  };
+}
+
 // Which passkey answered last. A request that names no credential leaves the
 // browser to ask which one to use, and a chooser is the wrong thing to show a
 // reader who has one passkey — more so when a synced copy or a repeated
@@ -156,7 +270,7 @@ export function secretVault({
   rpId = globalThis.location?.protocol === 'chrome-extension:' ? VAULT_RP_ID : (globalThis.location?.hostname || VAULT_RP_ID),
   subtle = globalThis.crypto?.subtle,
   now, onLock = () => {},
-  store = vaultSessionStore(),
+  store = vaultStore(),
   credentialStore = vaultCredentialStore(),
   // A page that cannot raise the passkey sheet itself hands the check to one
   // that can. Chrome's side panel is such a page: the request leaves it and no

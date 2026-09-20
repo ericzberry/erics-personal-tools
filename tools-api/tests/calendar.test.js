@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import worker from '../src/index.js';
-import {scanBirthdays,dueForScan,isBirthdayEvent,calendarOrder,SCAN_EVERY_DAYS} from '../src/calendar.js';
+import {scanBirthdays,dueForScan,isBirthdayEvent,seriesOf,calendarOrder,SCAN_EVERY_DAYS} from '../src/calendar.js';
 import {CALENDAR_SCOPE,DRIVE_SCOPE} from '../src/drive.js';
 import {encryptSettings,decryptSettings} from '../src/ai-settings.js';
 import {normalizeReminder} from '../../chrome-sidebar/src/reminder-data.js';
@@ -64,32 +64,39 @@ function fakeGoogle({calendars,events,refusal}={}){
 
 const CALENDARS=[{id:'owner@example.com',summary:'Eric',primary:true},
   {id:'addressbook#contacts@group.v.calendar.google.com',summary:'Birthdays'}];
+// Expanded occurrences, as Google returns them with singleEvents=true: each
+// instance has its own id and names the series it came from. Derek's series
+// starts on the 3rd and every occurrence of it falls on the 4th, which is the
+// disagreement that reading the series instead of the occurrence gets wrong.
 const EVENTS={
   'owner@example.com':[
-    {id:'typed-1',summary:'Derek’s birthday',eventType:'default',recurrence:['RRULE:FREQ=YEARLY'],start:{date:'1985-03-04'}},
+    {id:'typed-1_20270304',recurringEventId:'typed-1',summary:'Derek’s birthday',eventType:'default',start:{date:'2027-03-04'}},
     {id:'meeting',summary:'Board meeting',eventType:'default',start:{date:'2026-10-01'}},
     // A yearly all-day event that is not a birthday, which is exactly the
     // thing a looser rule would sweep up.
-    {id:'anniversary',summary:'Wedding anniversary',eventType:'default',recurrence:['RRULE:FREQ=YEARLY'],start:{date:'2011-06-18'}},
-    // A birthday in name only: no recurrence, so it is one day in 2026 rather
-    // than a date that comes round.
+    {id:'anniversary_20270618',recurringEventId:'anniversary',summary:'Wedding anniversary',eventType:'default',start:{date:'2027-06-18'}},
+    // A birthday in name only: it belongs to no series, so it is one day in
+    // 2026 rather than a date that comes round.
     {id:'party',summary:'Birthday party at the Smiths',eventType:'default',start:{date:'2026-10-11'}}
   ],
   'addressbook#contacts@group.v.calendar.google.com':[
-    {id:'contact-1',summary:'Ashley Bell',eventType:'birthday',recurrence:['RRULE:FREQ=YEARLY'],start:{date:'1990-07-22'}},
-    {id:'contact-2',summary:'Celeste',eventType:'birthday',recurrence:['RRULE:FREQ=YEARLY'],start:{date:'2026-11-02'}}
+    {id:'contact-1_20270722',recurringEventId:'contact-1',summary:'Ashley Bell',eventType:'birthday',start:{date:'2027-07-22'}},
+    {id:'contact-2_20261102',recurringEventId:'contact-2',summary:'Celeste',eventType:'birthday',start:{date:'2026-11-02'}}
   ]
 };
 
-test('only a date that comes round every year and says birthday is one',()=>{
+test('only an all-day occurrence of something that repeats and says birthday is one',()=>{
   const [derek,meeting,anniversary,party]=EVENTS['owner@example.com'];
   assert.equal(isBirthdayEvent(derek),true);
   assert.equal(isBirthdayEvent(meeting),false);
   assert.equal(isBirthdayEvent(anniversary),false,'an anniversary repeats yearly too');
-  assert.equal(isBirthdayEvent(party),false,'one party is not a birthday that comes round');
+  assert.equal(isBirthdayEvent(party),false,'one party belongs to no series, so it never comes round');
   assert.equal(isBirthdayEvent(EVENTS['addressbook#contacts@group.v.calendar.google.com'][0]),true,'Google’s own say so');
   // A birthday with a time on it is an appointment about a birthday.
-  assert.equal(isBirthdayEvent({summary:'Lunch for Ann’s birthday',recurrence:['RRULE:FREQ=YEARLY'],start:{dateTime:'2026-10-11T12:00:00Z'}}),false);
+  assert.equal(isBirthdayEvent({recurringEventId:'x',summary:'Lunch for Ann’s birthday',start:{dateTime:'2026-10-11T12:00:00Z'}}),false);
+  // A record remembers the series, not the occurrence, so next year's sweep
+  // recognizes the same birthday rather than importing it again.
+  assert.equal(seriesOf(derek),'typed-1');
 });
 
 test('a sweep writes each birthday once, leaves what was typed by hand alone, and does not bring back a deleted one',async()=>{
@@ -233,11 +240,48 @@ test('an event whose title is only the word birthday names nobody, and is flagge
   const {env}=environment();
   await connectGoogle(env);
   const google=fakeGoogle({calendars:[CALENDARS[0]],events:{'owner@example.com':[
-    {id:'nameless',summary:'Happy birthday!',eventType:'default',recurrence:['RRULE:FREQ=YEARLY'],start:{date:'2024-05-02'}},
-    {id:'named',summary:'Priya’s birthday',eventType:'default',recurrence:['RRULE:FREQ=YEARLY'],start:{date:'2024-06-09'}}
+    {id:'nameless_20270502',recurringEventId:'nameless',summary:'Happy birthday!',eventType:'default',start:{date:'2027-05-02'}},
+    {id:'named_20270609',recurringEventId:'named',summary:'Priya’s birthday',eventType:'default',start:{date:'2027-06-09'}}
   ]}});
   const result=await scanBirthdays(env,{request:new Request('https://example.com/v1/calendar/birthdays'),
     fetcher:google.fetcher,now:new Date('2026-09-20T12:00:00Z')});
   assert.equal(result.added,2,'the day is real, so the record is still kept');
-  assert.deepEqual(result.flagged,['Happy birthday!'],'but one of them cannot say whose it is');
+  assert.deepEqual(result.flagged,['Happy birthday! — names nobody'],'but one of them cannot say whose it is');
+});
+
+test('the day comes from the occurrence, not from where the series happens to start',async()=>{
+  const {env}=environment();
+  await connectGoogle(env);
+  // A real calendar had exactly this: a series beginning September 4th whose
+  // every occurrence falls on the 5th. Reading the series gave the wrong day by
+  // one, and then imported a second copy of a birthday already written down.
+  const google=fakeGoogle({calendars:[CALENDARS[0]],events:{'owner@example.com':[
+    {id:'kristen_20270905',recurringEventId:'kristen',summary:'Kristen Snyder’s Birthday',eventType:'default',start:{date:'2027-09-05'}}
+  ]}});
+  await saveReminder(env,{kind:'Birthday',title:'Kristen Snyder’s Birthday',date:'2026-09-05',every:12});
+  const result=await scanBirthdays(env,{request:new Request('https://example.com/v1/calendar/birthdays'),
+    fetcher:google.fetcher,now:new Date('2026-09-20T12:00:00Z')});
+  assert.equal(result.added,0,'the day agrees, so it is the birthday already written down');
+  assert.equal(result.matched,1);
+  assert.deepEqual(result.flagged,[]);
+  assert.equal((await savedReminders(env)).length,1);
+});
+
+test('the same name a day away is imported and said out loud, never merged on a guess',async()=>{
+  const {env}=environment();
+  await connectGoogle(env);
+  const google=fakeGoogle({calendars:[CALENDARS[0]],events:{'owner@example.com':[
+    {id:'kristen_20270904',recurringEventId:'kristen',summary:'Kristen Snyder’s Birthday',eventType:'default',start:{date:'2027-09-04'}},
+    {id:'faraway_20271120',recurringEventId:'faraway',summary:'Priya’s birthday',eventType:'default',start:{date:'2027-11-20'}}
+  ]}});
+  await saveReminder(env,{kind:'Birthday',title:'Kristen Snyder’s Birthday',date:'2026-09-05',every:12});
+  await saveReminder(env,{kind:'Birthday',title:'Priya',date:'2026-03-02',every:12});
+  const result=await scanBirthdays(env,{request:new Request('https://example.com/v1/calendar/birthdays'),
+    fetcher:google.fetcher,now:new Date('2026-09-20T12:00:00Z')});
+  // Two people really can share a name and be born a day apart, so nothing is
+  // skipped on the strength of a near miss — it is reported instead.
+  assert.equal(result.added,2);
+  assert.equal(result.flagged.length,1);
+  assert.match(result.flagged[0],/Kristen Snyder.*09-04.*09-05/);
+  assert.ok(!result.flagged.some(line=>/Priya/.test(line)),'a name two months away is simply another birthday');
 });

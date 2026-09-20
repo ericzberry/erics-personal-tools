@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {secretVault,vaultSessionStore,vaultCredentialStore,sealSecret,openSecret,isSealed,recoveryCode,recoveryBytes,encode,CREDENTIAL_KEY,SUSPECT,UNNAMED,VAULT_RP_ID} from '../src/secret-vault.js';
+import {secretVault,vaultSessionStore,vaultCarriedStore,vaultStore,forgetCarriedSession,vaultCredentialStore,sealSecret,openSecret,isSealed,recoveryCode,recoveryBytes,encode,CREDENTIAL_KEY,SESSION_KEY,CARRY_KEY,CARRY_DB,SUSPECT,UNNAMED,VAULT_RP_ID} from '../src/secret-vault.js';
 import {IDLE_MS} from '../src/idle-session.js';
 
 const ORIGIN='chrome-extension://synthetic-extension-id';
@@ -300,4 +300,172 @@ test('a key borrowed from the host’s own lock opens the records and is marked 
   assert.equal(borrowed.vault.borrowed(),false);
   await borrowed.vault.key();
   assert.equal(borrowed.vault.borrowed(),false);
+});
+
+// Stands in for the browser's IndexedDB, where the sealing key lives. Requests
+// settle asynchronously and a transaction completes only after every request
+// made inside it, including one queued from another's handler.
+function fakeIndexedDB(){
+  const databases=new Map();
+  const later=run=>setTimeout(run,0);
+  return {
+    databases,
+    open(name){
+      const opening={result:null,onsuccess:null,onerror:null,onblocked:null,onupgradeneeded:null};
+      later(()=>{
+        const fresh=!databases.has(name);
+        if(fresh)databases.set(name,new Map());
+        const stores=databases.get(name);
+        opening.result={
+          close(){},
+          createObjectStore(name){stores.set(name,new Map());},
+          transaction(name){
+            const data=stores.get(name),queue=[];
+            const store={
+              get(key){const query={result:undefined,onsuccess:null,onerror:null};queue.push(()=>{query.result=data.get(key);query.onsuccess?.();});return query;},
+              put(value,key){const query={onsuccess:null,onerror:null};queue.push(()=>{data.set(key,value);query.onsuccess?.();});return query;}
+            };
+            const transaction={error:null,oncomplete:null,onerror:null,onabort:null,objectStore:()=>store};
+            const drain=()=>{if(!queue.length)return transaction.oncomplete?.();queue.shift()();later(drain);};
+            later(drain);
+            return transaction;
+          }
+        };
+        if(fresh)opening.onupgradeneeded?.();
+        opening.onsuccess?.();
+      });
+      return opening;
+    },
+    deleteDatabase(name){
+      const deleting={onsuccess:null,onerror:null,onblocked:null};
+      later(()=>{databases.delete(name);deleting.onsuccess?.();});
+      return deleting;
+    }
+  };
+}
+// A browser: one disk, one IndexedDB, and a session area that Chrome empties
+// every time the extension is unloaded.
+function browser(){
+  const disk=localArea(),indexedDB=fakeIndexedDB();
+  let session=sessionArea();
+  return {
+    disk,indexedDB,
+    reload(){session=sessionArea();},
+    session:()=>session,
+    store:()=>vaultStore(vaultSessionStore(session.area,session.changes),vaultCarriedStore(disk.area,{indexedDB,subtle:crypto.subtle}))
+  };
+}
+
+test('an unlock survives the extension being reloaded, with the window it already had',async()=>{
+  const chrome=browser();
+  let now=1000;
+  const clock=()=>now;
+  const before=fixture({store:chrome.store(),clock});
+  await before.vault.key();
+  assert.equal(before.count(),1);
+  await tick();
+  assert.ok(chrome.disk.values.get(CARRY_KEY),'the unlock is carried somewhere a reload cannot reach');
+
+  // Updating the extension empties `chrome.storage.session` and nothing else.
+  now+=5*60*1000;
+  chrome.reload();
+  const after=fixture({store:chrome.store(),clock});
+  await after.vault.ready;
+  assert.equal(after.vault.unlocked(),true,'the reloaded extension is still unlocked');
+  assert.equal(after.count(),0,'and asked for no passkey');
+  assert.ok(chrome.session().stored(SESSION_KEY),'what it unsealed is back in session memory');
+
+  // The carried record keeps the original stamp, so the window runs out when it
+  // was always going to rather than starting again.
+  now+=IDLE_MS-5*60*1000;
+  assert.equal(after.vault.unlocked(),false,'a carried session expires on the one idle window');
+  chrome.reload();
+  const idle=fixture({store:chrome.store(),clock});
+  await idle.vault.ready;
+  assert.equal(idle.vault.unlocked(),false,'and is not adopted afterwards');
+  assert.equal(chrome.disk.values.get(CARRY_KEY),undefined,'an expired record is cleared rather than left behind');
+});
+
+test('what is carried is sealed, not the key written down',async()=>{
+  const chrome=browser();
+  const f=fixture({store:chrome.store()});
+  await f.vault.key();
+  await tick();
+  const carried=chrome.disk.values.get(CARRY_KEY);
+  const live=chrome.session().stored(SESSION_KEY);
+  assert.ok(live.key,'the session area holds the key itself');
+  assert.equal(JSON.stringify(carried).includes(live.key),false,'the carried copy does not');
+  assert.equal(carried.key,undefined);
+
+  // The sealing key never leaves the browser: it is generated non-extractable.
+  const seal=chrome.indexedDB.databases.get(CARRY_DB).get('seal').get('session-seal');
+  assert.equal(seal.extractable,false);
+  await assert.rejects(()=>crypto.subtle.exportKey('raw',seal));
+
+  // And the sealed record alone opens nothing.
+  chrome.reload();
+  chrome.indexedDB.databases.delete(CARRY_DB);
+  const without=fixture({store:chrome.store()});
+  await without.vault.ready;
+  assert.equal(without.vault.unlocked(),false);
+});
+
+test('locking closes the carried session, and so does the browser starting up',async()=>{
+  const chrome=browser();
+  const f=fixture({store:chrome.store()});
+  await f.vault.key();
+  await tick();
+  f.vault.lock();
+  await tick();
+  assert.equal(chrome.disk.values.get(CARRY_KEY),undefined,'Lock now reaches the carried copy too');
+  chrome.reload();
+  const locked=fixture({store:chrome.store()});
+  await locked.vault.ready;
+  assert.equal(locked.vault.unlocked(),false);
+
+  // A new browser session is not the same session. The service worker's
+  // onStartup throws the carried copy away, sealing key and all.
+  await locked.vault.key();
+  await tick();
+  assert.ok(chrome.disk.values.get(CARRY_KEY));
+  await forgetCarriedSession({storage:chrome.disk.area,indexedDB:chrome.indexedDB});
+  assert.equal(chrome.disk.values.get(CARRY_KEY),undefined);
+  assert.equal(chrome.indexedDB.databases.has(CARRY_DB),false,'the sealing key goes with it');
+  chrome.reload();
+  const restarted=fixture({store:chrome.store()});
+  await restarted.vault.ready;
+  assert.equal(restarted.vault.unlocked(),false,'a browser that has just started asks for the passkey');
+});
+
+test('a host with nowhere to carry an unlock keeps the session store it had',async()=>{
+  const session=sessionArea();
+  const live=vaultSessionStore(session.area,session.changes);
+  assert.equal(vaultStore(live,null),live,'no IndexedDB, no carried copy — and nothing else changes');
+  assert.equal(vaultStore(null,null),null,'the mobile app has neither and needs neither');
+  assert.equal(vaultCarriedStore(undefined,{indexedDB:fakeIndexedDB(),subtle:crypto.subtle}),null);
+  assert.equal(vaultCarriedStore(localArea().area,{indexedDB:undefined,subtle:crypto.subtle}),null);
+});
+
+test('a reloaded extension is one session again, not a page holding its own key',async()=>{
+  // The first page back puts what it unsealed into session memory, because that
+  // is how the others hear about a lock: Chrome announces nothing when a key
+  // that was not there is removed.
+  const chrome=browser();
+  const before=fixture({store:chrome.store()});
+  await before.vault.key();
+  await tick();
+  chrome.reload();
+
+  const first=fixture({store:chrome.store()});
+  await first.vault.ready;
+  const beside=fixture({store:chrome.store()});
+  await beside.vault.ready;
+  assert.equal(first.vault.unlocked(),true);
+  assert.equal(beside.vault.unlocked(),true);
+  assert.equal(beside.count(),0,'the second page back asked for nothing either');
+
+  beside.vault.lock();
+  await tick();
+  assert.equal(first.vault.unlocked(),false,'Lock now in one page still closes the others');
+  assert.equal(chrome.disk.values.get(CARRY_KEY),undefined,'and the carried copy with them');
 });

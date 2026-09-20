@@ -61,10 +61,19 @@ connection made before it exists keeps working and simply cannot read a
 calendar: the screen says so and offers the rest of the consent rather than a
 sweep that would fail. Nothing here ever creates, moves or deletes an event.
 
+**The occurrence, not the series.** Google is asked to expand the recurrences,
+so what arrives is the instance the owner sees drawn on the day rather than the
+series it belongs to. A series' start date is where its rule begins, which is
+not always where the rule lands: one calendar here holds a birthday whose series
+starts September 4th and whose every occurrence is the 5th. The record remembers
+the series id (`recurringEventId`), so next year's sweep recognizes the same
+birthday instead of importing a new one.
+
 **What counts as a birthday.** Google's own contact birthdays say so outright
 (`eventType: "birthday"`) and are taken at their word. Anything else has to look
-like one from both sides — an all-day date that repeats every year *and* a name
-that says birthday — because a wedding anniversary is yearly and all-day too. A
+like one from both sides — an all-day occurrence of something that repeats *and*
+a name that says birthday — because a wedding anniversary is yearly and all-day
+too, and a one-off "birthday party" belongs to no series at all. A
 calendar that holds nothing but birthdays is read whole; every other one is
 searched, because a calendar of ten thousand meetings cannot be read whole
 inside a Worker's request budget. That budget also caps how many calendars one
@@ -88,9 +97,13 @@ as a birth year and gave forty-five people an age counted from the day their
 reminder was written down; those ages were cleared and the rule replaced with
 this one.
 
-**A title that names nobody** — one that is nothing but the word birthday — is
-still saved, because the day is real, but the sweep reports it so somebody can
-say whose it is.
+**What the sweep cannot decide, it says out loud.** Two things are imported
+normally and then reported, because neither is safe to settle without a person:
+a title that is nothing but the word birthday, which names nobody though its day
+is real; and a name that matches a birthday already written down on a day one or
+two off, which is usually one person two places disagree about — but two people
+really can share a name and be born a day apart, so nothing is ever skipped on
+the strength of a near miss.
 
 **Nothing is written twice and nothing already there is touched.** Three things
 are checked in order for each event: the sweep's own record of every event it

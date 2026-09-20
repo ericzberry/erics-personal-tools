@@ -20,7 +20,7 @@
 //     calendar also holds is recognized and left exactly as it is.
 import {encryptSettings,decryptSettings} from './ai-settings.js';
 import {accessToken,storedAccount,noteCalendarRefused,forgetAccessToken,CALENDAR_SCOPE} from './drive.js';
-import {calendarBirthday,sameBirthday,birthdayName,localDate,CALENDAR_SOURCE} from '../../chrome-sidebar/src/reminder-data.js';
+import {calendarBirthday,sameBirthday,birthdayName,addMonths,localDate,CALENDAR_SOURCE} from '../../chrome-sidebar/src/reminder-data.js';
 
 const fail=(status,message)=>{throw {status,message};};
 const now=()=>new Date().toISOString();
@@ -41,6 +41,10 @@ const MAX_ADDED=200;
 // written again next month. One entry per person, so this grows very slowly.
 const MAX_HANDLED=2000;
 const CONTACTS=/#contacts@group\.v\.calendar\.google\.com$/;
+// How far apart two records naming the same person can fall and still be worth
+// asking about. Two days covers a calendar written down a day out and a date
+// remembered across a time zone; beyond that they are simply two birthdays.
+const NEAR_DAYS=2;
 
 // --- What the last sweep did.
 export async function storedScan(env){
@@ -88,15 +92,26 @@ async function calendarFetch(env,request,fetcher,path,retried=false){
 
 // --- Which events are birthdays.
 //
-// Google's own contact birthdays say so outright, and those are taken at their
-// word. Anything else has to look like one from both sides: a date with no
-// time that comes round every year, and a name that says birthday. A yearly
-// all-day event alone is not enough — so is a wedding anniversary.
-const yearly=event=>Array.isArray(event?.recurrence)
-  &&event.recurrence.some(rule=>/^RRULE[:;]/i.test(String(rule))&&/FREQ=YEARLY/i.test(String(rule)));
+// Google is asked to expand the recurrences rather than hand back the series
+// they come from, so what arrives is the occurrence itself — the one the owner
+// sees drawn on the day. That matters: a series' own start date is where the
+// rule begins, which is not always where the rule lands. One calendar here had
+// a birthday whose series starts September 4th and whose every occurrence is
+// the 5th, and reading the series gave the wrong day by one.
+//
+// An occurrence names the series it belongs to in `recurringEventId`, and that
+// is what a record remembers, so the same birthday is the same birthday next
+// year rather than a new one every time it comes round.
+//
+// Google's own contact birthdays say so outright and are taken at their word.
+// Anything else has to look like one from both sides: an all-day occurrence of
+// something that repeats, and a name that says birthday. Repeating alone is not
+// enough — a wedding anniversary is yearly and all-day too — and a one-off
+// "birthday party" belongs to no series at all, which is what rules it out.
 export const namedBirthday=summary=>/\b(birthdays?|bday|b-day)\b/i.test(String(summary??''));
+export const seriesOf=event=>String(event?.recurringEventId||'')||'';
 export const isBirthdayEvent=event=>!!event?.start?.date
-  &&(event.eventType==='birthday'||(yearly(event)&&namedBirthday(event.summary)));
+  &&(event.eventType==='birthday'||(!!seriesOf(event)&&namedBirthday(event.summary)));
 
 // A sweep's request budget, spent one call at a time. Everything that reads
 // Google goes through here so nothing can quietly exceed it.
@@ -124,8 +139,8 @@ async function calendars(env,request,fetcher,spend){
 // ten thousand meetings down to one request; a calendar that holds nothing but
 // birthdays is read without it, because Google writes those titles in the
 // owner's own language and "birthday" is not a word in all of them.
-async function calendarBirthdays(env,request,fetcher,spend,calendar){
-  const events=[];
+async function calendarBirthdays(env,request,fetcher,spend,calendar,window){
+  const events=[],series=new Set();
   // A calendar that holds nothing but birthdays is read whole; everything else
   // is searched, because a calendar of ten thousand meetings cannot be.
   const contacts=CONTACTS.test(String(calendar.id||''));
@@ -133,8 +148,9 @@ async function calendarBirthdays(env,request,fetcher,spend,calendar){
     let pageToken='';
     do{
       if(!spend.spend())return {events,short:true};
-      const params=new URLSearchParams({maxResults:String(PAGE_SIZE),singleEvents:'false',showDeleted:'false',
-        fields:'items(id,summary,eventType,recurrence,start/date),nextPageToken',...query});
+      const params=new URLSearchParams({maxResults:String(PAGE_SIZE),singleEvents:'true',showDeleted:'false',
+        orderBy:'startTime',timeMin:window.from,timeMax:window.to,
+        fields:'items(id,summary,eventType,recurringEventId,start/date),nextPageToken',...query});
       if(pageToken)params.set('pageToken',pageToken);
       let page;
       try{
@@ -146,11 +162,35 @@ async function calendarBirthdays(env,request,fetcher,spend,calendar){
         if([409,429,504].includes(error?.status))throw error;
         return {events,short:false};
       }
-      for(const event of Array.isArray(page.items)?page.items:[])if(isBirthdayEvent(event))events.push(event);
+      for(const event of Array.isArray(page.items)?page.items:[]){
+        if(!isBirthdayEvent(event))continue;
+        // A year's window holds one occurrence of a yearly birthday. Anything
+        // that repeats faster would fill it with the same event over and over,
+        // so only the first occurrence of a series is taken.
+        const id=seriesOf(event)||event.id;
+        if(series.has(id))continue;
+        series.add(id);
+        events.push({...event,id});
+      }
       pageToken=typeof page.nextPageToken==='string'?page.nextPageToken:'';
     }while(pageToken);
   }
   return {events,short:false};
+}
+
+// Same name, nearly the same day. `sameBirthday` is the strict test that
+// decides what not to import; this is the loose one that decides what to
+// mention, and the two must not be confused — nothing is ever skipped on the
+// strength of a near miss.
+function nearBirthday(record,candidate){
+  if(record?.kind!=='Birthday'||sameBirthday(record,candidate))return false;
+  const left=birthdayName(`${record.title??''} ${record.subject??''}`);
+  const right=birthdayName(`${candidate.title??''} ${candidate.subject??''}`);
+  if(!left.size||!right.size)return false;
+  if(![...left].every(word=>right.has(word))&&![...right].every(word=>left.has(word)))return false;
+  const day=value=>{const [m,d]=value.slice(5).split('-').map(Number);return m*31+d;};
+  const apart=Math.abs(day(record.date||'')-day(candidate.date||''));
+  return apart>0&&apart<=NEAR_DAYS;
 }
 
 // --- The records.
@@ -176,12 +216,15 @@ export async function scanBirthdays(env,{request,fetcher=fetch,now:when=new Date
   const previous=await storedScan(env);
   const handled=new Set(restart?[]:(previous?.handled||[]));
   const spend=budget();
+  // One year from today: long enough that every yearly birthday falls inside it
+  // exactly once, short enough that nothing repeats within it.
+  const window={from:`${today}T00:00:00Z`,to:`${addMonths(today,12)}T00:00:00Z`};
   const list=await calendars(env,request,fetcher,spend);
   const records=await reminderRows(env);
   const added=[],matched=[],saved=[],flagged=[];
   let scanned=0,short=spend.exhausted;
   for(const calendar of list){
-    const result=await calendarBirthdays(env,request,fetcher,spend,calendar);
+    const result=await calendarBirthdays(env,request,fetcher,spend,calendar,window);
     short=short||result.short;
     scanned+=result.events.length;
     for(const event of result.events){
@@ -200,13 +243,19 @@ export async function scanBirthdays(env,{request,fetcher=fetch,now:when=new Date
       if(already){saved.push(already.title);continue;}
       const byHand=records.find(record=>sameBirthday(record,candidate));
       if(byHand){matched.push(byHand.title);continue;}
+      // The same name on a nearby but different day. It is usually one person
+      // whose birthday two places disagree about by a day — and it is not
+      // something to decide here, because two people really can share a name
+      // and be born a day apart. So it is imported and said out loud.
+      const near=records.find(record=>nearBirthday(record,candidate));
+      if(near)flagged.push(`${candidate.title} (${candidate.date.slice(5)}) also written down as ${near.title} (${near.date.slice(5)})`);
       if(added.length>=MAX_ADDED){short=true;handled.delete(event.id);continue;}
       records.push(await addReminder(env,candidate));
       added.push(candidate.title);
       // A title that is nothing but the word birthday names nobody, so the
       // record it makes cannot say whose it is. It is still saved — the day is
       // real — but it is worth someone's attention rather than silence.
-      if(!birthdayName(candidate.title).size)flagged.push(candidate.title);
+      if(!birthdayName(candidate.title).size)flagged.push(`${candidate.title} — names nobody`);
     }
     if(spend.exhausted){short=true;break;}
   }

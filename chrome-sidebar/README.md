@@ -1502,3 +1502,32 @@ harness at 380px and the 280px minimum: a return named from its taxpayer and
 government, a locked document before and after its password, and a year divided
 by taxpayer. Native iPhone and installed Chrome behavior were not directly
 tested. Archive: `release/erics-sidebar-0.6.143.zip`.
+
+## An update is not the end of a session (0.6.144 / mobile 0.1.98)
+
+Updating the extension, or pressing **Reload** on it, asked for the passkey
+again. Nothing about the session had ended: `chrome.storage.session` is memory
+the extension holds, so Chrome empties it whenever the extension is unloaded,
+and the unlocked vault went with it.
+
+The unlock is now kept a second time, where a reload cannot reach it and where
+nobody can read it: sealed with a key that is generated non-extractable and left
+in IndexedDB, with the sealed record in local storage beside it. The extension
+can seal and open with that key and no code can read it back out, so neither
+half opens anything on its own. A reloaded extension unseals what it had and
+carries on inside the window it was already in.
+
+Nothing about that window changed. The carried record holds the same stamp as
+every other copy, so it expires on the one idle hour, **Lock now** clears it, and
+a browser that has just started throws it away along with its sealing key and
+asks for the passkey. The phone is unaffected — it already carries its unlock
+across the one reload it has.
+
+Validation: 431 extension and 33 mobile tests pass, including a reloaded
+extension adopting the carried unlock and expiring on the original window, a
+lock in one page closing the others afterwards, and the carried record holding
+no readable key. The sealing and unsealing were also run against a real browser's
+IndexedDB and WebCrypto, confirming that two pages sealing at once agree on one
+key and that the key refuses to be exported. Reloading the installed extension
+in the owner's own Chrome was not directly tested. Archive:
+`release/erics-sidebar-0.6.144.zip`.

@@ -75,6 +75,28 @@ the reload that applies an update, and `mobile-security.js` carries that unlock
 across it in the tab's session storage: written as the reload is triggered, read
 once and removed, and refused when it is stale or belongs to another saved lock.
 
+**The extension's own reload is not the end of a session either.**
+`chrome.storage.session` is memory the extension holds, so Chrome empties it
+whenever the extension is unloaded — every update, and every press of **Reload**
+on an unpacked build. Nothing about the reader's session ended, but the next
+protected section asked for the passkey again. The extension cannot write a
+handoff the way mobile does, because nothing tells it a reload is coming, so
+`vaultCarriedStore()` keeps the same record where a reload cannot reach it:
+sealed with an AES-GCM key that is generated non-extractable and left in
+IndexedDB, with the sealed record in `chrome.storage.local` beside it. The
+extension's pages can seal and open with that key; no code, theirs included, can
+read it back out, and neither half opens anything alone. `vaultStore()` composes
+the two — the session area answers first, the sealed copy answers after a
+reload — so every page still reads and writes one record.
+
+This lengthens no session. The carried record carries the same stamp as every
+other copy, so it expires on the one idle window, **Lock now** clears it, and the
+service worker's `onStartup` — the single event that fires once per browser
+session — throws it away along with its sealing key, so a browser that has just
+started asks for the passkey. The trade is deliberate and narrower than it
+sounds: for the remainder of an idle window the key exists on disk sealed rather
+than only in memory, and the profile directory alone does not open it.
+
 **On the phone, the app's own lock is the check.** The mobile app already asks
 for the passkey before it shows anything, to unwrap this device's access token.
 That is a WebAuthn PRF evaluation of the same passkey the record vault needs, so
