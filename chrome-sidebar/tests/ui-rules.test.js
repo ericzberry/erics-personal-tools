@@ -194,3 +194,24 @@ test('one currency formatter, and it writes what is owed in parentheses',async()
       `${file} formats its own currency — use money() from src/money.js. See UI-26 in docs/UI_RULES.md.`);
   }
 });
+
+// UI-27. A list of money is read down its right edge, so every figure in one
+// list ends on the same one — a portfolio's total included. Giving the heading
+// its own two-column layout put the total 104px right of the figures it totals
+// and squeezed the name into 75px, where a trust's name broke into three lines
+// with the total jammed against them. Both lines reserve the same slot for the
+// verbs that ride at the end of a row, in one declaration, so neither can
+// drift from the other again.
+test('one column of money: a heading total reserves the same slot as the rows under it',()=>{
+  const css=readFileSync(new URL('../src/components/finance.css',import.meta.url),'utf8');
+  const shared=/([^{}]*\.action-group)\{[^}]*min-width:calc\(var\(--verbs\)\*var\(--verb\)\)/.exec(css);
+  assert.ok(shared,'no rule reserves the verb slot');
+  for(const line of ['.record-line','.group-line'])
+    assert.ok(shared[1].includes(line),
+      `${line} does not share the reserved verb slot — its figures will end on a different edge. `+
+      'See UI-27 in docs/UI_RULES.md.');
+  // The name takes the whole line and the total follows underneath. At sidebar
+  // width the amount and the slot leave under 80px, which is not a name.
+  assert.match(css,/\.group-name\{flex:1 1 100%/,
+    'the heading name shares its line with the total again — there is no room for both');
+});

@@ -3002,3 +3002,43 @@ headline total of $31,732,021.04 after that headline is refused, and an availabl
 figure standing alone still counted. Not directly checked: the live Morgan
 Stanley page, which is behind a sign-on — the figures above came off the owner's
 own reading of it.
+
+## One column of money, and the heading back out of it (0.6.222 / mobile 0.1.172)
+
+**A regression, and it was mine.** 0.6.215 gave the portfolio heading two
+columns of its own — a name column and a total column — to stop a long trust
+name pushing its own total onto a row underneath. It did stop that, and it
+broke two things that matter more.
+
+The heading's total no longer lined up with the figures it totals. Every class
+figure in the ledger reserves the slot its row actions ride in, so they all end
+on one edge; the heading was given its own layout and reserved nothing, so its
+total sat 104px to the right of the column it heads. Measured at 374px: the
+class figures ended at x=200, the heading total at x=304.
+
+And the name column was whatever the total left. At 374px the amount and the
+verb slot take 200 of a 275px row, so "Berry 2020 Descendants' Irrevocable
+Trust" was handed 75px, broke into three lines, and the total sat across them.
+
+**The heading is a name on its own line again, with the total underneath it,
+in the same column as everything else.** Both lines now reserve the verbs' slot
+from one shared declaration, so neither can drift from the other. Measured
+after: every right edge in a group is identical — 233px at 374px, 147px at the
+280px minimum — heading total and class figures alike, with no horizontal
+overflow at either width.
+
+That costs the heading a line, which is what the two columns were trying to buy
+back. There is no room to buy: at sidebar width the amount plus the slot leave
+under 80px, and 80px is not a name. Recovering it means taking the row actions
+out of the flow, which is a change to how every row in the product is built,
+not a change to this heading.
+
+UI-27 in the register holds it: one column of money, every figure in a list
+ending on the same right edge with a group's own total among them, and the slot
+reserved in one declaration rather than two.
+
+Validation: 589 extension and 33 mobile tests pass from an archive of this
+release. The synthetic ledger was measured at 374px and at 280px with the
+owner's own longest trust name and its real total substituted in, confirming
+one right edge and no overflow. Native iPhone and installed Chrome behavior
+were not directly tested. Archive: `release/erics-sidebar-0.6.222.zip`.

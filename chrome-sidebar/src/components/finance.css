@@ -36,21 +36,21 @@
    The name and its kind run as one piece of text rather than two blocks side
    by side, so the kind follows the last word of a name that wrapped instead of
    being set adrift on a line of its own underneath it. */
-/* Two columns, so every portfolio's total sits in the same place whatever its
-   name is. A trust called "Berry 2020 Descendants' Irrevocable Trust" used to
-   push its own total onto a row of its own, and a run of portfolios then read
-   as a name, a stray figure, a name — with no column of totals to read down.
-   The name wraps inside its column instead. */
-.group-name{min-width:0;overflow-wrap:break-word}
+/* The name takes the whole line and wraps on it; the total follows underneath,
+   in the same column the class figures below it land in. Squeezing the two
+   side by side is what a sidebar has no room for: at 374px a trust called
+   "Berry 2020 Descendants' Irrevocable Trust" left 75px for its own name and
+   broke into three lines with the total jammed against them. */
+.group-name{flex:1 1 100%;min-width:0;overflow-wrap:break-word}
 .group-name>.record-group-title{display:inline}
 .portfolio-kind{margin-inline-start:6px;vertical-align:2px}
 /* A portfolio's heading is its name, its total, and its own two verbs, ruled
    off from the figures under it as one line. In a narrow sidebar the total
    drops under the name rather than squeezing it into a column six words deep,
    and the rule belongs to the line so it closes the heading either way. */
-.breakdown-row.group-line{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 8px;padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
+.breakdown-row.group-line{align-items:center;flex-wrap:wrap;padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
 .breakdown-row.group-line>.group-name>.record-group-title{min-width:0;padding:0;border-bottom:0}
-.group-figure{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.group-figure{flex:0 0 auto;display:flex;align-items:center;gap:8px;margin-inline-start:auto}
 .breakdown-row strong,.trend-row strong{font-weight:600}
 /* An amount never breaks across lines. "$1,720,000" split after the "0" reads
    as a different number, so the name beside it wraps instead. */
@@ -71,15 +71,16 @@
    the touch sizes underneath keep it honest. */
 .finance-ledger{--verb:26px;--verbs:3}
 @media(hover:none){.finance-ledger{--verb:32px}}
-/* The rows reserve the slot so their figures line up in a column. A portfolio's
-   heading does not: it is a name and a total, and holding 78px open for two
-   verbs that only appear under the pointer cost the name two extra wrapped
-   lines at sidebar width. */
-.finance-ledger .record-line>.record-figure>.action-group{flex:none;min-width:calc(var(--verbs)*var(--verb));justify-content:flex-end}
-.finance-ledger .group-line>.group-figure>.action-group{flex:none;justify-content:flex-end}
+/* One column of money down the whole ledger. A portfolio's total and every
+   class figure under it reserve the same slot for the verbs that ride at the
+   end of a line, so they end on the same edge whatever verbs a row carries.
+   Without it the heading total sat 104px right of the figures it totals. */
+.finance-ledger .record-line>.record-figure>.action-group,
+.finance-ledger .group-line>.group-figure>.action-group{flex:none;min-width:calc(var(--verbs)*var(--verb));justify-content:flex-end}
 /* A row with no verbs at all — what is owed on the houses — still keeps the
    slot, or its figure would run out to the edge past every figure above it. */
-.finance-ledger .record-line>.record-figure>.action-group:empty{display:flex}
+.finance-ledger .record-line>.record-figure>.action-group:empty,
+.finance-ledger .group-line>.group-figure>.action-group:empty{display:flex}
 .finance-ledger .estate-detail{--verbs:4}
 /* The houses behind a Real estate line, shown only when they are asked for.
    Set in from the line they add up to, and ruled along their edge, so a run of

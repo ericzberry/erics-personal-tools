@@ -49,6 +49,7 @@ here.
 | **UI-21** | One focus ring: 2px, in the forest token, in every sheet either host loads. Offsets may differ — inside a tile, outside a control — but the width and the colour may not. The one exception is the gear on the forest header, which rings in `currentColor` because forest on forest is no ring at all. | `tests/ui-rules.test.js` |
 | **UI-22** | Everything that expands opens the same way: one inset block with a banded head, and no sheet carries a list of disclosures exempt from it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-26** | One currency formatter, in `ui.js`, and it writes a negative in parentheses. No other module builds a currency format. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
+| **UI-27** | One column of money: every figure in a list ends on the same right edge, a group's own total included, and the lines that hold them reserve their row actions' slot in one shared declaration. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 
 ## Ratcheting
 
@@ -186,6 +187,17 @@ figure then passes for an asset. It is not a status tone: no mark, no surface,
 only the red. One formatter does this, `money()` in `ui.js`, and no other
 module builds a currency format of its own. *"Use parens not minus sign for all
 liabilities. Make it a shade of red."*
+
+**UI-27 — a column of money ends on one edge.** *Enforced.* A list of figures
+is read down its right edge, so every figure in it ends on the same one and a
+group's own total is one of them. The lines that carry them reserve the slot
+their row actions ride in from one shared declaration, because two
+declarations drift. A heading does not get a layout of its own: at sidebar
+width the amount and that slot leave under 80px, which is not a name. *"In Net
+Worth — this looks terrible — overlapping numbers and misaligned numbers."*
+This was a regression 0.6.215 introduced by giving the portfolio heading two
+columns of its own: the total landed 104px right of the figures it totalled,
+and a trust's name broke into three lines with the total jammed against them.
 
 ## Open
 
