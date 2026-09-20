@@ -51,7 +51,7 @@ is marked `vision` only where image input is known to be supported; an unmarked
 model is simply never chosen for an image, which surfaces as a clear "no model
 available" rather than a provider error.
 
-`finance.intake` uses level 3, 7,000 output tokens, no web tool, and a $0.03
+`finance.intake` uses level 2, 7,000 output tokens, no web tool, and a $0.03
 estimated request ceiling. The output budget was raised from 2,500 on
 2026-09-20: a wealth manager listing a household's joint account and its trusts
 puts twenty-eight accounts on one page, each of which comes back named,
@@ -77,6 +77,19 @@ the page was read, the figures were found, and the request was abandoned
 mid-answer at 25 seconds with the provider still billing for it. The reading now
 waits 113 seconds, inside the 130 the device itself allows, so the Worker gives
 up first and can say why.
+
+The level went back to 2 on 2026-09-20, and with it to a model that does not
+reason before answering. It had been raised to 3 because a level-2 model read
+E*TRADE's page by filing every figure under the institution's name and calling a
+column of gains the holdings — both of which are what a snapshot looks like when
+the page reader hands over bare figures with no row around them. It no longer
+does: accounts arrive as table rows naming the account, the column and the
+figure together, a figure a row already stated is not repeated loose, and a
+change printed above its own percentage never reaches the model. What level 3
+cost was the wait — a reasoning model thinks first and then still has
+twenty-eight accounts to write. Selection is now `gpt-4.1-mini` at about $0.013
+a read against $0.016, and Settings still pins this one task to any reviewed
+model if a reading comes back wrong.
 
 It reads one block of pasted text, or an image of a statement, into draft
 figures and nothing else: the owner's saved records are never sent, so it

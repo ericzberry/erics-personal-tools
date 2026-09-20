@@ -100,3 +100,22 @@ test('a task waits in proportion to the answer it asked for',()=>{
   for(const tokens of [500,2500,7512,40000])assert.equal(taskTimeout(tokens)%1000,0,`${tokens} rounds to whole seconds`);
   assert.equal(taskTimeout(1e6),TIMEOUT_CEILING,'and it is capped');
 });
+
+// Reading figures off a page the reader has already narrowed to figures is not
+// work that needs a model to think first. Level 3 selected a reasoning model,
+// which thinks and then still has twenty-eight accounts to write out, and the
+// press sat for the better part of two minutes.
+test('the finance reading takes the fast model, and an image still finds one that can see',()=>{
+  const available=MODEL_CATALOG.map(model=>({id:model.id}));
+  const page={messages:[{role:'system',content:'y'.repeat(8784)},{role:'user',content:'x'.repeat(2715)}]};
+  const chosen=chooseTaskModel({provider:'openai',available,task:'finance.intake',input:page});
+  assert.equal(chosen.model.reasoning??false,false,'no model that thinks before it writes');
+  assert.ok(chosen.estimatedCost<=TASK_POLICIES['finance.intake'].maxCost);
+  // A photographed statement goes down the same route and must still reach a
+  // model this application will send a picture to.
+  const photo={messages:[{role:'user',content:[{type:'image'},{type:'text',text:'x'}]}]};
+  assert.equal(MODEL_CATALOG.find(m=>m.id===chooseTaskModel({provider:'openai',available,task:'finance.intake',input:photo}).model.id).vision,true);
+  // And the owner's own pick still outranks the floor, which is what makes a
+  // wrong reading a setting rather than a deploy.
+  assert.equal(chooseTaskModel({provider:'openai',available,task:'finance.intake',input:page,chosen:'gpt-5-mini'}).model.id,'gpt-5-mini');
+});
