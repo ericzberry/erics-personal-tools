@@ -1,4 +1,4 @@
-import {mountSettings} from './components/views.js';
+import {mountSettings,AiTaskRow} from './components/views.js';
 import {ConnectionCard,setModelSuggestions,setStatus} from './components/ui.js';
 import {providerFor} from './ai-providers.js';
 mountSettings(document.getElementById('app'));
@@ -20,6 +20,7 @@ function controls() {
   for (const id of ['connection-add','connection-reload']) $(id).disabled=working||!connected;
   $('connection-actions').hidden=!connected;
   for (const node of $('connection-list').querySelectorAll('button')) node.disabled=working||!connected;
+  for (const node of $('ai-tasks-list').querySelectorAll('select')) node.disabled=working||!connected;
   $('settings-connect').disabled=working||!available;
   $('settings-disconnect').disabled=working||!connected;
   $('settings-disconnect').hidden=!connected;
@@ -30,7 +31,7 @@ function controls() {
   for(const node of $('playground-form').querySelectorAll('input,textarea,select,button'))node.disabled=!canRun;
   $('connection-models').disabled=!canRun;
   $('playground-copy').disabled=working||!$('playground-output').textContent;
-  $('playground-context').textContent=dirty?'Save or cancel your changes before making a provider request.':!selected?'Select a saved connection above.':!selected.hasApiKey?'Save an API key for this connection to try it.':`Using ${selected.name}. Tests and prompts use this provider’s API credit.`;
+  $('playground-context').textContent=dirty?'Save or cancel your changes first.':!selected?'Select a connection above.':!selected.hasApiKey?'Save an API key to try it.':`Using ${selected.name} · billed to that provider.`;
 }
 function endpointHint(){
   const provider=providerFor($('ai-provider').value);
@@ -44,7 +45,7 @@ function renderList() {
     edit(next);
   }})));
   $('connections-empty').hidden=connections.length>0;
-  $('connections-empty').textContent=connected?'No connections yet. Add your first provider.':'Connect your browser to load your AI settings.';
+  $('connections-empty').textContent=connected?'No connections yet.':'Not connected.';
   controls();
 }
 function edit(connection=null) {
@@ -77,7 +78,21 @@ async function run(action) {
 }
 async function load() {
   const result=await send('list');connections=result.connections;renderList();
+  await loadTasks();
   await migrate();
+}
+// Every AI action the app performs, and the model that runs it. This list is
+// the whole of that choice: no feature offers one beside its own button.
+async function loadTasks() {
+  try {renderTasks((await send('ai-tasks')).tasks||[]);}
+  catch (error) {setStatus($('ai-tasks-status'),error.message,'error');}
+}
+function renderTasks(tasks) {
+  setStatus($('ai-tasks-status'),'');
+  $('ai-tasks-list').replaceChildren(...tasks.map(task=>AiTaskRow({...task,onChange:model=>run(async()=>{
+    renderTasks((await send('ai-task-save',{task:task.task,model})).tasks||[]);
+    setStatus($('ai-tasks-status'),`${task.label}: ${model||'automatic'}`,'success');
+  })})));
 }
 // Keys saved in this browser before connections moved to D1 follow them here,
 // where the connections that hold them now live.
@@ -92,11 +107,11 @@ $('settings-connect').addEventListener('click',()=>run(async()=>{
   await send('connect', {token:$('settings-token').value.trim()||undefined});
   $('settings-token').value='';connected=true;
   await load();$('settings-cloud').open=false;setStatus($('settings-cloud-status'),'This browser is connected.','success');
-  status('Connected. Your settings are ready.','success');
+  status('Connected.','success');
 }));
 $('settings-disconnect').addEventListener('click',()=>run(async()=>{
   await send('disconnect');connected=false;connections=[];edit();$('settings-token').value='';$('settings-cloud').open=true;
-  status('Disconnected from this browser. Saved AI connections remain in your account.','success');
+  status('Disconnected. Saved connections stay in your account.','success');
 }));
 $('connection-form').addEventListener('input',()=>{dirty=true;controls();});
 $('connection-form').addEventListener('change',()=>{dirty=true;controls();});

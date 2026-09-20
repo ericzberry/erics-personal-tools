@@ -169,8 +169,11 @@ export async function generate(connection,input,fetcher=fetch) {
     warning:!text?'The provider returned no text. Try a higher output limit or another text model.':['length','max_tokens','max_output_tokens'].includes(stopReason)?'The output limit was reached; this response may be incomplete.':null};
 }
 
+// The owner's choice for this action rides on the connection, put there by the
+// server when it was loaded. It never comes from the request: which model runs
+// an action is a setting, not something a caller can ask for.
 export async function routeTask(connection,task,input,fetcher=fetch) {
   taskPolicy(task,input);
   const availability=await listModels(connection,fetcher);
-  return chooseTaskModel({provider:connection.provider,available:availability.models,task,input});
+  return chooseTaskModel({provider:connection.provider,available:availability.models,task,input,chosen:connection.taskModels?.[task]||''});
 }

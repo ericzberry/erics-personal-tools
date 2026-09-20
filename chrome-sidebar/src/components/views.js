@@ -13,7 +13,7 @@ export function DraftView() {
 }
 export function DraftReset() {
   return Disclosure('Reset draft data',[
-    Note('Clears this board’s picks and corrections and switches live capture off. Other drafts and rankings stay saved. Turn capture back on in Settings to use ESPN history again.'),
+    Note('Clears this board’s picks and turns capture off.'),
     Button('Reset this draft',{id:'reset-draft',variant:'danger'}),Notice('',{id:'reset-draft-status',hidden:true})
   ],{className:'settings-panel'});
 }
@@ -66,7 +66,7 @@ export function VoiceView() {
 export const VoiceLines=(voices=[])=>voices.map(voice=>Stack([
   Strong(voice.name),Note([voice.audience,...voice.markers].filter(Boolean).join(' · '))
 ],{className:'voice-line'}));
-export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open a tool or a relevant website to get started.')])],{id:'home-tool',className:'tool-page',hidden:true});
+export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open a tool, or a site a tool knows.')])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     UI.SettingsList([
@@ -92,12 +92,32 @@ const PanelTool=id=>Section([],{id:`${id}-tool`,className:'tool-page',hidden:tru
 export function mountApp(root) {root.replaceChildren(AppHeader({}),UI.PageOfferBar(),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),
   ...['finance','taxes','attention','subscriptions','gifts','sizes','reminders','cards','personal'].map(PanelTool),SettingsView());}
 
+// One AI action and the model that runs it. The action's name reads down the
+// left and its model sits at the end of the line, the way a record's own
+// controls do. Nothing explains what routing is: the choice is the explanation.
+export function AiTaskRow({task,label,automatic,chosen,options,onChange}) {
+  const id=`ai-task-${task.replace('.','-')}`;
+  const select=UI.Select({id,label:`Model for ${label}`,options:[
+    {text:automatic?`Automatic · ${automatic}`:'Automatic',value:''},
+    ...options.map(option=>({text:option.id,value:option.id}))
+  ]});
+  const control=select.querySelector('select');
+  // Selecting the option rather than assigning `value` works the same in every
+  // host this screen renders in. `selected` is a property, so the shared list
+  // is told to catch up before this row starts listening for the owner's own
+  // change — otherwise the trigger would keep reading "Automatic".
+  for(const option of control.options)option.selected=option.value===(chosen||'');
+  control.dispatchEvent(new control.ownerDocument.defaultView.Event('change'));
+  control.addEventListener('change',()=>onChange([...control.options].find(option=>option.selected)?.value||''));
+  return Section([Stack([UI.Strong(label,{className:'record-name'}),
+    Stack([select],{className:'ai-task-model'})],{className:'record-line'})],{className:'record-row ai-task-row'});
+}
 export function AISettingsView() {
   const field=UI.FormField;
   return Stack([
     Section([Stack([UI.Strong('eb',{className:'settings-monogram'}),UI.Strong('ericberry')],{className:'settings-brand'}),
       Note('Personal settings'),CapabilityPicker(),Text('AI connections',{className:'settings-nav-current'}),
-      Note('Open here anytime: ericberry → Tab → Enter',{className:'settings-shortcut'})
+      Note('ericberry → Tab → Enter',{className:'settings-shortcut'})
     ],{className:'settings-rail'}),
     Main([
       Stack([Stack([Heading('AI connections',1)]),
@@ -112,7 +132,7 @@ export function AISettingsView() {
       Stack([
         Section([SectionTitle('Saved connections'),
           ActionGroup([Button('Add connection',{id:'connection-add',variant:'primary',size:'compact'}),Button('Reload connections',{id:'connection-reload',variant:'secondary',size:'compact'})],{compact:true,id:'connection-actions',hidden:true}),
-          Text('Connect your browser to load your AI settings.',{id:'connections-empty',className:'settings-empty'}),
+          Text('Not connected.',{id:'connections-empty',className:'settings-empty'}),
           Stack([],{id:'connection-list',className:'connection-list'})],{className:'settings-library'}),
         UI.Panel([
           SectionTitle('Add connection',undefined,{titleId:'connection-editor-title'}),
@@ -123,7 +143,7 @@ export function AISettingsView() {
             field({id:'ai-base-url',label:'API base URL (optional)',kind:'url',placeholder:'https://…'}),
             Note('',{id:'ai-endpoint-help'}),
             field({id:'ai-key',label:'API key',kind:'password',placeholder:'Paste your provider’s key'}),
-            Note('Keys are stored encrypted. Saved keys are never displayed.',{id:'ai-key-help'}),
+            Note('Stored encrypted, never shown again.',{id:'ai-key-help'}),
             UI.Toggle({id:'ai-clear-key',label:'Remove the saved API key',checked:false}),
             ActionGroup([Button('Save connection',{id:'connection-save',variant:'primary',type:'submit'}),Button('Cancel',{id:'connection-cancel',variant:'secondary'})]),
             Button('Remove connection',{id:'connection-remove',variant:'danger-subtle',hidden:true}),
@@ -133,9 +153,17 @@ export function AISettingsView() {
           ],{id:'connection-form'})
         ],{className:'settings-card settings-editor'})
       ],{className:'settings-columns'}),
+      // Every action the app can ask a model to do, listed in one place with the
+      // model that runs it. No feature offers this choice next to its own
+      // button: a model is a setting, not a decision to make mid-errand.
+      UI.Panel([
+        SectionTitle('AI models'),
+        Notice('',{id:'ai-tasks-status',role:'status'}),
+        Stack([],{id:'ai-tasks-list',className:'record-group'})
+      ],{className:'settings-card ai-tasks-card'}),
       UI.Panel([
         SectionTitle('Try a connection',Button('Fetch models',{id:'connection-models',variant:'secondary',size:'compact'})),
-        Note('Select a saved connection above. Tests and prompts use that provider’s API credit.',{id:'playground-context'}),
+        Note('',{id:'playground-context'}),
         UI.ModelSuggestions({id:'provider-model-list'}),
         Note('',{id:'model-list-status',role:'status'}),
         UI.Form([

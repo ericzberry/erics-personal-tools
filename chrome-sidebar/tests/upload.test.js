@@ -69,7 +69,7 @@ test('an attachment dragged from a message is fetched, checked and named like an
   assert.deepEqual(seen,['K-1 - Synthetic Fund.pdf','direct.pdf']);
   // Anything that is not an https attachment says so instead of failing silently.
   await promise('application/pdf:x.pdf:file:///etc/passwd');
-  assert.match(status.textContent,/Save it to your computer first/);
+  assert.match(status.textContent,/Save it, then drop the file/);
   // A promised file still has to pass the type check the picker applies.
   await promise('text/plain:notes.txt:https://mail.example.com/att?id=2');
   assert.match(status.textContent,/Use .pdf/);

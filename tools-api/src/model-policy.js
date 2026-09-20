@@ -61,8 +61,39 @@ export function taskPolicy(task,input={}) {
   return {...policy,task,images,vision:images>0,
     inputTokens:(Math.ceil(characters/3)||(policy.web?6000:1000))+images*IMAGE_TOKENS};
 }
-export function chooseTaskModel({provider,available,task,input={},catalog=MODEL_CATALOG}) {
+// Every action the app can ask a model to do, as the settings screen lists
+// them: the action's own name, what it needs from a model, and the models that
+// could serve it. Nothing else in the app offers a model choice, so this is the
+// whole of what there is to choose between.
+export function taskCatalog(chosen={},catalog=MODEL_CATALOG) {
+  return Object.entries(TASK_POLICIES).map(([task,policy])=>({
+    task,label:policy.label,level:policy.level,web:!!policy.web,
+    chosen:chosen[task]||'',automatic:policy.model||'',
+    options:catalog.filter(model=>!policy.web||model.web)
+      .map(model=>({id:model.id,provider:model.provider,level:model.level,input:model.input,output:model.output}))
+  }));
+}
+// `chosen` is what the owner picked for this action in Settings. It is the
+// owner's call, so it overrides the automatic choice's capability floor and its
+// cost ceiling — but not what the request physically needs: a model with no web
+// search cannot do a task that searches, one with no image input cannot read a
+// picture, and neither can hold more than its context. Those refuse, in words,
+// rather than quietly routing to something else.
+export function chooseTaskModel({provider,available,task,input={},catalog=MODEL_CATALOG,chosen=''}) {
   const policy=taskPolicy(task,input),ids=new Set(available.map(m=>typeof m==='string'?m:m.id));
+  // A pinned policy model is the automatic answer, not a lock: the owner's own
+  // choice in Settings replaces it, which is what makes that screen the truth.
+  const picked=chosen?catalog.find(model=>model.id===chosen&&model.provider===provider):null;
+  if(chosen&&!picked)throw {status:400,message:`${chosen} is not a reviewed model for this connection. Choose another model for ${policy.label} in Settings.`};
+  if(picked){
+    if(!ids.has(picked.id))throw {status:400,message:`This connection cannot reach ${picked.id}. Choose another model for ${policy.label} in Settings.`};
+    if(policy.web&&!picked.web)throw {status:400,message:`${picked.id} cannot search the web, which ${policy.label} needs. Choose another model in Settings.`};
+    if(policy.vision&&!picked.vision)throw {status:400,message:`${picked.id} cannot read an image, which this ${policy.label} needs. Choose another model in Settings, or paste the figures as text.`};
+    const reasoningTokens=picked.reasoning?(policy.web?2048:512):0,maxTokens=policy.outputTokens+reasoningTokens;
+    if(policy.inputTokens+maxTokens>picked.context)throw {status:400,message:`${picked.id} cannot hold this much text. Choose another model for ${policy.label} in Settings.`};
+    const estimatedCost=((policy.inputTokens+(policy.web?(picked.searchTokens||6000):0))*picked.input+maxTokens*picked.output)/1e6+(policy.web?0.01:0);
+    return {model:picked,policy,maxTokens,estimatedCost};
+  }
   const candidates=catalog.filter(m=>m.provider===provider&&(!policy.model||m.id===policy.model)&&ids.has(m.id)&&m.level>=policy.level&&(!policy.web||m.web)&&(!policy.vision||m.vision))
     .map(model=>{
       const reasoningTokens=model.reasoning?(policy.web?2048:512):0;

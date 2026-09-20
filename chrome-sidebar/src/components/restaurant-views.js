@@ -19,12 +19,12 @@ export function RestaurantWorkspace({mobile=false}={}) {
             SettingsGroup({title:'When & how many',level:2,children:[
               Stack([Toggle({id:'restaurant-flex-dates',label:'Flexible dates',descriptionId:'restaurant-date-help'})],{id:'restaurant-date-options',hidden:true}),
               FieldGrid([F({id:'restaurant-date',label:'Date',kind:'date'}),Stack([F({id:'restaurant-through',label:'Last date',kind:'date'})],{id:'restaurant-through-field',hidden:true})]),
-              Note('Up to 7 dates, each checked separately.',{id:'restaurant-date-help',hidden:true}),
+              Note('Up to 7 dates.',{id:'restaurant-date-help',hidden:true}),
               FieldGrid([F({id:'restaurant-start',label:'From',kind:'time'}),F({id:'restaurant-end',label:'Until',kind:'time'})]),
               Toggle({id:'restaurant-flexible',label:'Flexible party size',descriptionId:'restaurant-party-help'}),
               Stack([F({id:'restaurant-party',label:'People',kind:'number'})],{id:'restaurant-fixed-fields'}),
               Stack([FieldGrid([F({id:'restaurant-min',label:'Minimum people',kind:'number'}),F({id:'restaurant-max',label:'Maximum people',kind:'number'})])],{id:'restaurant-flex-fields',hidden:true}),
-              Note('Up to 8 sizes between 1 and 20, checked separately.',{id:'restaurant-party-help',hidden:true})
+              Note('Up to 8 sizes, 1 to 20.',{id:'restaurant-party-help',hidden:true})
             ]})
           ],{className:'workspace-form'}),
           Disclosure('Research settings',[
@@ -38,7 +38,7 @@ export function RestaurantWorkspace({mobile=false}={}) {
       ],{id:'restaurant-search-section','aria-label':'Restaurant search'}),
       Section([
         Heading('Shortlist',2),
-        Note('Your last shortlist stays available offline.',{id:'restaurant-empty',hidden:true}),
+        Note('Your last shortlist, kept offline.',{id:'restaurant-empty',hidden:true}),
         Notice('',{id:'restaurant-summary',hidden:true}),
         Notice('',{id:'restaurant-clarification',hidden:true}),
         Stack([],{id:'restaurant-candidates',className:'result-list'}),
@@ -74,7 +74,7 @@ export function MobileRestaurantCandidate(r,{search,links,expired=false}) {
     EvidenceList(r.evidence),
     Disclosure('Booking pages',[
       Note(`${search.endDate&&search.endDate!==search.date?`${search.date} – ${search.endDate}`:search.date} · ${search.startTime}–${search.endTime} local time`),
-      expired?Note('This search date has passed. Run a new search for current booking links.'):
+      expired?Note('This date has passed. Search again for current links.'):
         links.length?Stack(links.map(link=>Link(`${link.provider} · ${link.size} people${link.date?` · ${link.date}`:''}${link.time?` · near ${link.time}`:''}`,link.url)),{className:'booking-links'}):Note('No booking destination was verified.')
     ])
   ]});
@@ -92,6 +92,6 @@ export function ReservationResult(result,{onOpen,onRecheck,busy}) {
   const recheck=Button('Recheck page',{variant:'secondary',disabled:busy||!result.tabId});recheck.addEventListener('click',onRecheck);
   return ResultBlock({title:`${result.restaurant.name} · ${result.size} ${result.size===1?'person':'people'}`,meta:`${result.provider} · ${result.date}${result.checkedAt?` · Checked ${new Date(result.checkedAt).toLocaleTimeString()}`:''}`,status:labels[result.status]||result.status,detail:result.detail,children:[
     result.slots?.length?Stack(result.slots.map(slot=>UI.Badge(`${slot.time} · ${slot.label}`)),{className:'slot-list','aria-label':'Available times'}):null,
-    ActionGroup([open,recheck],{compact:true}),result.status==='attention'?Note('Open the page, complete any login or verification, select the requested filters, then return here and recheck.'):null
+    ActionGroup([open,recheck],{compact:true}),result.status==='attention'?Note('Sign in and set the filters on the page, then recheck.'):null
   ]});
 }

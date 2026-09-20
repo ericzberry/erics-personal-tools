@@ -44,6 +44,9 @@ export async function settingsAction(message, chromeApi, request = cloudRequest)
   // The same Google account the tax filing uses, consented again so it also
   // covers reading sent mail.
   if(message.action==='google-connect')return request(token,'/v1/drive/connect',{method:'POST',value:{}});
+  // Which model runs which action. The only place in the app a model is named.
+  if (message.action === 'ai-tasks') return request(token, '/v1/ai-tasks');
+  if (message.action === 'ai-task-save') return request(token, `/v1/ai-tasks/${encodeURIComponent(message.task)}`, {method:'PUT', value:{model:message.model}});
   if (message.action === 'list') return request(token, '/v1/ai-connections');
   if (!['save', 'remove','models','test','generate','restaurants'].includes(message.action) || !/^[a-f0-9-]{36}$/.test(message.id || '')) throw Error('Unknown settings action.');
   if(message.action==='restaurants')return request(token,`/v1/ai-connections/${message.id}/restaurants`,{method:'POST',value:{model:message.model,search:message.search},timeoutMs:130000});

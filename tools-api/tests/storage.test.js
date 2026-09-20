@@ -109,3 +109,24 @@ test('rewards sync is authenticated, encrypted, revision protected, and validate
  assert.equal((await call(env,url,'PUT',{entries:[],revision:saved.revision})).status,200);
  assert.deepEqual((await (await call(env,url)).json()).entries,[]);
 });
+
+// A model is chosen once, in Settings, for a named action. The list of actions
+// comes from the policy catalog rather than from whatever a caller asks about,
+// and an unknown action or an unreviewed model is refused rather than stored.
+test('AI actions are listed with their models, and a choice is saved, changed and cleared',async()=>{
+ const env=environment();
+ env.sql.exec(readFileSync(new URL('../ai-tasks-schema.sql',import.meta.url),'utf8'));
+ const tasks=async()=>(await (await call(env,'/v1/ai-tasks')).json()).tasks;
+ const listed=await tasks();
+ assert.ok(listed.some(entry=>entry.task==='finance.intake'&&entry.label==='Finance reading'));
+ assert.equal(listed.every(entry=>entry.chosen===''),true,'nothing is chosen until it is chosen');
+ assert.equal((await call(env,'/v1/ai-tasks/finance.intake','PUT',{model:'gpt-5-mini'})).status,200);
+ assert.equal((await tasks()).find(entry=>entry.task==='finance.intake').chosen,'gpt-5-mini');
+ assert.equal(env.sql.prepare('SELECT COUNT(*) AS n FROM ai_task_models').get().n,1);
+ // Clearing puts the action back on automatic rather than saving a blank.
+ assert.equal((await call(env,'/v1/ai-tasks/finance.intake','PUT',{model:''})).status,200);
+ assert.equal(env.sql.prepare('SELECT COUNT(*) AS n FROM ai_task_models').get().n,0);
+ assert.equal((await call(env,'/v1/ai-tasks/finance.intake','POST',{model:'gpt-5-mini'})).status,405);
+ assert.equal((await call(env,'/v1/ai-tasks/not.areal','PUT',{model:'gpt-5-mini'})).status,404);
+ assert.equal((await call(env,'/v1/ai-tasks/finance.intake','PUT',{model:'made-up-model'})).status,400);
+});

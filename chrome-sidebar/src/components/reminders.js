@@ -12,7 +12,7 @@ export function RemindersView(){
     // read at all: this is where birthdays come from, not what the tool is for,
     // and an empty section explaining a connection nobody has made is noise.
     SettingsGroup({title:'From your calendar',level:2,children:[
-      Note('Birthdays in your Google Calendar are kept here too. The app looks once a month; a birthday already saved, or already written down by hand, is left as it is.'),
+      Note('Checked once a month. Birthdays already here are left alone.'),
       Notice('',{id:'reminders-calendar-status',role:'status'}),
       Stack([],{id:'reminders-calendar-actions',className:'action-group'})
     ],id:'reminders-calendar',hidden:true}),

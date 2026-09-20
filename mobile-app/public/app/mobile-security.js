@@ -16,7 +16,7 @@ root.innerHTML = `
   <button id="lock-restart" class="secondary" type="button" hidden>Start setup again</button>
   <button id="lock-unlock" type="button" hidden>Unlock with passkey</button>
   <p id="lock-status" role="status" aria-live="polite"></p>
-  <details id="lock-recovery" hidden><summary>Can’t use your passkey?</summary><p>Recover with your original access token. Saved records and pending changes stay on this device.</p><button id="lock-recover" class="secondary" type="button">Recover access</button></details>
+  <details id="lock-recovery" hidden><summary>Can’t use your passkey?</summary><p>Your original access token. Saved records stay.</p><button id="lock-recover" class="secondary" type="button">Recover access</button></details>
 </section>
 <div id="mobile-private" hidden></div>`;
 const el = id => document.getElementById(id);
@@ -58,7 +58,7 @@ function showGate() {
   el('lock-recovery').hidden = true;
   el('lock-recovery').open = false;
   el('lock-token').value = saved ? '' : vault.legacyToken();
-  if (!saved && el('lock-token').value) status('Create a passkey to protect your existing connection.');
+  if (!saved && el('lock-token').value) status('Create a passkey to protect it.');
 }
 async function run(action) {
   if (busy) return;
@@ -105,7 +105,7 @@ el('lock-setup').addEventListener('submit', event => {
     el('lock-finish').focus();
   });
 });
-el('lock-restart').addEventListener('click', () => { vault.cancel(); showGate(); status('Setup restarted. Your saved data is unchanged.'); });
+el('lock-restart').addEventListener('click', () => { vault.cancel(); showGate(); status('Setup restarted.'); });
 el('lock-finish').addEventListener('click', () => run(async attempt => {
   // PRF verification must start directly from the button gesture on Safari.
   const existing = vault.record() || vault.legacyToken();
@@ -123,7 +123,7 @@ el('lock-recover').addEventListener('click', () => {
   el('lock-setup').hidden = false;
   el('lock-token').value = '';
   el('lock-title').textContent = 'Recover mobile access';
-  status('Enter your original token. Downloaded data and pending changes are kept.');
+  status('Enter your original token.');
   el('lock-token').focus();
 });
 window.addEventListener('message', event => {
@@ -131,7 +131,7 @@ window.addEventListener('message', event => {
   if (event.data?.type === 'mobile-ready') frame.contentWindow.postMessage({type: 'mobile-unlock', token, records: records ? encode(records) : ''}, location.origin);
   if (event.data?.type === 'mobile-activity' && !document.hidden) session.touch();
   if (event.data?.type === 'mobile-size' && Number.isFinite(event.data.height)) frame.style.height = `${Math.max(100, Math.min(100000, event.data.height))}px`;
-  if (event.data?.type === 'mobile-disconnected') { vault.disconnect(); session.lock(); status('Disconnected. Offline copies removed; cloud records kept.'); }
+  if (event.data?.type === 'mobile-disconnected') { vault.disconnect(); session.lock(); status('Disconnected. Cloud records kept.'); }
 });
 for (const type of ['pointerdown', 'keydown', 'scroll']) document.addEventListener(type, event => {
   if (event.isTrusted && !document.hidden) session.touch();
@@ -142,7 +142,18 @@ document.addEventListener('visibilitychange', () => {
   else if (session.check()) el('mobile-private').hidden = false;
   else automatic.request();
 }, true);
-window.addEventListener('pagehide', () => { ++epoch; automatic.background(); session.lock(); forgetRecordKey(); vault?.cancel(); el('lock-token').value = ''; });
+// Switching to another app is not the end of the session. iOS fires pagehide
+// when it puts this page in the back/forward cache, and locking there meant a
+// passkey for every glance at something else — the inactivity window is what
+// decides when to ask again, and private content is already concealed while
+// the page is hidden. A page that is genuinely going away is a different
+// thing: its memory goes with it, so the session is closed and nothing is
+// left holding a token.
+window.addEventListener('pagehide', event => {
+  automatic.background();
+  if (event.persisted) return;
+  ++epoch; session.lock(); forgetRecordKey(); vault?.cancel(); el('lock-token').value = '';
+});
 window.addEventListener('pageshow', () => { if (!session.check()) automatic.request(); });
 window.addEventListener('storage', event => {
   if (event.key === VAULT_KEY || event.key === null) {

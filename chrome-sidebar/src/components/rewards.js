@@ -39,8 +39,7 @@ export function RewardsView(){
       ],{id:'reward-card-form',className:'form-stack'})
     ],{id:'reward-card-intake'}),
     Disclosure('Add or edit a reward',[
-      Note('A membership with no balance — a perks portal or partner program — is a membership entry: name it, say who provides it, and describe what it gets you.'),
-      Note('Do not enter passwords or security codes.'),
+      Note('No passwords or security codes.'),
       UI.Form([
         field('kind','Entry type','select',[{text:'Points or miles balance',value:'balance'},{text:'Credit, discount, or offer',value:'benefit'},{text:'Membership or program access',value:'membership'},{text:'Credit card you hold',value:'card'}]),
         field('name','Program or benefit name',undefined,undefined,'Airline miles, dining credit, or perks program'),
@@ -53,7 +52,7 @@ export function RewardsView(){
         field('url','Official account or offer URL (optional)','url'),
         UI.FormField({id:'reward-notes',label:'Terms, eligibility, and next step (optional)',kind:'textarea',rows:3}),
         UI.ProtectedField({id:'reward-secret',label:'Card details (optional)',
-          help:'Encrypted with your passkey before it leaves this device, so the cloud stores only unreadable text. Never enter the security code (CVV).'}),
+          help:'Encrypted on this device. Never the security code.'}),
         Notice('',{id:'reward-form-status'}),
         ActionGroup([Button('Save reward',{id:'reward-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'reward-cancel',variant:'secondary'})])
       ],{id:'reward-form',className:'form-stack'})

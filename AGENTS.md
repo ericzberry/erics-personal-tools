@@ -65,6 +65,8 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Establish a clear reading order: heading, explanation/status, content or fields, then actions.
 - Keep the most important action visually dominant; normally use one primary action per form or task group.
 - Use progressive disclosure for secondary detail. Keep current status and necessary actions discoverable.
+- Write far less than seems necessary. A screen explains itself through its labels, its grouping and what it shows; prose that describes what a control does, restates what the reader can already see, or reassures them about how the feature works is removed, not shortened. Prefer none to some: a section with a heading and a list needs no sentence introducing it.
+- What earns words: what just happened, what went wrong and what to do about it, a consequence that is not visible before it is irreversible, and a constraint a reader would otherwise violate. Say those once, in one line, in the reader's terms. Everything else is a comment in the source, where the reasoning belongs, rather than a paragraph on the screen.
 - Put the selected tool and saved information first on mobile. Keep device and connection maintenance secondary, omit unlocked-state banners and manual lock controls, and let tool content use the page scroll instead of a small nested scrolling box.
 - A heading is never set below what it heads. A label naming a group — a category over a run of records, a section over a grid of tiles — carries at least the size and the ink of the things inside it, and is told apart from them by weight, by a rule, or by the space around it. Shrinking a category into a pale eyebrow under the records it names inverts the hierarchy, and the group then reads as rows with a caption stuck above them.
 - Avoid redundant cards inside cards, gratuitous shadows, decorative icons, and oversized headings. Every visual boundary should explain a relationship. Capability launcher icons are navigation, not decoration, and are the exception.
@@ -86,6 +88,7 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Spend a tone on what just happened, not on a state the screen is already showing. A locked section, a disconnected tool, an offline note or a capability awaiting a connection is a standing condition and takes no tone. Keep the weight low with it: the mark and the words carry the meaning, and only an error takes a filled surface.
 - Work in progress is shown as motion that lasts exactly as long as the work — a spinner, or a progress bar once a fraction is known — not a sentence that appears once and then sits still. Clearing a status clears its tone, so a finished operation never keeps the colour of the last one.
 - Keep secret values masked and never expose saved secrets in previews, logs, or screenshots.
+- One inactivity window governs every protected section, defined once in the shared idle session and long enough that ordinary work never meets it. Concealing and locking are different things: leaving the app, switching tabs or backgrounding the page hides private content and nothing more, and only real inactivity, a deliberate lock, or a page that is genuinely going away ends the session. A passkey is asked for when the window has run out, not because the reader looked at something else.
 
 ## Visual consistency and accessibility
 
@@ -109,6 +112,8 @@ Apply these rules to every user-facing interface in this repository. Follow each
 ## AI model selection
 
 - Connections store provider access, not default models. Production features identify their task and use the central task policy to choose a model.
+- A model is chosen once, in Settings, for a named action — never beside the button that runs it. No feature shows a model or connection picker, and no request may name a model: which model answers is read from the owner's saved choice on the server. Every action that asks a model anything registers a task in the central policy, and Settings lists all of them, so that screen is the complete answer to "what does this app use AI for, and with what".
+- The owner's choice outranks the automatic one, including a pinned default: it is refused only where the request cannot physically run on it — no web search where the task searches, no image support where an image is sent, not enough context — and then in words that name the action to change. Per-request model IDs remain only in the settings playground, which is one experiment rather than a feature.
 - Select the least expensive available, reviewed candidate that meets the task's capability and tool requirements. Increase requirements for more complex inputs; never silently lower them to save cost.
 - Keep capability tiers, pricing sources, output budgets, and selection tests centralized. Add representative quality evaluations as tasks and model choices expand.
 - Honor explicit user model choices within the relevant task policy, never as a global default. Manual model IDs belong only to per-request playground experiments. Never copy model constants into feature controllers.

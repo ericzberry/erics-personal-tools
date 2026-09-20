@@ -34,7 +34,7 @@ export function CardsView(){
           field('unit','Reward type','select',[{value:'cash',text:'Cash back (%)'},{value:'points',text:'Points or miles per dollar'}]),
           field('base','Base reward rate','number'),field('cpp','Redemption value (cents per point)','number'),
           Note('Cash back uses 1.'),
-          Heading('Bonus categories',3),Note('Total rates. For a capped bonus, enter the remaining eligible spend; blank means unlimited.'),
+          Heading('Bonus categories',3),Note('Total rates. For a cap, enter the spend left; blank is unlimited.'),
           Stack([],{id:'cards-rules'}),ActionGroup([button('Add bonus category','add-rule','secondary',{size:'compact'})]),
           field('source','Issuer terms URL'),field('checked','Terms reviewed on','date'),
           field('notes','Limits, exclusions, and shared caps','textarea')
@@ -94,7 +94,7 @@ export function SavedCard(card,{onEdit,onDelete,onResolve}){
   const edit=Button('Edit',{variant:'subtle',size:'compact'});edit.addEventListener('click',onEdit);
   const remove=Button('Delete',{variant:'danger-subtle',size:'compact'});
   const confirm=Button('Delete saved card',{variant:'danger',size:'compact'}),cancel=Button('Keep card',{variant:'secondary',size:'compact'});
-  const confirmation=Stack([Note('Delete this card from your connected devices?'),ActionGroup([confirm,cancel],{compact:true})],{hidden:true});
+  const confirmation=Stack([Note('Delete this card from all devices?'),ActionGroup([confirm,cancel],{compact:true})],{hidden:true});
   remove.addEventListener('click',()=>{confirmation.hidden=false;confirm.focus();});cancel.addEventListener('click',()=>{confirmation.hidden=true;remove.focus();});confirm.addEventListener('click',onDelete);
   const conflicts=card.conflict?['local','cloud'].map(choice=>{const b=Button(choice==='local'?'Keep my change':'Use cloud version',{variant:'secondary',size:'compact'});b.addEventListener('click',()=>onResolve(choice));return b;}):[];
   return Disclosure(card.name,[Note(`${card.base}${card.unit==='cash'?'% cash back':' points per dollar'} base · ${rewardRules(card.rules).length} bonus categories${card.unit==='points'?` · ${card.cpp}¢ per point`:''}`),
@@ -107,7 +107,7 @@ export function PurchaseConditions(cards,purchase){
     const control=FormField({id:`cards-confirm-${card.id}-${index}`,label:`${card.name}: ${rule.condition}`,kind:'checkbox'});
     control.querySelector('input').setAttribute('data-confirm',`${card.id}:${index}`);return [control];
   }));
-  return fields.length?[Note('Confirm only the requirements that this purchase meets.'),...fields]:[];
+  return fields.length?[Note('Confirm only what this purchase meets.'),...fields]:[];
 }
 const money=value=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(value);
 const percent=value=>`${value.toFixed(2)}%`;
@@ -119,7 +119,7 @@ export function PurchaseReading(reading){
   return [Section([
     Strong(detail),
     ...(reading.reason?[Note(reading.reason)]:[]),
-    ...(reading.confidence==='low'?[Note('Low confidence in this reading. Check the category before relying on the result.',{className:'footnote purchase-reading-warning'})]:[]),
+    ...(reading.confidence==='low'?[Note('Low confidence. Check the category.',{className:'footnote purchase-reading-warning'})]:[]),
     Note(reading.manual?'You set these values.':'Read from your description. Adjust below to change it.')
   ],{className:'purchase-reading'})];
 }
@@ -128,7 +128,7 @@ const near=(a,b)=>Math.abs(a-b)<0.000001;
 // Each row therefore names the reward program that applied and how far apart the
 // cards actually are.
 export function ComparisonResults(rows){
-  if(!rows.length)return [Note('Add a card with reviewed reward rates to compare.')];
+  if(!rows.length)return [Note('Add a card with reward rates to compare.')];
   const top=rows[0].dollars,tied=rows.filter(row=>near(row.dollars,top)).length>1,runnerUp=rows.find(row=>!near(row.dollars,top));
   const estimated=rows[0].estimated;
   const program=row=>row.matched
@@ -141,7 +141,7 @@ export function ComparisonResults(rows){
     return `Beats ${runnerUp.name} by ${percent(row.rate-runnerUp.rate)}${estimated?` · ${money(row.dollars-runnerUp.dollars)} more`:''}.`;
   };
   return [Heading('Recommended card',2),
-    Note(estimated?'Computed from your saved terms and the reading above. Excludes interest, fees, signup bonuses, and unentered offers. Comparing does not deduct spending caps.':'Effective rates from your saved terms. Add an amount to your description for dollar estimates. Excludes interest, fees, signup bonuses, and unentered offers.'),
+    Note(estimated?'From your saved terms. No interest, fees, signup bonuses or caps.':'From your saved terms. Add an amount for dollar estimates.'),
     ...rows.map(row=>Section([
       Strong(`${near(row.dollars,top)?(tied?'Tied best · ':'Best return · '):''}${row.name}`),
       Heading(estimated?`${money(row.dollars)} · ${percent(row.rate)}`:percent(row.rate),3),

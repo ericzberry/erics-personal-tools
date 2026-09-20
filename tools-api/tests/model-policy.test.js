@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MODEL_CATALOG,chooseTaskModel} from '../src/model-policy.js';
+import {MODEL_CATALOG,chooseTaskModel,taskCatalog} from '../src/model-policy.js';
 import {generate} from '../src/providers.js';
 const choose=(task='email.summary',input={},available=MODEL_CATALOG)=>chooseTaskModel({provider:'openai',available,task,input});
 test('task selection minimizes estimated cost among capable and available candidates',()=>{
@@ -43,4 +43,32 @@ test('discovery failures and billed-request failures never cause a blind retry o
   }),e=>e.status===429);
   assert.equal(calls,stage==='discovery'?1:2);
  }
+});
+
+// Which model runs an action is a setting, chosen once in Settings, and the
+// app has no other place to choose one. An explicit choice is the owner's
+// call: it outranks the automatic pick and the cost ceiling, and is refused
+// only where the request physically cannot run on it.
+test('an owner’s chosen model replaces the automatic one, and only capability refuses it',()=>{
+ const pick=(task,chosen,input={},available=MODEL_CATALOG)=>chooseTaskModel({provider:'openai',available,task,input,chosen});
+ assert.equal(pick('email.summary','').model.id,'gpt-5.6-terra','no choice leaves the automatic answer alone');
+ assert.equal(pick('email.summary','gpt-5-nano').model.id,'gpt-5-nano','a pinned policy model is a default, not a lock');
+ assert.equal(pick('finance.intake','gpt-4o-mini').model.id,'gpt-4o-mini','a choice outranks the capability floor');
+ assert.equal(pick('cards.research','gpt-5.6-terra').model.id,'gpt-5.6-terra','and the cost ceiling');
+ // What the request needs of a model is not the owner's to waive.
+ assert.throws(()=>pick('cards.research','gpt-5-nano'),e=>/search the web/.test(e.message));
+ assert.throws(()=>pick('finance.intake','gpt-5-nano',{messages:[{content:[{type:'image'}]}]}),e=>/read an image/.test(e.message));
+ assert.throws(()=>pick('email.summary','gpt-5-nano',{},[{id:'gpt-5.6-terra'}]),e=>/cannot reach/.test(e.message));
+ assert.throws(()=>pick('email.summary','not-a-model'),e=>/not a reviewed model/.test(e.message));
+});
+
+test('every AI action is listed for settings, with the models that could run it',()=>{
+ const tasks=taskCatalog({'finance.intake':'gpt-5-mini'});
+ assert.ok(tasks.length>10,'every registered action is offered, not a chosen few');
+ const finance=tasks.find(entry=>entry.task==='finance.intake');
+ assert.equal(finance.label,'Finance reading');
+ assert.equal(finance.chosen,'gpt-5-mini');
+ // A searching action only offers models that can search.
+ assert.deepEqual(tasks.find(e=>e.task==='cards.research').options.filter(o=>!MODEL_CATALOG.find(m=>m.id===o.id).web),[]);
+ assert.equal(tasks.find(e=>e.task==='email.summary').automatic,'gpt-5.6-terra');
 });

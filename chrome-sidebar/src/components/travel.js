@@ -16,7 +16,7 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
         FormField({id:'travel-number',label:'Number',kind:'password'}),
         Note(mode==='editor'?'Numbers stay masked while you edit.':'Tap a program to see its number, or use Copy in the list.',{id:'travel-number-help'}),
         FormField({id:'travel-notes',label:'Notes (optional)',kind:'password'}),
-        Note('On edit, blank number and notes fields keep their saved values.'),
+        Note('Blank keeps the saved value.'),
         ActionGroup([Button('Save record',{id:'travel-save',type:'submit',variant:'primary'}),Button('Cancel edits',{id:'travel-cancel',variant:'secondary'})],{compact:true}),
         Note('',{id:'travel-form-status',role:'status'})
       ],{id:'travel-form',className:'form-stack'})
@@ -34,7 +34,7 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
   const copy=CopyIconButton(`Copy number for ${record.name}`), edit=action('Edit',{variant:'subtle'}), remove=action('Delete',{variant:'danger-subtle'});
   copy.addEventListener('click',onCopy);edit.addEventListener('click',onEdit);
   const confirm=action('Delete from all devices',{variant:'danger'}), keep=action('Keep record',{variant:'secondary'});
-  const confirmation=Stack([Note('Permanently delete this travel record from all devices?'),ActionGroup([confirm,keep],{compact:true})],{hidden:true});
+  const confirmation=Stack([Note('Delete this record from all devices?'),ActionGroup([confirm,keep],{compact:true})],{hidden:true});
   remove.addEventListener('click',()=>{confirmation.hidden=false;confirm.focus();});
   keep.addEventListener('click',()=>{confirmation.hidden=true;remove.focus();});confirm.addEventListener('click',onDelete);
   const notes=action('Copy notes',{variant:'subtle'});notes.addEventListener('click',onCopyNotes);
@@ -42,7 +42,7 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
   if(record.conflict){
     const local=action('Keep this device’s changes',{variant:'secondary'}), cloud=action('Use cloud version',{variant:'secondary'});
     const accept=action('Discard my pending change',{variant:'danger'}), cancel=action('Keep reviewing',{variant:'secondary'});
-    const warning=Stack([Note('Discard the pending change on this device and use the cloud version?'),ActionGroup([accept,cancel],{compact:true})],{hidden:true});
+    const warning=Stack([Note('Discard this device’s change and use the cloud version?'),ActionGroup([accept,cancel],{compact:true})],{hidden:true});
     local.addEventListener('click',()=>onResolve('local'));
     cloud.addEventListener('click',()=>{warning.hidden=false;accept.focus();});cancel.addEventListener('click',()=>{warning.hidden=true;cloud.focus();});
     accept.addEventListener('click',()=>onResolve('cloud'));
@@ -66,11 +66,11 @@ export function TravelRecord(record, {onEdit,onCopy,onShow,onCopyNotes,onDelete,
 
 export function TravelConnection(){return Stack([Disclosure('Connection settings',[
       Stack([
-        Note('Connect with the same private access token on each device.',{id:'travel-connection',role:'status'}),
+        Note('',{id:'travel-connection',role:'status'}),
         Stack([FormField({id:'travel-token',label:'Private access token',kind:'password'}),ActionGroup([Button('Connect',{id:'travel-connect',variant:'primary'})])],{id:'travel-setup',className:'connection-setup'}),
         Stack([
           ActionGroup([Button('Refresh records',{id:'travel-refresh',variant:'secondary',size:'compact'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger',size:'compact'})],{compact:true}),
-          Note('Disconnect removes this device’s offline copies. Cloud records stay saved.')
+          Note('Removes this device’s offline copies. Cloud records stay.')
         ],{id:'travel-maintenance',className:'connection-maintenance',hidden:true}),
         Note('',{id:'travel-connection-status',role:'status'})
       ],{className:'connection-content'})

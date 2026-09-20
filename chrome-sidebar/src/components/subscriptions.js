@@ -34,7 +34,7 @@ export function SubscriptionsView(){
   ]);
 }
 export function SubscriptionEvidence(record){
-  return Disclosure(`Charge evidence (${record.charges.length})`,record.charges.length?record.charges.map(c=>RecordRow({title:`${c.on} · ${money(c.amount,record.currency)}`,detail:c.description,notes:c.source})): [Note('No imported charges. Terms were entered manually.')]);
+  return Disclosure(`Charge evidence (${record.charges.length})`,record.charges.length?record.charges.map(c=>RecordRow({title:`${c.on} · ${money(c.amount,record.currency)}`,detail:c.description,notes:c.source})): [Note('Entered by hand; no imported charges.')]);
 }
 export function SubscriptionResearch(record){
   const r=record.research;if(!r)return null;
@@ -42,5 +42,5 @@ export function SubscriptionResearch(record){
   return Disclosure(`Alternatives · checked ${r.checked}`,[Note(`${r.country} · ${r.summary}`),...(r.requirements?[Note(`Required features: ${r.requirements}`)]:[]),...r.options.map(o=>{
     const alternative=annualCost(o),saving=current===null?null:Math.round((current-alternative)*100)/100;
     return RecordRow({title:o.name,detail:`${money(o.amount,o.currency)} · ${BILLING_CYCLES[o.cycle]}${saving>0?` · Potential ${money(saving,o.currency)}/year less`:saving!==null?' · No annual price saving':''}`,notes:o.terms,actions:[RowLink(OPEN_GLYPH,`Open the pricing page for ${o.name}`,o.url,{rel:'noopener noreferrer'})]});
-  }),Note('Compare required features, taxes, eligibility and switching costs before changing plans. Savings compare listed ongoing prices; annual plans may require upfront payment.')]);
+  }),Note('Listed ongoing prices. Check features, taxes and eligibility before switching.')]);
 }

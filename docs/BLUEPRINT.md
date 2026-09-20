@@ -227,7 +227,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 ## tools-api/
 
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
-  `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`,
+  `/health`, `/v1/releases/latest`, `/v1/ai-tasks[/:task]`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`. `/v1/push/key` is public like the release route,
@@ -277,6 +277,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `voice-schema.sql` (`voice_profiles`),
   `calendar-schema.sql` (`calendar_scans`),
+  `ai-tasks-schema.sql` (`ai_task_models`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of

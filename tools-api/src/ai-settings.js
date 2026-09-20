@@ -1,5 +1,6 @@
 import {providerFor} from '../../chrome-sidebar/src/ai-providers.js';
 import {providerConfig} from './providers.js';
+import {taskCatalog} from './model-policy.js';
 const fail = (status, message) => {throw {status, message};};
 async function encryptionKey(env) {
   if (!/^[a-f0-9]{64}$/i.test(env.SETTINGS_ENCRYPTION_KEY || '')) fail(503, 'Settings encryption is not configured.');
@@ -51,10 +52,19 @@ function normalize(input, previous) {
   return {name:field(input.name, 'the connection name', 100, true), provider:input.provider,
     baseUrl, apiFormat, apiKey};
 }
+// The owner's per-action model choices, read straight from the database so a
+// request cannot name its own model. A missing table means nothing has been
+// chosen yet, which is the automatic routing every action starts with.
+export async function taskModels(env) {
+  try {
+    const {results}=await env.DB.prepare('SELECT task, model FROM ai_task_models').all();
+    return Object.fromEntries(results.map(row=>[row.task,row.model]));
+  } catch { return {}; }
+}
 export async function savedConnection(id,env) {
   const row=await env.DB.prepare('SELECT value FROM ai_connections WHERE id = ?').bind(id).first();
   if(!row)fail(404,'Connection not found.');
-  return decryptSettings(row.value,id,env);
+  return {...await decryptSettings(row.value,id,env),taskModels:await taskModels(env)};
 }
 // Callers holding the plaintext pass it in; a value this request just
 // encrypted must not be decrypted again to describe it.
@@ -64,6 +74,29 @@ async function publicRecord(row, env, settings) {
 }
 export async function aiSettings(request, env, readValue, json) {
   const path = new URL(request.url).pathname;
+  // Every action the app can ask a model to do, and which model it uses. This
+  // is the one place a model is chosen; features send the action, never a name.
+  if (path === '/v1/ai-tasks' && request.method === 'GET') {
+    return json({tasks:taskCatalog(await taskModels(env))});
+  }
+  const chosenTask = /^\/v1\/ai-tasks\/([a-z]+\.[a-z]+)$/.exec(path);
+  if (chosenTask) {
+    if (request.method !== 'PUT') return json({error:'Method not allowed.'}, 405);
+    const [,task] = chosenTask;
+    const known = taskCatalog().find(entry => entry.task === task);
+    if (!known) fail(404, 'Unknown AI action.');
+    const model = field(JSON.parse(await readValue(request)).model ?? '', 'the model', 100);
+    // Empty is the automatic choice: the row goes away rather than being kept
+    // as a blank that later reads as a selection.
+    if (!model) {
+      await env.DB.prepare('DELETE FROM ai_task_models WHERE task = ?').bind(task).run();
+    } else {
+      if (!known.options.some(option => option.id === model)) fail(400, 'Choose a reviewed model for this action.');
+      await env.DB.prepare('INSERT INTO ai_task_models (task, model, updated_at) VALUES (?, ?, ?) ON CONFLICT(task) DO UPDATE SET model = excluded.model, updated_at = excluded.updated_at')
+        .bind(task, model, new Date().toISOString()).run();
+    }
+    return json({tasks:taskCatalog(await taskModels(env))});
+  }
   if (path === '/v1/ai-connections' && request.method === 'GET') {
     await encryptionKey(env);
     const {results} = await env.DB.prepare('SELECT id, value, revision, updated_at FROM ai_connections ORDER BY updated_at DESC').all();

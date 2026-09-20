@@ -11,7 +11,7 @@
 async function promisedFile(spec, maxBytes, fetcher = globalThis.fetch) {
   const [type, name, ...rest] = String(spec).split(':');
   const url = rest.join(':');
-  const unreadable = Error('That attachment could not be read from the message. Save it to your computer first, then drop the file.');
+  const unreadable = Error('Couldn’t read that attachment. Save it, then drop the file.');
   if (!/^https:\/\//i.test(url)) throw unreadable;
   let response;
   try { response = await fetcher(url, {credentials: 'include', cache: 'no-store', redirect: 'follow'}); }

@@ -2,13 +2,15 @@
 
 Connections contain credentials and endpoint configuration, never a default model. Legacy encrypted `model` values are ignored, excluded from public records, and removed on the next save. No database migration is required. The playground uses an explicit model for that individual request only.
 
-Features send a stable task ID, not a model name. `src/model-policy.js` owns task requirements and the reviewed candidate catalog. `routeTask` checks the selected connection's live model list and honors an explicit per-task model choice, or selects the lowest estimated-cost candidate that meets the task's capability floor, context requirement, and estimated-cost ceiling. Unknown tasks and unreviewed models fail closed. API model listings indicate account visibility; generation may still fail on permissions, quota, or tool access. Errors and timeouts are not automatically retried.
+Features send a stable task ID, not a model name. `src/model-policy.js` owns task requirements and the reviewed candidate catalog. `routeTask` checks the selected connection's live model list and honors the owner's saved per-task model choice, or selects the lowest estimated-cost candidate that meets the task's capability floor, context requirement, and estimated-cost ceiling.
+
+`GET /v1/ai-tasks` lists every registered action with its label, its saved choice, the automatic default, and the reviewed models that could run it; `PUT /v1/ai-tasks/:task` saves one, and an empty model clears it back to automatic. Choices live in `ai_task_models` and are read by `savedConnection`, never from the request — a caller cannot name the model that answers it. A saved choice overrides the capability floor, the cost ceiling and a pinned policy model, because it is the owner's call; it is refused when the model is unreviewed, unavailable on that connection, cannot search where the task searches, cannot read an image where one is sent, or cannot hold the request. The settings screen is the only place in the app where a model is named. Unknown tasks and unreviewed models fail closed. API model listings indicate account visibility; generation may still fail on permissions, quota, or tool access. Errors and timeouts are not automatically retried.
 
 Current policies:
 
 | Task | Requirement | Escalation |
 | --- | --- | --- |
-| `email.summary` | GPT-5.6 Terra, explicitly selected by Eric | No silent fallback; reasoning disabled |
+| `email.summary` | GPT-5.6 Terra by default, replaceable in Settings | No silent fallback; reasoning disabled |
 | `restaurant.availability` | Level 2: structured extraction from booking pages | No automatic downgrade |
 | `restaurant.research` | Level 2 plus native web search | Level 3 for category searches above 12 candidates |
 
