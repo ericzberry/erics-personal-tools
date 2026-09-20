@@ -1291,8 +1291,15 @@ drops its holdings: nothing is left saying which account a position sits in.
 
 **Liquid against illiquid is the question the classes answer together.** Every
 asset class names its group, and the Breakdown leads with the two of them: cash,
-stocks, bonds, crypto, vested stock and an unsplit securities total are liquid;
+crypto, vested stock and marketable securities are liquid;
 fund investments, real estate, other and unvested stock are not.
+
+**A reading does not split marketable securities.** Stocks and bonds both file
+as Liquid securities, because the question the ledger asks is how much could be
+sold this week and an equity sleeve answers it the same way the municipal ladder
+beside it does. A trust holding both read back as two numbers that had to be
+added to answer the one question the line is there for. Both classes remain for
+a figure entered by hand; it is the reading that stopped splitting them.
 
 **Everything held through a fund is one class.** It was three — private equity,
 venture capital, hedge funds — and the split asked a question the owner does not

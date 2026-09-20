@@ -112,7 +112,7 @@ test('finance totals and readings stay behind the gate, and a saved figure goes 
 
   // A reading produces figures to review and saves nothing on its own.
   h.document.getElementById('finance-page-read').click();
-  await settle(()=>h.document.getElementById('finance-snapshot-body').textContent.includes('Stocks'));
+  await settle(()=>h.document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'));
   assert.equal(saved.length,0,'reading a page must not save anything');
   assert.equal(h.document.getElementById('finance-snapshot-status').textContent,'');
 
@@ -120,12 +120,12 @@ test('finance totals and readings stay behind the gate, and a saved figure goes 
   // the figure is addressed by where, what and when — nothing else.
   [...h.document.querySelectorAll('#finance-snapshot-body button')].find(button=>button.textContent==='Save these figures').click();
   await settle(()=>saved.length===1);
-  assert.equal(saved[0].id,'1-1-20260401');
+  assert.equal(saved[0].id,'1-10-20260401','portfolio 1, Liquid securities, that date');
   assert.equal(saved[0].revision,null,'a date this class has no figure for yet is an append');
-  assert.deepEqual([saved[0].portfolio,saved[0].class,saved[0].amount],[1,1,1300]);
+  assert.deepEqual([saved[0].portfolio,saved[0].class,saved[0].amount],[1,10,1300]);
   assert.equal(saved[0].row,'mark');
   // January's figure is untouched, because a figure is keyed by its own date.
-  assert.equal(h.document.getElementById('finance-snapshot-body').textContent.includes('Stocks'),false,'a saved reading leaves the review list');
+  assert.equal(h.document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'),false,'a saved reading leaves the review list');
   tool.stop();h.restore();
 });
 

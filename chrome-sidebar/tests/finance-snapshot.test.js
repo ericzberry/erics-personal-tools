@@ -283,9 +283,13 @@ test('a second account site reads under its own name, its own default class and 
 
   panel().querySelector('button').click();
   await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 figures.'));
-  const checking=writes.find(write=>write.class===3),brokerage=writes.find(write=>write.class===1);
+  const checking=writes.find(write=>write.class===3),
+    brokerage=writes.find(write=>write.class===classById('liquid').code);
   assert.ok(checking,'a figure the reading could not place takes the site’s own class');
-  assert.ok(brokerage,'a class the reading did state is kept');
+  // The reading said stocks and the ledger keeps it as Liquid securities:
+  // what this asks is that a stated class is not overwritten by the site's
+  // default, which is cash, and it is not.
+  assert.ok(brokerage,'a class the reading did state is not replaced by the site’s');
   assert.deepEqual([checking.amount,brokerage.amount],[8420.11,51200]);
   // The joint account is the estate's and joins the portfolio already holding
   // it; the trust is not, and gets its own rather than adding a trust's money

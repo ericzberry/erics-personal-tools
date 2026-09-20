@@ -135,11 +135,13 @@ test('holdings split an account only when they add up to it',()=>{
     {...dated,account:'Brokerage',label:'VTI',class:1,value:700},
     {...dated,account:'Brokerage',label:'Treasury 2027',class:2,value:300}
   ],[estate],{institution:'Schwab'});
-  // The Treasury files as Liquid securities, not as Bonds: the ledger asks how
-  // much could be sold this week, and a bond answers that the same way the
-  // equity beside it does.
+  // Both halves file as Liquid securities: the ledger asks how much could be
+  // sold this week, and a Treasury and an equity fund answer that the same way.
+  // The split still replaces the total it accounts for — it is one line now
+  // because the two things it was split into are not a distinction this ledger
+  // keeps.
   assert.deepEqual(reconciles.marks.map(row=>[row.class,row.amount]),
-    [[1,700],[classById('liquid').code,300]],'the split replaces the total it accounts for');
+    [[classById('liquid').code,1000]],'the split replaces the total it accounts for');
 
   // The E*TRADE page from the screenshot: three brokered CDs beside a $1.6M
   // account value. The CDs are not what the account holds.
@@ -260,7 +262,9 @@ test('positions no account claimed are counted alone and refused beside a balanc
     {...dated,label:'VTI',class:classById('stocks').code,scope:'holding',value:700},
     {...dated,label:'Treasury 2027',class:classById('bonds').code,scope:'holding',value:300}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
-  assert.deepEqual(alone.marks.map(row=>row.amount),[700,300]);
+  // One figure, because both are Liquid securities and this ledger keeps one
+  // amount per class: the stock and the Treasury are not two lines.
+  assert.deepEqual(alone.marks.map(row=>row.amount),[1000]);
 
   const beside=foldReadings([
     {...dated,account:'Individual Brokerage -4049',label:'Net Account Value',class:classById('liquid').code,scope:'account',value:1668402.54},
@@ -1033,7 +1037,7 @@ test('a UBS Brokerage account is fund investments, and every other one is not',(
   ],[estate],{institution:'UBS',today:'2026-09-20'});
   const byClass=Object.fromEntries(ubs.marks.map(mark=>[classLabel(mark.class),mark.amount]));
   assert.equal(byClass['Fund investments'],8454037.54,'the Brokerage account holds the funds');
-  assert.equal(byClass.Stocks,3954866.16,'and the account beside it is untouched');
+  assert.equal(byClass['Liquid securities'],3954866.16,'and the equity account beside it is untouched');
 
   // One UBS fund account carries no description at all — the page prints an
   // empty name column — so there is no word to recognize it by and it is named
@@ -1124,4 +1128,34 @@ test('a cap-table page states positions, never balances, and the fund he runs is
   assert.match(beside.notes.join(' '),/Averin Capital, which you manage/);
   assert.equal(managedVehicle('Averin Health Opportunities GP I LLC')?.name,'Averin Capital');
   assert.equal(managedVehicle('C2V Tributary Fund II, LP'),null);
+});
+
+// Stocks and bonds are both Liquid securities. The ledger asks how much could
+// be sold this week, not what it is invested in, so an equity sleeve and a
+// municipal ladder in the same trust are one line rather than two numbers the
+// reader has to add to answer the only question the line is there for.
+test('an equity sleeve and a bond ladder are one liquid line, not two',()=>{
+  const trust={row:'portfolio',number:1,name:'Berry AE 21 Irrevocable Trust',kind:5,currency:'USD'};
+  const reading=(label,cls,value)=>({account:'AE 2021 Trust Y1 78660',label,class:classById(cls).code,
+    registration:'',scope:'account',value,asOf:'2026-09-20',confidence:'high',reason:''});
+  const folded=foldReadings([
+    reading('Cap Group Intl','stocks',112757.17),
+    reading('Kayne SMID','stocks',39972.55),
+    reading('SP 500 TME','stocks',451894.37),
+    reading('Core Munis','bonds',381402.85)
+  ],[trust],{institution:'UBS',today:'2026-09-20'});
+  assert.deepEqual(folded.marks.map(mark=>classLabel(mark.class)),['Liquid securities'],
+    'one line, whatever the sleeves were called');
+  assert.equal(folded.marks[0].amount,112757.17+39972.55+451894.37+381402.85);
+  // The classes still exist for a figure entered by hand; it is the reading
+  // that stops splitting what this ledger does not split.
+  assert.ok(classById('stocks')&&classById('bonds'));
+  // And what is not marketable keeps its own line, which is the distinction
+  // the Breakdown is actually for.
+  const mixed=foldReadings([
+    reading('Brokerage','liquid',856692.22),
+    reading('SP 500 TME','stocks',451894.37)
+  ],[trust],{institution:'UBS',today:'2026-09-20'});
+  assert.deepEqual(mixed.marks.map(mark=>classLabel(mark.class)).sort(),
+    ['Fund investments','Liquid securities']);
 });

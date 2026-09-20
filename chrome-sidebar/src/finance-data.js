@@ -1064,7 +1064,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   // Bonds row of its own split one account across two lines that are read back
   // as one number. What the class exists for — telling liquid from locked up —
   // Liquid securities already says.
-  const BONDS=classById('bonds').code;
+  const BONDS=classById('bonds').code,STOCKS=classById('stocks').code;
   const classify=(reading,said='')=>{
     // The stock-plan test reads the figure's own label and nothing around it:
     // the group's text holds every other label too, and one potential benefit
@@ -1083,7 +1083,13 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // securities is reporting the page faithfully and the ledger wrongly.
     const holds=FUND_ACCOUNTS[matchKey(institution)];
     if(holds&&holds.test(`${reading.account||''} ${own}`))return classById('funds').code;
-    if(reading.class===BONDS)return LIQUID;
+    // Stocks and bonds are both Liquid securities. The ledger asks how much
+    // could be sold this week, not what it is invested in, and an equity sleeve
+    // answers that the same way the municipal ladder beside it does. Split
+    // across two rows, one trust read back as two numbers that had to be added
+    // to answer the only question the line is there for. Bonds went this way
+    // first; stocks were left behind and the row stayed.
+    if(reading.class===BONDS||reading.class===STOCKS)return LIQUID;
     if(reading.class!==UNCLASSIFIED)return reading.class;
     if(INVESTED.test(said))return defaultClass===CASH||!defaultClass?LIQUID:defaultClass;
     return defaultClass??reading.class;
