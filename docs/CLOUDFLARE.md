@@ -87,6 +87,39 @@ Follow the release requirements in [AGENTS.md](../AGENTS.md). Release from a tes
 
    Run only the commands for the apps being released. The script reads local manifests and writes release metadata; it does not deploy or validate the release. Verify the extension version at `/v1/releases/latest` and the mobile version at `/v1/releases/latest?app=mobile-app` on the deployed service.
 
+### Releasing from a checkout other sessions are working in
+
+`scripts/release.js` refuses a dirty tree, and rightly: `wrangler deploy` ships
+the working tree, and `predeploy` rebuilds `mobile-app/dist` from it, so a
+deploy made while another session has unfinished work in `tools-api/src`,
+`mobile-app/public` or `chrome-sidebar/src` publishes that work. Several
+sessions edit this repository at once, so the tree is often dirty through no
+fault of the release.
+
+Build and deploy from an archive of the commit instead, which ships exactly
+`HEAD` and nothing uncommitted:
+
+```sh
+T=$(mktemp -d)
+git archive HEAD | tar -x -C "$T"
+cp -R chrome-sidebar/vendor "$T/chrome-sidebar/vendor"   # see below
+cp tools-api/wrangler.jsonc "$T/tools-api/wrangler.jsonc"
+ln -s "$PWD/tools-api/node_modules" "$T/tools-api/node_modules"
+npm --prefix "$T/tools-api" run deploy
+```
+
+**Copy `vendor/` in, or the build quietly loses the spreadsheet reader.**
+`chrome-sidebar/vendor/` is not in Git, so an archive arrives without it, and
+both builds are written to warn and carry on rather than fail — a green build
+whose packaged extension cannot read an `.xlsx` statement, and, because mobile's
+build copies the same directory, a deploy that stops serving
+`/app/vendor/read-xlsx.js` to the phone. The warning is one line in a passing
+build; read it.
+
+The same applies to `scripts/publish-release.js`, which reads local manifests:
+run it against the archive, or it publishes whatever version number another
+session happens to have mid-bump in the tree.
+
 The service is [erics-tools-api.ezberry.workers.dev](https://erics-tools-api.ezberry.workers.dev); the mobile entry point is [/app/](https://erics-tools-api.ezberry.workers.dev/app/). A push, deployment, D1 publication, delivered extension directory, and installed client version are separate outcomes. Chrome may still need Reload, and an open mobile client may retain its older service worker. State any live or device verification that could not be completed.
 
 ## The Worker's own hostname
