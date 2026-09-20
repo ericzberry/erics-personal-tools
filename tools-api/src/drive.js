@@ -24,7 +24,11 @@ export const DRIVE_SCOPE='https://www.googleapis.com/auth/drive';
 // would be a second thing to renew, revoke and explain. The scope is read-only
 // and nothing here ever writes to, sends or deletes mail.
 export const GMAIL_SCOPE='https://www.googleapis.com/auth/gmail.readonly';
-export const GOOGLE_SCOPES=[DRIVE_SCOPE,GMAIL_SCOPE,'openid','email'];
+// The same account again, for the same reason: Reminders reads the birthdays
+// already in the owner's calendar rather than asking to be told them twice.
+// Read-only, and nothing here ever creates, moves or deletes an event.
+export const CALENDAR_SCOPE='https://www.googleapis.com/auth/calendar.readonly';
+export const GOOGLE_SCOPES=[DRIVE_SCOPE,GMAIL_SCOPE,CALENDAR_SCOPE,'openid','email'];
 const ACCOUNT_ID='google-drive';
 const TICKET_MINUTES=15;
 const now=()=>new Date().toISOString();
@@ -64,12 +68,15 @@ export function forgetAccessToken(){cached=null;}
 // A refusal from Google that is about permission rather than about one
 // request is written down, because the panel's next question is what the
 // connection can do — and the answer has just changed. Re-connecting replaces
-// this record wholesale, which is what clears it.
-export async function noteMailRefused(env){
+// this record wholesale, which is what clears it. One consent covers several
+// things, and they can be refused separately, so the note says which.
+export async function noteRefused(env,field){
   const account=await storedAccount(env);
-  if(!account||account.mailRefused)return;
-  await storeAccount(env,{...account,mailRefused:true});
+  if(!account||account[field])return;
+  await storeAccount(env,{...account,[field]:true});
 }
+export const noteMailRefused=env=>noteRefused(env,'mailRefused');
+export const noteCalendarRefused=env=>noteRefused(env,'calendarRefused');
 async function storeAccount(env,value){
   await env.DB.prepare('INSERT INTO drive_accounts (id, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at')
     .bind(ACCOUNT_ID,await encryptSettings(value,ACCOUNT_ID,env),now()).run();
@@ -278,7 +285,8 @@ export async function driveCallback(request,env,fetcher=fetch){
     // What Google actually granted, not what was asked for: a consent that
     // left a scope out must be visible to the feature that needs it.
     await storeAccount(env,{refreshToken:result.refresh_token,email,connectedAt:now(),scopes});
-    return page('Google connected',`${email?`${email} can `:'This Worker can now '}file tax documents into your Drive folder${scopes.includes(GMAIL_SCOPE)?' and read your sent mail':''}. You can close this tab.`);
+    const also=[scopes.includes(GMAIL_SCOPE)?'read your sent mail':'',scopes.includes(CALENDAR_SCOPE)?'read the birthdays in your calendar':''].filter(Boolean);
+    return page('Google connected',`${email?`${email} can `:'This Worker can now '}file tax documents into your Drive folder${also.length?` and ${also.join(', and ')}`:''}. You can close this tab.`);
   }catch{
     return page('Drive was not connected','That link expired or was already used. Start again from Taxes.');
   }

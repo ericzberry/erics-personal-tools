@@ -8,6 +8,14 @@ export function RemindersView(){
     SettingsGroup({title:'Needs attention',level:2,children:[Stack([],{id:'reminders-now',className:'travel-list'})]}),
     SettingsGroup({title:'Coming up',level:2,children:[Stack([],{id:'reminders-later',className:'travel-list'})]}),
     SettingsGroup({title:'Completed',level:2,children:[Stack([],{id:'reminders-done',className:'travel-list'})]}),
+    // Last, and hidden until the Worker has said whether there is a calendar to
+    // read at all: this is where birthdays come from, not what the tool is for,
+    // and an empty section explaining a connection nobody has made is noise.
+    SettingsGroup({title:'From your calendar',level:2,children:[
+      Note('Birthdays in your Google Calendar are kept here too. The app looks once a month; a birthday already saved, or already written down by hand, is left as it is.'),
+      Notice('',{id:'reminders-calendar-status',role:'status'}),
+      Stack([],{id:'reminders-calendar-actions',className:'action-group'})
+    ],id:'reminders-calendar',hidden:true}),
     Disclosure('Add or edit a reminder',[
       Form([
         Strong('New reminder',{id:'reminders-editor-title'}),

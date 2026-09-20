@@ -37,19 +37,31 @@ const reading=async(token,path,options)=>path==='/v1/ai-connections'
   :{capability:'reminders',path:'/v1/reminders',
     record:normalizeReminder({kind:'Birthday',title:'Derek’s birthday',date:today(),every:12}),
     summary:'Derek’s birthday · Every year · Today'};
+// The three conditions the calendar section actually meets, answered without a
+// Google connection so each can be looked at.
+const calendarStates={
+  none:{google:{connected:false,calendar:false},scan:null,everyDays:30},
+  unapproved:{google:{connected:true,calendar:false},scan:null,everyDays:30},
+  swept:{google:{connected:true,calendar:true},everyDays:30,
+    scan:{ranOn:'2026-08-24',added:9,matched:2,saved:0,scanned:11,calendars:3,short:false}}
+};
 const root=document.getElementById('reminder-states');
 const states=[
-  ['Populated · one overdue, one completed',records,connected],
-  ['Connected with nothing saved yet',[],connected],
-  ['Not connected',[],{get:async()=>''}]
+  ['Populated · one overdue, one completed · calendar swept last month',records,connected,'swept'],
+  ['Connected with nothing saved yet · Google approved for Drive only',[],connected,'unapproved'],
+  ['Connected · no Google connection at all',[],connected,'none'],
+  ['Not connected',[],{get:async()=>''},'none']
 ];
-for(const [label,list,credentials] of states){
+for(const [label,list,credentials,calendar] of states){
   const heading=document.createElement('h2');
   heading.textContent=`Synthetic state · ${label}`;
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:16px 0 8px;color:#666';
   const host=document.createElement('div');
   root.append(heading,host);
   const offline=store(list);
-  const tool=mountReminders(host,{credentials,offline,today});
+  const remote=async(token,path)=>path==='/v1/calendar/birthdays'?calendarStates[calendar]
+    :path==='/v1/drive/connect'?{url:'https://accounts.google.com/o/oauth2/v2/auth'}
+    :reading(token,path);
+  const tool=mountReminders(host,{credentials,offline,today,remote,openExternal:()=>true});
   mountCapture(host.querySelector('#reminders-capture'),{credentials,remote:reading,stores:{reminders:offline},today,onSaved:()=>tool.refresh()});
 }

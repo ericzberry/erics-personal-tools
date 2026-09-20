@@ -230,7 +230,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/health`, `/v1/releases/latest`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`,
-  `/v1/push/…`, `/v1/drive/…`, `/v1/voice[/scan]`. `/v1/push/key` is public like the release route,
+  `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
   body over 64 KB because a statement or document image travels inline;
@@ -260,6 +260,11 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `src/voice.js` is the other thing that Google connection is for: it reads a
   page of sent mail at a time, keeps the study's place between calls, and turns
   what Eric wrote into the profile his replies are written from.
+  `src/calendar.js` is the third: it sweeps the owner's calendar for birthdays
+  and writes them into `reminder_records`, remembering every event it has
+  already settled so nothing is written twice and a deleted one stays deleted.
+  It runs on the same hourly `scheduled` trigger, once a month, and on demand
+  through its own routes. See [REMINDERS.md](REMINDERS.md).
 - `src/providers.js` (provider adapters, including the text/image content parts
   every format renders in its own shape) and `src/model-policy.js` (the central
   task → model policy and priced catalogue, where `vision` marks a model that may
@@ -271,6 +276,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `voice-schema.sql` (`voice_profiles`),
+  `calendar-schema.sql` (`calendar_scans`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of

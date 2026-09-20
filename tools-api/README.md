@@ -73,6 +73,17 @@ Apply `npx wrangler d1 execute erics-personal-tools --remote --file travel-schem
 
 Apply `npx wrangler d1 execute erics-personal-tools --remote --file reminders-schema.sql` before deploying `/v1/reminders`, which is the same generic record store over `reminder_records`. It validates a reminder's anchor date and repeat interval and never computes a due date; the device works out what today means. `POST /v1/ai-connections/:id/capture` reads one short typed note into a record one of the record routes already accepts, and returns 422 with its own explanation when the note names nothing datable. `/v1/gifts` is the same again over `gift_records` (apply `gifts-schema.sql`), and `/v1/sizes` once more over `size_records` (apply `sizes-schema.sql`). See [reminders](../docs/REMINDERS.md), [gifts](../docs/GIFTS.md), [clothing sizes](../docs/SIZES.md) and [quick add](../docs/QUICK_ADD.md).
 
+`/v1/calendar/birthdays` reports whether the Google connection can read a
+calendar and what the last birthday sweep did; `POST /v1/calendar/birthdays/scan`
+runs one now, and `{restart:true}` makes it forget which events it has already
+settled. Apply `npx wrangler d1 execute erics-personal-tools --remote --file
+calendar-schema.sql` before deploying them, and reconnect Google so the consent
+covers `calendar.readonly` — an existing connection keeps working and simply
+reports that it cannot read a calendar. The sweep also rides the hourly
+`triggers.crons` entry, where it runs at most once every thirty days. It writes
+ordinary rows into `reminder_records` and never creates, moves or deletes a
+calendar event. See [reminders](../docs/REMINDERS.md).
+
 `/v1/push/*` delivers the combined Needs attention digest to a phone; reminder-only days retain the existing reminder wording. Apply `push-schema.sql`, set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` with `npx wrangler secret put`, and keep the hourly `triggers.crons` entry in the Wrangler config. `GET /v1/push/key` is public; `PUT`/`DELETE /v1/push/subscriptions/:id` and `POST /v1/push/test` need the bearer token. A subscription's endpoint is a capability URL: it is encrypted at rest and never returned by the listing. See [notifications](../docs/NOTIFICATIONS.md).
 
 ## Subscriptions and attention

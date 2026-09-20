@@ -50,11 +50,15 @@ test('the list separates what needs attention, and marking a service done re-anc
   // The birthday is 52 days out with a fortnight of notice, so it waits below.
   assert.match(document.querySelector('#reminders-later').textContent,/Celeste/);
   assert.match(document.querySelector('#reminders-later').textContent,/turns 10/);
+  // A row's own verbs are glyphs at the end of its line, so they are found by
+  // the name a screen reader is given rather than by a word under the record.
+  const rowAction=(node,verb)=>[...node.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')?.startsWith(verb));
   const birthdayRow=document.querySelector('#reminders-later .record-row');
-  assert.equal([...birthdayRow.querySelectorAll('button')].some(button=>button.textContent.startsWith('Mark done')),false,
+  assert.equal(!!rowAction(birthdayRow,'Mark done'),false,
     'a birthday is never marked done, which would move the date it falls on');
   assert.equal(document.querySelector('#reminders-done').closest('section').hidden,true);
-  const done=[...attention.querySelectorAll('button')].find(button=>button.textContent==='Mark done today');
+  const done=rowAction(attention,'Mark done today');
+  assert.ok(done.querySelector('svg'),'the verb is carried by a glyph on the row');
   done.dispatchEvent(new document.defaultView.Event('click',{bubbles:true}));
   await settle(()=>store.writes.length>0);
   assert.equal(store.writes[0].value.date,'2026-09-11','the interval restarts from the day the work happened');
@@ -104,4 +108,77 @@ test('quick add says what is missing instead of failing quietly',async()=>{
   await settle(()=>document.getElementById('capture-status').textContent.includes('Settings'));
   assert.equal(store.records.length,0);
   restore();
+});
+
+// The calendar section, mounted on its own each time: what it offers depends
+// entirely on what the Worker says the Google connection can do.
+function calendarTool(document,{google,scan=null,onScan}={}){
+  const store=fakeStore();
+  const opened=[];
+  let state={google,scan,everyDays:30};
+  const remote=async(token,path)=>{
+    if(path==='/v1/drive/connect')return {url:'https://accounts.google.com/consent'};
+    if(path==='/v1/calendar/birthdays/scan'){state=onScan(store);return state;}
+    return state;
+  };
+  const tool=mountReminders(document.querySelector('main'),{credentials:{get:async()=>'token'},offline:store,remote,
+    openExternal:url=>{opened.push(url);return true;},today:()=>'2026-09-20'});
+  return {tool,store,opened,
+    buttons:()=>[...document.querySelectorAll('#reminders-calendar-actions button')].map(button=>button.textContent),
+    press:label=>[...document.querySelectorAll('#reminders-calendar-actions button')]
+      .find(button=>button.textContent===label).dispatchEvent(new document.defaultView.Event('click',{bubbles:true})),
+    status:()=>document.querySelector('#reminders-calendar-status')};
+}
+
+test('with no Google connection the calendar section asks for one rather than offering a sweep',async()=>{
+  const {document,restore}=setup();
+  const {tool,opened,buttons,press,status}=calendarTool(document,{google:{connected:false,calendar:false}});
+  await settle(()=>document.querySelector('#reminders-calendar').hidden===false);
+  assert.deepEqual(buttons(),['Connect Google'],'one action, and it is the one that applies');
+  press('Connect Google');
+  await settle(()=>opened.length===1);
+  assert.equal(opened[0],'https://accounts.google.com/consent');
+  assert.match(status().textContent,/Approve reading your calendar in Google/);
+  tool.clear();restore();
+});
+
+test('a Google connection that stops short of the calendar asks for the rest of the consent',async()=>{
+  const {document,restore}=setup();
+  const {tool,buttons}=calendarTool(document,{google:{connected:true,calendar:false}});
+  await settle(()=>buttons().length>0);
+  assert.deepEqual(buttons(),['Approve reading your calendar'],
+    'a connection that exists needs the rest of a consent, not a first one');
+  // A standing condition is not an event, so it is not toned like one.
+  assert.doesNotMatch(document.querySelector('#reminders-calendar-status').className,/error|alert|success/);
+  tool.clear();restore();
+});
+
+test('a sweep puts the birthdays it wrote in the list before it says what it did',async()=>{
+  const {document,restore}=setup();
+  const {tool,buttons,press,status}=calendarTool(document,{google:{connected:true,calendar:true}},);
+  await settle(()=>buttons().includes('Look for birthdays now'));
+  assert.match(status().textContent,/every 30 days/,'a sweep that has not run says when it will');
+  assert.equal(buttons().includes('Look again from the start'),false,'there is nothing to forget yet');
+  restore();tool.clear();
+});
+
+test('what a sweep wrote is in the list before the sentence about it, and each row says where it came from',async()=>{
+  const {document,restore}=setup();
+  const {tool,buttons,press,status}=calendarTool(document,{google:{connected:true,calendar:true},
+    onScan:store=>{
+      store.records.push({...normalizeReminder({kind:'Birthday',title:'Ashley Bell',date:'1990-07-22',every:12,
+        since:'1990',source:'google-calendar',sourceId:'contact-1'}),id:'imported-1',revision:'r-1'});
+      return {google:{connected:true,calendar:true},everyDays:30,added:['Ashley Bell'],
+        scan:{ranOn:'2026-09-20',added:1,matched:1,saved:0,scanned:3,calendars:2,short:false}};
+    }});
+  await settle(()=>buttons().includes('Look for birthdays now'));
+  press('Look for birthdays now');
+  await settle(()=>document.querySelector('#reminders-later').textContent.includes('Ashley Bell'));
+  assert.match(status().textContent,/added 1 · 1 already written down/);
+  assert.match(status().className,/success/,'a finished sweep reports as one');
+  assert.match(document.querySelector('#reminders-later').textContent,/turns 37/);
+  assert.match(document.querySelector('#reminders-later').textContent,/From your calendar/,
+    'a row nobody typed says why it is there');
+  assert.ok(buttons().includes('Look again from the start'),'starting over is offered once there is something to forget');
+  tool.clear();restore();
 });

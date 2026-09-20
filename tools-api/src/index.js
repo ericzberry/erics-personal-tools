@@ -3,6 +3,7 @@ import {cards,classifyPurchase,researchCard} from './cards.js';
 import {finance,readFinanceUpdates} from './finance.js';
 import {rewardPrograms} from './programs.js';
 import {drive,driveCallback} from './drive.js';
+import {calendarRoutes,sweepBirthdays} from './calendar.js';
 import {voice} from './voice.js';
 import {readTaxDocument} from './taxes.js';
 import {personal} from './personal.js';
@@ -68,8 +69,14 @@ export default {
   // Every hour, because a device is told at its own morning hour and those are
   // spread across time zones. The handler decides who is due; nothing is sent
   // to a device outside the hour it asked for.
+  //
+  // The calendar sweep rides the same trigger and decides for itself that a
+  // month has passed. The two are started separately and neither is awaited by
+  // the other: reading a calendar must never be able to hold up, or fail, the
+  // morning a phone is waiting for.
   async scheduled(event, env, ctx) {
     ctx.waitUntil(deliverDueReminders(env, {log: message => console.log(message)}));
+    ctx.waitUntil(sweepBirthdays(env, {log: message => console.log(message)}));
   },
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -139,6 +146,7 @@ export default {
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
       if(path.startsWith('/v1/drive/'))return await drive(request,env,readValue,json);
+      if(path.startsWith('/v1/calendar/'))return await calendarRoutes(request,env,readValue,json);
       if(path==='/v1/voice'||path.startsWith('/v1/voice/'))return await voice(request,env,readValue,json);
       if(path==='/v1/rewards/programs'||path.startsWith('/v1/rewards/programs/'))return await rewardPrograms(request,env,readValue,json);
       if(path==='/v1/rewards')return await rewardsSettings(request,env,readValue,json);

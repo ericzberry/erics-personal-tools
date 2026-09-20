@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeReminder,nextDue,addMonths,reminderDue,reminderAge,attentionSplit,markedDone,canMarkDone,
-  duePhrase,describeReminder,localDate,DEFAULT_NOTICE_DAYS} from '../src/reminder-data.js';
+  duePhrase,describeReminder,localDate,DEFAULT_NOTICE_DAYS,
+  calendarBirthday,sameBirthday,fromCalendar} from '../src/reminder-data.js';
 const birthday={kind:'Birthday',title:'Derek’s birthday',date:'1985-03-04',every:12,since:'1985'};
 const service={kind:'Service',title:'Oil change',subject:'Outback',date:'2026-03-31',every:6};
 
@@ -60,4 +61,58 @@ test('the validator refuses what the tool could not show, and defaults the rest'
     assert.throws(()=>normalizeReminder({...service,...change}),undefined,JSON.stringify(change));
   assert.match(describeReminder(normalizeReminder(service)),/Outback · Every 6 months · last done 2026-03-31/);
   assert.equal(localDate(new Date(2026,0,5)),'2026-01-05','the device’s own day, not UTC');
+});
+
+test('a calendar birthday keeps its day, and only keeps an age when the calendar knew one',()=>{
+  const today='2026-09-20';
+  // A year somebody could have been born in is the date of birth, and the age
+  // follows from it.
+  const known=calendarBirthday({id:'evt-1',summary:'Ashley’s birthday',start:'1985-03-04'},{today});
+  assert.equal(known.date,'1985-03-04');
+  assert.equal(known.since,'1985');
+  assert.equal(known.every,12);
+  assert.equal(known.kind,'Birthday');
+  assert.equal(reminderAge(reminderDue(known,today)),42,'the next birthday is the one being counted to');
+  // A placeholder year is not one. The day survives; the age does not appear.
+  const unknown=calendarBirthday({id:'evt-2',summary:'Mom',start:'2026-11-02'},{today});
+  assert.equal(unknown.date,'2026-11-02');
+  assert.equal(unknown.since,'','a year that is not a birth year must not become an age');
+  assert.equal(reminderAge(reminderDue(unknown,today)),0);
+  // February 29th stays February 29th rather than being moved to the 28th.
+  const leap=calendarBirthday({id:'evt-3',summary:'Leap day birthday',start:'2028-02-29'},{today});
+  assert.equal(leap.date,'2024-02-29');
+  assert.equal(nextDue(leap,today),'2027-02-28','a 29th clamps on the way out, not on the way in');
+  // Nothing usable is nothing, not a guess.
+  assert.equal(calendarBirthday({id:'evt-4',summary:'',start:'1985-03-04'},{today}),null);
+  assert.equal(calendarBirthday({id:'evt-5',summary:'No date',start:''},{today}),null);
+  assert.equal(calendarBirthday({summary:'Nameless event',start:'1985-03-04'},{today}),null);
+});
+
+test('the same birthday written twice is recognized by its day and its name, whatever year each carries',()=>{
+  const typed=normalizeReminder({kind:'Birthday',title:'Ashley',date:'2021-03-04',every:12});
+  const fromTheCalendar=calendarBirthday({id:'evt-1',summary:'Ashley’s birthday',start:'1985-03-04'},{today:'2026-09-20'});
+  assert.equal(sameBirthday(typed,fromTheCalendar),true,'a placeholder year must not hide a duplicate');
+  // Two people can share a day without sharing a record.
+  const other=normalizeReminder({kind:'Birthday',title:'Derek',date:'1990-03-04',every:12});
+  assert.equal(sameBirthday(other,fromTheCalendar),false);
+  // And one person's birthday is not their anniversary.
+  const anniversary=normalizeReminder({kind:'Anniversary',title:'Ashley',date:'2021-03-04',every:12});
+  assert.equal(sameBirthday(anniversary,fromTheCalendar),false);
+  // A different day is a different birthday however alike the names read.
+  assert.equal(sameBirthday(normalizeReminder({kind:'Birthday',title:'Ashley',date:'2021-03-05',every:12}),fromTheCalendar),false);
+});
+
+test('a record remembers where it came from, and an older client editing it does not lose that',()=>{
+  const imported=calendarBirthday({id:'evt-1',summary:'Ashley’s birthday',start:'1985-03-04'},{today:'2026-09-20'});
+  assert.equal(fromCalendar(imported),true);
+  assert.equal(imported.sourceId,'evt-1');
+  // An extension or phone on an older version sends neither field; the record
+  // keeps what it already had rather than being orphaned from its calendar.
+  const edited=normalizeReminder({kind:'Birthday',title:'Ashley',date:'1985-03-04',every:12,notice:30},imported);
+  assert.equal(edited.source,'google-calendar');
+  assert.equal(edited.sourceId,'evt-1');
+  assert.equal(edited.notice,30);
+  // Somewhere this app cannot import from is refused rather than stored.
+  assert.throws(()=>normalizeReminder({kind:'Birthday',title:'Ashley',date:'1985-03-04',every:12,source:'somewhere-else'}),/imported from/);
+  assert.equal(fromCalendar(normalizeReminder({kind:'Birthday',title:'Typed by hand',date:'1985-03-04',every:12})),false);
 });

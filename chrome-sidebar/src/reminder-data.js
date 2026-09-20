@@ -27,6 +27,14 @@ export const MAX_INTERVAL_MONTHS=120;
 export const MAX_NOTICE_DAYS=365;
 export const DEFAULT_NOTICE_DAYS=14;
 export const REMINDER_NOTES_MAX=2000;
+// Where a record came from, when it was not typed here. A record with no
+// source was written by hand and is never touched by an import.
+export const CALENDAR_SOURCE='google-calendar';
+export const REMINDER_SOURCES=['',CALENDAR_SOURCE];
+export const MAX_SOURCE_ID=200;
+// Nobody in a calendar was born more than this long ago, and a start year
+// outside that range is a placeholder rather than a date of birth.
+export const MAX_AGE_YEARS=120;
 
 // The device's own day, not UTC: "today is Derek's birthday" is said in the
 // owner's timezone, and a UTC date would move it by one for half of each day.
@@ -48,6 +56,14 @@ const date=(value,label,required=false)=>{
 const year=(value,label)=>{
   const clean=text(value??'',4,label);
   if(clean&&!/^(1[89]|2[0-4])\d{2}$/.test(clean))fail(`Enter ${label} as a four-digit year.`);
+  return clean;
+};
+// A source is one of the places this app can import from, or nothing at all.
+// An unrecognized one is refused rather than stored, so the row's "where this
+// came from" can never say something the app does not know how to honour.
+const origin=value=>{
+  const clean=text(value??'',40,'where this came from');
+  if(clean&&!REMINDER_SOURCES.includes(clean))fail('That is not a place reminders can be imported from.');
   return clean;
 };
 const count=(value,max,label)=>{
@@ -73,9 +89,71 @@ export function normalizeReminder(input,previous={}){
     // Only a reminder that does not repeat can be finished; a repeating one is
     // completed by moving its anchor forward instead.
     completed:date(get('completed')??'','the date it was completed'),
-    notes:text(get('notes')??'',REMINDER_NOTES_MAX,'notes')
+    notes:text(get('notes')??'',REMINDER_NOTES_MAX,'notes'),
+    // Provenance, in two parts: which place this came from, and what that
+    // place calls it. The second is what lets a later sweep of the same
+    // calendar recognize its own work instead of adding it twice. An older
+    // client that does not send either keeps whatever the record already had,
+    // because `get` falls back to the previous value.
+    source:origin(get('source')??''),
+    sourceId:text(get('sourceId')??'',MAX_SOURCE_ID,'the source identifier')
   };
 }
+
+// A birthday as a calendar keeps it, turned into the record this app keeps.
+//
+// The one judgement here is the year. A calendar's yearly birthday event
+// starts on the date of birth when the year is known, and on a placeholder
+// when it is not — so a year that is not a year someone could have been born
+// in is dropped rather than shown as an age. That is the same rule the form
+// follows: a birthday with no year simply has no age, rather than an invented
+// one counted from when it was first written down.
+export function calendarBirthday(event,{today=localDate()}={}){
+  const title=String(event?.summary??'').trim().slice(0,120);
+  const start=String(event?.start??'');
+  const sourceId=String(event?.id??'').slice(0,MAX_SOURCE_ID);
+  if(!title||!isDate(start)||!sourceId)return null;
+  const thisYear=Number(today.slice(0,4)),startYear=Number(start.slice(0,4));
+  const born=startYear<thisYear&&startYear>=thisYear-MAX_AGE_YEARS;
+  return normalizeReminder({
+    kind:'Birthday',title,subject:'',
+    date:born?start:thisYearsDate(start,thisYear),
+    every:12,since:born?String(startYear):'',
+    notice:DEFAULT_NOTICE_DAYS,completed:'',notes:'',
+    source:CALENDAR_SOURCE,sourceId
+  });
+}
+// The same month and day, in a year that has one. February 29th only exists
+// every fourth year, and moving it to the 28th would be recording a different
+// birthday; stepping back to a year that has the day keeps the date itself
+// intact and lets `nextDue` clamp it the way it clamps every other 29th.
+function thisYearsDate(start,thisYear){
+  for(let year=thisYear;year>thisYear-4;year--){
+    const value=`${year}-${start.slice(5)}`;
+    if(isDate(value))return value;
+  }
+  return start;
+}
+
+// Two records naming the same birthday. The year is deliberately not compared:
+// one of them may carry a placeholder year, and a birthday is the day it falls
+// on. What has to agree is the day and the name — so two people who share a
+// birthday stay two records, and "Ashley’s birthday" recognizes "Ashley".
+const NOT_A_NAME=new Set(['birthday','birthdays','bday','bdays','b','day','happy','birth','the','of']);
+export const birthdayName=value=>new Set(String(value??'').toLowerCase()
+  .replace(/[\u2019']s\b/g,'')
+  .replace(/[^a-z0-9]+/g,' ')
+  .split(' ')
+  .filter(word=>word&&!NOT_A_NAME.has(word)));
+export function sameBirthday(record,candidate){
+  if(record?.kind!=='Birthday'||candidate?.kind!=='Birthday')return false;
+  if(String(record.date??'').slice(5)!==String(candidate.date??'').slice(5))return false;
+  const left=birthdayName(`${record.title??''} ${record.subject??''}`);
+  const right=birthdayName(`${candidate.title??''} ${candidate.subject??''}`);
+  if(!left.size||!right.size)return false;
+  return [...left].every(word=>right.has(word))||[...right].every(word=>left.has(word));
+}
+export const fromCalendar=record=>record?.source===CALENDAR_SOURCE;
 
 // Adding months keeps the anchor's day where the target month has one, and
 // clamps to the month's last day where it does not, so a 31st does not skid

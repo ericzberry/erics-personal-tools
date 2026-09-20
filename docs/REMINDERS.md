@@ -41,6 +41,53 @@ a year later.
 renewal wants ninety days. `attentionSplit()` uses each record's own notice to
 decide what leads the list.
 
+## Birthdays already in the calendar
+
+Nobody types a birthday twice. They are in a calendar because somebody put them
+there — often Google itself, out of the contacts — so Reminders reads them
+rather than asking to be told again.
+[`tools-api/src/calendar.js`](../tools-api/src/calendar.js) does the reading and
+`calendarBirthday` in `reminder-data.js` turns one event into one record.
+
+**The Worker does it, not a device.** The Google refresh token lives there and
+no page ever sees it, and the sweep has to happen whether or not the app is
+open. It rides the same hourly cron as the [notifications](NOTIFICATIONS.md) and
+decides for itself that thirty days have passed. *Look for birthdays now* on the
+Reminders screen runs the same sweep on demand, on either host.
+
+**One consent, three things.** `calendar.readonly` was added to the Google
+connection [Taxes](TAXES.md) already makes, beside Drive and read-only Gmail. A
+connection made before it exists keeps working and simply cannot read a
+calendar: the screen says so and offers the rest of the consent rather than a
+sweep that would fail. Nothing here ever creates, moves or deletes an event.
+
+**What counts as a birthday.** Google's own contact birthdays say so outright
+(`eventType: "birthday"`) and are taken at their word. Anything else has to look
+like one from both sides — an all-day date that repeats every year *and* a name
+that says birthday — because a wedding anniversary is yearly and all-day too. A
+calendar that holds nothing but birthdays is read whole; every other one is
+searched, because a calendar of ten thousand meetings cannot be read whole
+inside a Worker's request budget. A sweep that runs out of budget says so
+instead of reporting a short answer as a complete one.
+
+**The year is the only judgement.** A yearly birthday event starts on the date
+of birth when the calendar knows the year and on a placeholder when it does not,
+so a start year outside a human lifespan becomes the day alone and no `since` at
+all. That is the rule above, applied to an import: a birthday with no year has
+no age rather than an invented one.
+
+**Nothing is written twice and nothing already there is touched.** Three things
+are checked in order for each event: the sweep's own record of every event it
+has already settled, kept in `calendar_scans`; a reminder this app already wrote
+from that event, matched on its `sourceId`; and a birthday the owner typed in
+themselves, matched on `sameBirthday` — the same day and the same name, ignoring
+the year, because one of the two may carry a placeholder. A match is left
+exactly as it is, notes and anchor date and all.
+
+The first of those is why a birthday deleted by hand stays deleted instead of
+coming back next month. *Look again from the start* forgets it, which is the
+only way back to one.
+
 ## Quick add
 
 A typed note can create a reminder without the form. The note field is shared

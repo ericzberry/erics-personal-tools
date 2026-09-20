@@ -12,7 +12,11 @@
     {"pattern": "tools.ezberry.net", "custom_domain": true}
   ],
   // Reminders are delivered at each device's own morning hour, so the Worker
-  // wakes every hour and sends only to the devices whose hour it is.
+  // wakes every hour and sends only to the devices whose hour it is. The same
+  // trigger carries the monthly sweep of the owner's calendar for birthdays,
+  // which decides for itself when a month has passed. Keep this entry in the
+  // real wrangler.jsonc too: it is ignored by Git, so a copy that has drifted
+  // from this template is the one thing that actually runs.
   "triggers": {
     "crons": ["0 * * * *"]
   },

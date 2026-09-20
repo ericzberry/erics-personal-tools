@@ -37,6 +37,16 @@ returns only the host, the time zone and the hour — never the endpoint.
 `lastSentOn` is server-kept and ignored on input: a device cannot tell the
 Worker it has already been notified today.
 
+## Two jobs on one trigger
+
+The hourly cron drives the morning notification below and, since it is already
+running, the monthly sweep of the owner's calendar for birthdays — see
+[reminders](REMINDERS.md). They are started separately in the `scheduled`
+handler and neither is awaited by the other: reading a calendar must never be
+able to delay, or fail, the morning a phone is waiting for. The sweep decides
+for itself that thirty days have passed, and does nothing at all when Google is
+not connected.
+
 ## Once, in the morning, only when there is something
 
 The cron runs hourly because "morning" is a different instant in every time
@@ -90,7 +100,11 @@ authenticate with, and every push carries it anyway.
 
 The hourly trigger lives in `wrangler.jsonc` (`triggers.crons`), and
 `push-schema.sql` must be applied before deploying the routes that use it. See
-[CLOUDFLARE.md](CLOUDFLARE.md).
+[CLOUDFLARE.md](CLOUDFLARE.md). That file is ignored by Git, so the entry lives
+in `wrangler.example.jsonc` and has to be kept in the real one by hand — and it
+had drifted out of it once. Nothing fails when the trigger is missing: the
+notification simply stops arriving. Check the schedule on the deployed Worker
+rather than assuming the config it was deployed from still had the entry.
 
 `POST /v1/push/test` sends to every subscribed device immediately. It exists
 because the only way to know notifications work is to receive one, and waiting
