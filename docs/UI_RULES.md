@@ -90,6 +90,7 @@ fails the suite for everyone at HEAD.
 | **UI-12** | One spacing scale per screen: 2–4px inside a record, 8–12px between groups. Gaps within a group are always smaller than gaps between them. | The full scroll, not a cropped component |
 | **UI-13** | Hit targets hold: 44px for touch form controls, 32px for the actions inside an expanded record. A row of glyphs is drawn to its line only where a pointer does the aiming; a finger keeps the touch size. | Sidebar and phone, hover and touch |
 | **UI-14** | Every visual boundary explains a relationship. No card inside a card, no shadow that separates nothing, no rule with nothing under it. | Wherever a boundary was added |
+| **UI-28** | A list of groups opens one group at a time, and a closed group's heading carries its own number — its name, its kind, its total, and anything a reader needs before deciding to open it. Stated in full under [From a complaint](#from-a-complaint). | The list closed, one group open, and after a refresh |
 | **UI-15** | Reviewed at the real sizes with no horizontal overflow: 380px and the 280px sidebar minimum, 390px and 320px on the phone, and a desktop viewport for full-tab pages. | [VISUAL_QA.md](VISUAL_QA.md) harnesses |
 
 ## From a complaint
@@ -198,6 +199,18 @@ Worth — this looks terrible — overlapping numbers and misaligned numbers."*
 This was a regression 0.6.215 introduced by giving the portfolio heading two
 columns of its own: the total landed 104px right of the figures it totalled,
 and a trust's name broke into three lines with the total jammed against them.
+
+**UI-28 — a list of groups opens one group at a time.** *By eye.* Where a list
+is groups of records — portfolios and their asset classes, years and their
+filings, programs and their offers — the group is closed to its own heading and
+opens on its own. The closed heading carries everything the group would
+otherwise hide: its name, what kind of thing it is, its own number, and any
+fact about the group a reader would need before deciding to open it, such as a
+date behind the rest of the list or a change still waiting to sync. Which
+groups are open survives a redraw, because these lists refresh themselves while
+they are being read. *"I think you could have entity level numbers and an
+option to expand per entity vs showing everything at once."* Look at the list
+closed, with one group open, and after a refresh.
 
 ## Open
 

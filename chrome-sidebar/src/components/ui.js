@@ -132,7 +132,14 @@ export const ToolTitle=(title,{actionsId,statusId}={})=>Stack([
   Stack([Heading(title,1),ActionGroup([],{id:actionsId,compact:true})],{className:'tool-title'}),
   statusId?Notice('',{id:statusId}):null
 ],{className:'tool-title-block'});
-export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>element('details',props,[titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),...children]);
+const isNode=value=>!!value&&typeof value==='object'&&'nodeType' in value;
+// A summary is usually a line of text, but a record that opens says more than
+// its name on the line you press — a portfolio's heading carries its total and
+// its own verbs — so a built node is taken as the summary's contents.
+export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>element('details',props,[
+  isNode(title)||Array.isArray(title)?element('summary',{},[title].flat().filter(Boolean))
+    :titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),
+  ...children]);
 export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list,min,max,step}) {
   const caption=element('label',{for:id,id:kind==='select'?`${id}-label`:undefined,text:label,className:hiddenLabel?'sr-only':undefined});
   const control=kind==='select'?Select({id,label,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,min,max,step,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});

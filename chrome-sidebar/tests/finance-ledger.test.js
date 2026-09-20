@@ -90,7 +90,10 @@ test('a portfolio behind the rest of the ledger still says its own date',async()
   const tool=ledger(document,[portfolio(1,'Eric and Ariana Berry Estate',1),portfolio(2,'Eric Berry',2),
     mark(1,10,'2026-09-20',1668402.54),mark(2,10,'2026-09-18',122666.62)]);
   await settle(()=>document.getElementById('finance-list').textContent.includes('Liquid securities'));
-  const said=[...document.querySelectorAll('#finance-list .record-group > .footnote')].map(node=>node.textContent);
+  // On the heading, not under it: a portfolio is closed until it is asked for,
+  // and a date behind the rest of the ledger is exactly what the closed row has
+  // to be able to say.
+  const said=[...document.querySelectorAll('#finance-list .group-name > .footnote')].map(node=>node.textContent);
   assert.deepEqual(said,['as of 2026-09-18'],'the date cascades to the group that is behind, and stops there');
   tool.stop();
 });
@@ -172,4 +175,41 @@ test('a breakdown line carries its share, and a line that comes to nothing is le
   const flows=BreakdownList('Private investments',[{label:'Committed',total:1000},{label:'Value',total:1100}],'USD',{shares:false});
   assert.deepEqual([...flows.querySelectorAll('.breakdown-line')].map(row=>row.textContent),['Committed$1,000','Value$1,100']);
   restore();
+});
+
+// The ledger is read at the level of the entities that hold the money. Seven
+// trusts with five classes each is forty lines to scroll past before the second
+// name; closed, it is seven names and seven totals, and one opens at a time.
+test('a portfolio is closed to its own total, and opens on its own',async()=>{
+  const document=setup();
+  const tool=ledger(document,AMENDED);
+  await settle(()=>document.getElementById('finance-list').textContent.includes('Liquid securities'));
+  const groups=[...document.querySelectorAll('#finance-list .portfolio-group')];
+  assert.equal(groups.length,2);
+  for(const group of groups)assert.equal(group.open,false,'a portfolio opens because it was asked for');
+  // Closed, the heading still carries the one thing it is there to say.
+  const heading=groups[0].querySelector('summary');
+  assert.match(heading.textContent,/Eric and Ariana Berry Estate/);
+  assert.match(heading.textContent,/\$1,668,403/,'the entity’s own total, on the line that is always shown');
+  // And the class lines are inside it, not beside it.
+  assert.ok(groups[0].querySelector('.record-line'),'the classes are in the block the heading opens');
+  assert.equal(heading.querySelector('.record-line'),null,'and not in the heading itself');
+  groups[0].open=true;
+  assert.equal(groups[1].open,false,'opening one is not opening the rest');
+  tool.stop();
+});
+
+// A verb on the heading acts on the portfolio; inside a summary every click is
+// also a press on the disclosure, so these have to stop there.
+test('renaming or deleting a portfolio does not open it',async()=>{
+  const document=setup();
+  const tool=ledger(document,AMENDED);
+  await settle(()=>document.getElementById('finance-list').textContent.includes('Liquid securities'));
+  const group=document.querySelector('#finance-list .portfolio-group');
+  const verb=group.querySelector('summary .record-actions button');
+  assert.ok(verb,'the heading carries the portfolio’s own verbs');
+  const press=new document.defaultView.Event('click',{bubbles:true,cancelable:true});
+  verb.dispatchEvent(press);
+  assert.equal(press.defaultPrevented,true,'the press is spent on the verb, not on the disclosure');
+  tool.stop();
 });

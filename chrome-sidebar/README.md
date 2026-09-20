@@ -3168,3 +3168,48 @@ is still loading. Not directly checked: the live page, which is behind a
 sign-on — the reading above is of the page as the owner sees it, and the
 signed-out shell was checked for its paths and its log-on form.
 Archive: `release/erics-sidebar-0.6.224.zip`.
+
+## An entity is a name and a number until it is asked for (0.6.225 / mobile 0.1.175)
+
+**Seven trusts with five classes each is forty lines to scroll past before the
+second name.** The ledger drew every class of every portfolio at once, so the
+thing it is read for — what each entity is worth — was buried in the thing it
+is read *with*.
+
+**A portfolio is a disclosure now.** Closed, it is a chevron, its name, what
+kind of account it is, and its own total. Opened, the classes, positions and
+properties inside it appear in the block the heading opens, and one entity
+opens without closing another. The ledger goes from forty-odd lines to one per
+entity, and a total that was three screens down is on the first.
+
+The closed heading carries everything the block would otherwise hide, which is
+the part that is easy to get wrong: a portfolio whose newest figure is behind
+the rest of the ledger says so on the line you can see, and so does one still
+waiting to reach the cloud. A heading that hid the reason to open it would be
+worse than the long list.
+
+Which entities are open survives a redraw. The ledger refreshes itself while it
+is visible, and a list that shut every minute would be unusable.
+
+The heading's own verbs stop the press there rather than passing it to the
+disclosure, so renaming a portfolio does not also open it.
+
+**And the column of money holds.** An entity sits at the same inset open or
+shut — closed it carries the open block's 1px border in nothing at all — so
+opening one does not step the totals 8px sideways. Measured at 374px with the
+settled ledger: every entity total and every class figure inside the open one
+ends at x=224, with no horizontal overflow, and the same holds at the 280px
+minimum.
+
+The chevron leads the heading rather than closing it, because the right-hand
+column of a ledger line is money and the two panels this list sits under —
+Breakdown, Value over time — already open from a marker on the left.
+
+New coverage: a portfolio renders closed with its own total on the summary and
+its class lines inside the block rather than beside it; opening one leaves the
+rest closed; and a press on a heading verb is spent on the verb. UI-28 in the
+register states the general form — a list of groups opens one group at a time,
+and a closed heading carries its own number and anything a reader needs before
+deciding to open it. Validation: 596 extension and 33 mobile tests pass from an
+archive of this release. Native iPhone and installed Chrome behavior were not
+directly tested. Archive: `release/erics-sidebar-0.6.225.zip`.

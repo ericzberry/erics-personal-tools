@@ -405,20 +405,31 @@ export function FinanceView(){
 // only when its own newest figure is older than that, and a line inside it only
 // when that line is older still. A date printed on every line was the same fact
 // written six times, and it was what made the list unreadable.
-export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[]}){
-  return Section([
-    Stack([
-      Stack([GroupTitle(name,{className:'record-group-title group-title--name'}),
-        kind?Badge(kind,{className:'pill portfolio-kind'}):null],{className:'group-name'}),
-      // The total and the portfolio's verbs are one block, so a narrow sidebar
-      // drops them under the name together instead of stranding the actions on
-      // a line of their own.
-      Stack([Amount(total,currency),
-        ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})],{className:'group-figure'})
-    ],{className:'breakdown-row group-line'}),
-    meta?Note(meta):null,
-    ...rows
-  ],{className:'record-group'});
+// The ledger is read at the level of the entities that hold the money: seven
+// names and seven totals, not seven names and forty class lines. A portfolio
+// opens to show what is inside it, one at a time, and closed it still says the
+// one thing it is there to say. What the heading cannot leave behind goes in
+// the summary with it — a date behind the rest of the ledger, or a portfolio
+// still waiting to reach the cloud, are facts about the entity and would be
+// hidden by the very row that should be reporting them.
+export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[],open=false,onToggle}){
+  const verbs=ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'});
+  // A verb on the heading acts on the portfolio. Inside a summary every click
+  // is also a press on the disclosure, so these stop there.
+  verbs.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();});
+  const heading=Stack([
+    Stack([GroupTitle(name,{className:'record-group-title group-title--name'}),
+      kind?Badge(kind,{className:'pill portfolio-kind'}):null,
+      meta?Note(meta):null],{className:'group-name'}),
+    // The total and the portfolio's verbs are one block, so a narrow sidebar
+    // drops them under the name together instead of stranding the actions on
+    // a line of their own.
+    Stack([Amount(total,currency),verbs],{className:'group-figure'})
+  ],{className:'breakdown-row group-line'});
+  const group=Disclosure(heading,rows,{className:'record-group portfolio-group'});
+  group.open=open;
+  group.addEventListener('toggle',()=>onToggle?.(group.open));
+  return group;
 }
 
 // A breakdown is a proportion, so every line shows the one it is: its share

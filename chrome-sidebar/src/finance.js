@@ -57,6 +57,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // Text out of a dropped file is carried on the attachment and described by
   // its card. An open page is not copied anywhere: it is already in front of
   // the owner.
+  // Which entities are open survives a redraw: the ledger refreshes while it
+  // is visible, and a list that shut itself every minute would be unusable.
+  const openPortfolios=new Set();
   let attachment=null;
   const status=(text,target='status',tone='')=>setStatus($(target),text,tone);
   const action=(label,handler,variant='secondary')=>{
@@ -803,6 +806,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         ...group.properties.map(entry=>entry.current?.asOf||'')].filter(Boolean).sort().at(-1)||'';
       return PortfolioGroup({
         name:portfolio.name,currency:portfolio.currency,total:group.total,
+        open:openPortfolios.has(portfolio.id),
+        onToggle:isOpen=>{if(isOpen)openPortfolios.add(portfolio.id);else openPortfolios.delete(portfolio.id);},
         // What kind of account this is, as a tag on the name. Under it, only
         // what the line above cannot say: a date behind the rest of the
         // ledger, and a portfolio still waiting to reach the cloud.
