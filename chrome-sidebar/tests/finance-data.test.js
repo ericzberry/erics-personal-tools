@@ -512,6 +512,40 @@ test('a figure printed against a kind of account is a total over accounts, not a
   assert.match(folded.notes.join(' '),/Open the list of accounts/);
 });
 
+// The dashboard again, read a second time, with the reading labelling the
+// credit-card sum the way the page labels it. Two of the three totals were
+// refused and the third was not, because "Outstanding" is a word about a
+// balance and was taken for the name of an account — so a portfolio called
+// OUTSTANDING was offered holding every card added up, and the sentence saying
+// the page could not answer went away with it, since something had been filed.
+test('the word a page puts over a sum is not the name of an account',()=>{
+  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:''};
+  const folded=foldReadings([
+    {...base,account:'Bank accounts',label:'Total',value:2101804.48,class:classById('cash').code},
+    {...base,account:'Credit cards · Outstanding',label:'Outstanding',value:15835,class:classById('credit').code},
+    {...base,account:'Investment accounts',label:'Total',value:14268036.59,class:classById('liquid').code}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(folded.marks,[],'all three are one total per kind, and none of them is an account');
+  assert.deepEqual(folded.portfolios,[]);
+  assert.match(folded.notes.join(' '),/Open the list of accounts/);
+});
+
+// The same sentence must not follow a page that does answer. A broker prints a
+// headline total over the accounts it also states, and refusing that total
+// loses nothing at all — the accounts are right there, unnamed but stated, and
+// telling the owner to go elsewhere would send him away from the page that has
+// what he came for.
+test('a headline total over accounts the page states does not send the owner elsewhere',()=>{
+  const base={asOf:'2026-09-20',confidence:'high',reason:'',class:9,registration:'',account:''};
+  const folded=foldReadings([
+    {...base,label:'Total Assets',scope:'all',value:1791069.16},
+    {...base,label:'Net Account Value',scope:'account',value:1668402.54},
+    {...base,label:'Net Account Value',scope:'account',value:122666.62}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
+  assert.equal(folded.marks.length,1);
+  assert.equal(folded.notes.some(note=>/Open the list of accounts/.test(note)),false);
+});
+
 // A card is read at a bank, behind the same password as the checking account,
 // and the site answers cash for what it holds. A balance owed is the one figure
 // where taking that answer moves net worth by twice the number.

@@ -1955,3 +1955,30 @@ makes it wrong.
 Validation: 496 extension tests pass. Nothing rendered changed — the
 description appears on the extensions page and in a store listing, never in the
 panel. Archive: `release/erics-sidebar-0.6.172.zip`.
+
+## The word over a sum is not the name of an account (0.6.173 / mobile 0.1.123)
+
+A bank's dashboard states one figure per kind of account and no accounts at all.
+Those are refused — each is every account under its heading added up — and when
+nothing else is on the page the reading says so and points at the list of
+accounts. A second read of the same dashboard got past both of those.
+
+The card sum was labelled the way the page labels it, **Outstanding**. The
+heading came off the front as it should, and the word left behind was taken for
+the name of an account: a portfolio called OUTSTANDING holding every card added
+together, offered for saving. Worse, something had been filed, so the sentence
+saying the page could not answer went away with it — leaving one card balance,
+`Left out: a total across accounts`, and no sign that twenty accounts were a
+page away. Outstanding, owed and due are column words now, like balance and
+value before them.
+
+**The sentence follows the evidence rather than the emptiness.** It is said when
+a kind's total was refused and nothing on the page named an account — not when
+nothing happened to be filed. A broker's headline total printed over accounts
+the page also states is a different thing and takes no such sentence: those
+accounts are right there, and sending the owner elsewhere would send him away
+from the page that has what he came for.
+
+New coverage: the dashboard's three kind totals refused with the card's own word
+among them, and a headline total over stated accounts leaving the guidance
+unsaid. Validation: 498 extension and 33 mobile tests pass.

@@ -803,7 +803,15 @@ const CATEGORY=/^(?:my |your |all |total )*(?:bank|deposit|checking|savings|cred
 // What a column is called, which is never what an account is called. These are
 // the words left over when a page names a figure but not the account it belongs
 // to: Present balance, Net Account Value, Total.
-const BALANCE_WORD=/^(?:my |your |net |available |present |current |total |account |ledger |posted |statement |market |cash )*(?:balance|value|amount|assets?|accounts?|cards?|total|equity)$/i;
+//
+// "Outstanding" is one of them, and it is the word that cost a whole reading.
+// A bank's dashboard sums its cards under Credit cards and labels the sum
+// Outstanding; the heading came off the front as it should, "Outstanding" was
+// taken for the name of an account, and a portfolio called OUTSTANDING was
+// offered holding the sum of every card — the one figure on a page whose other
+// two were correctly refused, which left nothing saying the page could not
+// answer.
+const BALANCE_WORD=/^(?:my |your |net |gross |available |present |current |total |outstanding |account |ledger |posted |statement |market |cash |owed )*(?:balance|value|amount|assets?|accounts?|cards?|total|equity|outstanding|owed|due)$/i;
 // What this figure says about which account it is, once the heading and the
 // column name are off: a name of the account's own, or nothing.
 const ownName=name=>{
@@ -935,6 +943,10 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   const usable=counted.filter(reading=>reading.scope!=='all'&&!groupTotal(reading));
   const summed=counted.length-usable.length;
   if(summed)dropped.push('a total across accounts');
+  // The two are refused together and mean different things. A headline total
+  // is printed over accounts the page also states, so refusing it loses
+  // nothing. A kind's total is printed instead of them.
+  const kinds=counted.filter(groupTotal).length;
   const accounts=new Map();
   for(const reading of usable){
     const key=accountKey(reading);
@@ -1039,10 +1051,15 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   // Said once, at the front, in the order a reader would ask it: what did you
   // not count, and why is a figure not split.
   if(dropped.length)notes.unshift(`Left out: ${[...new Set(dropped)].join(', ')}.`);
-  // Nothing was filed and the page is the reason: it states one total for each
-  // kind of account and never names an account. Saying only what was left out
-  // would leave the owner on the page that cannot answer.
-  if(summed&&!figures.size)notes.push('This page totals its accounts by kind. Open the list of accounts and read that instead.');
+  // The page is the reason, and the evidence is that nothing on it named an
+  // account — not that nothing came of it. One stray figure getting through
+  // used to take this sentence away with it, which left the owner holding a
+  // single card balance and no idea the other twenty accounts were a page
+  // away. Saying only what was left out would leave him on the page that
+  // cannot answer.
+  const anyAccount=usable.some(reading=>ownName(reading.account)
+    ||accountDigits(`${reading.account||''} ${reading.label||''}`).length);
+  if(kinds&&!anyAccount)notes.push('This page totals its accounts by kind, and names none of them. Open the list of accounts and read that instead.');
   // Read in the order it will be read back: whose money it is, then what it is
   // in. Sorting by portfolio number put the figures in the order the portfolios
   // happened to be created in, which is no order at all to anyone looking at
