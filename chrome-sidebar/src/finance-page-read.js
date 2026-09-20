@@ -118,12 +118,35 @@ export function readAccountPage() {
   // arrived as eighty-four bare figures, each under a repeat of the account's
   // name and none of them saying which column it fell out of. The row has
   // already said all of it.
+  //
+  // And a table is not always a <table>. A bank's account list is as often a
+  // grid of divs carrying the roles that say so — role="table" or role="grid",
+  // with role="row" over role="cell" — because that is what a design system
+  // builds and what a screen reader is owed. To innerText those cells are one
+  // line each, so an account's name, its type, its day's change and its balance
+  // arrive as four unrelated lines, and the reading that has to put them back
+  // together guesses: a figure lands under a repeat of the name above it, a
+  // name under the wrong column, and a page holding twenty accounts offers up
+  // its summary panel because that is the only part of it still legible. The
+  // roles state exactly what the markup means, so a grid that declares itself
+  // one is read the way the element would be.
   const celled = new Set();
   const KEEP = 12, WALK = 100;
-  const found = document.querySelectorAll('table');
+  const GRID = 'table,[role="table"],[role="grid"],[role="treegrid"]';
+  const ROW = 'tr,[role="row"]';
+  const CELL = 'th,td,[role="cell"],[role="gridcell"],[role="columnheader"],[role="rowheader"]';
+  // A row belongs to the nearest grid above it and a cell to the nearest row,
+  // so a grid nested inside another does not hand its rows to both.
+  const inside = (node, selector, owner) => [...node.querySelectorAll(selector)]
+    .filter(found => !found.closest || found.closest(owner) === node);
+  const gridRows = grid => grid.rows
+    ? [...grid.rows].slice(0, 200).map(row => [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean))
+    : inside(grid, ROW, GRID).slice(0, 200)
+      .map(row => inside(row, CELL, ROW).map(cell => clean(cell.innerText)).filter(Boolean));
+  const found = document.querySelectorAll(GRID);
   const tables = [];
   for (let index = 0; index < found.length && index < WALK && tables.length < KEEP; index++) {
-    const cells = [...found[index].rows].slice(0, 200).map(row => [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean));
+    const cells = gridRows(found[index]);
     const rows = cells.map(row => row.join('  |  ')).filter(Boolean);
     const figures = rows.filter(row => row.length <= 400 && !blocked(row) && (MONEY.test(row) || CONTEXT.test(row)));
     const kept = new Set(figures);

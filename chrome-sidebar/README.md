@@ -2062,7 +2062,54 @@ Validation: 505 extension, 33 mobile and 128 API tests pass. The panel and the
 saved rows were reviewed against a synthetic reading of the Amex benefits page
 at 420px and 280px with no horizontal overflow.
 
-## The cards you hold are not a list to type twice (0.6.181 / mobile 0.1.131)
+## A heading over accounts says "accounts" (0.6.180 / mobile 0.1.130)
+
+Naming the kinds one at a time does not end. The rule knew bank, credit and
+investment; the page answered **Outstanding**, and then **External accounts**,
+and each new word arrived as a portfolio holding a sum nobody holds — while the
+sentence saying the page had named no account stayed quiet, because something
+had been filed.
+
+What those headings share is not the word in front but the word at the end. A
+heading over a group of accounts says *accounts*, or *cards*; an account of
+one's own almost never does. So the shape is the rule now — up to two words and
+then the plural — and the next bank to invent a kind needs no new word here. A
+heading with a real account behind it still comes off the front and leaves the
+account: `External accounts · Fidelity Cash Management (...4410)` is that
+account, at that balance.
+
+New coverage: nine spellings of a group heading refused, and a heading stripped
+off an account that survives it. Validation: 509 extension and 33 mobile tests
+pass.
+
+## A table is not always a `<table>` (0.6.182 / mobile 0.1.132)
+
+Four readings of the same Chase overview came back with the same thing: the
+totals in its summary panel, and not one of the twenty accounts listed below
+them. The accounts were on the page the whole time. The reader could not see
+them as accounts, because it looked for `<table>` and Chase builds its account
+list out of divs carrying the roles that say what they are — `role="table"` over
+`role="row"` over `role="cell"`, which is what a design system builds and what a
+screen reader is owed.
+
+To `innerText` a grid like that is one line per cell. An account's name, its
+type, its day's change and its balance arrive as four unrelated lines, and the
+rule that reassembles a figure with the line above it then crosses them: a
+balance under a repeat of the name above it, a name under the wrong column,
+`Joint checking (...0823)` labelled Savings. What reached the reading was a heap
+of half-attached figures and one clean summary panel — so the summary panel is
+what came back, every time.
+
+A grid that declares itself a table is now read the way the element would be,
+row by row, with the header saying which column each figure fell out of. Nothing
+widens for it: the same figure and account tests decide which rows are worth
+keeping, and the same limits bound how many.
+
+New coverage: two ARIA grids read as tables, every account travelling with its
+own number and balance, beside a summary panel of totals by kind. Validation:
+511 extension and 33 mobile tests pass.
+
+## The cards you hold are not a list to type twice (0.6.184 / mobile 0.1.134)
 
 **Best card knew nothing about the cards the rest of the app had already seen.**
 The wallet holds the cards the owner has — added there by name, or named by an
@@ -2108,4 +2155,4 @@ session's in-flight shell list keeps the mobile suite from building against; the
 working tree's 527 extension and 33 mobile tests pass. The
 standalone card view was reviewed against the synthetic wallet at 380px, 280px
 and 390px: populated, nothing saved yet, the comparison caveat, and the research
-that one press starts. Archive: `release/erics-sidebar-0.6.181.zip`.
+that one press starts. Archive: `release/erics-sidebar-0.6.184.zip`.

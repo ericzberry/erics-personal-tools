@@ -190,7 +190,7 @@ const inPage = (document, location) =>
   // alone with no closure over this module.
   Function('document', 'location', `return (${readAccountPage.toString()})()`)(document, location);
 const pageOf = ({text, tables = []}) => ({
-  querySelectorAll: selector => selector === 'table' ? tables : [],
+  querySelectorAll: selector => /table|grid/.test(selector) ? tables : [],
   title: '  Positions  ',
   body: {innerText: text}
 });
@@ -402,6 +402,57 @@ test('layout tables ahead of the accounts do not use up the table limit', () => 
     cells([`Account ${account}`, `$${account + 1},000.00`])
   ]}));
   assert.equal(inPage(pageOf({tables: many, text: 'Accounts'}), HERE).tables.length, 12);
+});
+
+// The same account list, built the way a bank actually builds one. Chase's
+// overview lays its accounts out in divs carrying the roles that say what they
+// are — role="table" over role="row" over role="cell" — and never a <table>
+// element. To innerText that is one line per cell, so an account's name, its
+// type, its day's change and its balance arrive as four unrelated lines; put
+// back together by the lines-above rule they come out crossed, a figure under a
+// repeat of the name above it and a name under the wrong column. A page holding
+// twenty accounts then offers up its summary panel, because the panel is the
+// only part of it still legible — which is exactly what a reading of it
+// returned: three totals by kind and not one account.
+const cellOf = text => ({innerText: text, closest: () => null});
+const gridOf = rows => {
+  const made = rows.map(list => {
+    const cells = list.map(cellOf);
+    const row = {querySelectorAll: selector => /cell|columnheader|rowheader/.test(selector) ? cells : []};
+    cells.forEach(cell => {cell.closest = selector => /row/.test(selector) ? row : null;});
+    return row;
+  });
+  const grid = {querySelectorAll: selector => /row/.test(selector) ? made : []};
+  made.forEach(row => {row.closest = selector => /table|grid/.test(selector) ? grid : null;});
+  return grid;
+};
+test('a grid of divs that says it is a table is read as one', () => {
+  const page = inPage(pageOf({
+    tables: [
+      gridOf([
+        ['Account', 'Type/Strategy', 'Day change', 'Account value'],
+        ['BERRY 2020 IRREV FAM TR (...5007)', 'Asset', '$0.00 (0.00%)', '$4,775,770.50'],
+        ["BERRY 20 DESC' IRR TR (...3004)", 'JPM 1-10 Year Municipal Ladder', '$0.00 (0.00%)', '$1,818,646.70']
+      ]),
+      gridOf([
+        ['Account', 'Type', 'Day change', 'Present balance', 'Available balance'],
+        ['Joint Savings (...8917)', 'Savings', '$0.00', '$880,033.77', '$880,033.77']
+      ])
+    ],
+    // What the page states around them: a summary panel of totals by kind, which
+    // is all a reading of this page used to come back with.
+    text: ['Overview', '$16,369,841.07', 'Assets', 'Bank accounts', '$2,101,804.48',
+      'Investment accounts', '$14,268,036.59'].join('\n')
+  }), HERE);
+  assert.equal(page.tables.length, 2, 'both grids are read, though neither is a <table>');
+  const read = page.tables.join('\n');
+  for (const [account, value] of [
+    ['BERRY 2020 IRREV FAM TR \\(\\.\\.\\.5007\\)', '\\$4,775,770\\.50'],
+    ["BERRY 20 DESC' IRR TR \\(\\.\\.\\.3004\\)", '\\$1,818,646\\.70'],
+    ['Joint Savings \\(\\.\\.\\.8917\\)', '\\$880,033\\.77']
+  ]) assert.match(read, new RegExp(`${account}[^\\n]*${value}`), `${account} travels with its own figure`);
+  assert.match(read, /Account {2}\| {2}Type {2}\| {2}Day change {2}\| {2}Present balance/,
+    'and the header says which column the figure fell out of');
 });
 
 // E*TRADE's own IRA card, in the order the page reads it. The account is named
