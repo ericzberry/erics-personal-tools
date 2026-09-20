@@ -378,6 +378,32 @@ test('a bank table keeps each account\u2019s name and number against its own bal
   assert.match(read, /BEDFORD BRIDGE CAPITAL, LLC \(\.\.\.4918\)/);
 });
 
+// A bank lays out its dashboard in tables — a promo panel, a rail of quick
+// links, a card of tabs — long before it gets to the accounts, and a cap taken
+// as "the first twelve tables in the document" spent every slot on that
+// furniture. The twelve tables worth keeping are the point; the ones ahead of
+// them cost a slot only if they carry a figure.
+test('layout tables ahead of the accounts do not use up the table limit', () => {
+  const furniture = Array.from({length: 12}, (_, panel) => ({rows: [
+    cells([`Quick links ${panel}`]),
+    cells(['Open an account', 'Learn how'])
+  ]}));
+  const accounts = {rows: [
+    cells(['Account', 'Balance']),
+    cells(['Roth IRA (...4144)', '$412,880.17']),
+    cells(['Joint checking (...0823)', '$136,724.37'])
+  ]};
+  const page = inPage(pageOf({tables: [...furniture, accounts], text: 'Accounts'}), HERE);
+  assert.equal(page.tables.length, 1, 'a table with no figure in it takes no slot');
+  assert.match(page.tables[0], /Roth IRA \(\.\.\.4144\) {2}\| {2}\$412,880\.17/);
+  assert.match(page.tables[0], /Joint checking \(\.\.\.0823\) {2}\| {2}\$136,724\.37/);
+  // And the cap itself still holds, counted in tables that carry figures.
+  const many = Array.from({length: 20}, (_, account) => ({rows: [
+    cells([`Account ${account}`, `$${account + 1},000.00`])
+  ]}));
+  assert.equal(inPage(pageOf({tables: many, text: 'Accounts'}), HERE).tables.length, 12);
+});
+
 // E*TRADE's own IRA card, in the order the page reads it. The account is named
 // in one column and its balance sits in another, with a contribution banner,
 // three rows of links and a table of holdings between the two — so the name is

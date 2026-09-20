@@ -100,6 +100,16 @@ export function readAccountPage() {
   // collapses their columns into an unreadable run. Rendering them row by row
   // keeps a label beside its figure; a table with no figure in it is furniture.
   //
+  // Twelve is a limit on tables worth keeping, not on tables looked at. Applied
+  // to the first twelve in the document it was spent on whatever the page lays
+  // out first, and a bank that builds its promo panels out of tables, or a
+  // broker that prints a grid of disclosures above the accounts, used all twelve
+  // slots on furniture and dropped every table holding a balance before one of
+  // them was read. So the rendering runs down the page and stops at the twelfth
+  // table that actually carries figures. The walk is bounded in turn, well above
+  // twelve, so a page built entirely of nested layout tables cannot cost the
+  // reading a cell at a time all the way to the end of the document.
+  //
   // Every cell a kept row states is remembered, because the same page states it
   // twice: once in the row, where the account, the column and the figure sit
   // together, and again as a loose line in the text around it. A wealth
@@ -109,15 +119,18 @@ export function readAccountPage() {
   // name and none of them saying which column it fell out of. The row has
   // already said all of it.
   const celled = new Set();
-  const tables = [...document.querySelectorAll('table')].slice(0, 12).map(table => {
-    const cells = [...table.rows].slice(0, 200).map(row => [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean));
+  const KEEP = 12, WALK = 100;
+  const found = document.querySelectorAll('table');
+  const tables = [];
+  for (let index = 0; index < found.length && index < WALK && tables.length < KEEP; index++) {
+    const cells = [...found[index].rows].slice(0, 200).map(row => [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean));
     const rows = cells.map(row => row.join('  |  ')).filter(Boolean);
     const figures = rows.filter(row => row.length <= 400 && !blocked(row) && (MONEY.test(row) || CONTEXT.test(row)));
     const kept = new Set(figures);
     cells.forEach(row => {if (kept.has(row.join('  |  '))) row.forEach(cell => celled.add(cell.toLowerCase()));});
     // The header row states what the columns mean, so it travels with them.
-    return figures.length ? [...new Set([rows[0], ...figures])].join('\n') : '';
-  }).filter(Boolean);
+    if (figures.length) tables.push([...new Set([rows[0], ...figures])].join('\n'));
+  }
 
   // A figure often sits on its own line under the name it belongs to, so a
   // kept figure brings the short line above it along as its label.
