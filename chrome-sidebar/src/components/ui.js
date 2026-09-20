@@ -112,6 +112,10 @@ export function setMeter(meter,value=0,tone='') {
 // It is told apart from them by weight, by its rule, and by the space around
 // it. Sans-serif keeps it out of the way of the serif page title.
 export const GroupTitle=(text,{className='',...props}={})=>element('h2',{text,...props,className:`group-title ${className}`.trim()});
+// That label with the run of records under it. Four tools had a private copy
+// of this one line; a wallet grouped by what its rows are — airlines, hotels,
+// the cards you hold — is the fifth, and it takes the shared one.
+export const RecordGroup=(title,rows=[])=>Section([GroupTitle(title,{className:'record-group-title'}),...rows],{className:'record-group'});
 export const SectionTitle=(title,action,props={})=>Stack([Heading(title,props.level||2,{id:props.titleId}),action],{className:'section-title'});
 // A tool's own title line: the name, the whole-tool actions that currently
 // apply beside it, and a status line that collapses when there is nothing to

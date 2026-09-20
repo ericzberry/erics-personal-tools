@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loyaltySite,loyaltySitePrograms,loyaltyProgramNamed,LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
-import {parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,BALANCE_UNITS,directoryBalances,programName,UNREAD_BALANCE} from '../src/balance-data.js';
+import {programShort,walletRun,WALLET_RUNS,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,BALANCE_UNITS,directoryBalances,programName,UNREAD_BALANCE} from '../src/balance-data.js';
 import {nextActions} from '../src/rewards-data.js';
 import {pageOffers} from '../src/page-offers.js';
 
@@ -65,6 +65,48 @@ test('a second currency at one issuer never lands on the first one’s entry',()
   assert.equal(rows[0].match,null,'cash back is a new balance, not an overwrite of the points one');
   assert.equal(rows[0].ambiguous,false,'and it is not ambiguous either — the page named it');
   assert.equal(rows[1].match?.id,'Membership Rewards-id','the points figure still updates the points entry');
+});
+
+// The wallet prints the brand, not the currency: a list read down its figures
+// says "United" where the program is MileagePlus, and the run it sits in has
+// already said that United is an airline.
+test('a program is named by its brand in the wallet, and by its full name nowhere else',()=>{
+  assert.equal(programShort(balance('MileagePlus','United Airlines','82,431 miles')),'United');
+  assert.equal(programShort(balance('Bonvoy','Marriott','240,000 points')),'Marriott');
+  assert.equal(programShort(balance('IHG One Rewards','IHG','28,550 points')),'IHG');
+  // One issuer with two currencies keeps them apart, because a row that said
+  // "Amex" twice would be two rows nobody can tell apart.
+  assert.equal(programShort(balance('Membership Rewards','American Express','512,000 points')),'Amex');
+  assert.equal(programShort(balance('Reward Dollars','American Express','$125.49')),'Amex cash');
+  // A program no registry knows says the shortest true thing about itself.
+  assert.equal(programShort(balance('Beauty Insider','Sephora','4,100 points')),'Sephora');
+  assert.equal(programShort({kind:'balance',name:'Gate 1 credit',source:'',value:'900 points'}),'Gate 1 credit');
+  // A card is the card and a credit is the credit; neither is its issuer.
+  assert.equal(programShort({kind:'card',name:'Platinum Card',source:'American Express',value:'5x flights'}),'');
+  assert.equal(programShort({kind:'benefit',name:'Ride credit',source:'Amex Platinum',value:'$15'}),'');
+});
+
+test('every program carries a brand and a run, and no two brands are the same',()=>{
+  const runs=new Set(WALLET_RUNS.map(run=>run.key));
+  const brands=new Set();
+  for(const program of LOYALTY_PROGRAMS){
+    assert.ok(program.short,`${program.label} has no brand to print`);
+    assert.ok(program.short.length<=program.label.length+program.source.length,`${program.short} is no shorter than the full name`);
+    assert.ok(runs.has(program.kind),`${program.label} is in no run the wallet draws`);
+    assert.equal(program.kind==='cards'||program.kind==='other',false,'cards and other are the wallet\u2019s runs, not a program\u2019s kind');
+    assert.equal(brands.has(program.short),false,`${program.short} names two programs`);
+    brands.add(program.short);
+  }
+});
+
+test('what is not a program still has a run of its own',()=>{
+  assert.equal(walletRun(balance('SkyMiles','Delta Air Lines','119,780 miles')),'airline');
+  assert.equal(walletRun(balance('Bonvoy','Marriott','240,000 points')),'hotel');
+  assert.equal(walletRun(balance('Guest Rewards','Amtrak','9,400 points')),'rail');
+  assert.equal(walletRun(balance('Ultimate Rewards','Chase','61,000 points')),'issuer');
+  assert.equal(walletRun({kind:'card',name:'Platinum Card',source:'American Express'}),'cards');
+  assert.equal(walletRun({kind:'membership',name:'Priority Pass Select',source:'Lounge access'}),'other');
+  assert.equal(walletRun(balance('Beauty Insider','Sephora','4,100 points')),'other');
 });
 
 test('a reading keeps only the figures it can check',()=>{

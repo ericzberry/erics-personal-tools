@@ -192,7 +192,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   balance (United, Marriott, Membership Rewards): one URL comparison says
   whether the tab beside the panel is a program's own site, which is what makes
   Rewards offer to read the balance off it, and each program carries the page
-  its balance is printed on. Recognition is the sidebar's alone and the reading
+  its balance is printed on, the brand the wallet prints for it (`short`) and
+  the run it is listed under (`kind`). Recognition is the sidebar's alone and the reading
   itself is `finance-page-read.js`, unchanged; the registry ships to mobile,
   because `balance-data.js` seeds the wallet's directory of programs from it.
   `reward-programs.js` is the counterpart for reward programs (MS Reserved): the

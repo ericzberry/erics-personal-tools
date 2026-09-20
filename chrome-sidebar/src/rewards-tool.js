@@ -1,10 +1,10 @@
 import {RewardsView,RewardGroup,CardBenefits,BalancePanel} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
-import {RecordRow,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
+import {RecordRow,RecordGroup,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl} from './program-data.js';
-import {parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,UNREAD_BALANCE} from './balance-data.js';
+import {parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,programShort,walletRun,WALLET_RUNS,UNREAD_BALANCE} from './balance-data.js';
 import {parseCreditReading,matchCredits,creditRecord} from './credit-data.js';
 import {LOYALTY_PROGRAMS,loyaltySitePrograms,loyaltyProgramNamed} from './loyalty-sites.js';
 import {institutionNamed} from './account-sites.js';
@@ -316,14 +316,15 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     status(`Added ${saved} program${saved===1?'':'s'}. Delete the ones you do not have, and read a balance from any program's own page.`,'success');
   }
   // A balance is one line: the program on the left, the figure at the end of
-  // it. The issuer's name is part of what the program is called rather than a
-  // line under it, and it joins the program's own name only where that name
-  // does not already carry the brand — "Hilton Honors", never "Hilton Hilton
-  // Honors", and "Choice Privileges" rather than "Choice Hotels Choice
-  // Privileges", because the word doing the naming is the first one either way.
+  // it. The program is named by its brand and nothing else — "United", not
+  // "United Airlines MileagePlus" — because the run it sits in has already
+  // said it is an airline and nobody holds two United currencies. What is not
+  // a balance keeps its full name, since a card is a card and a credit is a
+  // credit, and there the issuer joins the name only where the name does not
+  // already carry the brand: "Hilton Honors", never "Hilton Hilton Honors".
   // Inside a card's group the heading has just named the card, so a benefit
   // filed there is left to its own name.
-  const titleOf=(e,inGroup)=>inGroup?e.name:programName(e.source,e.name);
+  const titleOf=(e,inGroup)=>inGroup?e.name:programShort(e)||programName(e.source,e.name);
   // A program the owner has never read has no figure, and an empty place where
   // the figure goes says that better than 26 rows all printing the same three
   // words. What is counted, and what is not, is already summed above the list.
@@ -401,14 +402,25 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       return {card,filed,visible:hit(card)?filed:filed.filter(hit),matched:hit(card)||filed.some(hit)};
     }).filter(group=>group.matched);
     const loose=entries.filter(e=>e.kind!=='card'&&!held.has(e.card)&&hit(e));
-    const rows=[...groups.map(group=>RewardGroup({
+    const cardRows=groups.sort((a,b)=>a.card.name.localeCompare(b.card.name)).map(group=>RewardGroup({
       title:group.card.name,
       detail:[group.card.source,`${group.filed.length} benefit${group.filed.length===1?'':'s'}`,
         group.card.secretHint?`•••• ${group.card.secretHint}`:'',group.card.pending?'Waiting to sync':'',
         group.card.conflict?'Conflict':''].filter(Boolean).join(' · '),
       open:!!query,
       children:[row(group.card,true),...group.visible.map(e=>row(e,true))]
-    })),...loose.map(e=>row(e))];
+    }));
+    // The wallet is read in runs — airlines, then hotels, then the cards you
+    // hold — and each run is one alphabetical column, because a program is
+    // looked for by what it is and not by the day it was saved. A run with
+    // nothing in it draws no heading.
+    const filed=new Map(WALLET_RUNS.map(run=>[run.key,[]]));
+    for(const e of loose)filed.get(walletRun(e)).push(e);
+    const rows=WALLET_RUNS.flatMap(run=>{
+      const inRun=run.key==='cards'?cardRows
+        :filed.get(run.key).sort((a,b)=>titleOf(a).localeCompare(titleOf(b))).map(e=>row(e));
+      return inRun.length?[RecordGroup(run.title,inRun)]:[];
+    });
     $('rewards-list').replaceChildren(...(rows.length?rows:emptyState()));
     const picker=$('reward-card'),chosen=picker.value;
     picker.replaceChildren(Option('Not a card benefit',''),...cards.map(card=>Option(card.name,card.id)));

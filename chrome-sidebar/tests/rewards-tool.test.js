@@ -344,10 +344,10 @@ test('a host with no catalogue store has no offers tab, and a failed load is not
 });
 
 // A balance is read down one column of programs and one of figures, so each is
-// one line: the issuer belongs to the program's name rather than to a line of
-// its own under it, "Available" is what every row in the wallet is and so says
-// nothing, and a program never read prints no figure instead of three words
-// where the number goes.
+// one line: the brand alone names the program, "Available" is what every row
+// in the wallet is and so says nothing, and a program never read prints no
+// figure instead of three words where the number goes. The runs the rows sit
+// in are what make the brand enough — an airline is under Airlines.
 test('a balance reads as one line: the program, then what is in it',async()=>{
  const h=harness();
  const records=[
@@ -360,13 +360,48 @@ test('a balance reads as one line: the program, then what is in it',async()=>{
  await tool.refresh();
  const rows=[...h.document.querySelectorAll('#rewards-list .record-row')];
  assert.deepEqual(rows.map(row=>row.querySelector('.record-name').textContent),
-  ['Marriott Bonvoy','Hilton Honors','United Airlines MileagePlus'],'the issuer joins the name only where the name does not already carry it');
+  ['United','Hilton','Marriott'],'the brand names the program, and each run is its own column');
+ assert.deepEqual([...h.document.querySelectorAll('#rewards-list .record-group-title')].map(node=>node.textContent),
+  ['Airlines','Hotels'],'a run with nothing in it draws no heading');
  assert.deepEqual(rows.map(row=>row.querySelector('.record-figure > strong')?.textContent??''),
-  ['131,581 points','82,400 points',''],'a program awaiting its first reading shows no figure');
+  ['','82,400 points','131,581 points'],'a program awaiting its first reading shows no figure');
  for(const row of rows)assert.equal([...row.children].filter(node=>!node.hidden).length,1,'nothing is left to print under the line');
  const wallet=h.document.getElementById('rewards-list').textContent;
  assert.equal(wallet.includes('Available'),false,'the resting state of every row states nothing');
  assert.equal(wallet.includes(UNREAD_BALANCE),false);
+ // The record keeps its own name where naming it is the point: the question
+ // asked before it is deleted is about "MileagePlus", not about United.
+ assert.match([...h.document.querySelectorAll('#rewards-list .record-row')][0].textContent,/MileagePlus/);
+ tool.stop();h.restore();
+});
+
+// Everything in the wallet is in one run or another, and the runs are in the
+// order the wallet is read in: what flies, what you sleep in, the rail, the
+// currencies a card earns, the cards themselves, and then whatever no registry
+// knows — which keeps its own full name, because nothing else names it.
+test('the wallet is read in runs, and what no registry knows is the last of them',async()=>{
+ const h=harness();
+ const entry=(id,fields)=>({id,state:'available',card:'',cadence:'',due:'',url:'',notes:'',secret:'',secretHint:'',revision:id,...fields});
+ const records=[
+  entry('a',{kind:'membership',name:'Priority Pass Select',source:'Lounge access',value:'Member'}),
+  entry('b',{kind:'card',name:'Platinum Card',source:'American Express',value:'5x flights'}),
+  entry('c',{kind:'benefit',name:'Ride credit',source:'Amex Platinum',value:'$15 per month',card:'b'}),
+  entry('d',{kind:'balance',name:'Membership Rewards',source:'American Express',value:'512,000 points'}),
+  entry('e',{kind:'balance',name:'Guest Rewards',source:'Amtrak',value:'9,400 points'}),
+  entry('f',{kind:'balance',name:'SkyMiles',source:'Delta Air Lines',value:'119,780 miles'})
+ ];
+ const tool=mountRewards(h.document.querySelector('main'),{credentials:{get:async()=>'token'},vault:fakeVault(),
+  offline:{request:async()=>({records})}});
+ await tool.refresh();
+ assert.deepEqual([...h.document.querySelectorAll('#rewards-list .record-group-title')].map(node=>node.textContent),
+  ['Airlines','Rail','Card points','Cards','Other']);
+ const run=title=>[...h.document.querySelectorAll('#rewards-list .record-group')]
+  .find(group=>group.querySelector('.record-group-title').textContent===title);
+ assert.deepEqual([...run('Card points').querySelectorAll('.record-name')].map(node=>node.textContent),['Amex']);
+ assert.deepEqual([...run('Cards').querySelectorAll('.reward-group > summary > strong')].map(node=>node.textContent),
+  ['Platinum Card'],'a card you hold is named by the card, never by its issuer\u2019s currency');
+ assert.deepEqual([...run('Other').querySelectorAll('.record-name')].map(node=>node.textContent),
+  ['Lounge access Priority Pass Select']);
  tool.stop();h.restore();
 });
 

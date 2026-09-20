@@ -60,10 +60,27 @@ back a card keeps in money are different things, and one number over the pair
 answers no question anybody has; a balance that has gone out of date is raised
 by name in Next actions, which is where something to do about it belongs.
 
+Each row says the brand and nothing more — **United**, **Marriott**, **Amex** —
+because the currency's own name is the long part and nobody holds two United
+currencies. The full name is still what the panel beside a program's page names
+when it offers to read it, and what the entry is called when it is deleted; the
+wallet's own list is the one place the brand is enough. A program no registry
+knows says its source, which is the shortest true thing there is about it.
+
+The rows are grouped into runs and each run is one alphabetical column:
+Airlines, Hotels, Rail, Card points, the Cards you hold, and Other for whatever
+no registry recognizes. A run with nothing in it draws no heading. The brand
+and the run are fields on the program in
+[`loyalty-sites.js`](../chrome-sidebar/src/loyalty-sites.js) — `short` and
+`kind` — so a program moves runs, or changes what it is called, in the registry
+rather than in the screen that draws it.
+
 Cash back — Blue Cash's Reward Dollars — is a balance like any other and stays
-money, so it reads `$125.49` rather than being rounded into points. The unit is
-read back out of the entry itself: "82,431 miles" is miles, and so is "82,431"
-under a program called MileagePlus.
+money, so it reads `$125.49` rather than being rounded into points, and it is
+the one place an issuer's two currencies are told apart by name: **Amex** for
+Membership Rewards, **Amex cash** for Reward Dollars. The unit is read back out
+of the entry itself: "82,431 miles" is miles, and so is "82,431" under a
+program called MileagePlus.
 
 ### The programs themselves
 

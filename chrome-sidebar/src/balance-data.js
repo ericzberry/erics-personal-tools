@@ -11,6 +11,7 @@
 // shape alone. Miles, points and cash back are different things: a figure
 // keeps the unit it was read in and is never restated in another.
 import {validateReward} from './rewards-data.js';
+import {loyaltyProgramNamed} from './loyalty-sites.js';
 
 // The units a balance is kept in. Anything else a program calls its currency
 // is read as the closest of these, because a wallet that named nine
@@ -149,6 +150,32 @@ export function programName(source,name){
   if(!issuer||!program)return program||issuer;
   return program.toLowerCase().includes(issuer.toLowerCase())||firstWord(program)===firstWord(issuer)
     ?program:`${issuer} ${program}`;
+}
+// What a program is called in the wallet's own list, which is not the same
+// question. The list is read down its figures, so the row says the brand a
+// person says out loud — "United", "Marriott", "Amex" — and the registry is
+// what knows it. A balance of a program nothing here recognizes says its own
+// source, which is the shortest true thing there is about it, and only a
+// balance with no source falls back to its name.
+//
+// Balances only. A card's name is the card — "Platinum Card" is not "Amex" —
+// and a benefit's name is the benefit, so both keep what they are called.
+export function programShort(entry){
+  if(!entry||entry.kind!=='balance')return '';
+  return loyaltyProgramNamed(entry.name,entry.source)?.short||String(entry.source||'').trim()||String(entry.name||'').trim();
+}
+// The runs the wallet is read in, in the order they are shown. A hotel's
+// points and an airline's miles are spent on different things, so they are
+// listed apart rather than in the order the entries happened to be saved; the
+// cards you hold and their benefits are the last run, and anything no registry
+// recognizes is the one after that rather than being filed under a guess.
+export const WALLET_RUNS=[{key:'airline',title:'Airlines'},{key:'hotel',title:'Hotels'},
+  {key:'rail',title:'Rail'},{key:'issuer',title:'Card points'},{key:'cards',title:'Cards'},
+  {key:'other',title:'Other'}];
+export function walletRun(entry){
+  if(entry?.kind==='card')return 'cards';
+  if(entry?.kind!=='balance')return 'other';
+  return loyaltyProgramNamed(entry.name,entry.source)?.kind||'other';
 }
 const dirKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 export function directoryBalances(programs=[],entries=[],now=new Date().toISOString()){

@@ -268,6 +268,10 @@
    smaller than the wallet's body text, and nothing is stacked above them. A
    summed figure is not one of them — a hotel's points and an airline's miles
    answer different questions, and one number over the pair answers neither. */
+/* One run of programs per heading, with the space between runs doing the
+   separating — the rule under a heading already closes the run above it. */
+.rewards-wallet #rewards-list{display:grid;gap:12px;}
+.rewards-wallet .record-group-title{padding:0 0 4px;}
 .rewards-wallet .record-line{min-height:24px;}
 .rewards-wallet .record-name,.rewards-wallet .record-figure>strong{font-size:12px;}
 .rewards-wallet .record-meta{font-size:11px;}

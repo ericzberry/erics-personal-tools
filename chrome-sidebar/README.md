@@ -2248,3 +2248,40 @@ because the bank is as likely to put it on one as the other. The reading is told
 the same.
 
 Validation: 537 extension and 33 mobile tests pass.
+
+## United, not United Airlines MileagePlus (0.6.195 / mobile 0.1.145)
+
+**Every row in the wallet printed a currency's full name.** "United Airlines
+MileagePlus", "Delta Air Lines SkyMiles", "IHG One Rewards" — three and four
+words each, wrapping to two lines at sidebar width, in a list whose point is
+the figure on the other side of them. Nobody holds two United currencies, so
+every word after the brand was a word the owner already knew.
+
+**The brand names the row.** United, Delta, Marriott, IHG, Amex. It is a field
+on the program in `loyalty-sites.js` — `short` — so what a wallet prints is a
+fact about the program rather than a rule a screen applies to a string. A
+program no registry knows says its source, which is the shortest true thing
+about it. An issuer running two currencies keeps them apart by name: **Amex**
+for Membership Rewards, **Amex cash** for Reward Dollars. And the full name is
+still there where naming it is the point — the panel that offers to read a
+program's page, and the question asked before a row is deleted.
+
+**The rows are read in runs.** Airlines, Hotels, Rail, Card points, the Cards
+you hold, then Other. Each is one alphabetical column under its heading, a run
+with nothing in it draws no heading, and which run a program belongs to is its
+`kind` in the same registry. A wallet is now scanned by what a thing is instead
+of by the day it was saved.
+
+Four tools each kept a private copy of the one line that heads a run of
+records; this run takes a shared `RecordGroup` in `ui.js` instead, which is
+where the next one should come from too.
+
+New coverage: the brand for a known program, for an issuer's two currencies,
+for one nothing recognizes and for a card and a credit, which keep their own
+names; every program in the catalogue carrying a brand and a run, with no two
+brands the same; and the mounted wallet drawing Airlines, Rail, Card points,
+Cards and Other in that order, each column alphabetical. Validation: 541
+extension and 33 mobile tests pass from an archive of this release. The
+synthetic wallet was reviewed at 380px and at 300px: four runs, their headings
+set above rows they are larger than, and no horizontal overflow. Archive:
+`release/erics-sidebar-0.6.195.zip`.
