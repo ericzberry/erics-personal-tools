@@ -49,6 +49,17 @@
    line that takes no space while there is nothing to say. */
 .tool-title-block{display:grid;gap:4px}
 .tool-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+/* A group's own actions sit at the end of its heading line, the way a tool's
+   do. Here rather than in styles.css because the phone loads this sheet and
+   not that one, and the rule has to reach both hosts. */
+.settings-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+.settings-group-head>.action-group{margin:0;flex:none}
+/* The institutions' own pages: a label per kind, and its links wrapping under
+   it. Links, not buttons — each one leaves for the institution's own site. */
+.account-pages-group{display:grid;gap:4px}
+.account-pages-kind{font-weight:600}
+.account-pages-row{display:flex;flex-wrap:wrap;gap:4px 12px}
+.account-pages-link{min-height:32px;display:inline-flex;align-items:center;color:var(--wallet-forest)}
 .tool-title>.action-group{margin:0;flex:none}
 .tool-title-block .notice:empty{display:none}
 .finance-ledger .notice:empty,.finance-ledger .footnote:empty,.personal-records .notice:empty,.personal-records .footnote:empty{display:none}

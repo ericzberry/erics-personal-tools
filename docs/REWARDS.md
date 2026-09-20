@@ -53,6 +53,29 @@ Nothing about the record shape changed to do this. A balance is the same entry
 it always was, and the unit is read back out of it: "82,431 miles" is miles,
 and so is "82,431" under a program called MileagePlus.
 
+### The programs themselves
+
+**Add the points programs** puts every program this tool knows into the wallet
+at once — each one a balance with no figure in it yet, carrying the page its
+balance is printed on. Getting to that page is then one press instead of a
+search through an airline's marketing site, and the wallet is the list of
+programs you are in rather than a list you have to build a program at a time.
+
+You prune it: a program awaiting its first reading holds nothing you would
+miss, so deleting one takes a single press and asks nothing. Everything with
+something in it still asks before it goes. The offer appears only while the
+wallet holds no program at all, because once they are in, pruning is the work.
+
+A program with no figure yet is counted in no total and is never raised in Next
+actions — it has never been read, so there is nothing about it to update. It is
+counted among the balances the totals line calls unread. Once a reading fills
+one in, the ordinary 30-day rule applies to it like any other balance.
+
+The programs are in
+[`chrome-sidebar/src/loyalty-sites.js`](../chrome-sidebar/src/loyalty-sites.js),
+and a program already in the wallet is never added twice, so adding again after
+pruning brings back only what was never there.
+
 ### Reading a balance off the program's page
 
 Open a program's own site with the sidebar beside it — united.com, marriott.com,
@@ -66,7 +89,9 @@ never signs in, never navigates, and never opens a tab of its own; no session,
 cookie or credential leaves the browser, and none of your wallet is sent for
 the reading. A balance read for a program you already hold updates that entry
 instead of adding a second one beside it, and keeps everything else about it —
-its expiration, its notes, the card it is filed under.
+its expiration, its notes, the card it is filed under. An entry with no link of
+its own takes the program's page; a link you put there yourself is never
+replaced.
 
 It reports the balance you can spend. Elite-qualifying miles, segments, nights
 and status credits are not balances and are left in the note beside one. A page

@@ -7,7 +7,7 @@ export function RewardsView(){
   return Stack([ToolTitle('Rewards & benefits',{actionsId:'rewards-connection',statusId:'rewards-status'}),
     Stack([Stack([],{id:'balance-body'}),Notice('',{id:'balance-status'})],{id:'balance-panel',className:'balance-panel',hidden:true}),
     UI.SettingsGroup({title:'Next actions',level:2,children:[Stack([],{id:'rewards-actions'})]}),
-    UI.SettingsGroup({title:'Your wallet',level:2,children:[
+    UI.SettingsGroup({title:'Your wallet',level:2,actionsId:'wallet-actions',children:[
       Stack([],{id:'rewards-totals',className:'reward-totals',hidden:true}),
       UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
       Stack([],{id:'rewards-list'})]}),

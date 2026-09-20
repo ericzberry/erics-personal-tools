@@ -172,3 +172,23 @@ test('a page that cannot be read is treated as not signed in',async()=>{
   const detect=accountSiteWatcher({api,throttleMs:0});
   assert.equal(await detect({id:2,url:'https://us.etrade.com/etx/pxy/my-accounts'}),null);
 });
+
+// Reaching the figures is its own errand: an institution's front page is
+// marketing, and the account summary is several presses past it. So every
+// institution holds the page its balances are printed on, and the link is a
+// way to reach them rather than a way to obtain them.
+test('every institution carries the page its balances are printed on',()=>{
+  for(const site of FINANCE_SITES){
+    const url=new URL(site.url);
+    assert.equal(url.protocol,'https:',`${site.id} links over HTTPS`);
+    assert.ok(!url.username&&!url.password,`${site.id} carries no credentials in its link`);
+    const registrable=host=>host.split('.').slice(-2).join('.');
+    assert.ok(site.hosts.some(host=>registrable(host)===registrable(url.hostname)),
+      `${site.id} links to its own institution, not somewhere else`);
+  }
+});
+
+test('a readable site keeps its page through the narrowing that makes it readable',()=>{
+  for(const site of ACCOUNT_SITES)assert.ok(site.url,`${site.id} keeps its page`);
+  assert.equal(ACCOUNT_SITES.find(site=>site.id==='schwab')?.url,'https://client.schwab.com/app/accounts/summary/');
+});

@@ -48,7 +48,14 @@ export function nextActions(entries,now=new Date()){
     const deadline=e.due||reset,limit=reset?WINDOW[e.cadence]:30;
     const days=deadline?Math.round((Date.parse(deadline)-today)/86400000):null;
     const stale=!Number.isFinite(Date.parse(e.updatedAt))||now-Date.parse(e.updatedAt)>=30*86400000;
-    const reason=days!==null&&days<0?'Deadline passed — verify availability':days!==null&&days<=limit?(days===0?'Use by today':`Use within ${days} day${days===1?'':'s'}`):e.state==='activation'?'Activate before using':e.kind==='balance'&&stale?'Update this balance':null;
+    // A balance whose value states no figure has never been read: it is a
+    // program the owner keeps in the wallet to reach, not a reading that has
+    // gone out of date, so there is nothing about it to update and it is left
+    // off the list. `balanceTotals` already counts it as unread, which is where
+    // a program awaiting its first reading belongs — and without this every
+    // program in the directory would arrive here 30 days after it was added.
+    const unread=e.kind==='balance'&&!/\d/.test(String(e.value||''));
+    const reason=days!==null&&days<0?'Deadline passed — verify availability':days!==null&&days<=limit?(days===0?'Use by today':`Use within ${days} day${days===1?'':'s'}`):e.state==='activation'?'Activate before using':e.kind==='balance'&&stale&&!unread?'Update this balance':null;
     return reason?[{...e,deadline,reason,priority:days!==null&&days<=limit?days:e.state==='activation'?31:32}]:[];
   }).sort((a,b)=>a.priority-b.priority||a.name.localeCompare(b.name));
 }

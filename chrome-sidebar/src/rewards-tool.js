@@ -4,7 +4,8 @@ import {RecordRow,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SH
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogCategories,offerUrl} from './program-data.js';
-import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord} from './balance-data.js';
+import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord,directoryBalances,UNREAD_BALANCE} from './balance-data.js';
+import {LOYALTY_PROGRAMS} from './loyalty-sites.js';
 import {aiConnections} from './ai-connection.js';
 const fields=['kind','name','source','card','value','due','cadence','state','url','notes'];
 // A revealed number returns to its masked form on its own, so an unattended
@@ -256,12 +257,40 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     balanceStatus(`Saved ${saved} balance${saved===1?'':'s'}.`,'success');
   }
   function startCard(){$('reward-card-intake').open=true;$('reward-card-name').focus();}
-  const detailOf=e=>[e.source,e.value,e.kind==='card'?'':STATES[e.state],CADENCE_LABELS[e.cadence]||'',
+  // The wallet as a directory of programs. Every program this tool recognizes
+  // arrives as a balance with no figure in it and the page its balance is
+  // printed on, so reaching that page is one press; the owner then deletes the
+  // ones they do not hold, which is one press each. A program already in the
+  // wallet is never added twice, so pressing this again after pruning brings
+  // back only what was never there — and a save that stops part way says how
+  // far it got rather than losing the rest.
+  async function addDirectory(){
+    if(busy||!loaded)return;
+    const pending=directoryBalances(LOYALTY_PROGRAMS,entries);
+    if(!pending.length){status('Every program this tool knows is already in your wallet.','success');return;}
+    let saved=0;
+    for(const entry of pending){
+      if(!await save(entry)){status(`Added ${saved} of ${pending.length} programs. Press again to add the rest.`,'error');return;}
+      saved++;
+    }
+    status(`Added ${saved} program${saved===1?'':'s'}. Delete the ones you do not have, and read a balance from any program's own page.`,'success');
+  }
+  // A program awaiting its first reading already says so in its value, and
+  // "Available" after it states nothing the row does not. A card carries no
+  // state either, for the same reason it carries no deadline.
+  const detailOf=e=>[e.source,e.value,
+    e.kind==='card'||(e.kind==='balance'&&e.value===UNREAD_BALANCE)?'':STATES[e.state],CADENCE_LABELS[e.cadence]||'',
     e.secretHint?`•••• ${e.secretHint}`:'',e.due?`Due ${e.due}`:'',e.pending?'Waiting to sync':'',
     e.conflict?'Conflict':'',e.deleting?'Pending deletion':''].filter(Boolean).join(' · ');
   function row(e){
     const filed=e.kind==='card'?entries.filter(other=>other.card===e.id).length:0;
-    const remove=rowAction(DELETE_GLYPH,`Delete ${e.name}`,()=>{confirmation.hidden=false;yes.focus();},true);
+    // A program awaiting its first reading holds nothing the owner would miss,
+    // so pruning the directory down to the programs they actually have costs
+    // one press per row. Everything else still asks, because everything else
+    // has something in it to lose.
+    const unread=e.kind==='balance'&&e.value===UNREAD_BALANCE;
+    const remove=rowAction(DELETE_GLYPH,`Delete ${e.name}`,
+      unread?()=>save(e,'DELETE'):()=>{confirmation.hidden=false;yes.focus();},true);
     const yes=action('Delete reward',()=>save(e,'DELETE'),'danger');
     const no=action('Keep reward',()=>{confirmation.hidden=true;remove.focus();});
     // Deleting a card leaves its benefits in the wallet rather than taking them
@@ -323,6 +352,12 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('reward-card-find').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     // The wallet syncs on its own, so the title carries no Refresh. A wallet
     // that never loaded is the one case with something to press.
+    // Offered only while the wallet holds no program at all: once the directory
+    // is in, pruning it is the work, and an Add that re-adds what was just
+    // deleted would be the loudest thing on the screen.
+    const holdsPrograms=entries.some(e=>e.kind==='balance'&&!e.deleting);
+    $('wallet-actions').replaceChildren(...(loaded&&!holdsPrograms
+      ?[action('Add the points programs',addDirectory,'secondary')]:[]));
     $('rewards-connection').replaceChildren(...(loaded?[]:[connectAction()]));
     for(const node of $('balance-panel').querySelectorAll('button'))node.disabled=busy||!loaded;
   }

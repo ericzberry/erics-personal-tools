@@ -5,6 +5,8 @@
 // meets can be inspected at sidebar and page widths without a cloud account.
 import {mountRewards} from '../src/rewards-tool.js';
 import {validateProgramCatalog, mergeCatalog} from '../src/program-data.js';
+import {directoryBalances} from '../src/balance-data.js';
+import {LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
 
 const token = 'synthetic-preview-token-at-least-32-characters';
 const credentials = {get: async () => token};
@@ -42,10 +44,17 @@ const CATALOG = mergeCatalog(
   validateProgramCatalog({programId: 'ms-reserved', complete: true, offers: OFFERS}));
 
 const store = records => ({request: async () => ({records})});
+// The wallet as a directory: every program this tool knows, none of them read
+// yet. This is what the owner meets immediately after adding them, and what
+// they prune — so the row's own shape, its link out to the program's page, and
+// the one press that deletes it are all reviewed here.
+const DIRECTORY = directoryBalances(LOYALTY_PROGRAMS, []).map((entry, index) =>
+  ({...entry, revision: `synthetic-directory-${index}`}));
 const STATES = [
   ['Wallet and a program’s offers', WALLET, [CATALOG]],
   ['Nothing read from a program yet', WALLET, []],
-  ['A program read, and an empty wallet', [], [CATALOG]]
+  ['A program read, and an empty wallet', [], [CATALOG]],
+  ['Every program added, none read yet', DIRECTORY, []]
 ];
 const root = document.getElementById('reward-states');
 for (const [label, entries, catalogs] of STATES) {

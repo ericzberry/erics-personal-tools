@@ -18,16 +18,21 @@
 // for it, in `finance-page-read.js`.
 //
 // An entry is one institution: the hosts it is recognized by, the name its
-// records should carry, and the kind of record its accounts usually are. A
-// `read` block is what makes a site readable — the path its signed-in
-// application occupies, and the host that application lives on when that is
-// narrower than the institution's own.
+// records should carry, the kind of record its accounts usually are, and the
+// page its balances are printed on. The URL is the institution's published
+// account page, so following it without a session lands on that institution's
+// own sign-in and returns there; it is a way to reach the figures, never a way
+// to obtain them. A `read` block is what makes a site readable — the path its
+// signed-in application occupies, and the host that application lives on when
+// that is narrower than the institution's own.
 export const FINANCE_SITES=[
   {id:'etrade',label:'E*TRADE',institution:'E*TRADE',kind:'brokerage',hosts:['etrade.com'],
+    url:'https://us.etrade.com/etx/pxy/my-portfolios',
     // The signed-in application lives under /etx/ (Complete View and the
     // account pages) and the older /e/t/ paths; the marketing site does not.
     read:{app:/^\/(etx|e\/t)\//i}},
   {id:'chase',label:'Chase',institution:'Chase',kind:'bank',hosts:['chase.com','jpmorganonline.com'],
+    url:'https://secure.chase.com/web/auth/dashboard',
     // Banking, cards and the J.P. Morgan investment accounts all sit behind the
     // same sign-on: jpmorganonline.com redirects to secure.chase.com, so one
     // entry covers both names. The signed-in application lives under /web/auth/
@@ -38,6 +43,7 @@ export const FINANCE_SITES=[
     read:{hosts:['chase.com'],app:/^\/web\/auth\//i}},
   {id:'morgan-stanley',label:'Morgan Stanley',institution:'Morgan Stanley',kind:'brokerage',
     hosts:['morganstanley.com','morganstanleyclientserv.com'],
+    url:'https://www.morganstanleyclientserv.com/cs/',
     // Morgan Stanley Online is one site under two names: the log-on form is
     // served from login.morganstanleyclientserv.com/ux/ and the signed-in
     // application from www. under /cs/, so the shared registrable domain covers
@@ -57,6 +63,7 @@ export const FINANCE_SITES=[
     read:{hosts:['morganstanleyclientserv.com'],app:/^\/cs\/(?!free)/i}},
   {id:'schwab',label:'Schwab',institution:'Schwab',kind:'brokerage',
     hosts:['schwab.com','schwaballiance.com'],
+    url:'https://client.schwab.com/app/accounts/summary/',
     // The balances are on client.schwab.com and nowhere else: www.schwab.com is
     // the marketing site, and schwaballiance.com now redirects there too. So
     // reading names the client subdomain instead of the registrable domain, and
@@ -85,36 +92,69 @@ export const FINANCE_SITES=[
   // into the group above once its signed-in application has been checked
   // against its log-on and public pages, which is the only work that separates
   // the two groups.
-  {id:'ubs',label:'UBS',institution:'UBS',kind:'brokerage',hosts:['ubs.com']},
-  {id:'fidelity',label:'Fidelity',institution:'Fidelity',kind:'brokerage',hosts:['fidelity.com','netbenefits.com']},
-  {id:'vanguard',label:'Vanguard',institution:'Vanguard',kind:'brokerage',hosts:['vanguard.com']},
-  {id:'merrill',label:'Merrill',institution:'Merrill',kind:'brokerage',hosts:['merrilledge.com','ml.com']},
-  {id:'bank-of-america',label:'Bank of America',institution:'Bank of America',kind:'bank',hosts:['bankofamerica.com']},
-  {id:'wells-fargo',label:'Wells Fargo',institution:'Wells Fargo',kind:'bank',hosts:['wellsfargo.com','wellsfargoadvisors.com']},
-  {id:'citi',label:'Citi',institution:'Citi',kind:'bank',hosts:['citi.com','citibank.com']},
-  {id:'us-bank',label:'U.S. Bank',institution:'U.S. Bank',kind:'bank',hosts:['usbank.com']},
-  {id:'pnc',label:'PNC',institution:'PNC',kind:'bank',hosts:['pnc.com']},
-  {id:'truist',label:'Truist',institution:'Truist',kind:'bank',hosts:['truist.com']},
-  {id:'ally',label:'Ally',institution:'Ally',kind:'bank',hosts:['ally.com']},
-  {id:'marcus',label:'Marcus',institution:'Marcus by Goldman Sachs',kind:'bank',hosts:['marcus.com']},
-  {id:'capital-one',label:'Capital One',institution:'Capital One',kind:'bank',hosts:['capitalone.com']},
-  {id:'american-express',label:'American Express',institution:'American Express',kind:'credit',hosts:['americanexpress.com']},
-  {id:'discover',label:'Discover',institution:'Discover',kind:'credit',hosts:['discover.com']},
-  {id:'interactive-brokers',label:'Interactive Brokers',institution:'Interactive Brokers',kind:'brokerage',hosts:['interactivebrokers.com']},
-  {id:'robinhood',label:'Robinhood',institution:'Robinhood',kind:'brokerage',hosts:['robinhood.com']},
-  {id:'ameriprise',label:'Ameriprise',institution:'Ameriprise',kind:'brokerage',hosts:['ameriprise.com']},
-  {id:'raymond-james',label:'Raymond James',institution:'Raymond James',kind:'brokerage',hosts:['raymondjames.com']},
-  {id:'edward-jones',label:'Edward Jones',institution:'Edward Jones',kind:'brokerage',hosts:['edwardjones.com']},
-  {id:'northern-trust',label:'Northern Trust',institution:'Northern Trust',kind:'brokerage',hosts:['northerntrust.com']},
-  {id:'pershing',label:'Pershing',institution:'BNY Pershing',kind:'brokerage',hosts:['netxinvestor.com','pershing.com']},
-  {id:'betterment',label:'Betterment',institution:'Betterment',kind:'brokerage',hosts:['betterment.com']},
-  {id:'wealthfront',label:'Wealthfront',institution:'Wealthfront',kind:'brokerage',hosts:['wealthfront.com']},
-  {id:'empower',label:'Empower',institution:'Empower',kind:'retirement',hosts:['empower.com','empower-retirement.com']},
-  {id:'tiaa',label:'TIAA',institution:'TIAA',kind:'retirement',hosts:['tiaa.org']},
-  {id:'carta',label:'Carta',institution:'Carta',kind:'private',hosts:['carta.com']},
-  {id:'coinbase',label:'Coinbase',institution:'Coinbase',kind:'crypto',hosts:['coinbase.com']},
-  {id:'kraken',label:'Kraken',institution:'Kraken',kind:'crypto',hosts:['kraken.com']},
-  {id:'treasury-direct',label:'TreasuryDirect',institution:'TreasuryDirect',kind:'other-asset',hosts:['treasurydirect.gov']}
+  {id:'ubs',label:'UBS',institution:'UBS',kind:'brokerage',hosts:['ubs.com'],
+    url:'https://onlineservices.ubs.com/'},
+  {id:'fidelity',label:'Fidelity',institution:'Fidelity',kind:'brokerage',hosts:['fidelity.com','netbenefits.com'],
+    url:'https://digital.fidelity.com/ftgw/digital/portfolio/summary'},
+  {id:'vanguard',label:'Vanguard',institution:'Vanguard',kind:'brokerage',hosts:['vanguard.com'],
+    url:'https://personal1.vanguard.com/mvc-balances-holdings/balances'},
+  {id:'merrill',label:'Merrill',institution:'Merrill',kind:'brokerage',hosts:['merrilledge.com','ml.com'],
+    url:'https://olui2.fs.ml.com/'},
+  {id:'bank-of-america',label:'Bank of America',institution:'Bank of America',kind:'bank',hosts:['bankofamerica.com'],
+    url:'https://secure.bankofamerica.com/myaccounts/'},
+  {id:'wells-fargo',label:'Wells Fargo',institution:'Wells Fargo',kind:'bank',hosts:['wellsfargo.com','wellsfargoadvisors.com'],
+    url:'https://connect.secure.wellsfargo.com/accounts/start'},
+  {id:'citi',label:'Citi',institution:'Citi',kind:'bank',hosts:['citi.com','citibank.com'],
+    url:'https://online.citi.com/US/nga/account/overview'},
+  {id:'us-bank',label:'U.S. Bank',institution:'U.S. Bank',kind:'bank',hosts:['usbank.com'],
+    url:'https://onlinebanking.usbank.com/'},
+  {id:'pnc',label:'PNC',institution:'PNC',kind:'bank',hosts:['pnc.com'],
+    url:'https://onlinebanking.pnc.com/'},
+  {id:'truist',label:'Truist',institution:'Truist',kind:'bank',hosts:['truist.com'],
+    url:'https://onlinebanking.truist.com/'},
+  {id:'ally',label:'Ally',institution:'Ally',kind:'bank',hosts:['ally.com'],
+    url:'https://secure.ally.com/'},
+  {id:'marcus',label:'Marcus',institution:'Marcus by Goldman Sachs',kind:'bank',hosts:['marcus.com'],
+    url:'https://www.marcus.com/us/en/account'},
+  {id:'capital-one',label:'Capital One',institution:'Capital One',kind:'bank',hosts:['capitalone.com'],
+    url:'https://myaccounts.capitalone.com/accountSummary'},
+  {id:'american-express',label:'American Express',institution:'American Express',kind:'credit',hosts:['americanexpress.com'],
+    url:'https://global.americanexpress.com/dashboard'},
+  {id:'discover',label:'Discover',institution:'Discover',kind:'credit',hosts:['discover.com'],
+    url:'https://card.discover.com/cardmembersvcs/achome/homepage'},
+  {id:'interactive-brokers',label:'Interactive Brokers',institution:'Interactive Brokers',kind:'brokerage',hosts:['interactivebrokers.com'],
+    url:'https://www.interactivebrokers.com/portal'},
+  {id:'robinhood',label:'Robinhood',institution:'Robinhood',kind:'brokerage',hosts:['robinhood.com'],
+    url:'https://robinhood.com/account'},
+  {id:'ameriprise',label:'Ameriprise',institution:'Ameriprise',kind:'brokerage',hosts:['ameriprise.com'],
+    url:'https://www.ameriprise.com/account'},
+  // Client Access, where the balances are, is served from the firm's own
+  // rjf.com rather than from raymondjames.com, so a client sitting on it is
+  // recognized only if that host is named here too.
+  {id:'raymond-james',label:'Raymond James',institution:'Raymond James',kind:'brokerage',hosts:['raymondjames.com','rjf.com'],
+    url:'https://clientaccess.rjf.com/'},
+  {id:'edward-jones',label:'Edward Jones',institution:'Edward Jones',kind:'brokerage',hosts:['edwardjones.com'],
+    url:'https://www.edwardjones.com/us-en/client-resources/online-access'},
+  {id:'northern-trust',label:'Northern Trust',institution:'Northern Trust',kind:'brokerage',hosts:['northerntrust.com'],
+    url:'https://www.northerntrust.com/'},
+  {id:'pershing',label:'Pershing',institution:'BNY Pershing',kind:'brokerage',hosts:['netxinvestor.com','pershing.com'],
+    url:'https://www.netxinvestor.com/'},
+  {id:'betterment',label:'Betterment',institution:'Betterment',kind:'brokerage',hosts:['betterment.com'],
+    url:'https://www.betterment.com/app/accounts'},
+  {id:'wealthfront',label:'Wealthfront',institution:'Wealthfront',kind:'brokerage',hosts:['wealthfront.com'],
+    url:'https://www.wealthfront.com/dashboard'},
+  {id:'empower',label:'Empower',institution:'Empower',kind:'retirement',hosts:['empower.com','empower-retirement.com'],
+    url:'https://participant.empower-retirement.com/participant/'},
+  {id:'tiaa',label:'TIAA',institution:'TIAA',kind:'retirement',hosts:['tiaa.org'],
+    url:'https://www.tiaa.org/public/tcm/user/dashboard'},
+  {id:'carta',label:'Carta',institution:'Carta',kind:'private',hosts:['carta.com'],
+    url:'https://app.carta.com/'},
+  {id:'coinbase',label:'Coinbase',institution:'Coinbase',kind:'crypto',hosts:['coinbase.com'],
+    url:'https://www.coinbase.com/assets'},
+  {id:'kraken',label:'Kraken',institution:'Kraken',kind:'crypto',hosts:['kraken.com'],
+    url:'https://pro.kraken.com/app/portfolio'},
+  {id:'treasury-direct',label:'TreasuryDirect',institution:'TreasuryDirect',kind:'other-asset',hosts:['treasurydirect.gov'],
+    url:'https://www.treasurydirect.gov/RS/UN-Display.do'}
 ];
 
 // The sites a snapshot can be read from: each institution's own entry, narrowed

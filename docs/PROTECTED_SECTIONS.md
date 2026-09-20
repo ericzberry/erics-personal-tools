@@ -363,14 +363,22 @@ scopes in one:
    block at all.
 2. **Everything you hold** — the totals, the breakdown, the value over time and
    the holdings list, under one heading that says the scope is the whole ledger.
-3. **Add to the ledger** — the statement drop zone, what it read, and the two
-   forms: **Enter a figure** and **Enter a private investment**. The two names
-   have to say they are two jobs; "Enter by hand" beside "Record an investment"
-   read as the same offer twice.
+3. **Add to the ledger** — the statement drop zone, what it read, the two
+   forms — **Enter a figure** and **Enter a private investment** — and
+   **Open an account page**. The two form names have to say they are two jobs;
+   "Enter by hand" beside "Record an investment" read as the same offer twice.
+   **Open an account page** is closed until it is wanted and holds one link per
+   institution the tool recognizes, grouped by kind: getting to the figures is a
+   way of putting one in the ledger, which is this block's scope, so it belongs
+   here rather than under a fourth heading of its own. The links are links and
+   nothing else — no session is held and nothing is signed in to — and an
+   institution the owner does not bank with costs one line in a closed list.
 
 Nothing in any of the three explains itself in a sentence underneath. The
 heading says the scope and the button says what it does, and a paragraph
-repeating both is a paragraph nobody reads twice.
+repeating both is a paragraph nobody reads twice. A reading under review is a
+heading per holder with a line per asset class under it — the shape the ledger
+itself is read in — and nothing beside the figures.
 
 These used to alternate: a site's reading, then the whole ledger's totals under
 a heading that said only *Position*, then the page action again down in *Read an

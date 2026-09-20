@@ -154,18 +154,23 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   carry a figure and the lines that name one). All five ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
-  `account-sites.js` is the sidebar's alone: `FINANCE_SITES`, the registry of
-  institutions worth recognizing, and `ACCOUNT_SITES`, the four of them whose
-  signed-in pages can be read (E*TRADE, Chase, Morgan Stanley, Schwab), plus the
-  in-page probe that says whether the owner is already signed in to one.
+  `account-sites.js` holds `FINANCE_SITES`, the registry of institutions worth
+  recognizing — each with the page its balances are printed on — and
+  `ACCOUNT_SITES`, the four of them whose signed-in pages can be read (E*TRADE,
+  Chase, Morgan Stanley, Schwab), plus the in-page probe that says whether the
+  owner is already signed in to one. Recognition and the probe are the sidebar's
+  alone, but the registry ships to mobile too, because `components/finance.js`
+  lists those pages under **Open an account page**.
   `context-panel.js` drives both from the tab it already watches: any recognized
   page turns the panel to Finance quietly — intake ready, figures unbuilt, no
   passkey prompt — and a signed-in site adds the snapshot prompt.
   `loyalty-sites.js` is the same registry for reward programs that keep a
   balance (United, Marriott, Membership Rewards): one URL comparison says
   whether the tab beside the panel is a program's own site, which is what makes
-  Rewards offer to read the balance off it. Like `account-sites.js` it is the
-  sidebar's alone; the reading itself is `finance-page-read.js`, unchanged.
+  Rewards offer to read the balance off it, and each program carries the page
+  its balance is printed on. Recognition is the sidebar's alone and the reading
+  itself is `finance-page-read.js`, unchanged; the registry ships to mobile,
+  because `balance-data.js` seeds the wallet's directory of programs from it.
   `reward-programs.js` is the counterpart for reward programs (MS Reserved): the
   in-page reader that lifts the published offer catalogue off the program's own
   pages, and the watcher `background.js` registers, so a visit updates the

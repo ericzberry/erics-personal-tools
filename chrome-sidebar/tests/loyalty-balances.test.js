@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loyaltySite,LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
-import {balanceTotals,readBalance,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT} from '../src/balance-data.js';
+import {balanceTotals,readBalance,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,directoryBalances,UNREAD_BALANCE} from '../src/balance-data.js';
+import {nextActions} from '../src/rewards-data.js';
 import {pageOffers} from '../src/page-offers.js';
 
 const balance=(name,source,value,updatedAt=new Date().toISOString())=>({id:`${name}-id`,kind:'balance',name,source,value,state:'available',updatedAt});
@@ -101,4 +102,58 @@ test('a program page offers the wallet the reading, and no other page does',()=>
   assert.deepEqual([offer.capability,offer.label],['rewards','Read your AAdvantage balance']);
   assert.equal(pageOffers({url:'https://example.invalid/'}).length,0);
   assert.equal(pageOffers({url:'https://www.aa.com/',active:'rewards'}).length,0,'no offer to go where the owner already is');
+});
+
+// The wallet as a directory of programs: every program this tool knows, each
+// carrying the page its balance is printed on, so reaching that page is one
+// press rather than a search through a marketing site.
+test('every program carries the page its balance is printed on',()=>{
+  for(const program of LOYALTY_PROGRAMS){
+    const url=new URL(program.url);
+    assert.equal(url.protocol,'https:',`${program.id} links over HTTPS`);
+    assert.ok(!url.username&&!url.password,`${program.id} carries no credentials in its link`);
+    assert.ok(program.hosts.some(host=>url.hostname===host||url.hostname.endsWith(`.${host}`)
+      ||host.split('.').slice(-2).join('.')===url.hostname.split('.').slice(-2).join('.')),
+      `${program.id} links to its own site, not somewhere else`);
+  }
+});
+
+test('the directory seeds one entry per program, and never a second time',()=>{
+  const seeded=directoryBalances(LOYALTY_PROGRAMS,[]);
+  assert.equal(seeded.length,LOYALTY_PROGRAMS.length,'every program arrives');
+  assert.ok(seeded.every(entry=>entry.kind==='balance'&&entry.url&&entry.value===UNREAD_BALANCE));
+  assert.equal(directoryBalances(LOYALTY_PROGRAMS,seeded).length,0,'seeding an already-seeded wallet adds nothing');
+  // A program the owner already keeps by hand is theirs; the directory leaves it alone.
+  const byHand=[balance('MileagePlus','United Airlines','42,000 miles')];
+  const rest=directoryBalances(LOYALTY_PROGRAMS,byHand);
+  assert.equal(rest.length,LOYALTY_PROGRAMS.length-1);
+  assert.ok(!rest.some(entry=>entry.name==='MileagePlus'),'the saved MileagePlus entry is not duplicated');
+});
+
+test('a program awaiting its first reading is counted as unread, never as a total or a stale figure',()=>{
+  const seeded=directoryBalances(LOYALTY_PROGRAMS,[]);
+  const totals=balanceTotals(seeded);
+  assert.equal(totals.totals.length,0,'nothing with no figure lands in a total');
+  assert.equal(totals.unread,LOYALTY_PROGRAMS.length);
+  assert.equal(totals.stale,0);
+  // And it never becomes a Next action, however long it sits there: a directory
+  // of programs would otherwise arrive as a list of nags a month after it was added.
+  const old=seeded.map(entry=>({...entry,updatedAt:new Date('2020-01-01').toISOString()}));
+  assert.equal(nextActions(old,new Date()).length,0);
+  // A balance that does state a figure is still raised once it goes out of date.
+  const read=[{...balance('Bonvoy','Marriott','42,000 points'),updatedAt:new Date('2020-01-01').toISOString()}];
+  assert.equal(nextActions(read,new Date())[0]?.reason,'Update this balance');
+});
+
+test('a reading fills in the directory entry and leaves the owner’s own link alone',()=>{
+  const program=LOYALTY_PROGRAMS.find(entry=>entry.id==='united');
+  const [row]=parseBalanceReading({balances:[{program:'MileagePlus',source:'United Airlines',amount:42000,unit:'miles'}]},program);
+  assert.equal(row.url,program.url,'a reading carries the page it was read from');
+  // A new entry takes the program's page.
+  assert.equal(balanceRecord(row,null).url,program.url);
+  // An entry the owner gave a link of their own keeps it.
+  const mine={...balance('MileagePlus','United Airlines','1 mile'),url:'https://example.com/my-own-page',
+    card:'',cadence:'',due:'',notes:'',secret:'',secretHint:''};
+  assert.equal(balanceRecord(row,mine).url,'https://example.com/my-own-page');
+  assert.equal(balanceRecord(row,mine).value,'42,000 miles','the figure is still the one just read');
 });

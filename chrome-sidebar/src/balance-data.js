@@ -86,6 +86,9 @@ export function parseBalanceReading(input,program=null,now=new Date().toISOStrin
     if(seen.has(key))return null;
     seen.add(key);
     return {name,source,amount,unit,value:formatBalance(amount,unit),
+      // Where this figure was printed, so the entry it lands on can be opened
+      // again without hunting for the page a second time.
+      url:program?.url||'',
       notes:text(row?.notes,400),
       confidence:CONFIDENCE.includes(row?.confidence)?row.confidence:'medium',
       readAt:now};
@@ -117,5 +120,38 @@ export function matchBalances(rows=[],entries=[]){
 // it was filed under are the owner's, not the page's.
 export function balanceRecord(row,match=null,now=new Date().toISOString()){
   const base=match||{kind:'balance',name:row.name,source:row.source,state:'available',card:'',cadence:'',due:'',url:'',notes:row.notes,secret:'',secretHint:''};
-  return validateReward({...base,kind:'balance',value:row.value},now);
+  // A link the owner put there is theirs and is never replaced; an entry that
+  // has none takes the program's own page, which is the whole point of holding
+  // the program in the wallet at all.
+  return validateReward({...base,kind:'balance',value:row.value,url:base.url||row.url||''},now);
+}
+
+// The wallet as a directory of programs. A program the owner holds is a balance
+// entry with no figure in it yet: it names the program, says who runs it, and
+// carries the page the balance is printed on, so reaching that page is one
+// press instead of a search. Reading a balance later fills the same entry in
+// through `matchBalances`, and `nextActions` leaves a figureless one alone
+// until it has been read once.
+//
+// Nothing here is saved by building it. A program already in the wallet — by
+// its own name, or by the source it is filed under — is never added a second
+// time, so seeding an already-seeded wallet adds nothing.
+// What an unread program's value says. The wallet already understands a value
+// that states no figure — "Gold status" is a balance too, and is counted in no
+// total — so a program awaiting its first reading needs no new record shape and
+// no change to what a reward is allowed to be. It says plainly that there is no
+// figure yet rather than showing a zero that would be a lie.
+export const UNREAD_BALANCE='Not read yet';
+const dirKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+export function directoryBalances(programs=[],entries=[],now=new Date().toISOString()){
+  const held=entries.filter(entry=>entry?.kind==='balance'&&!entry.deleting);
+  const names=new Set(held.map(entry=>dirKey(entry.name)));
+  const sources=new Set(held.map(entry=>dirKey(entry.source)));
+  return programs
+    .filter(program=>!names.has(dirKey(program.label))&&!sources.has(dirKey(program.source)))
+    .map(program=>validateReward({
+      kind:'balance',name:program.label,source:program.source,value:UNREAD_BALANCE,
+      state:'available',card:'',cadence:'',due:'',url:program.url||'',
+      notes:'',secret:'',secretHint:''
+    },now));
 }
