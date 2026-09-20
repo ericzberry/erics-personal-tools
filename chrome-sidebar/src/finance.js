@@ -5,6 +5,8 @@ import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statem
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
+import {firmQuarters} from './firm-history.js';
+import {FirmQuarters} from './components/firms.js';
 const today=()=>new Date().toISOString().slice(0,10);
 
 // `readPage` is the host's ability to read the tab the owner is looking at.
@@ -293,6 +295,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       ],currency,{shares:false})]:[])
     ]:[Note('Nothing recorded yet.')]);
     $('trend').replaceChildren(TrendTable(series,currency));
+    // Each firm's own quarters. The panel is absent rather than empty until a
+    // firm has been read at least once, because a heading over nothing is a
+    // question the tool cannot yet answer.
+    const firms=firmQuarters(records,{currency});
+    $('firms-panel').hidden=!firms.length;
+    $('firms').replaceChildren(FirmQuarters(firms,currency));
     // Currencies are never added together, so say what a total covers.
     $('breakdown-panel').querySelector('summary').textContent=currencies.length>1?`Breakdown · ${currency} only`:'Breakdown';
   }
@@ -824,8 +832,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   }
   // Not hidden figures: figures that were never put on the page.
   function sealLedger(){
-    for(const id of ['currency-switch','totals','breakdown','trend','list'])$(id).replaceChildren();
-    $('currency-switch').hidden=true;$('stale').hidden=true;
+    for(const id of ['currency-switch','totals','breakdown','trend','firms','list'])$(id).replaceChildren();
+    $('currency-switch').hidden=true;$('stale').hidden=true;$('firms-panel').hidden=true;
   }
   function render(){
     // What the ledger holds — the totals and the saved figures — waits to be

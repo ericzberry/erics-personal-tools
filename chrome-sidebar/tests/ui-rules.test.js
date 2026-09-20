@@ -214,4 +214,11 @@ test('one column of money: a heading total reserves the same slot as the rows un
   // width the amount and the slot leave under 80px, which is not a name.
   assert.match(css,/\.group-name\{flex:1 1 100%/,
     'the heading name shares its line with the total again — there is no room for both');
+  // The same edge, in a list of quarters. A row whose change is empty — the
+  // first quarter of any series, and every quarter that covers less of the
+  // ledger than the newest — has nothing in its last slot, and the shared
+  // rule that hides an empty footnote took the slot away with it: that row's
+  // amount ended 88px right of every amount below it.
+  assert.match(css,/\.trend-row \.footnote:empty\{display:block\}/,
+    'an empty change collapses, so the first quarter\u2019s amount ends on its own edge. See UI-27 in docs/UI_RULES.md.');
 });

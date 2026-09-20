@@ -9,8 +9,8 @@ import {markRef,capitalRef,holdingRef,propertyRef,valuationRef} from '../src/fin
 const vault={idleMs:900000,available:()=>true,unlocked:()=>true,touch(){},lock(){},
   async key(){return null;},async open(){return '';},async unlockWithRecoveryCode(){return null;},recoveryCode:()=>'EV1-SYNTHETIC'};
 const portfolio=(number,name,kind,currency='USD')=>({id:`p${number}`,row:'portfolio',revision:'r1',number,name,kind,currency});
-const mark=(portfolio,cls,asOf,amount)=>{
-  const value={row:'mark',portfolio,class:cls,asOf,amount};
+const mark=(portfolio,cls,asOf,amount,firm=0)=>{
+  const value={row:'mark',portfolio,class:cls,asOf,amount,firm};
   return {...value,id:markRef(value),revision:String(amount)};
 };
 const holding=(number,portfolio,name,vehicle,cls,share=10000)=>({id:holdingRef(number),row:'holding',revision:'r1',number,portfolio,name,vehicle,class:cls,stated:0,share});
@@ -42,12 +42,19 @@ const SETTLED=[
   portfolio(3,'Berry Children’s Custodial Account with a Very Long Name',7),
   ...['2025-03-31','2025-06-30','2025-09-30','2025-12-31','2026-03-31','2026-06-30','2026-09-20']
     .flatMap((asOf,index)=>[
-      mark(1,10,asOf,1400000+index*45000),
-      mark(1,3,asOf,60000+index*1500),
+      // Where each figure was read, which is what puts a firm in the panel
+      // below the trend. The mortgage carries none: it was typed in, and a
+      // figure that names no firm belongs to none of them.
+      mark(1,10,asOf,1400000+index*45000,5),
+      mark(1,3,asOf,60000+index*1500,2),
       mark(1,21,asOf,780000-index*9000),
-      mark(2,10,asOf,96000+index*4200)
+      mark(2,10,asOf,96000+index*4200,3)
     ]),
   mark(3,10,'2026-03-31',41250),
+  // A firm read once, in the middle of a quarter rather than at its end, so
+  // the row says the day it was struck: the heading above it names a quarter
+  // that had not finished when the figure was taken.
+  mark(3,3,'2026-05-14',18400,4),
   holding(1,1,'Vantage Point Partners Fund IV, L.P.',1,4),
   capital({holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000}),
   // A general partner held in part: the statement states the whole vehicle and

@@ -313,6 +313,14 @@ export function FinanceView(){
           Disclosure('Value over time',[
             Stack([],{id:'finance-trend'})
           ],{id:'finance-trend-panel',className:'ledger-panel'}),
+
+          // The same question asked of each place the money is held. A figure
+          // is filed under whose money it is, so where it sits survives only in
+          // the firm the figure carries — and a figure entered by hand carries
+          // none. Closed, and absent altogether until a firm has been read.
+          Disclosure('Institutions over time',[
+            Stack([],{id:'finance-firms'})
+          ],{id:'finance-firms-panel',className:'ledger-panel',hidden:true}),
           Stack([],{id:'finance-list',className:'travel-list'})
         ]})},
       {key:'add',label:'Figures',content:

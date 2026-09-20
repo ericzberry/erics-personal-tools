@@ -159,6 +159,36 @@ export const VALUE_SOURCES=[
   {code:3,id:'sale',label:'Sale price'},
   {code:4,id:'owner',label:'Own estimate'}
 ];
+// Where a figure was read, which is the one thing folding it into the ledger
+// throws away. A figure is filed under whose money it is — the estate's cash at
+// Chase and the estate's cash at UBS are one portfolio and one asset class —
+// and that is right for net worth and leaves one question unanswerable from the
+// stored rows alone: how UBS is doing, as against Morgan Stanley. Only the
+// reading knows, so the answer is recorded at the moment of reading, under a
+// code from here.
+//
+// A code rather than a name, for the two reasons every other categorization
+// here is one: a code is permanent where a spelling is not, and D1 holds no
+// words — a portfolio's name is encrypted precisely so that the database cannot
+// say who banks where, and an institution written out in the clear beside it
+// would give that back. The key is the site's own id in `account-sites.js`,
+// which is already the one spelling this application uses for a place; the
+// number beside it is what is stored. Numbers follow that registry's order and
+// are never reused, so a site that goes away keeps its own — a quarter filed
+// under it stays true.
+export const FIRMS={etrade:1,chase:2,'morgan-stanley':3,schwab:4,ubs:5,fidelity:6,vanguard:7,
+  merrill:8,'bank-of-america':9,'wells-fargo':10,citi:11,'us-bank':12,pnc:13,truist:14,ally:15,
+  marcus:16,'capital-one':17,'american-express':18,discover:19,'interactive-brokers':20,
+  robinhood:21,ameriprise:22,'raymond-james':23,'edward-jones':24,'northern-trust':25,pershing:26,
+  betterment:27,wealthfront:28,empower:29,tiaa:30,carta:31,icapital:32,coinbase:33,kraken:34,
+  'treasury-direct':35};
+export const firmCode=id=>FIRMS[String(id||'')]||0;
+export const firmId=code=>Object.keys(FIRMS).find(id=>FIRMS[id]===Number(code))||'';
+// The quarter a date falls in, as one number, for the same reason a date is
+// one: 2026-09-30 is 20263, which sorts and compares like the words for it.
+export const quarterNumber=asOf=>Number(String(asOf).slice(0,4))*10+Math.floor((Number(String(asOf).slice(5,7))-1)/3)+1;
+export const quarterName=period=>`${Math.floor(period/10)} Q${period%10}`;
+export const quarterEnded=period=>`${Math.floor(period/10)}-${String((period%10)*3).padStart(2,'0')}-${period%10===2||period%10===3?'30':'31'}`;
 export const STALE_DAYS=90;
 export const MAX_VALUE=1e12;
 export const MAX_DATES=240;

@@ -1,3 +1,4 @@
+import {firmId} from './finance-data.js';
 // Recognizes the finance sites this tool knows, and answers two questions about
 // the tab beside the panel: is this page about the owner's money at all, and —
 // for the few sites whose account pages can be read — is the owner already
@@ -237,6 +238,14 @@ export const FINANCE_SITES=[
 // to the host and path its signed-in application occupies.
 export const ACCOUNT_SITES=FINANCE_SITES.filter(site=>site.read)
   .map(({read,...site})=>({...site,hosts:read.hosts||site.hosts,app:read.app}));
+
+// What to call a firm on screen. A stored figure carries the firm it was read
+// at as a code, because the ledger's database is not allowed to hold the words
+// — a portfolio's name is encrypted precisely so it cannot say who banks where
+// — so the words are looked up here, where the one label per place already
+// lives. Nothing else knows both the code and the label, and everything that
+// shows a firm asks this rather than keeping a second list of names.
+export const firmLabel=code=>FINANCE_SITES.find(site=>site.id===firmId(code))?.label||'';
 
 const hostMatches=(hostname,host)=>hostname===host||hostname.endsWith(`.${host}`);
 function match(url,sites){

@@ -73,7 +73,8 @@ progress indicators, imported by `tokens.css` so every host has them) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns
 `{message, tone}` when what it got was not a success) · plus per-feature component
-modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
+modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `firms.js`
+(each institution's quarters, under the ledger's own tab), `personal.js`,
 `vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js`,
@@ -153,7 +154,13 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `foldCapital`, which ties a capital account statement to the investment it
   names; plus `VALUE_SOURCES` and the property rows — an address and its dated
   valuations — with `propertiesOn` for what a property is worth, what is owed on
-  it and what is left),
+  it and what is left; plus `FIRMS`, the permanent code per institution that a
+  figure carries to say where it was read, and the quarter helpers that go with
+  it),
+  `firm-history.js` (each institution's own quarters, computed off those codes:
+  a quarter is what the firm held at the end of it, a quarter nobody read is
+  not a row, and a figure carrying no firm belongs to none of them — drawn by
+  `components/firms.js` in the ledger's own tab),
   `personal-data.js`/`personal-offline.js`,
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored, plus `birthdaysAhead`
@@ -190,7 +197,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   recognizing — each with the page its balances are printed on — and
   `ACCOUNT_SITES`, the five of them whose signed-in pages can be read (E*TRADE,
   Chase, Morgan Stanley, Schwab, Coinbase), plus the in-page probe that says
-  whether the owner is already signed in to one. Recognition and the probe are the sidebar's
+  whether the owner is already signed in to one, and `firmLabel`, where the
+  code a figure carries becomes the name on screen — the one place that knows
+  both. Recognition and the probe are the sidebar's
   alone, but the registry ships to mobile too, because `components/finance.js`
   lists those pages under **Open an account page**.
   `context-panel.js` drives both from the tab it already watches: any recognized
@@ -339,6 +348,10 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `storage-usage-schema.sql` (`storage_usage`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
+- `finance-marks-rebuild.sql` is the one exception to that list's shape: a
+  one-time, destructive rebuild of `finance_marks` for the primary-key change
+  that added `firm`, run by hand and deliberately kept out of
+  `finance-schema.sql` so no routine schema apply can repeat it.
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of
   every app release). `wrangler.example.jsonc` — config template; real config and
   credentials stay outside Git.

@@ -199,6 +199,10 @@ Worth — this looks terrible — overlapping numbers and misaligned numbers."*
 This was a regression 0.6.215 introduced by giving the portfolio heading two
 columns of its own: the total landed 104px right of the figures it totalled,
 and a trust's name broke into three lines with the total jammed against them.
+A list of quarters broke the same edge from the other end: the shared rule that
+hides an empty footnote took away the slot a change rides in, so the first
+quarter of a series — the one with nothing to compare against — ended its
+amount 88px right of every quarter under it.
 
 **UI-28 — a list of groups opens one group at a time.** *By eye.* Where a list
 is groups of records — portfolios and their asset classes, years and their
