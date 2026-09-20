@@ -117,6 +117,32 @@ the points balance it was printed beside, and where a reading finds two balances
 for one provider the program's own name decides which entry each lands on, or
 neither does and it is saved as a new balance for you to check.
 
+### Reading what is left of a card's credits
+
+A card's page prints a tracker for each credit it carries: what has been earned
+against it and what is still to go. The same press that reads a balance reads
+those too — one snapshot, one list to review — and each one names the credit it
+would fill in.
+
+What is stored is what is **left** in the period the credit is in now, never
+what has been used: a tracker reading `$0 Earned / $200 To Go` has $200 left.
+That figure sits beside the card's own terms rather than replacing them, because
+"$25 per month" and "$25 left this month" are different facts and only one of
+them changes. Everything else about a saved benefit — its notes, its link, its
+expiration, the card it is filed under — stays yours.
+
+A credit is filed under the card the page names it against, matched to your
+saved cards on the words that tell one card from another; a name that fits two
+of them equally files under neither, because a Platinum's credits under a Blue
+Cash is worse than credits under no card at all. A credit with nothing left is
+marked used, which takes it off Next actions until the next reading finds the
+period has turned over.
+
+Research and this reading answer different questions: **Add a card you hold**
+brings back what the card gives, and the tracker says how much of it is left.
+A credit read before it has ever been researched is saved with the amount the
+page states.
+
 ## Resets and Next actions
 
 Most card credits are not one-time offers — they come back, and the unused part
@@ -139,8 +165,9 @@ deadline and is never raised.
 Research reports what the issuer's pages say on the day it ran. Benefits change,
 and enrollment, eligibility, caps, tiers and merchant exclusions are yours to
 confirm against the linked terms. It returns at most 40 benefits per card, omits
-welcome offers and introductory rates, and reports nothing about how much of a
-credit you have already used. Earning rates stay on the card entry; **Best card**
+welcome offers and introductory rates, and knows nothing about how much of a
+credit you have used — that comes from reading the card's own tracker, which the
+issuer itself says may not reflect recent activity. Earning rates stay on the card entry; **Best card**
 is where rates are compared (see [BEST_CARD.md](BEST_CARD.md)).
 
 ## Private data and offline behavior
@@ -167,10 +194,11 @@ its model through the central task policy
 - `GET /v1/rewards`, `PUT /v1/rewards` — the whole wallet, revisioned. See
   [tools-api/README.md](../tools-api/README.md).
 - `POST /v1/ai-connections/:uuid/balance-intake` — `{text, program, source, unit,
-  programs}` in; `{balances, unread}` out. `programs` is every currency that site
-  states, so an issuer running two of them is read for both; a device that sends
-  only the single `program` is read the way it always was. The page text and
-  nothing else: matching and every total stay on the device.
+  programs}` in; `{balances, credits, unread}` out. `programs` is every currency
+  that site states, so an issuer running two of them is read for both; a device
+  that sends only the single `program` is read the way it always was. `credits`
+  is what the card's own trackers say is left of each recurring credit. The page
+  text and nothing else: matching and every total stay on the device.
 - `POST /v1/ai-connections/:uuid/card-benefits` — `{name}` in; `{card, benefits}`
   or `{matches:[{name,note}]}` out. Requires an OpenAI connection and web-search
   evidence including the issuer page it cites.

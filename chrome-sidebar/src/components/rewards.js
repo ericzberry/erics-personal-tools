@@ -113,7 +113,7 @@ export function BalanceTotals({totals=[],stale=0,unread=0}={}){
 // page, because a figure is the owner's to check before it is saved. `programs`
 // is every currency that site prints, which is more than one wherever an issuer
 // runs a currency per kind of card.
-export function BalancePanel({site,programs=[],rows=[],disabled=false,onRead,onSave,onDiscard}){
+export function BalancePanel({site,programs=[],rows=[],credits=[],disabled=false,onRead,onSave,onDiscard}){
   const action=(label,variant,handler)=>{
     const node=Button(label,{variant,size:'compact',disabled});
     node.addEventListener('click',handler);
@@ -123,15 +123,33 @@ export function BalancePanel({site,programs=[],rows=[],disabled=false,onRead,onS
   // all: an issuer running two of them is the case where naming only the first
   // would promise half the page.
   const currencies=(programs.length?programs:[site]).map(program=>program.label);
+  const found=[rows.length?`${rows.length} balance${rows.length===1?'':'s'}`:'',
+    credits.length?`${credits.length} credit${credits.length===1?'':'s'}`:''].filter(Boolean);
   const heading=Stack([
     Strong(`${site.source} ${currencies.join(' and ')}`),
-    rows.length?Label(`${rows.length} balance${rows.length===1?'':'s'} read · nothing saved yet`,{className:'snapshot-meta'}):null
+    found.length?Label(`${found.join(' and ')} read · nothing saved yet`,{className:'snapshot-meta'}):null
   ],{className:'snapshot-heading'});
-  if(!rows.length)return Section([heading,ActionGroup([action(`Read my balance${currencies.length>1?'s':''}`,'primary',onRead)],{compact:true})],{className:'record-row'});
-  return Section([heading,...rows.map(BalanceRow),ActionGroup([
-    action(`Save ${rows.length===1?'this balance':`these ${rows.length} balances`}`,'primary',onSave),
+  if(!found.length)return Section([heading,ActionGroup([action(`Read my balance${currencies.length>1?'s':''}`,'primary',onRead)],{compact:true})],{className:'record-row'});
+  return Section([heading,...rows.map(BalanceRow),...credits.map(CreditRow),ActionGroup([
+    action(`Save ${found.join(' and ')}`,'primary',onSave),
     action('Discard','subtle',onDiscard)
   ],{compact:true})],{className:'record-row'});
+}
+// A credit the issuer's own tracker states, and where it would land. What is
+// left in the period is the figure, because it is the one that decides whether
+// the owner does anything before it resets.
+function CreditRow(row){
+  // Which card it belongs to is said once, in the line that says where the
+  // credit would land. Carried on the name as well it was the longest thing in
+  // the panel, repeated down every row of a card that has a dozen of them.
+  const target=[row.match?`Updates ${row.match.name}`:row.holder?`New credit on ${row.holder.name}`
+    :row.ambiguous?'Several of your cards match — saves without one':row.card?`New credit · ${row.card}`:'New credit',
+    row.confidence==='high'?'':`${row.confidence} confidence`].filter(Boolean).join(' · ');
+  return Stack([
+    Stack([Label(row.name),Strong(`${row.left} left`)],{className:'snapshot-figure'}),
+    Note([CADENCE_LABELS[row.cadence]||'',target].filter(Boolean).join(' · ')),
+    ...(row.notes?[Note(row.notes)]:[])
+  ],{className:'snapshot-row'});
 }
 // A read balance names the entry it would land on, and nothing more is implied
 // until it is saved.

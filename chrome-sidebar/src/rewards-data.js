@@ -19,12 +19,18 @@ export function resetDate(cadence,now=new Date()){
   const end=new Date(now.getFullYear(),Math.floor(now.getMonth()/months)*months+months,0);
   return `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
 }
-const FIELDS=['kind','name','source','value','due','state','url','notes','secret','secretHint','card','cadence'];
+// `remaining` is what is left of a recurring credit in the period it is in now,
+// read off the issuer's own tracker. It is money as the page states it and
+// empty on everything else, including every entry saved before a tracker was
+// ever read — which is why it is a field of its own rather than something
+// folded into `value`, where it would overwrite what the card actually gives.
+const FIELDS=['kind','name','source','value','due','state','url','notes','secret','secretHint','card','cadence','remaining'];
 export function validateReward(input,now=new Date().toISOString()){
   const entry=Object.fromEntries(FIELDS.map(key=>[key,String(input[key]||'').trim()]));
   if(!entry.name||!entry.source||!entry.value)throw Error('Enter a name, source, and balance or benefit.');
   if(!REWARD_KINDS.includes(entry.kind)||!REWARD_STATES.includes(entry.state))throw Error('Choose a valid entry type and status.');
   if(entry.cadence&&!CADENCES.includes(entry.cadence))throw Error('Choose how often this benefit resets.');
+  if(entry.remaining&&(entry.kind==='card'||entry.remaining.length>40))throw Error('A remaining amount belongs to a benefit, not a card.');
   // A benefit names the card it came with, so its card is a saved card entry.
   // A card cannot belong to a card.
   if(entry.card&&(entry.kind==='card'||!/^[a-f0-9-]{36}$/.test(entry.card)))throw Error('Choose which of your saved cards this benefit belongs to.');

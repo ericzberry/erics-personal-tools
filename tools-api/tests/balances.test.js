@@ -64,6 +64,36 @@ test('a device that names one program still gets the reading it always got',asyn
   assert.match(JSON.stringify(seen.body),/This page belongs to Marriott, which keeps one balance on it: Bonvoy, counted in points/);
 });
 
+// A card prints a tracker per recurring credit beside its balances: how much
+// has been used and how much is left. The figure that matters is what is left,
+// and the two sit next to each other on the page.
+test('one reading brings back the credit trackers as well as the balances',async()=>{
+  const {fetcher,seen}=responder({balances:[
+    {program:'Membership Rewards',source:'American Express',amount:13674,unit:'points',confidence:'high'}
+  ],credits:[
+    {credit:'$200 Airline Fee Credit',card:'Morgan Stanley Platinum Card',amount:200,remaining:200,cadence:'annual',confidence:'high',notes:''},
+    {credit:'$300 Digital Entertainment Credit',card:'Morgan Stanley Platinum Card',amount:25,remaining:25,cadence:'monthly',confidence:'high',notes:'$67 earned this year.'}
+  ],unread:''});
+  const result=await readLoyaltyBalances(connection,{text:'13,674 Membership Rewards Points  $0 Earned  $200 To Go',
+    program:'Membership Rewards',source:'American Express',unit:'points'},fetcher);
+  assert.deepEqual(result.balances.map(row=>row.value),['13,674 points']);
+  assert.deepEqual(result.credits.map(row=>[row.name,row.left,row.cadence]),[
+    ['$200 Airline Fee Credit','$200','annual'],
+    ['$300 Digital Entertainment Credit','$25','monthly']
+  ]);
+  const prompt=JSON.stringify(seen.body);
+  assert.match(prompt,/STILL AVAILABLE TO USE/,'the figure asked for is what is left, not what was earned');
+  assert.match(prompt,/\$0 Earned \/ \$200 To Go\" has 200 remaining, not 0|has 200 remaining, not 0/);
+  assert.match(prompt,/A points balance, a statement balance, an amount due/);
+});
+
+test('a page with no trackers on it returns no credits rather than inventing one',async()=>{
+  const {fetcher}=responder({balances:[],unread:'The page shows an amount due, which is not a rewards balance.'});
+  const result=await readLoyaltyBalances(connection,{text:'Payment due $242.03'},fetcher);
+  assert.deepEqual(result.credits,[]);
+  assert.match(result.unread,/amount due/);
+});
+
 test('an empty page, an oversized page, and an unreadable answer are each refused in their own way',async()=>{
   const {fetcher}=responder({balances:[],unread:''});
   for(const text of ['','   ','x'.repeat(MAX_BALANCE_TEXT+1)])

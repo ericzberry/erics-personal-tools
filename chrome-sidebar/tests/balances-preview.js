@@ -34,16 +34,23 @@ const credentials={get:async()=>'synthetic-preview-token-at-least-32-characters'
 // One page of synthetic account text, read the way the sidebar reads the tab
 // beside it, and one synthetic answer from the reading.
 const page=async()=>({text:'MileagePlus\nMiles 91,204\nPremier Platinum · PQP 8,400',host:'united.com',title:'MileagePlus account',trimmed:0,tables:1});
-const reading=(balances,slow=false)=>async(token,path)=>{
+const reading=(balances,credits=[],slow=false)=>async(token,path)=>{
   if(path==='/v1/ai-connections')return {connections:[{id:'c1',name:'Synthetic',provider:'openai',hasApiKey:true}]};
   if(slow)await new Promise(resolve=>setTimeout(resolve,4000));
-  return {balances,unread:'Premier qualifying points were left out — they are not a spendable balance.'};
+  return {balances,credits,unread:'Premier qualifying points were left out — they are not a spendable balance.'};
 };
 const found=[{program:'MileagePlus',source:'United Airlines',amount:91204,unit:'miles',confidence:'high',notes:'8,400 PQP shown on the page are qualifying points, not a balance.'}];
 // An issuer running a currency per kind of card: the points cards earn
 // Membership Rewards, the cash-back card earns Reward Dollars, and both are
 // printed on the one page the panel reads.
 const amexPage=async()=>({text:'Membership Rewards Points 13,674 · 2 Accounts\nReward Dollars $125.49 · Blue Cash Preferred',host:'americanexpress.com',title:'American Express',trimmed:0,tables:1});
+// What a card's own benefits page states beside its balance: a tracker per
+// recurring credit, saying what is left of it in the period it is in now.
+const amexCredits=[
+  {credit:'$200 Airline Fee Credit',card:'Morgan Stanley Platinum Card® (-61007)',amount:200,remaining:200,cadence:'annual',confidence:'high',notes:''},
+  {credit:'$300 Digital Entertainment Credit',card:'Morgan Stanley Platinum Card® (-61007)',amount:25,remaining:25,cadence:'monthly',confidence:'high',notes:'$67 earned this year.'},
+  {credit:'Uber Cash',card:'Morgan Stanley Platinum Card® (-61007)',amount:15,remaining:0,cadence:'monthly',confidence:'medium',notes:'Spent this month.'}
+];
 const amexFound=[
   {program:'Membership Rewards',source:'American Express',amount:13674,unit:'points',confidence:'high',notes:''},
   {program:'Reward Dollars',source:'American Express',amount:125.49,unit:'dollars',confidence:'high',notes:'Earned on Blue Cash Preferred.'}
@@ -56,6 +63,7 @@ for(const [label,url,remote,read] of [
   ['Beside a program page · the page shows no balance','https://www.marriott.com/loyalty/myAccount.mi',reading([]),page],
   ['Beside an issuer running two currencies · nothing read yet','https://global.americanexpress.com/rewards/summary',reading(amexFound),amexPage],
   ['Beside an issuer running two currencies · read, nothing saved yet','https://global.americanexpress.com/rewards/summary',reading(amexFound),amexPage],
+  ['Beside a card’s benefits page · read, nothing saved yet','https://global.americanexpress.com/rewards/summary',reading(amexFound.slice(0,1),amexCredits),amexPage],
   ['An ordinary page · no panel at all','https://example.invalid/',reading(found),page],
   ['A full tab · the wallet, with no page to read',null,reading(found),null]
 ]){

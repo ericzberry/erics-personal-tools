@@ -117,6 +117,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `rewards-sync.js`, `balance-data.js` (points and miles: what a page reading
   may become, which saved balance it updates, and the per-unit totals the
   wallet opens with — shared with mobile and the Worker),
+  `credit-data.js` (the other half of that reading: what an issuer's own
+  tracker says is left of each recurring credit, which of the owner's cards it
+  belongs to, and which saved benefit it fills in — shared the same way),
   `program-data.js`/`program-offline.js` (the offer
   catalogues reward programs publish, read-only on every host),
   `finance-data.js`/`finance-offline.js` (the ledger: the asset-class and

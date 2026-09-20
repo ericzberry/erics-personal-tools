@@ -2003,3 +2003,47 @@ Show the accounts themselves on the page, then read again.*
 
 Validation: 61 finance and account-site tests pass; the whole extension and
 mobile suites pass from an archive of HEAD.
+
+## The tracker says what is left; research never could (0.6.176 / mobile 0.1.126)
+
+A card's benefits are already in the wallet — **Add a card you hold** brings back
+what the card gives, how often each credit resets and what has to be enrolled in.
+What no research can know is how much of one is left this month, and that is the
+part that decides whether the owner does anything today. The issuer prints it:
+`$200 Airline Fee Credit · $0 Earned · $200 To Go`, a tracker per credit, beside
+the points balance the panel already reads.
+
+**One press, both halves.** The same snapshot of the page in front of the owner
+now comes back as balances and credits together, reviewed in one list and saved
+by one press. Nothing about the errand changed: no session, cookie or credential
+leaves the browser, none of the wallet is sent, and nothing is written by reading.
+
+**What is stored is what is left.** `$0 Earned / $200 To Go` has $200 left, and
+reading it the other way round would say a credit had been spent that has not
+been touched — so the reading is told, in those words, which of the two figures
+it is being asked for. The figure sits beside the card's own terms rather than
+replacing them, because "$25 per month" and "$25 left this month" are different
+facts and only one of them changes. A credit with nothing left is marked used,
+which takes it off Next actions until the period turns over and the next reading
+gives it back.
+
+**Filed under the card it belongs to.** The page names the card; the wallet holds
+whatever research called it. They are matched on the words that tell one card
+from another — every Amex is an American Express card, so those words name
+none of them — and a name that fits two equally is filed under neither, because
+a Platinum's credits under a Blue Cash is worse than credits under no card.
+
+**`remaining` is a field of its own.** Folded into `value` it would overwrite
+what the card actually gives; every entry saved before a tracker was ever read
+simply has none, and the row says the figure once where the terms and what is
+left are the same number.
+
+New coverage: a tracker read for what is left and not what was earned; a credit
+with no such figure left out; money read as money; the same credit stated twice
+kept once; a card matched on what distinguishes it and a tie filed under none; a
+read credit updating the saved benefit while its notes, link and terms stay the
+owner's; a spent credit going used and coming back; a card-less credit still
+saying where it came from; and the API returning both halves of one reading.
+Validation: 505 extension, 33 mobile and 128 API tests pass. The panel and the
+saved rows were reviewed against a synthetic reading of the Amex benefits page
+at 420px and 280px with no horizontal overflow.

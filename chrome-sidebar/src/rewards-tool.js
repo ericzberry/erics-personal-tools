@@ -5,6 +5,7 @@ import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} f
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl} from './program-data.js';
 import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord,directoryBalances,UNREAD_BALANCE} from './balance-data.js';
+import {parseCreditReading,matchCredits,creditRecord} from './credit-data.js';
 import {LOYALTY_PROGRAMS,loyaltySitePrograms} from './loyalty-sites.js';
 import {aiConnections} from './ai-connection.js';
 const fields=['kind','name','source','card','value','due','cadence','state','url','notes'];
@@ -34,7 +35,9 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // The loyalty program whose site is open beside the panel, and what was read
   // off it. A reading is a proposal until it is saved: the figures are shown as
   // they will be stored, and nothing is written by reading.
-  let site=null,balances=null;
+  // `credits` is the other half of the same reading: what the issuer's own
+  // trackers say is left of each recurring credit on the card.
+  let site=null,balances=null,credits=null;
   let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null,syncFailed=false;
   let found=null,connectionsFor='';
   const connections=aiConnections({load:async token=>(await remote(token,'/v1/ai-connections')).connections,need:'to read a balance off a page or look up a card.'});
@@ -231,9 +234,9 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('balance-panel').hidden=!show;
     if(!show){$('balance-body').replaceChildren();setStatus($('balance-status'),'');return;}
     $('balance-body').replaceChildren(BalancePanel({
-      site,programs:loyaltySitePrograms(site),rows:balances||[],disabled:busy||!loaded,
+      site,programs:loyaltySitePrograms(site),rows:balances||[],credits:credits||[],disabled:busy||!loaded,
       onRead:readBalances,onSave:saveBalances,
-      onDiscard:()=>{balances=null;renderBalances();balanceStatus('');}
+      onDiscard:()=>{balances=null;credits=null;renderBalances();balanceStatus('');}
     }));
   }
   const balanceStatus=(text,tone='')=>setStatus($('balance-status'),text,tone);
@@ -258,26 +261,40 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
           programs:programs.map(entry=>({program:entry.label,source:entry.source,unit:entry.unit}))},timeoutMs:130000});
       // Checked here too: the wallet accepts nothing the API has not proved.
       const rows=matchBalances(parseBalanceReading(result,programs),entries);
-      balances=rows.length?rows:null;
-      balanceStatus(rows.length
-        ?`${rows.length} balance${rows.length===1?'':'s'} read. Nothing is saved yet.`
-        :[`No balance was found on that page. Open your account page and read again.`,result.unread||''].filter(Boolean).join(' '),rows.length?'success':'alert');
+      const found=matchCredits(parseCreditReading(result,site.source),entries);
+      balances=rows.length?rows:null;credits=found.length?found:null;
+      const read=[rows.length?`${rows.length} balance${rows.length===1?'':'s'}`:'',
+        found.length?`${found.length} credit${found.length===1?'':'s'}`:''].filter(Boolean);
+      balanceStatus(read.length
+        ?`${read.join(' and ')} read. Nothing is saved yet.`
+        :['Nothing to read on that page. Open your account or benefits page and read again.',result.unread||''].filter(Boolean).join(' '),read.length?'success':'alert');
     }catch(error){balanceStatus(reason(error),'error');}
     finally{busy=false;render();renderBalances();}
   }
   // Saved one at a time through the same validator and queue as a typed edit.
   // A balance that fails leaves itself and the rest in place to be corrected.
   async function saveBalances(){
-    if(!balances?.length)return;
-    let saved=0;
-    while(balances.length){
+    if(!balances?.length&&!credits?.length)return;
+    let figures=0,tracked=0;
+    while(balances?.length){
       const [row]=balances,match=row.ambiguous?null:row.match;
       const entry=balanceRecord(row,match);
       if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent,'error');return;}
-      balances=balances.slice(1);saved++;
+      balances=balances.slice(1);figures++;
     }
-    balances=null;renderBalances();
-    balanceStatus(`Saved ${saved} balance${saved===1?'':'s'}.`,'success');
+    balances=null;
+    // A credit goes through the same validator and queue as a typed benefit,
+    // one at a time, so one that fails leaves itself and the rest on screen to
+    // be saved again rather than taking the reading down with it.
+    while(credits?.length){
+      const [row]=credits,match=row.match;
+      const entry=creditRecord(row,match,row.ambiguous?null:row.holder);
+      if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent,'error');return;}
+      credits=credits.slice(1);tracked++;
+    }
+    credits=null;renderBalances();
+    balanceStatus(`Saved ${[figures?`${figures} balance${figures===1?'':'s'}`:'',
+      tracked?`${tracked} credit${tracked===1?'':'s'}`:''].filter(Boolean).join(' and ')}.`,'success');
   }
   function startCard(){$('reward-card-intake').open=true;$('reward-card-name').focus();}
   // The wallet as a directory of programs. Every program this tool recognizes
@@ -302,6 +319,12 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // "Available" after it states nothing the row does not. A card carries no
   // state either, for the same reason it carries no deadline.
   const detailOf=e=>[e.source,e.value,
+    // What the issuer's own tracker last said is left of it. The card's terms
+    // stay in the value beside it, because "$25 per month" and "$25 left this
+    // month" are different facts and only one of them changes — and when they
+    // are the same figure, which is a credit read before its terms were ever
+    // researched, the row says it once.
+    e.remaining&&e.remaining!==e.value?`${e.remaining} left`:'',
     e.kind==='card'||(e.kind==='balance'&&e.value===UNREAD_BALANCE)?'':STATES[e.state],CADENCE_LABELS[e.cadence]||'',
     e.secretHint?`•••• ${e.secretHint}`:'',e.due?`Due ${e.due}`:'',e.pending?'Waiting to sync':'',
     e.conflict?'Conflict':'',e.deleting?'Pending deletion':''].filter(Boolean).join(' · ');
@@ -358,7 +381,9 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     picker.replaceChildren(Option('Not a card benefit',''),...cards.map(card=>Option(card.name,card.id)));
     picker.value=cards.some(card=>card.id===chosen)?chosen:'';
     const next=nextActions(entries.filter(e=>!e.deleting&&!e.conflict));
-    $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,detail:`${e.name} · ${e.source} · ${e.value}`,actions:[rowAction(EDIT_GLYPH,`Review ${e.name}`,()=>edit(e))]})));
+    $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,
+      detail:[e.name,e.source,e.remaining?`${e.remaining} left`:e.value].join(' · '),
+      actions:[rowAction(EDIT_GLYPH,`Review ${e.name}`,()=>edit(e))]})));
     $('rewards-actions').closest('section').hidden=!next.length;
     // What the owner came to the wallet to know: how many miles and how many
     // points they hold, counted separately and never added together.
@@ -392,7 +417,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
   async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…','progress');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
-  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
+  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=null;catalogs=[];balances=null;credits=null;connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
   // Whether a connection exists at all is the only thing worth saying, and it
   // is checked once per connected device rather than on every automatic sync.
   async function connectionList(){
@@ -499,7 +524,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     // site has nothing to say beside another's.
     site(program=null){
       if((program?.id||'')===(site?.id||''))return;
-      site=program||null;balances=null;
+      site=program||null;balances=null;credits=null;
       renderBalances();
     },
     stop(){clearInterval(watch);clearInterval(retry);clearTimeout(revealTimer);}};

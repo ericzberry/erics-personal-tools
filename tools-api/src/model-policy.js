@@ -18,7 +18,11 @@ export const TASK_POLICIES = {
   'cards.category':{label:'Purchase reading',level:1,outputTokens:600,web:false,maxCost:0.01},
   'cards.research':{label:'Card issuer research',level:3,outputTokens:4000,web:true,maxCost:0.10},
   'rewards.benefits':{label:'Card benefit research',level:3,outputTokens:6000,web:true,maxCost:0.15},
-  'rewards.balances':{label:'Points balance reading',level:2,outputTokens:1200,web:false,maxCost:0.02},
+  // One press reads the page for both of the things it states: the balances,
+  // and the credit trackers a card prints beside them. A premium card carries a
+  // couple of dozen of those, so the budget is the list of them rather than a
+  // figure or two.
+  'rewards.balances':{label:'Points and credit reading',level:2,outputTokens:4000,web:false,maxCost:0.03},
   'subscriptions.intake':{label:'Recurring charge reading',level:2,outputTokens:7000,web:false,maxCost:0.05},
   'subscriptions.research':{label:'Subscription alternatives',level:3,outputTokens:4000,web:true,maxCost:0.10},
   // A broker dashboard is not a simple extraction. It states several accounts
@@ -28,7 +32,14 @@ export const TASK_POLICIES = {
   // a column of gains the holdings — both of which the instructions rule out
   // in as many words. This is the ledger Eric's net worth is kept in, and the
   // reasoning model that follows those rules costs a tenth of a cent more.
-  'finance.intake':{label:'Finance reading',level:3,outputTokens:2500,web:false,maxCost:0.03},
+  // The budget is the list of accounts, not a figure or two. A wealth manager
+  // holding a family's joint account and its trusts prints twenty-eight of them
+  // on one page, and each one comes back as a named, classified, dated reading:
+  // that page needs some 2,800 output tokens and had 2,500, so the JSON stopped
+  // mid-account and the whole reading was thrown away as unreadable. A ledger
+  // may not be read in part, so the ceiling is set where a page of that size
+  // fits whole.
+  'finance.intake':{label:'Finance reading',level:3,outputTokens:7000,web:false,maxCost:0.03},
   'capture.note':{label:'Quick note reading',level:1,outputTokens:500,web:false,maxCost:0.01},
   'email.summary':{label:'Email summary',model:'gpt-5.6-terra',level:3,outputTokens:700,web:false,maxCost:0.04},
   // A reply goes out over Eric's name in Eric's voice, so it uses the model he
