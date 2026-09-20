@@ -51,8 +51,8 @@ is marked `vision` only where image input is known to be supported; an unmarked
 model is simply never chosen for an image, which surfaces as a clear "no model
 available" rather than a provider error.
 
-`finance.intake` uses level 2, 7,000 output tokens, no web tool, and a $0.03
-estimated request ceiling. The output budget was raised from 2,500 on
+`finance.intake` names `gpt-5.6-terra`, with 7,000 output tokens, no web tool,
+and a $0.12 estimated request ceiling. The output budget was raised from 2,500 on
 2026-09-20: a wealth manager listing a household's joint account and its trusts
 puts twenty-eight accounts on one page, each of which comes back named,
 classified and dated, and that answer weighs some 2,800 output tokens. Against
@@ -78,18 +78,22 @@ mid-answer at 25 seconds with the provider still billing for it. The reading now
 waits 113 seconds, inside the 130 the device itself allows, so the Worker gives
 up first and can say why.
 
-The level went back to 2 on 2026-09-20, and with it to a model that does not
-reason before answering. It had been raised to 3 because a level-2 model read
-E*TRADE's page by filing every figure under the institution's name and calling a
-column of gains the holdings — both of which are what a snapshot looks like when
-the page reader hands over bare figures with no row around them. It no longer
-does: accounts arrive as table rows naming the account, the column and the
-figure together, a figure a row already stated is not repeated loose, and a
-change printed above its own percentage never reaches the model. What level 3
-cost was the wait — a reasoning model thinks first and then still has
-twenty-eight accounts to write. Selection is now `gpt-4.1-mini` at about $0.013
-a read against $0.016, and Settings still pins this one task to any reviewed
-model if a reading comes back wrong.
+The model is named rather than left to whichever is cheapest, because the two
+things this reading needs are the two things cheapest does not choose for. It
+has to be current: selection by price landed on `gpt-4.1-mini`, a generation
+behind everything else the app calls. And it has to be quick: the alternative at
+that tier reasons before every answer, and thinking first and then writing
+twenty-eight accounts is what made one press sit for the better part of two
+minutes. `gpt-5.6-terra` is the same tier as the reasoning model it replaces, a
+generation newer, takes image input, and answers at `reasoning.effort: none`.
+
+It is dearer per token — about four cents for a page the size of a wealth
+manager's account list, against one — so the ceiling is raised to $0.12 to clear
+the largest page the reading accepts rather than the usual one, which is the
+right trade for the ledger a net worth is kept in at the rate one household
+reads its accounts. A connection that cannot reach the named model is refused in
+words rather than sent quietly to another, and Settings still pins this one task
+to any reviewed model.
 
 It reads one block of pasted text, or an image of a statement, into draft
 figures and nothing else: the owner's saved records are never sent, so it

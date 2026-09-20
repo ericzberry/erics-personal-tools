@@ -110,7 +110,18 @@ test('the finance reading takes the fast model, and an image still finds one tha
   const page={messages:[{role:'system',content:'y'.repeat(8784)},{role:'user',content:'x'.repeat(2715)}]};
   const chosen=chooseTaskModel({provider:'openai',available,task:'finance.intake',input:page});
   assert.equal(chosen.model.reasoning??false,false,'no model that thinks before it writes');
+  // Named rather than left to whichever is cheapest, because cheapest chooses
+  // for neither of the things this reading needs — a current model, and a quick
+  // one. A model a generation behind the rest of the app must not win it.
+  assert.equal(chosen.model.id,TASK_POLICIES['finance.intake'].model);
+  assert.equal(chosen.model.reasoningEffort,'none','it answers without reasoning first');
+  assert.ok(!/^gpt-4/.test(chosen.model.id),`${chosen.model.id} is a generation behind`);
   assert.ok(chosen.estimatedCost<=TASK_POLICIES['finance.intake'].maxCost);
+  // The ceiling has to clear the largest page the reading accepts, not the
+  // usual one, or the biggest ledger is the one that cannot be read.
+  const largest={messages:[{role:'system',content:'y'.repeat(8784)},{role:'user',content:'x'.repeat(24000)}]};
+  assert.ok(chooseTaskModel({provider:'openai',available,task:'finance.intake',input:largest})
+    .estimatedCost<=TASK_POLICIES['finance.intake'].maxCost,'a full-length page still fits the cost policy');
   // A photographed statement goes down the same route and must still reach a
   // model this application will send a picture to.
   const photo={messages:[{role:'user',content:[{type:'image'},{type:'text',text:'x'}]}]};
