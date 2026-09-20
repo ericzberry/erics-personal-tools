@@ -11,7 +11,7 @@
 // asks that page for itself, from inside the tab, over the session already
 // there. That is what makes "all the offers" true from any page on the site
 // instead of only from the index.
-import {rewardProgram, validateProgramCatalog, MAX_CATALOG_BYTES} from './program-data.js';
+import {rewardProgram, validateProgramCatalog, MAX_CATALOG_BYTES, READ_MARKUP} from './program-data.js';
 import {CONNECTION_KEY, cloudRequest} from './cloud-storage.js';
 
 export const FETCH_MS = 15000;
@@ -79,7 +79,11 @@ const token = async (api) => (await api.storage.local.get(CONNECTION_KEY))[CONNE
 // to do — no program, not due, not connected, or the page would not be read.
 export async function readProgramFromTab(tab, {api = globalThis.chrome, request = cloudRequest, now = () => Date.now()} = {}) {
   const program = rewardProgram(tab?.url);
-  if (!program || tab.id === undefined) return null;
+  // Only a program whose catalogue is published in its markup is read this
+  // way. A program whose offers are the owner's own is read by the wallet,
+  // from the text of the page, and only when the owner presses for it — so
+  // visiting that site quietly reads nothing.
+  if (!program || program.reading !== READ_MARKUP || tab.id === undefined) return null;
   const {[READ_STATE_KEY]: state = {}} = await api.storage.local.get(READ_STATE_KEY);
   if (!shouldRead(program, tab.url, state, now())) return null;
   const access = await token(api);
@@ -118,7 +122,7 @@ export async function forgetProgramReads(api = globalThis.chrome) {
 export function watchRewardPrograms(api = globalThis.chrome, {read = readProgramFromTab, onRead = () => {}} = {}) {
   let queue = Promise.resolve();
   const consider = tab => {
-    if (!rewardProgram(tab?.url)) return;
+    if (rewardProgram(tab?.url)?.reading !== READ_MARKUP) return;
     queue = queue.then(() => read(tab)).then(catalog => {if (catalog) onRead(catalog);}, () => {});
   };
   api.tabs.onUpdated.addListener((id, change, tab) => {if (change.status === 'complete') consider(tab);});

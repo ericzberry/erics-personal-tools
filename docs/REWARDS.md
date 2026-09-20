@@ -114,6 +114,14 @@ one text snapshot of the page you are already looking at, turns it into a
 figure per program, and shows it. Nothing is saved by reading: each balance
 names the entry it would land on, and a press of yours saves it.
 
+An issuer's page also lists the offers it has picked for your cards, and those
+are a catalogue rather than wallet entries: the same press saves them under
+**Offers**, beside the other catalogue, and says how many. Nothing there waits
+to be reviewed, because a hundred merchants reviewed one at a time is not a
+thing to ask of anyone; the list adds and updates and retires nothing, so
+scrolling further and pressing again brings back the rest. See
+[reward programs](REWARD_PROGRAMS.md).
+
 What the snapshot keeps depends on whose page it is. An airline's or a hotel's
 page is a balance page, and is narrowed to the lines that carry a figure and the
 lines that name one, the way Finance reads an account page. A card issuer's own

@@ -131,8 +131,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   own page and folded into that card's saved `rewardRules` in Best card rather
   than into the wallet — the category, the channel, the rule it replaces and
   the card it lands on; shared with mobile and the Worker),
-  `program-data.js`/`program-offline.js` (the offer
-  catalogues reward programs publish, read-only on every host),
+  `program-data.js`/`program-offline.js` (the offer catalogues reward programs
+  keep: the registry of programs and whether each is read from its markup or
+  from the text of the page, `parseOfferReading` for the second kind, and the
+  fold, search and grouping of a catalogue — read-only on every host),
   `finance-data.js`/`finance-offline.js` (the ledger: the asset-class and
   registration code registries, the portfolio and figure validators, the totals
   and the series, `foldReadings` — which turns what a page states into the few

@@ -19,6 +19,25 @@ let rewards={entries:[
   {id:'99999999-9999-4999-8999-999999999999',kind:'benefit',name:'Synthetic ride credit',source:'Synthetic Gold Card (...4321)',value:'$15 per month',due:'',state:'available',url:'',notes:'',secret:'',secretHint:'',cadence:'monthly',remaining:'$15',updatedAt:new Date().toISOString()}
 ],revision:'first'};
 let cards=[{id:'22222222-2222-4222-8222-222222222222',name:'Synthetic Everyday Cash',unit:'cash',base:2,cpp:1,rules:'[]',checked:'2026-09-09',source:'https://example.com/terms',notes:'Synthetic terms for testing only.',revision:'first'}, {id:'33333333-3333-4333-8333-333333333333',name:'Synthetic Dining Points',unit:'points',base:1,cpp:1.5,rules:JSON.stringify([{category:'Dining',channel:'Any',rate:3,remaining:50,active:true,end:'',condition:'Eligible restaurant purchase'}]),checked:'2026-09-09',source:'',notes:'',revision:'first'}, {id:'44444444-4444-4444-8444-444444444444',name:'Synthetic Everyday Points',unit:'points',base:1,cpp:1.2,rules:JSON.stringify([{category:'Gas',channel:'Any',rate:4,remaining:null,active:true,end:'',condition:''},{category:'Department stores',channel:'Any',rate:3,remaining:null,active:true,end:'',condition:''}]),checked:'2026-09-09',source:'',notes:'',revision:'first'}];
+const offer=(programId,key,name,category,summary,extra={})=>({key,name,category,summary,badge:'',dates:'',
+  firstSeenAt:new Date(Date.now()-40*86400000).toISOString(),...extra});
+const reservedCatalog={id:'ms-reserved',programId:'ms-reserved',label:'Morgan Stanley Reserved',
+  source:'Morgan Stanley Reserved Living & Giving',complete:true,readAt:new Date().toISOString(),listedAt:new Date().toISOString(),
+  offers:[
+    offer('ms-reserved','/offer/synthetic-hotel','Synthetic Hotel Group','Travel','Fourth night free on eligible stays, plus a room upgrade.'),
+    offer('ms-reserved','/offer/synthetic-car','Synthetic Car Rental','Automotive','Up to 25% off the base rate worldwide.'),
+    offer('ms-reserved','/offer/synthetic-spa','Synthetic Spa','Health & Beauty','$50 credit on a first booking.',{badge:'New',firstSeenAt:new Date().toISOString()})
+  ],updatedAt:new Date().toISOString()};
+// An issuer's offers as a page reading saves them: no page of their own, the
+// merchant as the name, and the badge the page put on it.
+let amexCatalog={id:'amex-offers',programId:'amex-offers',label:'Amex Offers',source:'American Express',
+  complete:false,readAt:new Date().toISOString(),listedAt:'',
+  offers:[
+    offer('amex-offers','synthetic-hotel-spend-500-get-100-back','Synthetic Hotel','Travel','Spend $500 or more, get $100 back.',{badge:'Added',dates:'Expires 12/31/2026'}),
+    offer('amex-offers','synthetic-grocer-spend-75-get-15-back','Synthetic Grocer','Food & Drink','Spend $75 or more, get $15 back.',{dates:'Expires 11/30/2026'}),
+    offer('amex-offers','synthetic-tailor-spend-250-get-50-back','Synthetic Tailor','Retail','Spend $250 or more, get $50 back.',{badge:'New',firstSeenAt:new Date().toISOString()}),
+    offer('amex-offers','synthetic-streaming-get-5x-points','Synthetic Streaming','Entertainment','Get 5X Membership Rewards points on eligible purchases.')
+  ],updatedAt:new Date().toISOString()};
 const fixture = `
 const fixtureEncode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
 let canceled = false, unsupported = false, offset = 0;
@@ -71,7 +90,7 @@ createServer(async (req, res) => {
       res.setHeader('Content-Type','text/html');res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><script src="/app/fixture.js"></script><link rel="stylesheet" href="/app/styles.css"><link rel="stylesheet" href="/app/shared/components/travel.css"><link rel="stylesheet" href="/app/shared/components/capabilities.css"></head><body class="shell unlocked-tools"><main id="root"></main><script type="module" src="/rewards-fixture.js"></script></body></html>`);return;
     }
     if(url.pathname==='/rewards-fixture.js'){
-      res.setHeader('Content-Type','text/javascript');res.end(`import {mountRewards} from '/app/shared/rewards-tool.js';import {rewardsOffline} from '/app/shared/rewards-offline.js';const token='${token}';const remote=async(_t,path,options={})=>{const response=await fetch(path,{method:options.method||'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:options.value?JSON.stringify(options.value):undefined});const value=await response.json();if(!response.ok)throw Object.assign(Error(value.error||'Synthetic failure'),{status:response.status});return value;};const tool=mountRewards(document.getElementById('root'),{credentials:{get:async()=>token},offline:rewardsOffline({remote}),remote});window.previewTool=tool;tool.refresh();`);return;
+      res.setHeader('Content-Type','text/javascript');res.end(`import {mountRewards} from '/app/shared/rewards-tool.js';import {rewardsOffline} from '/app/shared/rewards-offline.js';import {programsOffline} from '/app/shared/program-offline.js';const token='${token}';const remote=async(_t,path,options={})=>{const response=await fetch(path,{method:options.method||'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:options.value?JSON.stringify(options.value):undefined});const value=await response.json();if(!response.ok)throw Object.assign(Error(value.error||'Synthetic failure'),{status:response.status});return value;};const tool=mountRewards(document.getElementById('root'),{credentials:{get:async()=>token},offline:rewardsOffline({remote}),programs:programsOffline({remote}),remote});window.previewTool=tool;tool.refresh();`);return;
     }
     if (url.pathname === '/fixture-count') {res.end(JSON.stringify({apiCalls}));return;}
     if (url.pathname.startsWith('/app/')) {
@@ -126,6 +145,18 @@ createServer(async (req, res) => {
       const cardId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');const previous=cards.find(c=>c.id===cardId);
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end(JSON.stringify({error:'Changed elsewhere'}));return;}
       cards=cards.filter(c=>c.id!==cardId);if(req.method==='PUT'){const record={...value,id:cardId,revision:crypto.randomUUID()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
+    }
+    // Two catalogues, because the Offers tab reads differently with more than
+    // one: a published one read from its markup, and an issuer's own offers
+    // read off the page by a press of the owner's.
+    if(url.pathname==='/v1/rewards/programs'||url.pathname==='/v1/rewards/programs/snapshot'){
+      res.end(JSON.stringify({records:[reservedCatalog,amexCatalog]}));return;
+    }
+    if(url.pathname.startsWith('/v1/rewards/programs/')){
+      let text='';for await(const data of req)text+=data;
+      const value=JSON.parse(text||'{}');
+      amexCatalog={...amexCatalog,offers:[...value.offers||[],...amexCatalog.offers].slice(0,500),updatedAt:new Date().toISOString()};
+      res.end(JSON.stringify({catalog:amexCatalog}));return;
     }
     if(url.pathname==='/v1/rewards'){
       if(req.method==='PUT'){let text='';for await(const data of req)text+=data;const value=JSON.parse(text);if(value.revision!==rewards.revision){res.statusCode=409;res.end('{}');return;}rewards={entries:value.entries,revision:crypto.randomUUID()};}

@@ -2,12 +2,38 @@
 
 A reward program is a perks portal: a membership with no balance, whose value is
 the catalogue of offers behind it. Morgan Stanley Reserved Living & Giving
-(`msreserved.com`) is the first one. Its offers change without notice, so the
-catalogue is read from the program's own pages instead of being typed in, and
-it is refreshed whenever the owner visits the site.
+(`msreserved.com`) is the first one, and **Amex Offers** — the offers American
+Express picks for the cards you hold — is the second. Offers change without
+notice, so a catalogue is read from the program's own pages instead of being
+typed in.
 
 The offers appear under **Offers**, the tab beside **Wallet** in Rewards &
 benefits, on the extension and on the phone.
+
+## Two kinds of catalogue
+
+Morgan Stanley Reserved publishes its offers: every member sees the same list,
+it needs no sign-in, and its pages are a listing whose markup says which part is
+an offer. That catalogue is read from the markup, by the watcher, whenever the
+owner visits the site. It costs nothing and it is exact.
+
+Amex Offers is the other kind. The offers are chosen for the owner's own cards,
+they sit behind their sign-in, and the page is an application rather than a
+listing — its markup is nobody's contract. So that catalogue is read the way the
+wallet reads an issuer's page: the owner presses **Read this page** with the
+offers open beside the panel, and the text of that page is read into offers.
+Visiting americanexpress.com reads nothing on its own.
+
+Because those offers are the owner's, the text of that page goes to the same
+model the rest of the reading uses — merchant names and what each offer gives,
+as the page states them. Nothing else about the account goes with it: no
+session, cookie or credential leaves the browser, and none of the wallet is
+sent. The catalogue is stored encrypted like every other record.
+
+A reading of that page is always **partial**. The list loads more offers as it
+is scrolled, so a reading adds and updates and never retires: scroll, press
+again, and what was further down joins what was already saved. At most
+`OFFER_READ_LIMIT` (100) offers come back from one press.
 
 ## What is read, and what is not
 
@@ -15,15 +41,18 @@ The reading follows the rule Finance already follows for an account site. The
 extension never signs in, never navigates, and never opens a tab of its own. It
 reads a page the owner already has open, in the page.
 
-What it takes is the published offer list: for each offer, its name, category,
-one-line summary, any badge (*New*, *Exclusive*, *Limited-Time Offer*), any
-dates, and the path of the offer's own page. Every member sees the same list.
+What it takes is the offer list: for each offer, its name, category, one-line
+summary, any badge (*New*, *Exclusive*, *Limited-Time Offer*, or *Added* where
+an issuer says the offer is already on a card), any dates, and the path of the
+offer's own page where it has one.
 
-What it never takes is anything about the owner's account. No session, cookie,
-or credential leaves the browser, and none is needed: the catalogue is the same
-whether or not anyone is signed in.
+What it never takes is a session, a cookie, or a credential — neither leaves the
+browser, and for a published catalogue none is needed: it is the same list
+whether or not anyone is signed in. An issuer's offers are the owner's own, and
+are held to the same rule as the rest of their wallet: read only when they ask,
+stored encrypted, and never sent anywhere but to the model that reads the page.
 
-## Where the whole list comes from
+## Where the whole list comes from (a published catalogue)
 
 `/offers/all_offers` lists every offer; every other page on the site shows a
 subset. When the owner is on the site but not on that page, the reading asks
@@ -36,7 +65,7 @@ reading drops an offer the program no longer lists. The status line dates the
 catalogue by the last complete reading, because a partial one does not confirm
 the rest is still current.
 
-## When it runs
+## When it runs (a published catalogue)
 
 `background.js` registers the watcher, so a visit is picked up whether or not
 the side panel is open. Landing on `/offers/all_offers` always reads — the
@@ -86,7 +115,10 @@ that is on the program's site.
 Add an entry to `REWARD_PROGRAMS` in
 [`chrome-sidebar/src/program-data.js`](../chrome-sidebar/src/program-data.js):
 its `id`, `label`, `source`, `hosts`, `origin`, the `catalog` path that lists
-everything, and the `offer` path pattern. If the program's markup differs from
+everything, the `offer` path pattern, and `reading` — `markup` for a published
+catalogue the watcher reads, or `text` for one read off the page by the owner's
+press, where offers have no page of their own and each one's link is the list
+it sits on. If the program's markup differs from
 the card markup `readProgramCards` expects, extend that reader in
 [`reward-programs.js`](../chrome-sidebar/src/reward-programs.js) rather than
 teaching the catalogue about a second shape.

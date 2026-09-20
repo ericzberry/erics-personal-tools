@@ -3,7 +3,7 @@ import {CardMatches} from './components/cards.js';
 import {RecordRow,RecordGroup,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
 import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
-import {catalogOffers,catalogGroups,catalogCategories,offerUrl} from './program-data.js';
+import {catalogOffers,catalogGroups,catalogCategories,offerUrl,rewardProgram,parseOfferReading,validateProgramCatalog,MAX_CATALOG_BYTES,READ_TEXT} from './program-data.js';
 import {parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,programShort,walletRun,WALLET_RUNS,UNREAD_BALANCE} from './balance-data.js';
 import {parseCreditReading,parseBenefitReading,matchCredits,creditRecord,benefitRecord} from './credit-data.js';
 import {parseRateReading,matchRates,rateCards,rateCardRecord} from './rate-data.js';
@@ -297,10 +297,34 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       // it found, which already carries the counts and "nothing saved yet".
       // Saying it again underneath is the screen telling the reader what they
       // are looking at. Only a reading that found nothing needs words.
-      balanceStatus(readingSummary({rows,credits:found,rates:rated,benefits:extra}).length?''
-        :['Nothing to read on that page. Open your account or benefits page and read again.',result.unread||''].filter(Boolean).join(' '),'alert');
+      // The offers a card's page lists are the program's catalogue, not the
+      // owner's wallet, so they go where the other catalogue goes and they go
+      // straight there: an offer list is read again every time the page is,
+      // and reviewing a hundred merchants one by one is not a thing to ask of
+      // anyone. A reading of it is always partial — the page loads more as it
+      // is scrolled — so it adds and updates and retires nothing.
+      const listed=await saveOffers(token,page.url,result);
+      balanceStatus(readingSummary({rows,credits:found,rates:rated,benefits:extra}).length
+        ?listed?`${listed} offer${listed===1?'':'s'} saved under Offers.`:''
+        :listed?`${listed} offer${listed===1?'':'s'} saved under Offers.`
+        :['Nothing to read on that page. Open your account or benefits page and read again.',result.unread||''].filter(Boolean).join(' '),listed?'success':'alert');
     }catch(error){balanceStatus(reason(error),'error');}
     finally{busy=false;render();renderBalances();}
+  }
+  // The offers off a page whose program keeps its catalogue in the page's text
+  // rather than its markup. The fold into what is stored is the Worker's, the
+  // same as for a catalogue read by the watcher, because that is the one copy
+  // every device writes. A program this page does not belong to, or a reading
+  // that found no offers, writes nothing.
+  async function saveOffers(token,url,result){
+    const program=rewardProgram(url);
+    if(!program||program.reading!==READ_TEXT)return 0;
+    const offers=parseOfferReading(result,program.id);
+    if(!offers.length)return 0;
+    const value=validateProgramCatalog({programId:program.id,complete:false,offers});
+    await remote(token,`/v1/rewards/programs/${program.id}`,{method:'PUT',value,maxBytes:MAX_CATALOG_BYTES});
+    await loadPrograms();
+    return offers.length;
   }
   // Saved one at a time through the same validator and queue as a typed edit.
   // A balance that fails leaves itself and the rest in place to be corrected.

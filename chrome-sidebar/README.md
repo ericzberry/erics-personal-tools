@@ -2655,3 +2655,42 @@ its cards are titled is one of its cards, whatever the page calls it — and a
 business card is still matched to its company by the roster first.
 
 Validation: 571 extension and 33 mobile tests pass.
+
+## The offers an issuer picked for your cards (0.6.212 / mobile 0.1.162)
+
+**Amex Offers is a catalogue this tool had no way to read.** Morgan Stanley
+Reserved publishes one: every member sees the same list, it needs no sign-in,
+and its markup says which part of the page is an offer, so the watcher reads it
+on a visit and it costs nothing. An issuer's offers are the other kind — chosen
+for the cards you hold, behind your sign-in, on a page that is an application
+rather than a listing — and reading them off the markup of a page like that
+would break the first time somebody shipped a new component.
+
+**So they are read the way the rest of an issuer's page is read.** With the
+offers open beside the panel, one press sends the text of that page and it comes
+back as offers: the merchant, what to spend and what comes back, the category,
+the date it runs out, and whether the page says it is already on a card. They
+land under **Offers** beside the published catalogue, labelled with the program
+they came from, and each one links to the list it lives on, because an Amex
+offer has no page of its own.
+
+**They save themselves, and they retire nothing.** A hundred merchants reviewed
+one at a time is not a thing to ask of anyone, and a catalogue is not the wallet
+— so the reading writes them where the other catalogue is written, through the
+same fold in the Worker that keeps "new to you" meaning what it says. The page
+loads more offers as it is scrolled, so every reading of it is partial: scroll,
+press again, and what was further down joins what is already there.
+
+Visiting americanexpress.com still reads nothing on its own. The offers are
+yours, so they are held to the rule the rest of your wallet is: read only when
+you press, stored encrypted, and nothing about the account sent anywhere but to
+the model that reads the page.
+
+New coverage: an issuer's offers recognized as a program read from text rather
+than markup, a visit to that site injecting no reader and writing nothing, a
+page reading turned into catalogue offers once each with the shouted category
+read as a name, the key that makes a merchant's new offer a new offer, and a
+partial reading folding in beside what was already saved. Validation: 576
+extension, 33 mobile and 134 API tests pass from an archive of HEAD. The Offers
+tab was reviewed at 380px against a synthetic wallet holding both catalogues.
+Archive: `release/erics-sidebar-0.6.212.zip`.

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML, DOMParser} from 'linkedom';
-import {rewardProgram, programById, validateOffer, validateProgramCatalog, mergeCatalog, catalogOffers, catalogCategories, offerUrl, titleCase, MAX_OFFERS,catalogGroups,NEW_OPEN_MAX} from '../src/program-data.js';
+import {rewardProgram, programById, validateOffer, validateProgramCatalog, mergeCatalog, catalogOffers, catalogCategories, offerUrl, titleCase, MAX_OFFERS,catalogGroups,NEW_OPEN_MAX,parseOfferReading,offerKey,OFFER_READ_LIMIT,READ_TEXT} from '../src/program-data.js';
 import {readProgramCards, shouldRead, readProgramFromTab, watchRewardPrograms, READ_MS, READ_STATE_KEY} from '../src/reward-programs.js';
 import {CONNECTION_KEY} from '../src/cloud-storage.js';
 
@@ -267,4 +267,64 @@ test('a New group too long to be worth opening waits to be asked',()=>{
   assert.equal(catalogGroups(build(NEW_OPEN_MAX+1),{})[0].open,false,
     'still first in the list, but it no longer opens itself');
   assert.equal(catalogGroups(build(NEW_OPEN_MAX+1),{})[0].label,'New');
+});
+
+// A program whose offers are the owner's own: picked per card, behind a
+// sign-in, on a page that is an application rather than a listing.
+test('an issuer’s offers are recognized as a program of their own, read from the page’s text', () => {
+  for (const url of ['https://global.americanexpress.com/offers/eligible', 'https://www.americanexpress.com/'])
+    assert.equal(rewardProgram(url)?.id, 'amex-offers', url);
+  assert.equal(programById('amex-offers').reading, READ_TEXT);
+  // Every offer is a tile on the one page, so an offer's link is that page.
+  assert.equal(offerUrl('amex-offers', 'hyatt-spend-500'), 'https://global.americanexpress.com/offers/eligible');
+});
+
+test('visiting an issuer’s site reads nothing on its own: that reading is the owner’s to press', async () => {
+  let asked = 0;
+  const api = {
+    storage: {local: {get: async () => ({[CONNECTION_KEY]: {token}, [READ_STATE_KEY]: {}}), set: async () => {}}},
+    scripting: {executeScript: async () => {asked++; return [{result: {complete: true, offers: [{key: '/offer/x', name: 'X'}]}}];}}
+  };
+  assert.equal(await readProgramFromTab({id: 7, url: 'https://global.americanexpress.com/offers/eligible'}, {api, request: async () => {throw Error('nothing should be written');}}), null);
+  assert.equal(asked, 0, 'the markup reader is never injected into a page it cannot read');
+  const seen = [];
+  const listeners = {};
+  watchRewardPrograms({tabs: {onUpdated: {addListener: fn => {listeners.updated = fn;}}, onActivated: {addListener: () => {}}, get: async () => ({})}},
+    {read: async tab => {seen.push(tab.url); return null;}});
+  listeners.updated(1, {status: 'complete'}, {id: 1, url: 'https://global.americanexpress.com/offers/eligible'});
+  listeners.updated(2, {status: 'complete'}, {id: 2, url: 'https://msreserved.com/offers/all_offers'});
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.deepEqual(seen, ['https://msreserved.com/offers/all_offers']);
+});
+
+test('a page reading of an issuer’s offers becomes catalogue offers, once each', () => {
+  const offers = parseOfferReading({offers: [
+    {merchant: 'Hyatt', offer: 'Spend $500 or more, get $100 back', category: 'TRAVEL', badge: 'Added', expires: 'Expires 12/31/2026'},
+    {merchant: 'Hyatt', offer: 'Spend $500 or more, get $100 back', category: 'Travel'},
+    {merchant: 'Saks Fifth Avenue', offer: 'Spend $100, get $20 back'},
+    {merchant: '', offer: 'A merchant this page never named'},
+    {merchant: 'A merchant with no offer against it', offer: ''}
+  ]}, 'amex-offers');
+  assert.deepEqual(offers.map(offer => offer.name), ['Hyatt', 'Saks Fifth Avenue']);
+  assert.equal(offers[0].category, 'Travel', 'a shouted category reads as a name here too');
+  assert.equal(offers[0].badge, 'Added');
+  assert.equal(offers[0].dates, 'Expires 12/31/2026');
+  // The key is what the page states, so the same offer read twice is one offer
+  // and a merchant's new offer is a new one.
+  assert.equal(offers[0].key, offerKey('Hyatt', 'Spend $500 or more, get $100 back'));
+  assert.notEqual(offers[0].key, offerKey('Hyatt', 'Spend $700 or more, get $150 back'));
+  // A catalogue read from markup takes nothing from a page reading.
+  assert.deepEqual(parseOfferReading({offers: [{merchant: 'Hyatt', offer: 'Spend $500'}]}, 'ms-reserved'), []);
+  assert.deepEqual(parseOfferReading({}, 'amex-offers'), []);
+  assert.throws(() => parseOfferReading({offers: Array.from({length: OFFER_READ_LIMIT + 1}, (_, index) => ({merchant: `M${index}`, offer: 'Spend $10'}))}, 'amex-offers'), /at most/);
+});
+
+test('an issuer’s offers fold in like any catalogue, and a partial reading retires none of them', () => {
+  const read = list => validateProgramCatalog({programId: 'amex-offers', complete: false, offers: parseOfferReading({offers: list}, 'amex-offers')}, '2026-09-20T00:00:00.000Z');
+  const first = read([{merchant: 'Hyatt', offer: 'Spend $500, get $100 back'}, {merchant: 'Saks', offer: 'Spend $100, get $20 back'}]);
+  const merged = mergeCatalog(first, read([{merchant: 'Saks', offer: 'Spend $100, get $20 back'}, {merchant: 'Delta', offer: 'Spend $200, get $40 back'}]));
+  assert.deepEqual(merged.offers.map(offer => offer.name).sort(), ['Delta', 'Hyatt', 'Saks']);
+  assert.equal(merged.complete, false);
+  assert.equal(merged.offers.find(offer => offer.name === 'Saks').firstSeenAt, first.offers[1].firstSeenAt,
+    'an offer seen twice keeps the day it was first seen');
 });

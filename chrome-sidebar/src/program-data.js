@@ -20,6 +20,17 @@ export const FIELD_MAX = {name: 200, category: 60, summary: 400, badge: 40, date
 export const MAX_CATALOG_BYTES = 256 * 1024;
 export const KEY_MAX = 120;
 
+// How a program's catalogue is read. `markup` is the original: the watcher
+// injects a reader into the page and takes the offer cards out of the markup,
+// which costs nothing and is exact. `text` is for a program whose offers are
+// the owner's own — an issuer's offers are picked per card and sit behind a
+// sign-in — where the page is an application rather than a listing and its
+// markup is nobody's contract. Those are read by the wallet's own page
+// reading, from the text of the page the owner is looking at, and only when
+// the owner presses for it.
+export const READ_MARKUP = 'markup';
+export const READ_TEXT = 'text';
+
 export const REWARD_PROGRAMS = [
   {
     id: 'ms-reserved',
@@ -33,7 +44,24 @@ export const REWARD_PROGRAMS = [
     // emptying the catalogue.
     catalog: '/offers/all_offers',
     // An offer's own page. Its path is the offer's identity everywhere here.
-    offer: /^\/offer\/[a-z0-9_.-]+$/i
+    offer: /^\/offer\/[a-z0-9_.-]+$/i,
+    reading: READ_MARKUP
+  },
+  {
+    id: 'amex-offers',
+    label: 'Amex Offers',
+    source: 'American Express',
+    hosts: ['americanexpress.com'],
+    origin: 'https://global.americanexpress.com',
+    // Every offer the owner is eligible for is on this one page, behind their
+    // sign-in and chosen for their cards. Nothing here fetches it: the reading
+    // is the text of the page they already have open.
+    catalog: '/offers/eligible',
+    // An Amex offer has no page of its own — it is a tile on that one page —
+    // so there is no path to recognize and the offer's link is the page it
+    // lives on.
+    offer: null,
+    reading: READ_TEXT
   }
 ];
 
@@ -52,8 +80,12 @@ export const programById = id => REWARD_PROGRAMS.find(program => program.id === 
 // path, so the link is the program's address and nothing of the owner's.
 export function offerUrl(programId, key) {
   const program = programById(programId);
-  if (!program || !String(key || '').startsWith('/')) return '';
-  return `${program.origin}${key}`;
+  if (!program) return '';
+  // An offer with a page of its own is linked to it; one without — a tile on
+  // the program's own list — is linked to the list, because that is where the
+  // owner goes to add it.
+  if (String(key || '').startsWith('/')) return `${program.origin}${key}`;
+  return program.reading === READ_TEXT ? `${program.origin}${program.catalog}` : '';
 }
 export const catalogUrl = programId => {
   const program = programById(programId);
@@ -92,6 +124,43 @@ export function validateOffer(input = {}) {
     dates: titleCase(text(input.dates, FIELD_MAX.dates)),
     firstSeenAt: isoDate(input.firstSeenAt)
   };
+}
+
+// One reading of a program whose offers are read from the page's text rather
+// than its markup. The shape is the catalogue's own, so nothing downstream
+// knows which way an offer was read.
+//
+// The key is the offer's identity across readings, and a tile on a list has no
+// path to be identified by. So it is made from what the page states — the
+// merchant and the offer itself — which is stable while the offer is, and
+// changes when the offer does, which is the right answer: a merchant's new
+// offer is a new offer.
+// What one press can bring back. An issuer's own list runs to a hundred offers
+// on a premium card, and a reading that stopped at a handful of them would need
+// pressing over and over to say the same thing — so the limit is the list, and
+// the page's own paging is what bounds it in practice.
+export const OFFER_READ_LIMIT = 100;
+export const offerKey = (name, summary) =>
+  `${text(name, FIELD_MAX.name)} ${text(summary, FIELD_MAX.summary)}`
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, KEY_MAX);
+export function parseOfferReading(input, programId) {
+  const program = programById(programId);
+  if (!program || program.reading !== READ_TEXT) return [];
+  const found = Array.isArray(input?.offers) ? input.offers : [];
+  if (found.length > OFFER_READ_LIMIT) throw Error(`A page reading returns at most ${OFFER_READ_LIMIT} offers.`);
+  const seen = new Set();
+  return found.map(row => {
+    const name = text(row?.merchant ?? row?.name, FIELD_MAX.name);
+    const summary = text(row?.offer ?? row?.summary, FIELD_MAX.summary);
+    if (!name || !summary) return null;
+    const offer = validateOffer({key: offerKey(name, summary), name, summary,
+      category: text(row?.category, FIELD_MAX.category),
+      badge: text(row?.badge, FIELD_MAX.badge),
+      dates: text(row?.dates ?? row?.expires, FIELD_MAX.dates)});
+    if (!offer || seen.has(offer.key)) return null;
+    seen.add(offer.key);
+    return offer;
+  }).filter(Boolean);
 }
 
 // A whole catalogue, as it is stored and as it crosses the network. `complete`

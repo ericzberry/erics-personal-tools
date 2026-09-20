@@ -218,7 +218,11 @@ export function readAccountPage(options) {
   if (!figures) {
     const page = [];
     for (const line of lines) {
-      if (!line || line.length > 200 || NOISE.test(line) || page.length >= 400) continue;
+      // A card's page is kept line for line, so its limit is not the balance
+      // page's four hundred: an issuer's offer list alone runs three lines an
+      // offer for a hundred offers. What actually bounds the snapshot is the
+      // text the reading is allowed to send, which is applied where it is sent.
+      if (!line || line.length > 200 || NOISE.test(line) || page.length >= 1200) continue;
       if (page.length && page[page.length - 1].toLowerCase() === line.toLowerCase()) continue;
       page.push(line);
     }
