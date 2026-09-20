@@ -195,16 +195,42 @@ export const matchKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/
 // filed on its own rather than joined to somebody else's portfolio, because a
 // trust's balance added into the joint estate is the one mistake here that
 // nobody can see afterwards.
+//
+// One kind of answer is not a title at all. A sign-on can reach money that is
+// not the owner's — a company he signs for rather than owns — and that has to
+// be named here too, marked `ignore`. Saying nothing about it would not leave
+// it out: an account no title claims starts a portfolio of its own, so silence
+// files it under its own name instead of skipping it.
 export const ACCOUNT_TITLES=[
   {institution:'Schwab',match:['schwab'],owner:'Eric and Ariana Berry Estate',
     byRegistration:{ira:'Eric Berry',roth:'Eric Berry','401k':'Eric Berry'}},
   {institution:'Chase',match:['chase','jpmorgan','jpmc'],holders:[
-    {owner:'Eric and Ariana Berry Estate',registration:'taxable',match:['ericandariana','ericariana','joint']},
-    {owner:'Berry 2020 Descendants’ Irrevocable Trust',registration:'trust',match:['berry2020','2020descendants','descendants']},
+    // The joint accounts are titled three ways on the one sign-on — a nickname
+    // that says Joint, and the two names written out in full — and all three
+    // are the same estate. The full-name fragments are long on purpose: a
+    // child's UTMA is titled to a parent as custodian, so "Ariana" on its own
+    // would take that child's money into the estate.
+    {owner:'Eric and Ariana Berry Estate',registration:'taxable',
+      match:['ericandariana','ericariana','ericzberry','arianacooperberry','joint']},
+    // Two irrevocable trusts made the same year, and only one word tells them
+    // apart. "Berry 2020" was the family trust's match until it was also the
+    // descendants' trust's, which put $4.7M of one into the other; neither
+    // fragment names a year on its own any more.
+    {owner:'Berry 2020 Irrevocable Family Trust',registration:'trust',
+      match:['berry2020irrev','2020irrevfam','irrevocablefamilytrust']},
+    {owner:'Berry 2020 Descendants’ Irrevocable Trust',registration:'trust',
+      match:['2020descendants','descendants','berry20desc']},
+    // The 2021 trust signs its accounts two ways: the trust's full title, and
+    // SLAT on the accounts opened under it.
     {owner:'Berry AE 21 Irrevocable Trust',registration:'trust',match:['berryae21','ae21']},
     {owner:'Celsie LLC',registration:'entity',match:['celsie']},
     {owner:'Maisie Ava Berry',registration:'custodial',match:['maisie']},
-    {owner:'Celeste Arabella Berry',registration:'custodial',match:['celeste','arabella']}
+    {owner:'Celeste Arabella Berry',registration:'custodial',match:['celeste','arabella']},
+    // Not the owner's money. It answers to the same password and it is listed
+    // beside everything else, which is precisely why it has to be named here:
+    // an account nobody claims starts a portfolio of its own, so leaving this
+    // one out of the roster files it rather than skipping it.
+    {owner:'Bedford Bridge Capital, LLC',ignore:true,match:['bedfordbridge']}
   ]}
 ];
 export const titledAccount=institution=>{
@@ -220,6 +246,8 @@ export const titledOwner=(institution,registrationId='')=>{
 // meaning — so each one has to be distinctive: every title in the Chase roster
 // contains "Berry", and none of them is found by it. The longest fragment that
 // appears wins, so a name contained in another name cannot take its accounts.
+// A holder marked `ignore` answers the same way and is returned the same way;
+// what is done about it is the fold's business, not this function's.
 export function titledHolder(institution,said){
   const entry=titledAccount(institution),key=matchKey(said);
   if(!entry?.holders?.length||!key)return null;
@@ -724,19 +752,68 @@ const balances=(totals,dropped)=>{
   }
   const repeats=totals.length-byValue.size;
   if(repeats)dropped.push(`${repeats} repeated balance${repeats===1?'':'s'}`);
-  return [...byValue.values()];
+  // The same money, said twice in two different numbers. A bank prints the
+  // present balance and the available balance in adjacent columns — what the
+  // account holds, and what of it has cleared — and because the two differ by
+  // whatever is pending, nothing above catches them: they are two balances, and
+  // added together they file a checking account at twice what is in it. The
+  // present balance is the ledger's answer, because the ledger is asking what
+  // the account holds rather than what could be spent today.
+  const kept=[...byValue.values()];
+  const settled=kept.filter(total=>PRESENT.test(total.label||''));
+  const pending=settled.length?kept.filter(total=>!PRESENT.test(total.label||'')&&AVAILABLE.test(total.label||'')):[];
+  if(!pending.length)return kept;
+  dropped.push(`${pending.length} available balance${pending.length===1?'':'s'}`);
+  return kept.filter(total=>!pending.includes(total));
 };
+// What an account holds, and what of it has cleared.
+const PRESENT=/\b(present|current|posted|statement|ledger)\b/i;
+const AVAILABLE=/\bavailable\b/i;
 // Read at a bank, but not a bank balance. One sign-on at Chase covers the
 // checking account and the managed portfolio beside it, and only one of those
 // is cash, so an account that names itself an investment keeps the class the
 // reading gave it.
 const INVESTED=/\b(invest\w*|brokerage|securities|managed|advisory|portfolio|ira|roth|401\s*\(?k|529|annuity|wealth)\b/i;
+// Read at a bank, and owed rather than held. The same sign-on that lists the
+// checking account lists the cards against it, and a card balance the reading
+// left unclassified would take the site's answer — cash — and be filed as money
+// in hand. It is the one class where getting it wrong moves net worth by twice
+// the figure, so the heading the page files a card under settles it here.
+const CARD=/\bcredit\s?cards?\b/i;
 
 // The digits a page prints in place of an account number — "-4049", "…4144",
 // "ending in 8820". They count only behind a marker saying that is what they
 // are: a bare run of digits inside a name is a year, and the Berry 2020
 // Descendants’ Irrevocable Trust is not account 2020.
 const ACCOUNT_DIGITS=/(?:ending in|account(?: number| no\.?| ?#)?|[-–—#]|\bx|\*+|\.{2,}|…)\s*(\d{3,})(?!\d)/gi;
+const accountDigits=said=>[...String(said).matchAll(ACCOUNT_DIGITS)].map(found=>found[1]);
+// A kind of account, not an account. A bank sorts what it holds into "Bank
+// accounts", "Credit cards" and "Investment accounts", and the figure printed
+// against one of those headings is every account under it added up — a joint
+// estate, four trusts, an LLC and two children's money in a single number.
+// Filed as an account it becomes a portfolio called Bank accounts, which is the
+// same mistake as the joint estate swallowing a trust and harder to see, since
+// no portfolio on the screen is named after anybody at all.
+//
+// The heading is taken off the front rather than the name thrown away, because
+// a reading told to put the heading in front of the account's own name does
+// exactly that: "Investment accounts · BERRY 2020 IRREV FAM TR (...5007)" is one
+// trust's account and must stay one.
+const CATEGORY=/^(?:my |your |all |total )*(?:bank|deposit|checking|savings|credit|debit|card|investment|brokerage|retirement|trust|loan|mortgage|business|personal)[\s-]*(?:card|account)s\b[\s·•|–—>›:]*/i;
+// What a column is called, which is never what an account is called. These are
+// the words left over when a page names a figure but not the account it belongs
+// to: Present balance, Net Account Value, Total.
+const BALANCE_WORD=/^(?:my |your |net |available |present |current |total |account |ledger |posted |statement |market |cash )*(?:balance|value|amount|assets?|accounts?|cards?|total|equity)$/i;
+// What this figure says about which account it is, once the heading and the
+// column name are off: a name of the account's own, or nothing.
+const ownName=name=>{
+  const clean=String(name||'').trim().replace(CATEGORY,'').trim();
+  return BALANCE_WORD.test(clean)?'':clean;
+};
+// A figure filed under a kind of account that names no account of its own is
+// that heading's total — every account under it added up.
+const groupTotal=reading=>CATEGORY.test((reading.account||'').trim())
+  &&![reading.account,reading.label].some(name=>ownName(name));
 // What a page says about which account a figure belongs to, beyond the name it
 // was filed under: the registration it states, and the account number it shows.
 const accountMark=reading=>{
@@ -745,7 +822,7 @@ const accountMark=reading=>{
   // it stated none: a taxable brokerage and a traditional IRA listed under one
   // name are two accounts whether or not the reading filled the field in.
   const kind=reading.registration||registrationFromName(said)?.id||'';
-  return `${kind}#${[...said.matchAll(ACCOUNT_DIGITS)].map(found=>found[1]).join(',')}`;
+  return `${kind}#${accountDigits(said).join(',')}`;
 };
 
 // One name, several accounts.
@@ -796,6 +873,11 @@ function separate(account,notes,dropped){
 // account, and nobody reading the ledger a year later could tell. So the device
 // refuses a figure that names itself a change, whatever scope it was given.
 const NOT_A_VALUE=/\b(gains?|loss|losses|change|returns?|performance|cost basis|unrealized|realized|yield|price)\b/i;
+// What a card has left to spend is not money owed and not money held. It is
+// printed beside the balance, in the same shape, and it is usually the larger
+// of the two: read as a balance it files the whole limit as debt, and a card
+// with nothing on it becomes the biggest liability in the ledger.
+const HEADROOM=/\b(available credit|credit (limit|line|available)|minimum payment|payment due|amount due)\b/i;
 // A stock plan's two halves, named by the page rather than by the reading: the
 // potential, projected or unvested benefit is a schedule, and everything else
 // in the account is stock that is held. The class is forced here because it is
@@ -831,6 +913,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     const own=reading.label||'';
     if(UNVESTED.test(own))return classById('unvested').code;
     if(VESTED.test(own)||STOCK_PLAN.test(said))return LIQUID;
+    if(CARD.test(said)&&classSide(reading.class)!=='liability')return classById('credit').code;
     if(reading.class!==UNCLASSIFIED)return reading.class;
     if(INVESTED.test(said))return defaultClass===CASH||!defaultClass?LIQUID:defaultClass;
     return defaultClass??reading.class;
@@ -840,11 +923,18 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   // reading it deserves: the figures are on the screen, and the note is only
   // there to say what is not.
   const dropped=[],notes=[];
-  const counted=readings.filter(reading=>!NOT_A_VALUE.test(reading.label||''));
-  const changes=readings.length-counted.length;
+  const values=readings.filter(reading=>!NOT_A_VALUE.test(reading.label||''));
+  const changes=readings.length-values.length;
   if(changes)dropped.push(`${changes} gain${changes===1?'':'s'} or return${changes===1?'':'s'}`);
-  const usable=counted.filter(reading=>reading.scope!=='all');
-  if(usable.length<counted.length)dropped.push('a total across accounts');
+  const counted=values.filter(reading=>!HEADROOM.test(reading.label||''));
+  const limits=values.length-counted.length;
+  if(limits)dropped.push(`${limits} credit limit${limits===1?'':'s'}`);
+  // A total over accounts, however the reading labelled its scope. One says so
+  // — scope "all" — and the other says so by naming a kind of account instead of
+  // an account, which is what a dashboard's group heading is.
+  const usable=counted.filter(reading=>reading.scope!=='all'&&!groupTotal(reading));
+  const summed=counted.length-usable.length;
+  if(summed)dropped.push('a total across accounts');
   const accounts=new Map();
   for(const reading of usable){
     const key=accountKey(reading);
@@ -888,7 +978,12 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // in one press — rather than disappearing into the estate.
     const byKind=portfolios.filter(portfolio=>portfolio.kind===kind.code);
     if(!owner&&!holdsManyTitles(institution)&&byKind.length===1)return byKind[0];
-    const name=owner||readings[0]?.account||kind.label;
+    // The name a page gave this, which is not always the one it was grouped
+    // under: an account listed beneath "Investment accounts" and named nowhere
+    // else is still not a portfolio called Investment accounts.
+    const own=readings.map(reading=>ownName(reading.account)).find(Boolean)
+      ||readings.map(reading=>ownName(reading.label)).find(Boolean);
+    const name=owner||own||kind.label;
     const already=proposed.find(portfolio=>matchKey(portfolio.name)===matchKey(name)&&portfolio.kind===kind.code);
     if(already)return already;
     const fresh={row:'portfolio',number:next(),name:String(name).slice(0,80),kind:kind.code,currency:'USD',isNew:true};
@@ -911,6 +1006,11 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // grouped under and the labels of the figures inside it. That is what says
     // whose account it is and what it holds.
     const said=[account.name,...inside.map(reading=>reading.label)].filter(Boolean).join(' ');
+    // A company the owner signs for rather than owns. It is on the page because
+    // it is behind the same password, and it is left out here rather than
+    // downstream, so that no figure of it reaches a total on any screen.
+    const holder=titledHolder(institution,said);
+    if(holder?.ignore){dropped.push(holder.owner);continue;}
     const portfolio=resolve(inside,said);
     const totals=balances(account.totals,dropped);
     const holdings=account.holdings,held=sum(holdings.map(reading=>reading.value));
@@ -939,6 +1039,10 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   // Said once, at the front, in the order a reader would ask it: what did you
   // not count, and why is a figure not split.
   if(dropped.length)notes.unshift(`Left out: ${[...new Set(dropped)].join(', ')}.`);
+  // Nothing was filed and the page is the reason: it states one total for each
+  // kind of account and never names an account. Saying only what was left out
+  // would leave the owner on the page that cannot answer.
+  if(summed&&!figures.size)notes.push('This page totals its accounts by kind. Open the list of accounts and read that instead.');
   // Read in the order it will be read back: whose money it is, then what it is
   // in. Sorting by portfolio number put the figures in the order the portfolios
   // happened to be created in, which is no order at all to anyone looking at

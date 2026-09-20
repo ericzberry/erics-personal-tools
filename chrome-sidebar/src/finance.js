@@ -387,8 +387,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     showCapital(result,'file');
     const any=found(result);
     // Anything the reading could not turn into a figure is still worth saying:
-    // it is a fact about this page, not an explanation of the panel.
-    const say=[any?'':none,extra,result.unread].filter(Boolean).join(' ');
+    // it is a fact about this page, not an explanation of the panel. So is
+    // anything the fold refused — a total over accounts, a second balance for
+    // one account, money behind this password that is not the owner's —
+    // because the only other evidence of it is a figure that is not there.
+    const say=[any?'':none,extra,...result.notes,result.unread].filter(Boolean).join(' ');
     status(say,target,say?'alert':'');
     return any;
   }
@@ -448,7 +451,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       const any=found(result);
       const say=[any?'':`No account figures were found on ${page.host}.`,
         page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
-        result.unread].filter(Boolean).join(' ');
+        ...result.notes,result.unread].filter(Boolean).join(' ');
       status(say,'snapshot-status',say?'alert':'');
     },'snapshot-status');
   }

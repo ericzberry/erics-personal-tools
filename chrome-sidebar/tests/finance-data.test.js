@@ -422,6 +422,109 @@ test('a bank holding several titles files each account under the one that holds 
   assert.equal(invested.marks[0].name,'Berry AE 21 Irrevocable Trust');
 });
 
+// Chase as it actually reads: two tables behind one password, eleven investment
+// accounts and nine deposit accounts, titled to a couple, four trusts, an LLC,
+// two children and one company that is not the owner's at all. Every figure in
+// here is from the pages in front of the owner, and the whole point of the fold
+// is that twenty rows become one figure per class per holder — not one pile per
+// heading, which is what the page's own grouping would make of it.
+test('one sign-on over a family structure files every account under the title that holds it',()=>{
+  const base={class:9,scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:''};
+  // The page groups them under a heading naming a kind of account, and the
+  // reading puts that heading in front of the name, exactly as it is told to.
+  const held=(account,value)=>({...base,account:`Investment accounts · ${account}`,label:'Account value',value,class:classById('liquid').code});
+  const kept=(account,value)=>({...base,account:`Bank accounts · ${account}`,label:'Present balance',value});
+  const folded=foldReadings([
+    held('BERRY 2020 IRREV FAM TR (...5007)',4775770.50),
+    held('ERIC Z BERRY & ARIANA COOPER BERRY (...3004)',3215290.34),
+    held('BERRY 2020 DESCENDANTS’ IRREV TR (...4001)',2753799.85),
+    held("BERRY 20 DESC' IRR TR (...3004)",1818646.70),
+    held('BERRY AE 21 IRREV FAM TR (...7005)',1704529.20),
+    held('AE 21 SLAT Brokerage (...4471)',0),
+    held('CELESTE ARABELLA BERRY UTMA NY (...3009)',0),
+    held('MAISIE AVA BERRY UTMA NY (...4008)',0),
+    held('Joint Brokerage (...8733)',0),
+    held('CELSIE LLC (...2006)',0),
+    kept('Joint Savings (...8917)',880033.77),
+    kept('2nd Joint Savings (...9134)',628301.72),
+    kept('2nd Joint Checking (...1551)',406310.18),
+    kept('Joint checking (...0823)',136724.37),
+    {...base,account:'Bank accounts · Joint checking (...0823)',label:'Available balance',value:136480.31},
+    kept('AE 21 SLAT Savings (...2530)',25631.95),
+    kept('CELESTE ARABELLA BERRY UTMA ARIANA, COOP (...8557)',25046.55),
+    kept('BEDFORD BRIDGE CAPITAL, LLC (...4918)',0),
+    kept('CELSIE LLC (...3644)',0),
+    {...base,account:'Credit cards · CHASE SAPPHIRE RESERVE (...1739)',label:'Current balance',value:15835,class:classById('credit').code}
+  ],[{...estate,id:'p1'}],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(folded.marks.map(row=>[row.name,classLabel(row.class),row.amount]),[
+    // Two accounts of the same trust, added together because the ledger asks
+    // per class and per holder — never per account.
+    ['Berry 2020 Descendants’ Irrevocable Trust','Liquid securities',2753799.85+1818646.70],
+    // The trust made the same year, which shares nine characters of its name
+    // and none of its money.
+    ['Berry 2020 Irrevocable Family Trust','Liquid securities',4775770.50],
+    ['Berry AE 21 Irrevocable Trust','Cash',25631.95],
+    ['Berry AE 21 Irrevocable Trust','Liquid securities',1704529.20],
+    ['Celeste Arabella Berry','Cash',25046.55],
+    ['Celeste Arabella Berry','Liquid securities',0],
+    ['Celsie LLC','Cash',0],
+    ['Celsie LLC','Liquid securities',0],
+    // The card is a debt whoever is on it, and it starts a portfolio of its own
+    // rather than joining somebody's estate on no evidence.
+    ['CHASE SAPPHIRE RESERVE (...1739)','Credit',15835],
+    // Four deposit accounts, the present balance of each: the available balance
+    // beside one of them is the same money less what has not cleared.
+    [ESTATE,'Cash',880033.77+628301.72+406310.18+136724.37],
+    [ESTATE,'Liquid securities',3215290.34],
+    ['Maisie Ava Berry','Liquid securities',0]
+  ]);
+  assert.deepEqual(folded.portfolios.filter(entry=>entry.name.includes('Berry 2020')).map(entry=>entry.name),
+    ['Berry 2020 Irrevocable Family Trust','Berry 2020 Descendants’ Irrevocable Trust'],
+    'two 2020 trusts, proposed apart');
+  // A company behind the same password that is not the owner's money. It is
+  // named in the roster precisely so that it can be left out: an account no
+  // title claims would otherwise start a portfolio of its own.
+  assert.equal(folded.marks.some(row=>/bedford/i.test(row.name)),false);
+  assert.equal(folded.portfolios.some(entry=>/bedford/i.test(entry.name)),false);
+  assert.match(folded.notes[0],/Bedford Bridge Capital, LLC/);
+  assert.match(folded.notes[0],/available balance/);
+  // And no portfolio is named after the page's own furniture.
+  assert.equal(folded.marks.some(row=>/accounts$|^Taxable$/i.test(row.name)),false);
+});
+
+// The same sign-on, read one page earlier. Chase's dashboard states one figure
+// for each kind of account and names no account at all, and those three figures
+// are twenty accounts belonging to eight holders. Filed, they became portfolios
+// called Bank accounts, Credit cards and Investment accounts — a ledger in which
+// nothing is anybody's.
+test('a figure printed against a kind of account is a total over accounts, not an account',()=>{
+  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:''};
+  const folded=foldReadings([
+    {...base,account:'Bank accounts',label:'Total',value:2101804.48,class:classById('cash').code},
+    {...base,account:'Credit cards',label:'Total',value:15835,class:classById('credit').code},
+    {...base,account:'Investment accounts',label:'Total',value:14268036.59,class:classById('liquid').code}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(folded.marks,[]);
+  assert.deepEqual(folded.portfolios,[]);
+  assert.match(folded.notes.join(' '),/total across accounts/);
+  // Nothing was filed and the page is why, so the note says where the figures
+  // are instead of only what was refused.
+  assert.match(folded.notes.join(' '),/Open the list of accounts/);
+});
+
+// A card is read at a bank, behind the same password as the checking account,
+// and the site answers cash for what it holds. A balance owed is the one figure
+// where taking that answer moves net worth by twice the number.
+test('a credit card balance is a debt, and the credit left on it is not a figure at all',()=>{
+  const base={class:9,scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:''};
+  const folded=foldReadings([
+    {...base,account:'Credit cards · CHASE SAPPHIRE RESERVE (...1739)',label:'Current balance',value:15835},
+    {...base,account:'Credit cards · CHASE SAPPHIRE RESERVE (...1739)',label:'Available credit',value:34165}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(folded.marks.map(row=>[classLabel(row.class),row.amount]),[['Credit',15835]]);
+  assert.match(folded.notes[0],/credit limit/);
+});
+
 test('an institution that settles its own titling answers however the name is spelled, and by registration',()=>{
   for(const institution of ['Charles Schwab','Schwab Bank','schwab','Charles Schwab & Co., Inc.'])
     assert.equal(titledOwner(institution),ESTATE,institution);
@@ -436,6 +539,24 @@ test('an institution that settles its own titling answers however the name is sp
   assert.equal(holdsManyTitles('Schwab'),false);
   assert.equal(titledHolder('Chase','CELSIE LLC BUSINESS COMPLETE BANKING')?.owner,'Celsie LLC');
   assert.equal(titledHolder('Chase','Chase Total Checking (...1234)'),null,'a nickname naming nobody is nobody');
+  // Two trusts made in 2020 and one fragment that used to name both. The
+  // longest fragment present wins, which is what keeps them apart.
+  for(const [said,owner] of [
+    ['BERRY 2020 IRREV FAM TR (...5007)','Berry 2020 Irrevocable Family Trust'],
+    ['BERRY 2020 IRREVOCABLE FAMILY TRUST (...6003)','Berry 2020 Irrevocable Family Trust'],
+    ['BERRY 2020 DESCENDANTS’ IRREV TR (...4001)','Berry 2020 Descendants’ Irrevocable Trust'],
+    ["BERRY 20 DESC' IRR TR (...3004)",'Berry 2020 Descendants’ Irrevocable Trust'],
+    ['BERRY AE 21 IRREV FAM TR (...7005)','Berry AE 21 Irrevocable Trust'],
+    ['AE 21 SLAT Savings (...2530)','Berry AE 21 Irrevocable Trust'],
+    ['ERIC Z BERRY & ARIANA COOPER BERRY (...3004)',ESTATE],
+    ['2nd Joint Checking (...1551)',ESTATE],
+    // A child's account is titled to a parent as custodian, and the parent's
+    // name in it must not carry it into the parents' own estate.
+    ['CELESTE ARABELLA BERRY UTMA ARIANA, COOP (...8557)','Celeste Arabella Berry'],
+    ['MAISIE AVA BERRY UTMA NY (...4008)','Maisie Ava Berry']
+  ])assert.equal(titledHolder('Chase',said)?.owner,owner,said);
+  // Money reached by the same password that is not the owner's.
+  assert.equal(titledHolder('Chase','BEDFORD BRIDGE CAPITAL, LLC (...4918)')?.ignore,true);
   // One institution, one spelling, whatever the page calls itself.
   assert.equal(institutionName('Charles Schwab'),'Schwab');
   assert.equal(institutionName('JPMorgan Chase Bank, N.A.'),'Chase');

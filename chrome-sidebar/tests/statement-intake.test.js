@@ -314,6 +314,40 @@ test("a card's own links do not stand in for the name of the account", () => {
   assert.equal(page.text.includes('Show more'), false);
 });
 
+// Chase lists what one password reaches in two sortable tables, and the whole
+// answer is in the first column: eleven investment accounts and nine deposit
+// accounts, each titled to a different trust, child or company. A row read
+// without its own name and number is a balance belonging to nobody, and four
+// trusts' money then adds up into one heap called Investment accounts.
+test('a bank table keeps each account\u2019s name and number against its own balance', () => {
+  const investments = {rows: [
+    cells(['Account', 'Type/Strategy', 'Day change', 'Account value']),
+    cells(['BERRY 2020 IRREV FAM TR (...5007)', 'Asset', '$0.00 (0.00%)', '$4,775,770.50']),
+    cells(['BERRY 20 DESC\' IRR TR (...3004)', 'JPM 1-10 Year Municipal Ladder', '$0.00 (0.00%)', '$1,818,646.70']),
+    cells(['CELSIE LLC (...2006)', 'Asset', '$0.00 (0.00%)', '$0.00'])
+  ]};
+  const deposits = {rows: [
+    cells(['Account', 'Type', 'Day change', 'Present balance', 'Available balance']),
+    cells(['Joint checking (...0823)', 'Checking', '\u2212$244.06', '$136,724.37', '$136,480.31']),
+    cells(['BEDFORD BRIDGE CAPITAL, LLC (...4918)', 'Business Checking', '$0.00', '$0.00', '$0.00'])
+  ]};
+  const page = inPage(pageOf({tables: [investments, deposits], text: 'Investment accounts\nBank accounts'}), HERE);
+  assert.equal(page.tables.length, 2);
+  const read = page.tables.join('\n');
+  for (const [account, value] of [
+    ['BERRY 2020 IRREV FAM TR \\(\\.\\.\\.5007\\)', '\\$4,775,770\\.50'],
+    ['BERRY 20 DESC\' IRR TR \\(\\.\\.\\.3004\\)', '\\$1,818,646\\.70'],
+    ['Joint checking \\(\\.\\.\\.0823\\)', '\\$136,724\\.37']
+  ]) assert.match(read, new RegExp(`${account}[^\\n]*${value}`), `${account} travels with its own figure`);
+  // Which column is which, so that the present balance can be told from the
+  // available one and a day's change from a balance.
+  assert.match(read, /Account {2}\| {2}Type {2}\| {2}Day change {2}\| {2}Present balance {2}\| {2}Available balance/);
+  // A row whose only figures are zero still says the account is there: an
+  // account that vanishes from a reading looks exactly like one that closed.
+  assert.match(read, /CELSIE LLC \(\.\.\.2006\)/);
+  assert.match(read, /BEDFORD BRIDGE CAPITAL, LLC \(\.\.\.4918\)/);
+});
+
 // E*TRADE's own IRA card, in the order the page reads it. The account is named
 // in one column and its balance sits in another, with a contribution banner,
 // three rows of links and a table of holdings between the two — so the name is

@@ -125,7 +125,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   figures the ledger keeps — `legacyLedger` for the retrofit, and
   `ACCOUNT_TITLES`, the portfolio an institution settles by itself — one title,
   overridden by registration where law requires it, or a `holders` roster where
-  one sign-on covers several titles and the account names which; plus `VEHICLES`
+  one sign-on covers several titles and the account names which, including the
+  holders marked `ignore`, whose accounts the same password reaches and the
+  ledger never counts; plus `VEHICLES`
   and the direct-investment rows — a holding and its dated capital accounts —
   with `positionsOn` for what a position is worth and what it cost, and
   `foldCapital`, which ties a capital account statement to the investment it

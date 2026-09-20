@@ -77,6 +77,31 @@ const merged={readings:[
   {account:'',label:'DIS Last Price $',class:'stocks',registration:'',scope:'holding',value:102.67,asOf:'2026-09-18',confidence:'low',reason:'Listed among the top movers.'},
   {account:'',label:"DIS Day's Gain $",class:'stocks',registration:'',scope:'holding',value:1318.56,asOf:'2026-09-18',confidence:'low',reason:"The top movers table states a day's gain."}
 ],capital:[],unread:''};
+// One password over a whole family structure, read well: a bank listing twenty
+// accounts titled to a couple, four trusts, an LLC, two children and one
+// company that is not the owner's money at all. Nothing here is a Berry figure
+// — the names are the shape the page has and the numbers are invented — and it
+// is on this page because the review panel's real job only shows at this
+// length: eight holders, a class or two each, and what it says it left out.
+const structure={readings:[
+  ...[['BERRY 2020 IRREV FAM TR (...5007)',1200000],['SYNTH Z ROE & ARIANA COOPER ROE (...3004)',900000],
+    ['BERRY 2020 DESCENDANTS’ IRREV TR (...4001)',640000],["BERRY 20 DESC' IRR TR (...3004)",310000],
+    ['BERRY AE 21 IRREV FAM TR (...7005)',480000],['AE 21 SLAT Brokerage (...4471)',0],
+    ['CELSIE LLC (...2006)',0],['Joint Brokerage (...8733)',0]]
+    .map(([account,value])=>({account:`Investment accounts · ${account}`,label:'Account value',class:'liquid',
+      registration:'',scope:'account',value,asOf:'2026-09-20',confidence:'high',reason:'Account value column.'})),
+  ...[['Joint Savings (...8917)',52000.40],['2nd Joint Checking (...1551)',18400.05],
+    ['AE 21 SLAT Savings (...2530)',9600],['CELESTE ARABELLA BERRY UTMA ARIANA, COOP (...8557)',4300],
+    ['BEDFORD BRIDGE CAPITAL, LLC (...4918)',77000]]
+    .map(([account,value])=>({account:`Bank accounts · ${account}`,label:'Present balance',class:'cash',
+      registration:'',scope:'account',value,asOf:'2026-09-20',confidence:'high',reason:'Present balance column.'})),
+  {account:'Bank accounts · Joint Savings (...8917)',label:'Available balance',class:'cash',registration:'',
+    scope:'account',value:51755.90,asOf:'2026-09-20',confidence:'high',reason:'Available balance column.'},
+  {account:'Credit cards · SYNTHETIC REWARDS CARD (...1739)',label:'Current balance',class:'unclassified',
+    registration:'',scope:'account',value:2410.55,asOf:'2026-09-20',confidence:'high',reason:'Balance owed on the card.'},
+  {account:'Credit cards · SYNTHETIC REWARDS CARD (...1739)',label:'Available credit',class:'unclassified',
+    registration:'',scope:'account',value:47589.45,asOf:'2026-09-20',confidence:'high',reason:'Credit left on the card.'}
+],capital:[],unread:''};
 const credentials={get:async()=>'synthetic-preview-token-at-least-32-characters'};
 // Each state is one vault, so the three can sit side by side on one page.
 const vault=({answer='open'}={})=>{
@@ -106,6 +131,7 @@ const states=[
   ['Open · beside a page that is not an account site','open',null,false],
   ...ACCOUNT_SITES.map(site=>[`Open · beside a signed-in ${site.label} page`,'open',site,false]),
   ['Open · beside an E*TRADE page that named no account','open',ACCOUNT_SITES.find(site=>site.id==='etrade'),false,merged],
+  ['Open · beside a Chase page holding a whole family structure','open',ACCOUNT_SITES.find(site=>site.id==='chase'),false,structure],
   ['Quiet · beside a signed-in Schwab page','open',ACCOUNT_SITES.find(site=>site.id==='schwab'),true],
   ['Quiet · beside a finance page with no reader','open',null,true]
 ];

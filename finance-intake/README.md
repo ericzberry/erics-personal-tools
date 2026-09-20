@@ -142,6 +142,23 @@ recognize is filed under the name the source gave it and registered by what that
 name says — a trust is a trust, an LLC is an entity — rather than joining a
 portfolio it was never part of. Adding a holder is one line in that roster.
 
+A holder in that roster can be marked `ignore`, and Bedford Bridge Capital is:
+a company the same password reaches and the ledger never counts. Silence would
+not achieve that — an account no title claims starts a portfolio of its own — so
+the way to leave money out is to name it. The reading says so once, under the
+figures it did keep.
+
+### A kind of account is not an account
+
+A bank sorts what it holds under **Bank accounts**, **Credit cards** and
+**Investment accounts**, and the figure printed against one of those headings is
+every account under it added up — at Chase, a joint estate, four trusts, an LLC
+and two children's money in a single number. Those are refused the way any other
+total across accounts is, and if a page states nothing else, the reading says to
+open the list of accounts instead. The accounts listed there each carry their
+own name and the last four digits of their number, which is what the roster
+matches and what tells two accounts of one trust apart.
+
 ## Properties
 
 A house is not a figure, so it is not filed as one. `property.mjs` writes the

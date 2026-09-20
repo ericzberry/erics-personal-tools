@@ -290,6 +290,54 @@ test('a second account site reads under its own name, its own default class and 
   tool.stop();restore();
 });
 
+// What the fold refused is the only thing the panel cannot show, because the
+// evidence for it is a figure that is not on the screen. Two of them arrive
+// together here: a page that never named an account, and money behind this
+// password that is not the owner's.
+test('what the fold left out is said, and a page that only totals its kinds says where to go instead',async()=>{
+  const {document,restore}=setup();
+  const {tool,writes}=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'Bank accounts',label:'Total',class:'cash',value:2101804.48,asOf:'2026-09-11'},
+      {...dated,account:'Investment accounts',label:'Total',class:'liquid',value:14268036.59,asOf:'2026-09-11'}
+    ],unread:''},
+    readPage:async()=>({text:'Bank accounts  |  $2,101,804.48',host:'secure.chase.com',title:'Chase Online',trimmed:0,tables:1})
+  });
+  await ready(document);
+  tool.site(CHASE);
+  const panel=()=>document.getElementById('finance-snapshot-body');
+  const said=()=>document.getElementById('finance-snapshot-status').textContent;
+  panel().querySelector('button').click();
+  await settle(()=>said().includes('Open the list of accounts'));
+  assert.match(said(),/total across accounts/,'the figures were refused, and the line says so');
+  assert.equal(panel().textContent.includes('Save these figures'),false,'nothing was filed to review');
+  assert.equal(writes.length,0);
+  tool.stop();restore();
+});
+
+test('an account the roster keeps out of the ledger is left out by name',async()=>{
+  const {document,restore}=setup();
+  const {tool}=financeHost(document,{
+    saved:[estate],
+    reading:{readings:[
+      {...dated,account:'Bank accounts · Joint Savings (...8917)',label:'Present balance',class:'cash',value:52000.40,asOf:'2026-09-11'},
+      {...dated,account:'Bank accounts · BEDFORD BRIDGE CAPITAL, LLC (...4918)',label:'Present balance',class:'cash',value:77000,asOf:'2026-09-11'}
+    ],unread:''},
+    readPage:async()=>({text:'Joint Savings  |  $52,000.40',host:'secure.chase.com',title:'Chase Online',trimmed:0,tables:1})
+  });
+  await ready(document);
+  tool.site(CHASE);
+  const panel=()=>document.getElementById('finance-snapshot-body');
+  panel().querySelector('button').click();
+  await settle(()=>panel().textContent.includes('Cash'));
+  assert.match(panel().textContent,/Eric and Ariana Berry Estate/);
+  assert.equal(panel().textContent.includes('BEDFORD'),false,'it is not offered to be filed');
+  assert.match(document.getElementById('finance-snapshot-status').textContent,/Bedford Bridge Capital, LLC/,
+    'and the one line about it names it, because a figure that is simply absent says nothing');
+  tool.stop();restore();
+});
+
 // An exchange states one balance for a page and never says what kind of money
 // it is, because to it there is only one kind. The site is what answers: a
 // figure read at Coinbase is coin, which is the whole reason the class exists.
