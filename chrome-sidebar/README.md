@@ -2600,3 +2600,33 @@ sidebar harness and the phone shell: the name leads its record in both, and the
 computed sizes were read off the rendered rows rather than the stylesheet.
 Archive: `release/erics-sidebar-0.6.206.zip`.
 >>>>>>> origin/main
+
+## Four corrections to a reading that finally worked (0.6.209 / mobile 0.1.159)
+
+The Chase structure came back whole, and four things about it were wrong.
+
+**Bonds are Liquid securities.** The ledger asks how much could be sold this
+week, not what it is invested in, and a municipal ladder in a trust answers that
+the same way the equities beside it do. A Bonds row of its own split one trust
+across two lines read back as one number. That trust is one line now.
+
+**A title the roster settles is not re-registered by a guess.** The reading's
+own `registration` used to outrank the roster's. One trust's managed account
+read as a trust and its brokerage as taxable, so the same name was proposed
+twice and the panel offered two portfolios called Berry AE 21 Irrevocable Trust,
+one of them holding nothing. The roster is the owner's standing answer about his
+own structure; a reading is a guess from a page. Law still outranks both — an
+IRA is one person's whatever else holds the account.
+
+**A proposed portfolio says what it is.** A reading offers half a dozen at once
+— trusts, a couple's estate, a company, two children — and they arrived as a
+list of names with nothing telling them apart, while the saved ledger has
+carried that tag on every heading all along.
+
+**Cards are titled together.** A card names a product and never a holder, so
+every card behind one sign-on started its own portfolio under the name on the
+plastic — a closed card, a Freedom and a Reserve holding one household's
+liabilities between them. An institution now says once where its cards are
+titled, and a business card is still matched by its company's name first.
+
+Validation: 568 extension and 33 mobile tests pass.

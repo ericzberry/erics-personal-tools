@@ -134,7 +134,11 @@ test('holdings split an account only when they add up to it',()=>{
     {...dated,account:'Brokerage',label:'VTI',class:1,value:700},
     {...dated,account:'Brokerage',label:'Treasury 2027',class:2,value:300}
   ],[estate],{institution:'Schwab'});
-  assert.deepEqual(reconciles.marks.map(row=>[row.class,row.amount]),[[1,700],[2,300]],'the split replaces the total it accounts for');
+  // The Treasury files as Liquid securities, not as Bonds: the ledger asks how
+  // much could be sold this week, and a bond answers that the same way the
+  // equity beside it does.
+  assert.deepEqual(reconciles.marks.map(row=>[row.class,row.amount]),
+    [[1,700],[classById('liquid').code,300]],'the split replaces the total it accounts for');
 
   // The E*TRADE page from the screenshot: three brokered CDs beside a $1.6M
   // account value. The CDs are not what the account holds.
@@ -469,13 +473,14 @@ test('one sign-on over a family structure files every account under the title th
     ['Celeste Arabella Berry','Liquid securities',0],
     ['Celsie LLC','Cash',0],
     ['Celsie LLC','Liquid securities',0],
-    // The card is a debt whoever is on it, and it starts a portfolio of its own
-    // rather than joining somebody's estate on no evidence.
-    ['CHASE SAPPHIRE RESERVE (...1739)','Credit',15835],
     // Four deposit accounts, the present balance of each: the available balance
     // beside one of them is the same money less what has not cleared.
     [ESTATE,'Cash',880033.77+628301.72+406310.18+136724.37],
     [ESTATE,'Liquid securities',3215290.34],
+    // The card is a debt, and it is the estate's: a card names a product and
+    // never a holder, so this institution says once where its cards are titled
+    // rather than starting a portfolio under the name on the plastic.
+    [ESTATE,'Credit',15835],
     ['Maisie Ava Berry','Liquid securities',0]
   ]);
   assert.deepEqual(folded.portfolios.filter(entry=>entry.name.includes('Berry 2020')).map(entry=>entry.name),
@@ -627,6 +632,28 @@ test('a summary panel of page totals names no account and files nothing',()=>{
   const real=foldReadings([{...base,account:'Bank accounts · Chase Total Checking (...4421)',label:'Present balance',value:8420.11}],
     [],{institution:'Chase',defaultClass:classById('cash').code});
   assert.deepEqual(real.marks.map(row=>[row.name,row.amount]),[['Chase Total Checking (...4421)',8420.11]]);
+});
+
+// One trust, two of its accounts, and a reading that guessed differently about
+// each. The roster is the owner's own standing answer about his own structure
+// and a reading is a guess from a page, so taking the guess first proposed the
+// same trust twice under one name — its managed account as a trust, its
+// brokerage as taxable — and the panel offered two portfolios called Berry AE
+// 21 Irrevocable Trust, one of them holding nothing.
+test('a title the roster settles is not re-registered by what a page guessed',()=>{
+  const base={scope:'account',registration:'',asOf:'2026-09-20',confidence:'high',reason:'',class:classById('liquid').code};
+  const folded=foldReadings([
+    {...base,account:'BERRY AE 21 IRREV FAM TR (...7005)',label:'Account value',value:1704529.20},
+    {...base,account:'AE 21 SLAT Brokerage (...4471)',label:'Account value',value:0,registration:'taxable'}
+  ],[],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.deepEqual(folded.portfolios.map(entry=>entry.name),['Berry AE 21 Irrevocable Trust'],
+    'one trust, proposed once');
+  assert.deepEqual([...new Set(folded.marks.map(row=>registrationLabel(row.kind)))],['Trust']);
+  // Law still outranks the roster: an IRA is one person's whatever else holds
+  // the account, so a retirement registration the page states is kept.
+  const ira=foldReadings([{...base,account:'BERRY AE 21 IRREV FAM TR (...7005)',label:'Account value',value:100,registration:'ira'}],
+    [],{institution:'Chase',defaultClass:classById('cash').code});
+  assert.equal(registrationLabel(ira.marks[0].kind),'IRA');
 });
 
 // A card is read at a bank, behind the same password as the checking account,

@@ -104,14 +104,21 @@ export function FoldReview({rows=[],editing=false,disabled=false,saveLabel='Save
   for(const [index,row] of rows.entries()){
     const open=groups.at(-1);
     if(open&&open.portfolio===row.portfolio)open.rows.push({row,index});
-    else groups.push({portfolio:row.portfolio,name:row.name,isNew:row.isNew,rows:[{row,index}]});
+    else groups.push({portfolio:row.portfolio,name:row.name,isNew:row.isNew,kind:row.kind,rows:[{row,index}]});
   }
   return Stack([
     // The date, and only the date: the figures are counted by being visible,
     // and a row states its own date only when the reading disagreed about one.
     shared?Label(`as of ${shared}`,{className:'snapshot-meta'}):null,
+    // What a proposed portfolio is, beside its name. A reading offers half a
+    // dozen at once — trusts, a couple's estate, a company, two children — and
+    // they arrive as a list of names with nothing saying which is which, while
+    // the saved ledger has carried that tag on every heading all along. It is
+    // the one thing about a new portfolio the owner cannot check afterwards
+    // without opening it.
     ...groups.map(group=>Section([
-      GroupTitle(`${group.name}${group.isNew?' · new':''}`,{className:'record-group-title'}),
+      Stack([GroupTitle(`${group.name}${group.isNew?' · new':''}`,{className:'record-group-title'}),
+        group.kind?Badge(registrationLabel(group.kind),{className:'pill portfolio-kind'}):null],{className:'group-name'}),
       ...group.rows.map(({row,index})=>FoldRow(row,{index,editing,dated:!shared,onAmount}))
     ],{className:'record-group snapshot-group'})),
     ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard})

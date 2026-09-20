@@ -215,7 +215,13 @@ export const matchKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/
 export const ACCOUNT_TITLES=[
   {institution:'Schwab',match:['schwab'],owner:'Eric and Ariana Berry Estate',
     byRegistration:{ira:'Eric Berry',roth:'Eric Berry','401k':'Eric Berry'}},
-  {institution:'Chase',match:['chase','jpmorgan','jpmc'],holders:[
+  // Where an institution's cards are titled. A card names a product, never a
+  // holder, so nothing on it says whose debt it is — and unlike an asset, the
+  // answer is not dangerous to settle once: every card behind this sign-on is
+  // the couple's, and a business card in the roster below is matched by its
+  // company's name before this is reached.
+  {institution:'Chase',match:['chase','jpmorgan','jpmc'],
+    cards:{owner:'Eric and Ariana Berry Estate',registration:'taxable'},holders:[
     // The joint accounts are titled three ways on the one sign-on — a nickname
     // that says Joint, and the two names written out in full — and all three
     // are the same estate. The full-name fragments are long on purpose: a
@@ -972,6 +978,13 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   // — but the account's own name outranks the site, because one sign-on at a
   // bank covers the checking account and the managed portfolio beside it, and
   // one of those is not cash. A stock plan's wording outranks both.
+  // Bonds are marketable securities, and this ledger is asked how much could be
+  // sold this week rather than what it is invested in. A municipal ladder in a
+  // trust is the same answer to that question as the equities beside it, and a
+  // Bonds row of its own split one account across two lines that are read back
+  // as one number. What the class exists for — telling liquid from locked up —
+  // Liquid securities already says.
+  const BONDS=classById('bonds').code;
   const classify=(reading,said='')=>{
     // The stock-plan test reads the figure's own label and nothing around it:
     // the group's text holds every other label too, and one potential benefit
@@ -985,6 +998,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // one group, the words "credit cards" were somewhere in it, and $16.4M of
     // assets was offered as -$18,537,244 owed. A card says so on its own row.
     if(CARD.test(`${reading.account||''} ${own}`)&&classSide(reading.class)!=='liability')return classById('credit').code;
+    if(reading.class===BONDS)return LIQUID;
     if(reading.class!==UNCLASSIFIED)return reading.class;
     if(INVESTED.test(said))return defaultClass===CASH||!defaultClass?LIQUID:defaultClass;
     return defaultClass??reading.class;
@@ -1033,13 +1047,26 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // which of them, and that answer outranks everything below it.
     const holder=titledHolder(institution,said);
     const stated=registrationById(readings.find(reading=>reading.registration)?.registration||'');
-    // The registration the page states wins — an IRA is registered to one
-    // person by law, whatever else the account is called — then the roster's,
-    // then what the title itself says, and taxable only when nothing does.
-    const kind=stated||(holder&&registrationById(holder.registration))||registrationFromName(said)||registrationById('taxable');
+    // A retirement registration the page states outranks everything, because
+    // law puts it beyond argument: an IRA is one person's, whatever the account
+    // is called or who the roster says holds it. Everything else the roster
+    // settles, and the roster outranks the reading — it is the owner's own
+    // standing answer about his own structure, and a reading is a guess from
+    // the page. Taking the guess first gave one trust two portfolios under one
+    // name: its brokerage account read as taxable, its managed account as a
+    // trust, and the same name proposed twice because the kinds differed.
+    const settled=stated&&['ira','roth','401k'].includes(stated.id)?stated:null;
+    const carded=!holder&&CARD.test(said)?registrationById(titledAccount(institution)?.cards?.registration||''):null;
+    const kind=settled||(holder&&registrationById(holder.registration))||carded||stated||registrationFromName(said)||registrationById('taxable');
     // The institution settles the title, and the registration settles which
     // title: the estate holds what is taxable, a person holds the IRA.
-    const owner=holder?.owner||titledOwner(institution,kind.id);
+    // A card is not an account anybody is named on twice. Every card behind one
+    // sign-on is the same person's debt, so they are titled together rather
+    // than each starting a portfolio under the name printed on the plastic —
+    // which had put a closed card, a Freedom and a Reserve in three portfolios
+    // holding one household's liabilities between them.
+    const card=!holder&&CARD.test(said)?titledAccount(institution)?.cards:null;
+    const owner=holder?.owner||card?.owner||titledOwner(institution,kind.id);
     // A portfolio the account names outright. Several portfolios answering to
     // one name is not a match but a coin flip — six of these names are "Berry
     // something" — so the most specific name wins and a tie falls through to
