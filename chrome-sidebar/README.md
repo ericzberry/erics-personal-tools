@@ -3213,3 +3213,63 @@ and a closed heading carries its own number and anything a reader needs before
 deciding to open it. Validation: 596 extension and 33 mobile tests pass from an
 archive of this release. Native iPhone and installed Chrome behavior were not
 directly tested. Archive: `release/erics-sidebar-0.6.225.zip`.
+
+## Each firm, quarter by quarter (0.6.226 / mobile 0.1.176)
+
+The ledger has always answered what the owner is worth and nothing at all
+about where it is held. A figure is filed under whose money it is, so the
+estate's securities at Chase and the estate's securities at UBS are one
+portfolio and one asset class, and the firm a reading was taken at was spent
+on choosing that portfolio and then dropped. **How is UBS doing, as against
+Morgan Stanley** had no answer in the stored rows — not a hard one, none.
+
+**A firm is a code, and the code is what is stored.** `FIRMS` in
+`finance-data.js` is one permanent number per institution, keyed by the site's
+own id, so nothing new has to be maintained beside the registry that already
+recognizes these places. A code rather than a name for the reason every
+categorization in this ledger is one, and for a second that matters more here:
+a portfolio's name is encrypted precisely so the database cannot say who banks
+where, and an institution spelled out beside it would hand that back.
+`account-sites.js` turns a code into the words on screen, where the one label
+per place already lives.
+
+**Institutions over time** is a closed disclosure under the ledger's own tab,
+beside Value over time, and it reads like it because it is that question asked
+of a narrower thing: a firm, its quarters, and what each is against the one
+before. The series is computed off the figures rather than stored a second
+time. A quarter is what the firm held at the end of it — the ledger's own step
+function asked about one firm's rows — so an account read in March and not
+since still counts in December at its March figure, which is exactly how it
+counts towards net worth. A quarter nobody read is not a row at all, because a
+flat line drawn through it would claim an observation nobody made. A quarter
+covering less of the firm than the newest one draws no change against it and
+says how much of it it covered. A figure carrying no firm — typed into the
+form, or folded out of a dropped file that named no site — belongs to none of
+them and is left out rather than gathered under a heading naming nowhere. The
+day a quarter's figure was struck rides beside the quarter when it was not
+struck in its closing month, because the heading claims a quarter that had not
+finished when the figure was taken.
+
+**UI-27 was broken in both lists, and in opposite directions.** A change with
+nothing to compare against is an empty footnote, and the shared rule that hides
+an empty one took its slot away with it — so the first quarter of a series
+ended its amount 88px right of every quarter under it. A longer note did the
+reverse, dragging its own amount left of the ones above. The slot is a fixed
+width now and an empty one keeps it, so every amount in the panel ends on one
+edge, Value over time included. The struck date is its own word rather than a
+third thing in that slot, and wraps under the quarter at 320px instead of
+holding the whole ledger 38px wider than the sidebar.
+
+The panel shows nothing until the figures themselves start carrying a firm,
+which is the change on the `firm-on-the-figure` branch — the fix for the
+undercount where Chase and UBS overwrote one another — and that one needs a
+deliberate rebuild of the figures table before it can be deployed.
+
+Validation: 605 extension, 33 mobile and 134 API tests pass from an archive of
+this release, and both apps build. New coverage: a firm's quarter as the step
+function sees it, with an account read one quarter and carried the next; a
+quarter nobody read left out; two firms in one portfolio and one asset class on
+one day kept apart; a figure with no firm belonging to none; currencies kept
+side by side; a partial quarter drawing no change; and the panel's headings,
+struck date and one column of money. Checked in the ledger preview at 420px
+and 320px. Archive: `release/erics-sidebar-0.6.226.zip`.
