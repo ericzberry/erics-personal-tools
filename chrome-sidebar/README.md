@@ -1905,3 +1905,18 @@ fails against the previous build. Nothing rendered changed: the panel's markup
 and styles are untouched, and the visible difference is a control that is live
 instead of dim, which needs a connected device to see.
 Archive: `release/erics-sidebar-0.6.168.zip`.
+
+## The store listing names the tools that are there (0.6.169)
+
+The manifest description still advertised restaurant searches, the travel
+wallet, AI settings, ESPN draft advice and Gmail — the extension as it was
+several dozen releases ago. Rewards, Best card, Finance, Taxes, Reminders,
+Subscriptions & renewals, Gift ideas, Clothing sizes, Personal information and
+Needs attention had all arrived since, and AI settings is a settings screen
+rather than a tool. The description now reads off the capability registry, inside
+Chrome's 132-character limit: travel wallet, rewards and cards, finance, taxes, reminders,
+subscriptions, gifts, sizes, restaurants, fantasy football and Gmail.
+
+Validation: 493 extension tests pass. Nothing rendered changed — the
+description appears on the extensions page and a store listing, not in the
+panel. Archive: `release/erics-sidebar-0.6.169.zip`.
