@@ -1812,3 +1812,74 @@ pass. The snapshot panel was reviewed against a synthetic reading of the same
 structure at 380px and 280px, with no horizontal overflow. The fix was proved
 against the account lists in the owner's screenshots rather than a live
 signed-in session, which is not reachable from here.
+
+## Two Amex cards, two currencies, and a button missing its bottom (0.6.166 / mobile 0.1.119)
+
+An issuer is not one reward program. Hold an Amex Platinum and a Blue Cash and
+the rewards page states two balances — 13,674 Membership Rewards points across
+the points cards, and $125.49 of Reward Dollars the Blue Cash earns in money —
+and the panel beside it named only the first, told the reading that everything
+on the page was Membership Rewards counted in points, and had one place to put
+whatever came back.
+
+**A site answers with every currency printed on it.** `loyaltySitePrograms`
+returns the programs sharing a host, the panel heads itself with all of them
+("American Express Membership Rewards and Reward Dollars"), one press reads
+them together, and the page offer names the issuer rather than promising one of
+its programs.
+
+**Cash back is kept as money.** `dollars` joins miles, points and Avios: a
+figure a program keeps in money is stored as `$125.49`, totalled on a line of
+its own — `$125.49 · cash back` — and never added to a points line. A program
+the registry recognizes is counted in the currency the registry says it keeps,
+so a reading that calls Reward Dollars points still stores money; 125 points
+would have been a number that is wrong rather than one that is missing. The
+reading is told, in the same words, that money is only ever a rewards balance
+and never a statement balance, an amount due, or available credit.
+
+**Neither balance can be saved over the other.** Matching on the provider alone
+is what lets "Mileage Plus" land on the MileagePlus entry; it also let cash back
+land on the points balance printed beside it. Where a reading finds more than
+one figure for one provider, the program's own name decides or nothing does, and
+what nothing decides is saved as a new balance. The directory offers an issuer's
+second currency for the same reason: holding the provider answers for its
+program only where the provider runs one.
+
+**The last button of a section got its frame back.** The rule that strips the
+separator under the last record in a run followed `:last-child` down to the last
+button of the last action row and took its bottom border with it, so **Add a
+reward** — the last control in the wallet — read as clipped. A control's border
+is its own outline, not a rule between records, and is no longer stripped.
+
+New coverage: a site answering with both Amex currencies; a reading that calls
+reward dollars points stored as money and totalled apart from points; cash back
+refusing to match the points entry while the points figure still updates it; the
+directory still owing an issuer its second currency; and the API told both
+currencies by name while a device that sends one is read the way it always was.
+Validation: 492 extension, 33 mobile and 126 API tests pass. The panel and the
+totals were reviewed against a synthetic reading of the Amex page at 420px and
+280px with no horizontal overflow, and the button's restored border measured in
+the rendered sidebar rather than judged by eye.
+
+## A class line is a figure, not a document (0.6.166 / mobile 0.1.119)
+
+In Net worth, a class inside a portfolio repeated its own date whenever it was
+behind the rest of that portfolio. Cash read a day before the securities beside
+it carried "2026-09-19" next to 54 cents — a qualification the reader cannot
+act on, sitting in the widest part of the line. A marked balance is a figure,
+not a document: its date is on the form that edits it and in the history behind
+the row, both one click away.
+
+The date still cascades where it says something. Once above the totals, for the
+ledger as a whole. Under a portfolio, when that portfolio is behind the rest of
+the ledger. And on a position or a property, where the date is the statement's
+or the valuation's own rather than a fact about when somebody typed. The word
+`liability` and a row still waiting to sync keep their place beside the figure.
+
+Validation: 492 extension and 33 mobile tests pass, including a class line that
+no longer repeats a date and a portfolio that still states one. The synthetic
+ledger was reviewed at 380px and 280px in the local fixture — the half-filled
+estate from the owner's screenshot, and a settled ledger with a stale custodial
+account, a fund position and two properties — with no horizontal page overflow.
+Installed Chrome and iPhone behavior were not directly tested.
+Archive: `release/erics-sidebar-0.6.166.zip`.

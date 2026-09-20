@@ -36,6 +36,34 @@ test('the reading is sent the page and nothing of the wallet',async()=>{
   assert.equal(/total across|already hold|wallet/i.test(prompt),false);
 });
 
+// An issuer runs a currency per kind of card and prints them together: an Amex
+// wallet holding a points card and a cash-back card has two balances on one
+// page, and the reading has to be told to keep them apart.
+test('a site that runs several currencies has every one of them named to the reading',async()=>{
+  const {fetcher,seen}=responder({balances:[
+    {program:'Membership Rewards',source:'American Express',amount:13674,unit:'points',confidence:'high'},
+    {program:'Reward Dollars',source:'American Express',amount:125.49,unit:'dollars',confidence:'high'}
+  ],unread:''});
+  const result=await readLoyaltyBalances(connection,{text:'13,674 Membership Rewards Points  $125.49 Reward Dollars',
+    program:'Membership Rewards',source:'American Express',unit:'points',
+    programs:[{program:'Membership Rewards',source:'American Express',unit:'points'},
+      {program:'Reward Dollars',source:'American Express',unit:'dollars'}]},fetcher);
+  assert.deepEqual(result.balances.map(row=>[row.name,row.value]),
+    [['Membership Rewards','13,674 points'],['Reward Dollars','$125.49']]);
+  const prompt=JSON.stringify(seen.body);
+  assert.match(prompt,/2 separate balances/);
+  assert.match(prompt,/Membership Rewards, counted in points/);
+  assert.match(prompt,/Reward Dollars, counted in dollars/);
+  // Money is for what a program keeps in money, never for what is owed on a card.
+  assert.match(prompt,/Never for an account balance, a statement balance, an amount due/);
+});
+
+test('a device that names one program still gets the reading it always got',async()=>{
+  const {fetcher,seen}=responder({balances:[],unread:''});
+  await readLoyaltyBalances(connection,{text:'Bonvoy 240,000',program:'Bonvoy',source:'Marriott',unit:'points'},fetcher);
+  assert.match(JSON.stringify(seen.body),/This page belongs to Marriott, which keeps one balance on it: Bonvoy, counted in points/);
+});
+
 test('an empty page, an oversized page, and an unreadable answer are each refused in their own way',async()=>{
   const {fetcher}=responder({balances:[],unread:''});
   for(const text of ['','   ','x'.repeat(MAX_BALANCE_TEXT+1)])

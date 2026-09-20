@@ -1,5 +1,6 @@
 import * as UI from './ui.js';
 import {CADENCE_LABELS} from '../rewards-data.js';
+import {formatTotal,unitLabel} from '../balance-data.js';
 const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label}=UI;
 const CADENCE_OPTIONS=[{text:'Does not reset',value:''},...Object.entries(CADENCE_LABELS).map(([value,text])=>({text,value}))];
 export function RewardsView(){
@@ -93,14 +94,15 @@ export function CardBenefits(result,{onSave,onDiscard}){
   ],{className:'reward-ingest'})];
 }
 
-// What the whole wallet comes to, one line per unit: miles and points are
-// different things and are never added together. A balance whose value states
-// no figure is counted in neither, and says so rather than being read as zero.
+// What the whole wallet comes to, one line per unit: miles, points and the
+// cash back a card keeps in money are different things and are never added
+// together. A balance whose value states no figure is counted in neither, and
+// says so rather than being read as zero.
 export function BalanceTotals({totals=[],stale=0,unread=0}={}){
   if(!totals.length)return [];
   return [Stack(totals.map(total=>Stack([
-    Strong(total.amount.toLocaleString('en-US'),{className:'balance-total-value'}),
-    Label(`${total.unit} · ${total.programs} program${total.programs===1?'':'s'}`,{className:'balance-total-unit'})
+    Strong(formatTotal(total.amount,total.unit),{className:'balance-total-value'}),
+    Label(`${unitLabel(total.unit)} · ${total.programs} program${total.programs===1?'':'s'}`,{className:'balance-total-unit'})
   ],{className:'balance-total'})),{className:'balance-total-row'}),
     ...(stale||unread?[Note([stale?`${stale} balance${stale===1?'':'s'} not updated in a month`:'',
       unread?`${unread} without a figure to count`:''].filter(Boolean).join(' · '))]:[])];
@@ -108,18 +110,24 @@ export function BalanceTotals({totals=[],stale=0,unread=0}={}){
 
 // Offered when the tab beside the panel is a loyalty program's own site.
 // Before anything is read it is one action; afterwards it is what came off the
-// page, because a figure is the owner's to check before it is saved.
-export function BalancePanel({site,rows=[],disabled=false,onRead,onSave,onDiscard}){
+// page, because a figure is the owner's to check before it is saved. `programs`
+// is every currency that site prints, which is more than one wherever an issuer
+// runs a currency per kind of card.
+export function BalancePanel({site,programs=[],rows=[],disabled=false,onRead,onSave,onDiscard}){
   const action=(label,variant,handler)=>{
     const node=Button(label,{variant,size:'compact',disabled});
     node.addEventListener('click',handler);
     return node;
   };
+  // One press reads every currency the site states, so the heading names them
+  // all: an issuer running two of them is the case where naming only the first
+  // would promise half the page.
+  const currencies=(programs.length?programs:[site]).map(program=>program.label);
   const heading=Stack([
-    Strong(`${site.source} ${site.label}`),
+    Strong(`${site.source} ${currencies.join(' and ')}`),
     rows.length?Label(`${rows.length} balance${rows.length===1?'':'s'} read · nothing saved yet`,{className:'snapshot-meta'}):null
   ],{className:'snapshot-heading'});
-  if(!rows.length)return Section([heading,ActionGroup([action('Read my balance','primary',onRead)],{compact:true})],{className:'record-row'});
+  if(!rows.length)return Section([heading,ActionGroup([action(`Read my balance${currencies.length>1?'s':''}`,'primary',onRead)],{compact:true})],{className:'record-row'});
   return Section([heading,...rows.map(BalanceRow),ActionGroup([
     action(`Save ${rows.length===1?'this balance':`these ${rows.length} balances`}`,'primary',onSave),
     action('Discard','subtle',onDiscard)

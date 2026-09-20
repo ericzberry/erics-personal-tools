@@ -43,11 +43,13 @@ Benefits entered by hand work the same way; pick the card in the editor.
 ## Points and miles
 
 The wallet opens with what your balances come to: one figure per unit, because
-miles and points are different things and are never added together. Each line
-says how many programs it covers, and the note under them says how many
-balances have not been updated in a month — a total is only as current as its
-oldest figure. A balance whose value states no number is counted in neither
-line rather than read as zero.
+miles, points and cash back are different things and are never added together.
+Cash back a card keeps in money — Blue Cash's Reward Dollars — is a balance like
+any other and is counted as money, so it reads `$125.49 · cash back` rather than
+being rounded into points. Each line says how many programs it covers, and the
+note under them says how many balances have not been updated in a month — a
+total is only as current as its oldest figure. A balance whose value states no
+number is counted in neither line rather than read as zero.
 
 Nothing about the record shape changed to do this. A balance is the same entry
 it always was, and the unit is read back out of it: "82,431 miles" is miles,
@@ -104,6 +106,17 @@ The programs recognized are in
 is counted in. Adding one is a single entry: its `id`, `label`, `source`,
 `unit`, and the hosts it is recognized by.
 
+### An issuer that runs more than one currency
+
+A card issuer keeps a currency per kind of card, and prints them together. Hold
+an Amex Platinum and a Blue Cash and the rewards page states two balances: the
+Membership Rewards points the Platinum earns, and the Reward Dollars the Blue
+Cash earns in money. Both are named on the panel, one press reads both, and each
+figure is filed under the program it belongs to — cash back is never saved over
+the points balance it was printed beside, and where a reading finds two balances
+for one provider the program's own name decides which entry each lands on, or
+neither does and it is saved as a new balance for you to check.
+
 ## Resets and Next actions
 
 Most card credits are not one-time offers — they come back, and the unused part
@@ -153,9 +166,11 @@ its model through the central task policy
 
 - `GET /v1/rewards`, `PUT /v1/rewards` — the whole wallet, revisioned. See
   [tools-api/README.md](../tools-api/README.md).
-- `POST /v1/ai-connections/:uuid/balance-intake` — `{text, program, source, unit}`
-  in; `{balances, unread}` out. The page text and nothing else: matching and
-  every total stay on the device.
+- `POST /v1/ai-connections/:uuid/balance-intake` — `{text, program, source, unit,
+  programs}` in; `{balances, unread}` out. `programs` is every currency that site
+  states, so an issuer running two of them is read for both; a device that sends
+  only the single `program` is read the way it always was. The page text and
+  nothing else: matching and every total stay on the device.
 - `POST /v1/ai-connections/:uuid/card-benefits` — `{name}` in; `{card, benefits}`
   or `{matches:[{name,note}]}` out. Requires an OpenAI connection and web-search
   evidence including the issuer page it cites.

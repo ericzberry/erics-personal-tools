@@ -5,7 +5,7 @@ import {validateReward,nextActions,luhnValid,parseCardBenefits,CADENCE_LABELS} f
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl} from './program-data.js';
 import {balanceTotals,parseBalanceReading,matchBalances,balanceRecord,directoryBalances,UNREAD_BALANCE} from './balance-data.js';
-import {LOYALTY_PROGRAMS} from './loyalty-sites.js';
+import {LOYALTY_PROGRAMS,loyaltySitePrograms} from './loyalty-sites.js';
 import {aiConnections} from './ai-connection.js';
 const fields=['kind','name','source','card','value','due','cadence','state','url','notes'];
 // A revealed number returns to its masked form on its own, so an unattended
@@ -227,7 +227,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('balance-panel').hidden=!show;
     if(!show){$('balance-body').replaceChildren();setStatus($('balance-status'),'');return;}
     $('balance-body').replaceChildren(BalancePanel({
-      site,rows:balances||[],disabled:busy||!loaded,
+      site,programs:loyaltySitePrograms(site),rows:balances||[],disabled:busy||!loaded,
       onRead:readBalances,onSave:saveBalances,
       onDiscard:()=>{balances=null;renderBalances();balanceStatus('');}
     }));
@@ -237,16 +237,23 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // into one figure per program, and show them. Nothing is saved yet.
   async function readBalances(){
     if(!site||!readPage||!remote||busy)return;
-    busy=true;render();balanceStatus(`Reading your ${site.label} balance…`,'progress');
+    // Every currency the site states is read in the one press, so the errand is
+    // named after the provider when there is more than one of them.
+    const programs=loyaltySitePrograms(site);
+    busy=true;render();balanceStatus(programs.length>1
+      ?`Reading your ${site.source} balances…`:`Reading your ${site.label} balance…`,'progress');
     try{
       const token=await credentials.get();
       if(!token)throw Error('Open Settings to connect this device.');
       const connection=await connections.id(token);
       const page=await readPage();
       const result=await remote(token,`/v1/ai-connections/${connection}/balance-intake`,
-        {method:'POST',value:{text:page.text,program:site.label,source:site.source,unit:site.unit},timeoutMs:130000});
+        // `program`, `source` and `unit` name the first of them on their own,
+        // so a device that is ahead of the Worker still gets a reading.
+        {method:'POST',value:{text:page.text,program:site.label,source:site.source,unit:site.unit,
+          programs:programs.map(entry=>({program:entry.label,source:entry.source,unit:entry.unit}))},timeoutMs:130000});
       // Checked here too: the wallet accepts nothing the API has not proved.
-      const rows=matchBalances(parseBalanceReading(result,site),entries);
+      const rows=matchBalances(parseBalanceReading(result,programs),entries);
       balances=rows.length?rows:null;
       balanceStatus(rows.length
         ?`${rows.length} balance${rows.length===1?'':'s'} read. Nothing is saved yet.`

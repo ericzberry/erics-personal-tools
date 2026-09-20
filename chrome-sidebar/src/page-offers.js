@@ -23,7 +23,7 @@
 import {capabilities} from './capabilities.js';
 import {financeSite} from './account-sites.js';
 import {rewardProgram} from './program-data.js';
-import {loyaltySite} from './loyalty-sites.js';
+import {loyaltySite,loyaltySitePrograms} from './loyalty-sites.js';
 import {isBought} from './gift-data.js';
 import {samePage} from './public-url.js';
 
@@ -68,7 +68,12 @@ export const OFFER_SOURCES=[
   // whether the page actually shows a balance is the reading's to find out.
   {id:'loyalty-balance',capability:'rewards',match:({page})=>{
     const program=loyaltySite(page.href);
-    return program?`Read your ${program.label} balance`:null;
+    if(!program)return null;
+    // An issuer that runs a currency per kind of card states them all on one
+    // page and the panel reads them in one press, so the offer names the
+    // issuer rather than promising only the first of them.
+    const currencies=loyaltySitePrograms(program);
+    return currencies.length>1?`Read your ${program.source} balances`:`Read your ${program.label} balance`;
   }},
   {id:'gmail',capability:'gmail',viaTab:true,icon:MAIL_GLYPH,match:({page})=>page.hostname==='mail.google.com'?'Summarize or reply':null},
   // Only inside a draft room. Advice on a draft is worth nothing between one

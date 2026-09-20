@@ -2,10 +2,13 @@
 // page the owner already has open.
 //
 // A program here is the airline, hotel or issuer currency a balance is kept in:
-// MileagePlus miles, Bonvoy points, Membership Rewards points. The registry
-// answers one question and costs one URL comparison to answer it — is the tab
-// beside the panel a program's own site? — and that is all the wallet needs to
-// offer the reading. Nothing is read, requested, or signed into to decide it.
+// MileagePlus miles, Bonvoy points, Membership Rewards points. One site can
+// state more than one of them — an issuer runs a currency per kind of card —
+// so a host answers with every program printed on it, not with one. The
+// registry answers one question and costs one URL comparison to answer it — is
+// the tab beside the panel a program's own site? — and that is all the wallet
+// needs to offer the reading. Nothing is read, requested, or signed into to
+// decide it.
 //
 // Reading the balance itself is the same errand Finance already runs for an
 // account page: one snapshot of the visible page, taken only when the owner
@@ -18,7 +21,6 @@
 // add up separately; the URL is what saves hunting for the balance through a
 // marketing site every time, and it is the published account page, so a visit
 // without a session lands on the program's own sign-in and returns there.
-export const LOYALTY_UNITS=['miles','points','Avios'];
 export const LOYALTY_PROGRAMS=[
   // Airlines.
   {id:'united',label:'MileagePlus',source:'United Airlines',unit:'miles',hosts:['united.com'],
@@ -69,6 +71,13 @@ export const LOYALTY_PROGRAMS=[
   // the two readings are different errands that both belong to the tab.
   {id:'membership-rewards',label:'Membership Rewards',source:'American Express',unit:'points',hosts:['americanexpress.com'],
     url:'https://global.americanexpress.com/rewards/summary'},
+  // One issuer, two currencies, one page: a wallet of Amex cards earns
+  // Membership Rewards on some of them and Blue Cash's Reward Dollars on
+  // another, and the rewards page prints both. They are separate programs
+  // because they are separate balances — spent in different places, and never
+  // added together.
+  {id:'amex-cash',label:'Reward Dollars',source:'American Express',unit:'dollars',hosts:['americanexpress.com'],
+    url:'https://global.americanexpress.com/rewards/summary'},
   {id:'ultimate-rewards',label:'Ultimate Rewards',source:'Chase',unit:'points',hosts:['chase.com','ultimaterewards.com'],
     url:'https://ultimaterewards.chase.com/'},
   {id:'thankyou',label:'ThankYou Rewards',source:'Citi',unit:'points',hosts:['citi.com','thankyou.com'],
@@ -87,3 +96,11 @@ export function loyaltySite(url){
   return LOYALTY_PROGRAMS.find(program=>program.hosts.some(host=>hostMatches(parsed.hostname,host)))||null;
 }
 export const loyaltyProgramById=id=>LOYALTY_PROGRAMS.find(program=>program.id===id)||null;
+// Every currency printed on one program's site. An issuer can run more than
+// one — Membership Rewards and Reward Dollars are both stated on the American
+// Express rewards page, and a card that earns one of them earns none of the
+// others — so the page in front of the owner is read for all of them at once
+// and each figure is filed under the program it belongs to.
+export const loyaltySitePrograms=program=>program
+  ?LOYALTY_PROGRAMS.filter(other=>other.hosts.some(host=>program.hosts.includes(host)))
+  :[];

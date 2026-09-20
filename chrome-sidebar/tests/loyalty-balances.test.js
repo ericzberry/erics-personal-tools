@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {loyaltySite,LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
-import {balanceTotals,readBalance,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,directoryBalances,UNREAD_BALANCE} from '../src/balance-data.js';
+import {loyaltySite,loyaltySitePrograms,LOYALTY_PROGRAMS} from '../src/loyalty-sites.js';
+import {balanceTotals,readBalance,parseBalanceReading,matchBalances,balanceRecord,BALANCE_LIMIT,BALANCE_UNITS,directoryBalances,UNREAD_BALANCE} from '../src/balance-data.js';
 import {nextActions} from '../src/rewards-data.js';
 import {pageOffers} from '../src/page-offers.js';
 
@@ -19,11 +19,53 @@ test('every program names itself, its source, and the unit its balance is counte
   const ids=new Set();
   for(const program of LOYALTY_PROGRAMS){
     assert.ok(program.id&&program.label&&program.source,`${program.id} names itself`);
-    assert.ok(['miles','points','Avios'].includes(program.unit),`${program.id} counts in a known unit`);
+    assert.ok(BALANCE_UNITS.includes(program.unit),`${program.id} counts in a known unit`);
     assert.ok(program.hosts.length,`${program.id} is recognized by a host`);
     assert.equal(ids.has(program.id),false,'program ids are unique');
     ids.add(program.id);
   }
+});
+
+// An issuer runs a currency per kind of card, and prints them all on one page.
+// Two Amex cards is the case: the points cards earn Membership Rewards and the
+// cash-back card earns Reward Dollars, which is money and not points.
+test('a site states every currency its issuer runs, not just the first',()=>{
+  const amex=loyaltySite('https://global.americanexpress.com/rewards/summary');
+  const programs=loyaltySitePrograms(amex);
+  assert.deepEqual(programs.map(program=>program.label),['Membership Rewards','Reward Dollars']);
+  assert.deepEqual(programs.map(program=>program.unit),['points','dollars']);
+  assert.deepEqual(loyaltySitePrograms(loyaltySite('https://www.united.com/')).map(program=>program.id),['united']);
+  assert.deepEqual(loyaltySitePrograms(null),[]);
+});
+
+test('cash back is kept as money, on a line of its own and never folded into points',()=>{
+  const amex=loyaltySitePrograms(loyaltySite('https://global.americanexpress.com/'));
+  const rows=parseBalanceReading({balances:[
+    {program:'Membership Rewards',source:'American Express',amount:'13,674',unit:'points',confidence:'high'},
+    // A reading that calls reward dollars points is still reward dollars: the
+    // registry knows what the program counts in, and 125 points would be wrong
+    // rather than merely missing.
+    {program:'Reward Dollars',source:'American Express',amount:'125.49',unit:'points',confidence:'high'}
+  ]},amex);
+  assert.deepEqual(rows.map(row=>[row.name,row.unit,row.value]),[
+    ['Membership Rewards','points','13,674 points'],
+    ['Reward Dollars','dollars','$125.49']
+  ]);
+  const {totals}=balanceTotals(rows.map(row=>balanceRecord(row,null)));
+  assert.deepEqual(totals.map(total=>[total.unit,total.amount]),[['points',13674],['dollars',125.49]],
+    'money and points are counted apart');
+});
+
+test('a second currency at one issuer never lands on the first one’s entry',()=>{
+  const entries=[balance('Membership Rewards','American Express','13,674 points')];
+  const amex=loyaltySitePrograms(loyaltySite('https://global.americanexpress.com/'));
+  const rows=matchBalances(parseBalanceReading({balances:[
+    {program:'Reward Dollars',source:'American Express',amount:'125.49',unit:'dollars'},
+    {program:'Membership Rewards',source:'American Express',amount:'14,000',unit:'points'}
+  ]},amex),entries);
+  assert.equal(rows[0].match,null,'cash back is a new balance, not an overwrite of the points one');
+  assert.equal(rows[0].ambiguous,false,'and it is not ambiguous either — the page named it');
+  assert.equal(rows[1].match?.id,'Membership Rewards-id','the points figure still updates the points entry');
 });
 
 test('the wallet totals miles and points separately, and never adds them together',()=>{
@@ -128,6 +170,11 @@ test('the directory seeds one entry per program, and never a second time',()=>{
   const rest=directoryBalances(LOYALTY_PROGRAMS,byHand);
   assert.equal(rest.length,LOYALTY_PROGRAMS.length-1);
   assert.ok(!rest.some(entry=>entry.name==='MileagePlus'),'the saved MileagePlus entry is not duplicated');
+  // Holding the provider answers for its program only where it runs one. An
+  // issuer with two currencies still owes the wallet its second.
+  const amexPoints=[balance('Membership Rewards','American Express','13,674 points')];
+  assert.ok(directoryBalances(LOYALTY_PROGRAMS,amexPoints).some(entry=>entry.name==='Reward Dollars'),
+    'the issuer’s other currency is still offered');
 });
 
 test('a program awaiting its first reading is counted as unread, never as a total or a stale figure',()=>{

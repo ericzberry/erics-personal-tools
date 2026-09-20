@@ -15,15 +15,32 @@ import {validateReward} from './rewards-data.js';
 // The units a total is kept in. Anything else a program calls its currency is
 // counted under the closest of these, because a wallet that answered "how many
 // points do I have" in nine currencies would not be answering.
-export const BALANCE_UNITS=['miles','points','Avios'];
+// `dollars` is cash back a card states in money — Blue Cash's Reward Dollars —
+// which is a reward balance like any other and is still not points: it is
+// counted on its own line and never added to one.
+export const BALANCE_UNITS=['miles','points','Avios','dollars'];
 export const BALANCE_LIMIT=25;
 // Loose on purpose: the unit is as often inside the program's own name —
-// MileagePlus, Rapid Rewards points — as it is beside the figure.
-const UNIT_PATTERNS=[[/avios/i,'Avios'],[/mile/i,'miles'],[/point/i,'points']];
+// MileagePlus, Rapid Rewards points — as it is beside the figure. Money is
+// asked last, so "125,000 points ($1,250 value)" is points, and only a figure
+// that names no other currency is read as cash.
+const UNIT_PATTERNS=[[/avios/i,'Avios'],[/mile/i,'miles'],[/point/i,'points'],[/\$|dollar/i,'dollars']];
+// What a unit is called where a total names it. Only money needs one: "points"
+// and "miles" already read as the thing they count.
+const UNIT_LABELS={dollars:'cash back'};
+export const unitLabel=unit=>UNIT_LABELS[unit]||unit;
 
 export const balanceUnit=text=>UNIT_PATTERNS.find(([pattern])=>pattern.test(String(text||'')))?.[1]||'';
-// One balance as the wallet's value field holds it: the figure, then the unit.
-export const formatBalance=(amount,unit)=>`${Math.round(amount).toLocaleString('en-US')} ${unit||'points'}`;
+// One balance as the wallet's value field holds it: the figure, then the unit —
+// or, for money, the figure as money, because "$125.49" says cash back without
+// a word beside it and rounding it to the dollar would lose the cents.
+export const formatBalance=(amount,unit)=>unit==='dollars'
+  ?amount.toLocaleString('en-US',{style:'currency',currency:'USD'})
+  :`${Math.round(amount).toLocaleString('en-US')} ${unit||'points'}`;
+// One line of a total, said the way its unit is said.
+export const formatTotal=(amount,unit)=>unit==='dollars'
+  ?amount.toLocaleString('en-US',{style:'currency',currency:'USD'})
+  :Math.round(amount).toLocaleString('en-US');
 
 // The figure and unit inside a stored entry. A balance whose value names no
 // number — "Gold status", "Member offers" — has no figure to add up and is
@@ -68,23 +85,35 @@ const CONFIDENCE=['high','medium','low'];
 // One balance as a reading proposes it. A reading is a proposal and nothing
 // more: every figure is checked here, shown to the owner, and saved only by a
 // press of their own — the same rule a statement reading already follows.
-export function parseBalanceReading(input,program=null,now=new Date().toISOString()){
+export function parseBalanceReading(input,programs=null,now=new Date().toISOString()){
   if(!input||typeof input!=='object')throw Error('Reading that page returned nothing to review.');
   const found=Array.isArray(input.balances)?input.balances:[];
   if(found.length>BALANCE_LIMIT)throw Error(`A page reading returns at most ${BALANCE_LIMIT} balances.`);
+  // The currencies printed on the page this was read from. An issuer runs more
+  // than one, so a figure picks its own program by name and only a reading that
+  // names none falls back to the first.
+  const site=Array.isArray(programs)?programs.filter(Boolean):programs?[programs]:[];
   const seen=new Set();
   return found.map(row=>{
     const amount=Number(String(row?.amount??'').replace(/[,\s]/g,''));
     if(!Number.isFinite(amount)||amount<0||amount>1e12)return null;
-    const name=text(row?.program,200)||program?.label||'';
+    const stated=text(row?.program,200);
+    const known=site.find(entry=>key(entry.label)===key(stated))||null;
+    const program=known||site[0]||null;
+    const name=stated||program?.label||'';
     const source=text(row?.source,200)||program?.source||'';
     if(!name||!source)return null;
-    const unit=BALANCE_UNITS.includes(row?.unit)?row.unit:balanceUnit(`${row?.unit} ${name}`)||program?.unit||'points';
+    // A program this tool recognizes is counted in the currency the registry
+    // says it keeps, not the one the page was read as: Reward Dollars is money
+    // whatever a reading calls it, and rounding it into points would be a
+    // number that is wrong rather than one that is missing.
+    const unit=known?known.unit
+      :BALANCE_UNITS.includes(row?.unit)?row.unit:balanceUnit(`${row?.unit} ${name}`)||program?.unit||'points';
     // A page that states the same program twice states one balance; the first
     // reading of it is the one kept, so a second cannot quietly overwrite it.
-    const key=`${name}|${source}`.toLowerCase();
-    if(seen.has(key))return null;
-    seen.add(key);
+    const already=`${name}|${source}`.toLowerCase();
+    if(seen.has(already))return null;
+    seen.add(already);
     return {name,source,amount,unit,value:formatBalance(amount,unit),
       // Where this figure was printed, so the entry it lands on can be opened
       // again without hunting for the page a second time.
@@ -104,10 +133,21 @@ const key=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim
 export function matchBalances(rows=[],entries=[]){
   const balances=entries.filter(entry=>entry?.kind==='balance'&&!entry.deleting);
   const taken=new Set();
+  // How many figures this reading found for each provider. Matching on the
+  // source alone is what lets "Mileage Plus" land on the MileagePlus entry when
+  // the owner spelled it differently — but an issuer that runs two currencies
+  // states two figures under one name, and neither may be filed under the
+  // other: cash back is not the points balance it was printed beside. Where the
+  // reading found more than one for a source, the program's own name decides or
+  // nothing does, and what nothing decides is saved as a new balance.
+  const perSource=new Map();
+  for(const row of rows)perSource.set(key(row.source),(perSource.get(key(row.source))||0)+1);
   return rows.map(row=>{
     const candidates=balances.filter(entry=>!taken.has(entry.id)&&
       (key(entry.name)===key(row.name)||(key(entry.source)===key(row.source)&&key(entry.name)===key(row.name))));
-    const bySource=candidates.length?candidates:balances.filter(entry=>!taken.has(entry.id)&&key(entry.source)===key(row.source));
+    const alone=perSource.get(key(row.source))===1;
+    const bySource=candidates.length?candidates
+      :alone?balances.filter(entry=>!taken.has(entry.id)&&key(entry.source)===key(row.source)):[];
     const match=bySource.length===1?bySource[0]:null;
     if(match)taken.add(match.id);
     return {...row,match,ambiguous:!match&&bySource.length>1};
@@ -147,8 +187,15 @@ export function directoryBalances(programs=[],entries=[],now=new Date().toISOStr
   const held=entries.filter(entry=>entry?.kind==='balance'&&!entry.deleting);
   const names=new Set(held.map(entry=>dirKey(entry.name)));
   const sources=new Set(held.map(entry=>dirKey(entry.source)));
+  // Holding the provider is enough to say a program is already there — "Amex
+  // points" typed by hand is Membership Rewards — but only where the provider
+  // runs one program. An issuer with two currencies would otherwise have its
+  // second one answered for by its first.
+  const single=new Map();
+  for(const program of programs)single.set(dirKey(program.source),(single.get(dirKey(program.source))||0)+1);
   return programs
-    .filter(program=>!names.has(dirKey(program.label))&&!sources.has(dirKey(program.source)))
+    .filter(program=>!names.has(dirKey(program.label))
+      &&!(single.get(dirKey(program.source))===1&&sources.has(dirKey(program.source))))
     .map(program=>validateReward({
       kind:'balance',name:program.label,source:program.source,value:UNREAD_BALANCE,
       state:'available',card:'',cadence:'',due:'',url:program.url||'',

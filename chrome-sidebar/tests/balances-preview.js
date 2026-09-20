@@ -40,12 +40,22 @@ const reading=(balances,slow=false)=>async(token,path)=>{
   return {balances,unread:'Premier qualifying points were left out — they are not a spendable balance.'};
 };
 const found=[{program:'MileagePlus',source:'United Airlines',amount:91204,unit:'miles',confidence:'high',notes:'8,400 PQP shown on the page are qualifying points, not a balance.'}];
+// An issuer running a currency per kind of card: the points cards earn
+// Membership Rewards, the cash-back card earns Reward Dollars, and both are
+// printed on the one page the panel reads.
+const amexPage=async()=>({text:'Membership Rewards Points 13,674 · 2 Accounts\nReward Dollars $125.49 · Blue Cash Preferred',host:'americanexpress.com',title:'American Express',trimmed:0,tables:1});
+const amexFound=[
+  {program:'Membership Rewards',source:'American Express',amount:13674,unit:'points',confidence:'high',notes:''},
+  {program:'Reward Dollars',source:'American Express',amount:125.49,unit:'dollars',confidence:'high',notes:'Earned on Blue Cash Preferred.'}
+];
 
 const root=document.getElementById('balance-states');
 for(const [label,url,remote,read] of [
   ['Beside a program page · nothing read yet','https://www.united.com/en/us/myunited',reading(found),page],
   ['Beside a program page · read, nothing saved yet','https://www.united.com/en/us/myunited',reading(found),page],
   ['Beside a program page · the page shows no balance','https://www.marriott.com/loyalty/myAccount.mi',reading([]),page],
+  ['Beside an issuer running two currencies · nothing read yet','https://global.americanexpress.com/rewards/summary',reading(amexFound),amexPage],
+  ['Beside an issuer running two currencies · read, nothing saved yet','https://global.americanexpress.com/rewards/summary',reading(amexFound),amexPage],
   ['An ordinary page · no panel at all','https://example.invalid/',reading(found),page],
   ['A full tab · the wallet, with no page to read',null,reading(found),null]
 ]){
