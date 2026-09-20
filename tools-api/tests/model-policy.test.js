@@ -116,6 +116,11 @@ test('the finance reading takes the fast model, and an image still finds one tha
   assert.equal(chosen.model.id,TASK_POLICIES['finance.intake'].model);
   assert.equal(chosen.model.reasoningEffort,'none','it answers without reasoning first');
   assert.ok(!/^gpt-4/.test(chosen.model.id),`${chosen.model.id} is a generation behind`);
+  // The saving is the point of choosing the small one: a tenth of what the tier
+  // above costs for the same page, on a reading whose drafts are read before
+  // anything reaches the ledger.
+  const tier=MODEL_CATALOG.find(model=>model.id==='gpt-5.6-terra');
+  assert.ok(chosen.model.output*10<=tier.output,'the small model is an order cheaper per token');
   assert.ok(chosen.estimatedCost<=TASK_POLICIES['finance.intake'].maxCost);
   // The ceiling has to clear the largest page the reading accepts, not the
   // usual one, or the biggest ledger is the one that cannot be read.

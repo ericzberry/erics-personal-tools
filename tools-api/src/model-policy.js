@@ -9,7 +9,8 @@ export const MODEL_CATALOG = [
   {id:'gpt-5-nano',provider:'openai',level:1,input:0.05,output:0.4,context:400000,reasoning:true,web:false},
   {id:'gpt-4o-mini',provider:'openai',level:1,input:0.15,output:0.6,context:128000,web:false,vision:true},
   {id:'gpt-4.1-mini',provider:'openai',level:2,input:0.4,output:1.6,context:1047576,web:true,searchTokens:8000,vision:true},
-  {id:'gpt-5-mini',provider:'openai',level:3,input:0.25,output:2,context:400000,reasoning:true,web:true,vision:true}
+  {id:'gpt-5-mini',provider:'openai',level:3,input:0.25,output:2,context:400000,reasoning:true,web:true,vision:true},
+  {id:'gpt-5.6-luna',provider:'openai',level:2,input:0.2,output:1.2,context:1050000,reasoning:false,reasoningEffort:'none',web:true,vision:true}
 ];
 // What one downscaled page costs in input tokens. Deliberately generous: an
 // underestimate here would let a request past the task's cost ceiling.
@@ -58,19 +59,25 @@ export const TASK_POLICIES = {
   // that screen.
   // Named, the way the mail tasks are, rather than left to whichever model is
   // cheapest — because the two things this reading needs are the two things
-  // cheapest does not choose for. It has to be current: the reading that ran
-  // before this was on a GPT‑4.1 model, a generation behind everything else the
-  // app calls. And it has to be quick: the alternative at this tier reasons
-  // before every answer, and thinking first and then writing twenty-eight
-  // accounts is what made the press sit for the better part of two minutes.
-  // Terra is the same tier, a generation newer, and answers at effort `none`.
+  // cheapest does not choose for. It has to be current: selection by price
+  // landed on a GPT‑4.1 model, a generation behind everything else the app
+  // calls. And it has to be quick: the models at the tier above reason before
+  // every answer, and thinking first and then writing twenty-eight accounts is
+  // what made the press sit for the better part of two minutes.
   //
-  // It is dearer per token than either — about four cents for a page of that
-  // size against one — and the ceiling is raised to cover the largest page this
-  // reading accepts rather than the usual one. That is the right trade for the
-  // ledger the net worth is kept in, at the rate one household reads its
-  // accounts.
-  'finance.intake':{label:'Finance reading',model:'gpt-5.6-terra',level:3,outputTokens:7000,web:false,maxCost:0.12},
+  // Luna is the current family's small model and answers at effort `none`. The
+  // argument for the tier above it was that a smaller model once read E*TRADE's
+  // page by filing every figure under the institution's name and calling a
+  // column of gains the holdings. That is a rule-following failure rather than
+  // a reading one, and this prompt is rule-dense — classes, registrations,
+  // scope, and a list of figures to leave out — so it is the fair worry about a
+  // small model. But it is a worry about a model two generations older than
+  // this one, on a snapshot that no longer hands over bare figures with no row
+  // around them, and it is checked where it would show: nothing is written to
+  // the ledger until the owner has read the drafts. A reading that comes back
+  // wrong costs a press, and Settings pins this one task to a larger model
+  // without a deploy.
+  'finance.intake':{label:'Finance reading',model:'gpt-5.6-luna',level:2,outputTokens:7000,web:false,maxCost:0.03},
   'capture.note':{label:'Quick note reading',level:1,outputTokens:500,web:false,maxCost:0.01},
   'email.summary':{label:'Email summary',model:'gpt-5.6-terra',level:3,outputTokens:700,web:false,maxCost:0.04},
   // A reply goes out over Eric's name in Eric's voice, so it uses the model he
