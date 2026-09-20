@@ -5,7 +5,7 @@
   --control-hover: #789386;
   --control-radius: 6px;
   --control-height: 36px;
-  --control-font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --control-font: 13px/1.45 var(--sans);
   --control-surface: var(--surface, #fffefa);
   --control-ink: var(--ink, #203b33);
   --control-focus: var(--forest, #173e37);
@@ -113,7 +113,7 @@
 .formatted-select-list[hidden] { display: none; }
 .form-field [aria-invalid=true] { border-color: #a34b3e; }
 @media (pointer: coarse) {
-  :root { --control-height: 44px; --control-font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  :root { --control-height: 44px; --control-font: 16px/1.4 var(--sans); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .formatted-select-trigger { transition: background-color .15s, border-color .15s; }
@@ -124,4 +124,4 @@
   .formatted-select-option[aria-selected=true] { border: 1px solid Highlight; }
 }
 
-.unlocked-tools .formatted-select{--control-height:44px;--control-font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+.unlocked-tools .formatted-select{--control-height:44px;--control-font:16px/1.4 var(--sans);}

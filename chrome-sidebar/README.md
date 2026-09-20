@@ -2431,3 +2431,72 @@ That page now files nothing and says why, which is the honest answer to a panel
 that states five totals and names no account.
 
 Validation: 560 extension and 33 mobile tests pass.
+
+## Rules for the interface, and something that keeps them (0.6.201 / mobile 0.1.151)
+
+**The guidance was all prose.** `DESIGN.md` says what the interface looks like
+and `AGENTS.md` says what a change owes the person using it, both at length and
+both well — but nothing said which of it a build actually holds. So drift
+accumulated in the places prose cannot reach: 166 raw hexes in sheets that have
+a palette to draw from, 13 different corner radii where the guide names one,
+type at 7, 8 and 9px under a guide that says metadata is 10–11px, and nineteen
+inlined copies of the system font stack, two of which had already lost
+`"Segoe UI"` — so two textareas fell back to a generic sans on Windows and
+nobody could have noticed.
+
+**`docs/UI_RULES.md` is the register.** Fifteen numbered rules, each with a
+status that says what breaking it costs. Five are **enforced**: a test fails,
+and the build is broken. Four are **ratcheting**: a test holds a budget of the
+violations already on the screen, per stylesheet, and the budget may go down
+and never up — which is how a rule arrives while the drift it names is still
+shipping. Nothing new lands, and the number falls as the old cases are cleaned
+up. Six are **by eye**, each naming the screen to look at. Three are **Open**:
+questions about the canon that have to be answered before anything can be
+enforced, including which spacing scale is real, because the guide says 4px
+increments and the compact density the owner asked for uses 2, 3 and 5px
+throughout.
+
+The register holds no reasoning and no procedure. `DESIGN.md` stays the canon —
+when a rule and the guide disagree, the guide is right until it is changed
+deliberately — and `VISUAL_QA.md` stays the way to look at the result.
+
+**`chrome-sidebar/tests/ui-rules.test.js` is the enforcement.** It holds UI-1,
+that only the shared `Select` ever builds a `<select>` — twenty-five screens
+ask for a dropdown and one component answers — and the four budgets, and it
+prints which budgets now have slack so the next pass knows where to go. A sheet
+with no entry has a budget of zero, so a new stylesheet starts clean whether or
+not anyone remembers to list it, and a budget left behind by a deleted file is
+an error rather than a silent exemption. Budgets are measured against the
+committed file: several sessions edit these sheets at once, and a number taken
+from someone else's half-finished cleanup fails the suite for everyone at HEAD.
+
+**`.claude/agents/ui-consistency.md` is what keeps it.** A reviewer that reads
+the register, takes one rule or one tool at a time, finds what breaks it, fixes
+it in the shared design system rather than in three features, verifies it in
+the real harnesses at 380px, 280px, 390px and 320px, and proposes the next rule
+from whatever it could not check. It carries the three things that waste a
+session's time here: that `preview_start` refuses when other sessions hold the
+dev-server slots, that a stylesheet reached through `@import` is served stale
+until its cache is reloaded, and what the mobile harness wants before it
+unlocks. Every sweep leaves the register different — a budget lowered, a
+by-eye rule promoted to a check, a rule added, or a question answered.
+
+**And the first pass is in this release.** UI-8 is down from 19 to 7: the stack
+lives in `--sans` in `tokens.css`, and `styles.css`, `select.css`, `tabs.css`,
+`finance.css`, `home.css` and `workspace.css` take it from there. Computed
+family, size and weight are unchanged everywhere it was applied, and the two
+textareas that had lost `"Segoe UI"` have it back. The seven left are
+`travel.css`, which another session was editing, and `capabilities.css`, which
+needs the palette imported first — `data.html` loads that sheet with no tokens
+at all and leans on its `var(--ink, #173e37)` fallbacks, so that page belongs
+to UI-6's next pass.
+
+Validation: 564 extension and 33 mobile tests pass from an archive of this
+release, built with the vendored reader it ships. The new checks were exercised
+both ways — a budget lowered by one fails with the rule, the file, both counts
+and what to do about it. The rendered result was checked in
+`/tests/finance-ledger-preview.html` and `/tests/settings-layout.html` against
+computed styles, since a change that should look like nothing is verified by
+reading the values rather than by looking at a screenshot. Native iPhone and
+installed Chrome behavior were not directly tested. Archive:
+`release/erics-sidebar-0.6.201.zip`.

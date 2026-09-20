@@ -20,7 +20,7 @@
 /* The three disclosures inside the ledger are peers of the run of portfolios
    under them, so their summaries carry a group's weight rather than the 12px
    of a footnote lost between two blocks of figures. */
-.finance-ledger .ledger-panel>summary{font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.finance-ledger .ledger-panel>summary{font:600 13px/1.4 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
 .trend-switch{margin-block-end:8px}
 /* A point that predates half the ledger is not a lower net worth; it is a
    smaller ledger. Its count says so in words, and the row is set back so the

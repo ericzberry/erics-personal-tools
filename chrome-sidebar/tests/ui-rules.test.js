@@ -1,0 +1,99 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync,readdirSync} from 'node:fs';
+
+// The register these enforce is docs/UI_RULES.md. Rules UI-2 to UI-5 are
+// checked in components.test.js and status-tones.test.js, where the code they
+// guard already had a test; only UI-1 and the four ratcheting rules live here.
+//
+// A budget is the number of existing violations in one sheet. It may go down
+// and never up, which is how a rule arrives while the drift it names is still
+// on the screen: nothing new lands, and the number falls as the old cases are
+// cleaned up. A sheet with no entry has a budget of zero, so a new stylesheet
+// starts clean whether or not anyone remembers to list it. Raising a number is
+// a decision and needs a line here saying which rule the case is exempt from
+// and why. Measure a budget against the committed file, not the working tree:
+// several sessions edit these sheets at once, and a number taken from someone
+// else's half-finished cleanup fails the suite for everyone at HEAD.
+
+const COMPONENTS=new URL('../src/components/',import.meta.url);
+const sheets=()=>readdirSync(COMPONENTS).filter(name=>name.endsWith('.css')).sort();
+// A rule cannot be read out of a comment, and the comments here carry the
+// reasoning, so they are stripped before anything is counted.
+const sheet=name=>readFileSync(new URL(name,COMPONENTS),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+
+// tokens.css and status.css define the palette every other sheet consumes.
+// Holding a hex is what they are for.
+const PALETTE=['tokens.css','status.css'];
+
+// UI-9. 7px is the inner curve of an 8px box with a 1px border, and nothing
+// else; 4, 6, 8, 12 and 14px are the block, control and page radii.
+const RADII=new Set(['0','inherit','50%','999px','4px','6px','7px','8px','12px','14px',
+  'var(--radius)','var(--control-radius)','var(--control-radius,6px)']);
+
+const RULES={
+  'UI-6 colour comes from a token':{
+    budget:{'styles.css':92,'capabilities.css':37,'select.css':16,'upload.css':7,'travel.css':5,
+      'workspace.css':4,'cards.css':2,'finance.css':1,'home.css':1,'reminders.css':1},
+    fix:'use a token from tokens.css, or add one there if the tone is genuinely new',
+    count:name=>PALETTE.includes(name)?0:(sheet(name).match(/#[0-9a-fA-F]{3,8}\b/g)||[]).length
+  },
+  'UI-7 nothing is set below 10px':{
+    budget:{'styles.css':15,'travel.css':1},
+    fix:'metadata is 10-11px and body text 12-14px; 7, 8 and 9px is loss, not density',
+    count:name=>[...sheet(name).matchAll(/font-size: *([0-9.]+)px/g),
+      ...sheet(name).matchAll(/font: *(?:[a-z0-9]+ )*?([0-9.]+)px/g)]
+      .filter(([,size])=>Number(size)<10).length
+  },
+  'UI-8 one system font stack, held in a token':{
+    // travel.css is left for the next pass because another session is editing
+    // it; capabilities.css needs `@import tokens.css` first, since data.html
+    // loads it with no palette at all and relies on its var() fallbacks.
+    budget:{'travel.css':4,'capabilities.css':3},
+    fix:'inherit the stack from :root in tokens.css instead of inlining it again',
+    count:name=>name==='tokens.css'?0:(sheet(name).match(/-apple-system/g)||[]).length
+  },
+  'UI-9 corners come from the radius set':{
+    budget:{'styles.css':17,'travel.css':3,'select.css':1,'workspace.css':1},
+    fix:`use one of ${[...RADII].join(', ')}`,
+    count:name=>[...sheet(name).matchAll(/border-radius: *([^;}]+)/g)]
+      .flatMap(([,value])=>value.trim().split(/\s+/)).filter(part=>!RADII.has(part)).length
+  }
+};
+
+test('the ratcheting UI rules hold, and their budgets only go down',()=>{
+  const slack=[];
+  for(const [rule,{budget,fix,count}] of Object.entries(RULES)){
+    for(const name of sheets()){
+      const found=count(name),allowed=budget[name]??0;
+      assert.ok(found<=allowed,
+        `${rule}: ${name} has ${found} where ${allowed} are budgeted — ${fix}. `+
+        'See docs/UI_RULES.md; a budget goes down, not up.');
+      if(found<allowed)slack.push(`${rule}: ${name} is down to ${found} from ${allowed} — lower the budget`);
+    }
+    // A sheet that was deleted or renamed leaves a budget behind that would
+    // silently forgive the next file to take its name.
+    for(const name of Object.keys(budget))assert.ok(sheets().includes(name),`${rule}: budget for missing ${name}`);
+  }
+  if(slack.length)console.log(`\n  ${slack.join('\n  ')}\n`);
+});
+
+// UI-1. Twenty-five screens ask for a dropdown and one component answers, so
+// the open options menu, its keyboard handling and its type-ahead are the same
+// everywhere and a native OS menu never appears.
+test('one owner per dropdown: only the shared Select builds a select element',()=>{
+  const src=new URL('../src/',import.meta.url);
+  const owners=['components/ui.js','components/select.js'];
+  const walk=dir=>readdirSync(new URL(dir,src),{withFileTypes:true}).flatMap(entry=>
+    entry.isDirectory()?walk(`${dir}${entry.name}/`):[`${dir}${entry.name}`]);
+  for(const file of walk('').filter(name=>name.endsWith('.js'))){
+    const code=readFileSync(new URL(file,src),'utf8');
+    if(owners.includes(file))continue;
+    assert.doesNotMatch(code,/element\(\s*'select'/,
+      `${file} builds its own select — use FormField({kind:'select'}) or the shared Select`);
+  }
+  for(const page of readdirSync(new URL('../',import.meta.url)).filter(name=>name.endsWith('.html'))){
+    const markup=readFileSync(new URL(`../${page}`,import.meta.url),'utf8');
+    assert.doesNotMatch(markup,/<select\b/,`${page} writes a select into the shell`);
+  }
+});

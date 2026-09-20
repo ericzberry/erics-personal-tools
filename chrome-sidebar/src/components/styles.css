@@ -47,7 +47,7 @@ body.settings-site {max-width:none;border:0;margin:0;font-size:16px;min-height:1
 .settings-empty {font-size:15px;line-height:1.7;color:var(--muted);padding:30px 22px;border:1px dashed #bcc8b9;border-radius:12px;margin-top:20px;}
 .playground-card {margin-top:28px;}
 .settings-site .editable-output {font-size:15px;min-height:80px;}
-.ai-output {white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:20px;margin-top:18px;max-height:650px;overflow:auto;}
+.ai-output {white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.7 var(--sans);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:20px;margin-top:18px;max-height:650px;overflow:auto;}
 @media(max-width:1000px) {.settings-shell {grid-template-columns:180px minmax(0,1fr);}.settings-shell > main {padding:30px 24px;}.settings-columns {gap:18px;}.settings-card {padding:20px;}}
 @media(max-width:800px) {.settings-shell {display:block;}.settings-rail {padding:16px 24px;}.settings-rail > .footnote,.settings-nav-current,.settings-shortcut {display:none;}.settings-brand h1 {font-size:23px;}.settings-monogram {width:32px;height:32px;font-size:20px;}.settings-columns {grid-template-columns:1fr;}.settings-heading {align-items:flex-start;}.settings-heading h1 {font-size:29px;}}
 @media(max-width:400px) {.settings-shell > main {padding:24px 16px;}.settings-heading {flex-wrap:wrap;}.settings-card {padding:18px;}}
@@ -180,7 +180,7 @@ th, td { padding: 8px 11px; }
 .button-primary, .button-secondary { padding: 9px 10px; border: 1px solid var(--forest); border-radius: 8px; background: var(--forest); color: var(--surface); font-size: 12px; }
 .button-secondary { background: var(--sage); color: var(--forest); border-color: var(--line); }
 .button-primary:disabled, .button-secondary:disabled { opacity: .5; cursor: default; }
-.editable-output { width: 100%; resize: vertical; padding: 11px; font: 12px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); min-height: 150px; }
+.editable-output { width: 100%; resize: vertical; padding: 11px; font: 12px/1.6 var(--sans); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); min-height: 150px; }
 @media(max-width:330px) { .tool-heading { align-items: start; flex-direction: column; gap: 5px; } }
 
 /* Draft source */
@@ -322,7 +322,7 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
 /* A field sized for a 280px panel: the text size of the prose beside it, not
    the 16px control font that pages and the phone use to avoid a zoom. A
    typed row keeps its own height from `rows`; the floor is for the short one. */
-.form-field.form-field--compact > textarea { font: 12px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; min-height: 64px; }
+.form-field.form-field--compact > textarea { font: 12px/1.6 var(--sans); min-height: 64px; }
 /* The two things this screen does with the message open beside it. Reading it
    and answering it are different jobs, so each is its own section — its name,
    the action that makes it, its own progress and its own result — and the rule
@@ -372,7 +372,7 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
 /* Bounded settings sections keep status, fields, and their actions together. */
 .settings-group { display: grid; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
 /* A section's name is never set below the rows it heads. */
-.settings-group-title { font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+.settings-group-title { font: 600 13px/1.4 var(--sans); letter-spacing: 0; }
 .settings-group > .form-stack { padding-bottom: 0; }
 .settings-group .action-group { margin: 0; }
 .action-group--compact { flex-wrap: wrap; justify-content: flex-start; margin: 0; }
@@ -394,7 +394,7 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
 .settings-list > .connection-only .connection-surface > details > summary::-webkit-details-marker, .settings-item > summary::-webkit-details-marker { display: none; }
 .settings-list > .connection-only .connection-surface > details > summary::after, .settings-item > summary::after { content: ''; width: 6px; height: 6px; margin-left: auto; margin-right: 4px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(-45deg); flex-shrink: 0; }
 .settings-list > .connection-only .connection-surface > details[open] > summary::after, .settings-item[open] > summary::after { transform: rotate(45deg); }
-.settings-list > .connection-only .connection-surface > details > summary, .settings-item > summary > .title-text, .settings-link { font: 500 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+.settings-list > .connection-only .connection-surface > details > summary, .settings-item > summary > .title-text, .settings-link { font: 500 13px/1.4 var(--sans); letter-spacing: 0; }
 .settings-list > .connection-only .connection-surface > details > summary:hover, .settings-item > summary:hover, .settings-link:hover { background: var(--sage); }
 .settings-item > :not(summary) { margin-left: 0; margin-right: 0; }
 .settings-link { border-bottom: 1px solid var(--line); text-decoration: none; }

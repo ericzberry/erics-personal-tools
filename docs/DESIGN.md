@@ -207,4 +207,6 @@ The wallet implements these tokens in `chrome-sidebar/src/components/travel.css`
 
 Review both collapsed and expanded rows, forms, confirmations, hover, keyboard focus, disabled states, 280px sidebar and phone layouts. Use synthetic records only. A passing build alone is not a visual review.
 
+Which of these rules a test actually holds is recorded in [UI_RULES.md](UI_RULES.md), with a budget per stylesheet for the drift that is still on the screen. This file stays the canon: when a rule and this guide disagree, change the guide first and the rule after.
+
 Configured mobile passkeys are invoked automatically on entry. Show only a brief opening state while the device verifies; show a retry control only after cancellation or failure. Native biometric or device-passcode verification remains in place. Do not display routine “Up to date” messages anywhere.

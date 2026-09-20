@@ -436,7 +436,9 @@ node scripts/release.js
 ## Where the rules are
 
 `AGENTS.md` (repository-wide) · `chrome-sidebar/AGENTS.md` (extension UI and
-release) · `docs/DESIGN.md`, `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
+release) · `docs/DESIGN.md`, `docs/UI_RULES.md` (the numbered register and its
+checks, held by `chrome-sidebar/tests/ui-rules.test.js` and the
+`ui-consistency` agent), `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/REWARDS.md`,
 `docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/REWARD_PROGRAMS.md`,

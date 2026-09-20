@@ -59,6 +59,8 @@ Add meaningful regression coverage for the failed behavior, such as default sele
 
 Run focused tests while editing. The existing suite commands from the repository root are `npm --prefix chrome-sidebar test`, `npm --prefix mobile-app test`, and `npm --prefix tools-api test`; select the relevant suites and required architecture checks for the changed dependencies. Complete the affected final builds as specified in AGENTS.md. There is no separate visual test command that replaces browser review.
 
+For anything a person can see, also run `node --test chrome-sidebar/tests/ui-rules.test.js`, which holds the rules in [UI_RULES.md](UI_RULES.md) and prints which per-stylesheet budgets now have slack. Fix what it catches in the shared sheet rather than raising a budget, and lower the budget in the same commit as the cleanup.
+
 Fix visible defects before packaging or pushing a UI change. If rendering is unavailable, complete independent implementation and checks, then report the exact missing review and leave the UI release incomplete. Do not present a DOM test, build, or source diff as visual acceptance. A documentation-only update to this guide does not itself require browser review.
 
 After deployment, revisit the normal entry path and the originally affected view. Verify the delivered version and requested behavior separately, following [Cloudflare release verification](CLOUDFLARE.md). Check installed Chrome behavior when extension APIs or live capture matter, and native iPhone behavior when passkey, clipboard, keyboard, or installed-app behavior matters. A browser fixture or phone-sized desktop viewport does not prove these device behaviors.

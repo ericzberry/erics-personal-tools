@@ -18,7 +18,12 @@
   --line: #dedfd5;
   --accent: #ad8050;
   --radius: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* The one system stack. Every sheet that needs a family in a `font`
+     shorthand takes it from here rather than writing the list again — there
+     were nineteen copies, and two of them had already lost "Segoe UI", so two
+     textareas fell back to a generic sans on Windows. */
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--sans);
   font-size: 14px;
   color: var(--ink);
   background: var(--paper);

@@ -14,6 +14,7 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | Repository orientation | [README.md](README.md) and the relevant project's README |
 | Extension behavior and setup | [chrome-sidebar/AGENTS.md](chrome-sidebar/AGENTS.md), [chrome-sidebar/README.md](chrome-sidebar/README.md) |
 | UI, controls, or layout | [docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md), its relevant host guide, and [docs/DESIGN.md](docs/DESIGN.md) |
+| Which UI rules are enforced, and how | [docs/UI_RULES.md](docs/UI_RULES.md) — the numbered register, its ratcheting budgets, and where each check lives |
 | Rendered UI review and acceptance | [docs/VISUAL_QA.md](docs/VISUAL_QA.md) |
 | Mobile, offline access, or shared assets | [mobile-app/README.md](mobile-app/README.md) and the shared modules included by `mobile-app/build.js` |
 | API, authentication, storage, or deployment | [tools-api/README.md](tools-api/README.md), the affected schema files, and the package scripts |
@@ -104,6 +105,7 @@ Apply these rules to every user-facing interface in this repository. Follow each
 ## Review before delivery
 
 - Follow [docs/VISUAL_QA.md](docs/VISUAL_QA.md) and the [shared component and host guides](docs/UI_COMPONENTS.md).
+- Every rule in [docs/UI_RULES.md](docs/UI_RULES.md) that a test can hold is held by one. Run those checks on any change a person can see, fix what they catch rather than raising a budget, and add the rule when you find drift no rule names. The `ui-consistency` agent keeps that register; use it for a sweep of one rule or one tool.
 
 - Inspect the rendered interface at its actual target size and a narrow supported size. A passing build is not a visual review.
 - Check alignment, grouping, hierarchy, wrapping, focus visibility, and all changed interaction states using synthetic data.

@@ -18,3 +18,8 @@ finance-intake/credentials/
 
 # Wrangler local cache
 .wrangler/
+
+# Per-machine agent settings and preview launchers; .claude/agents/ is shared
+.claude/settings.local.json
+.claude/launch.json
+.claude/worktrees/
