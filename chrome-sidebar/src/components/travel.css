@@ -60,6 +60,16 @@
    press away for the rest. Without this a category of twenty offers is a screen
    of prose, and the wallet under it is never reached. */
 .program-offers .record-row > p:not(.footnote){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* A catalogue is read down its offers' names, so everything around a name is
+   set below it and each step down is a step further from what is being looked
+   for: the category the run sits under, then the category and dates against the
+   name, then the offer's own sentence, which is the smallest thing on screen.
+   Set at the body size the sentence was the largest type in the list and every
+   row shouted its fine print over the offer it belonged to. */
+.rewards-wallet .program-offers .reward-group>summary strong{font-size:12px;font-weight:600}
+.rewards-wallet .program-offers .reward-group>summary .footnote{font-size:11px}
+.program-offers .record-row>.footnote{font-size:11px}
+.program-offers .record-row>p:not(.footnote){font-size:10px;line-height:1.6}
 .account-pages-group{display:grid;gap:4px}
 .account-pages-kind{font-weight:600}
 .account-pages-row{display:flex;flex-wrap:wrap;gap:4px 12px}
