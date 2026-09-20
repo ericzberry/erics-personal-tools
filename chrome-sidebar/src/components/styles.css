@@ -474,3 +474,19 @@ a.row-action { text-decoration: none; color: inherit; }
 .settings-brand > strong:last-child{font:500 22px/1.2 Georgia,serif;}.settings-site h2{font-size:17px;}.settings-site .form-field{margin:10px 0;}.settings-site label{font-size:13px;margin-bottom:4px;}.settings-site .action-group{gap:8px;}.settings-site .toggle-field{margin:10px 0;}.settings-site .button-primary,.settings-site .button-secondary{font-size:13px;padding:8px 12px;min-height:36px;}
 
 .action-group > button{flex:0 0 auto;}.settings-site .connection-setup .action-group{display:flex;}.settings-site .settings-empty{padding:12px;border-radius:6px;font-size:13px;}
+
+/* A measured amount of a fixed limit. Not the progress bar: it holds still,
+   because nothing is running, and it keeps the neutral rule until the amount
+   crosses into something worth deciding about. */
+.meter{display:block;width:100%;height:6px;border-radius:999px;background:var(--line);overflow:hidden;}
+.meter > span{display:block;height:100%;border-radius:inherit;background:var(--forest);transition:width .25s ease;}
+.meter--alert > span{background:var(--alert-line);}
+.meter--error > span{background:var(--error-line);}
+@media(prefers-reduced-motion:reduce){.meter > span{transition:none;}}
+/* The figure, the bar, then what it is made of — read top to bottom, with the
+   size itself the largest thing in the group. */
+.storage-figure{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+.storage-figure > strong{font-size:16px;}
+.storage-figure > span{font-size:12px;color:var(--muted);}
+.storage-databases{display:grid;gap:2px;margin-top:10px;}
+.storage-databases > div{display:flex;justify-content:space-between;gap:12px;margin:0;font-size:12px;}

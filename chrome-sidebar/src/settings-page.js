@@ -1,4 +1,4 @@
-import {mountSettings,AiTaskRow} from './components/views.js';
+import {mountSettings,AiTaskRow,setCloudStorage} from './components/views.js';
 import {ConnectionCard,setModelSuggestions,setStatus} from './components/ui.js';
 import {providerFor} from './ai-providers.js';
 mountSettings(document.getElementById('app'));
@@ -17,7 +17,7 @@ async function send(action, data={}) {
 function status(message,tone='') {setStatus($('settings-status'),message,tone);$('settings-status').hidden=!message;}
 function controls() {
   for (const node of $('connection-form').querySelectorAll('input,select,button')) node.disabled=working||!connected;
-  for (const id of ['connection-add','connection-reload']) $(id).disabled=working||!connected;
+  for (const id of ['connection-add','connection-reload','storage-refresh']) $(id).disabled=working||!connected;
   $('connection-actions').hidden=!connected;
   for (const node of $('connection-list').querySelectorAll('button')) node.disabled=working||!connected;
   for (const node of $('ai-tasks-list').querySelectorAll('select')) node.disabled=working||!connected;
@@ -79,6 +79,7 @@ async function run(action) {
 async function load() {
   const result=await send('list');connections=result.connections;renderList();
   await loadTasks();
+  await loadStorage();
   await migrate();
 }
 // Every AI action the app performs, and the model that runs it. This list is
@@ -103,6 +104,32 @@ async function migrate() {
     else if (result.remaining) status('Some keys saved in this browser need review before they move.','alert');
   } catch (error) {status(`Keys saved in this browser were kept: ${error.message}`,'error');}
 }
+// What the account's Cloudflare storage holds, against what the plan allows.
+// The Worker keeps the reading and takes it again hourly, so arriving here
+// normally costs no external request; Refresh is the owner asking for it now.
+// The Worker also notifies the phone when a threshold is crossed, which is the
+// part that matters — this screen is for looking, not for finding out.
+let storage=null;
+const renderStorage=()=>setCloudStorage(document,storage);
+async function loadStorage({refresh=false}={}){
+  if(!connected)return;
+  $('storage-refresh').disabled=true;
+  if(refresh)setStatus($('storage-status'),'Reading Cloudflare…','progress'),$('storage-status').hidden=false;
+  try{
+    storage=await send('storage',{refresh});
+    renderStorage();
+    // A reading Cloudflare would not re-take is still the right answer, but its
+    // age is the thing that could mislead, so that is what gets said.
+    if(storage.stale)setStatus($('storage-status'),`Showing the reading from ${new Date(storage.checkedAt).toLocaleString()}. ${storage.error}`,'alert');
+    else setStatus($('storage-status'),'');
+  }catch(error){
+    setStatus($('storage-status'),error.message,'error');
+  }finally{
+    $('storage-status').hidden=!$('storage-status').textContent;
+    controls();
+  }
+}
+$('storage-refresh').addEventListener('click',()=>loadStorage({refresh:true}));
 $('settings-connect').addEventListener('click',()=>run(async()=>{
   await send('connect', {token:$('settings-token').value.trim()||undefined});
   $('settings-token').value='';connected=true;
@@ -110,7 +137,7 @@ $('settings-connect').addEventListener('click',()=>run(async()=>{
   status('Connected.','success');
 }));
 $('settings-disconnect').addEventListener('click',()=>run(async()=>{
-  await send('disconnect');connected=false;connections=[];edit();$('settings-token').value='';$('settings-cloud').open=true;
+  await send('disconnect');connected=false;connections=[];storage=null;renderStorage();setStatus($('storage-status'),'');$('storage-status').hidden=true;edit();$('settings-token').value='';$('settings-cloud').open=true;
   status('Disconnected. Saved connections stay in your account.','success');
 }));
 $('connection-form').addEventListener('input',()=>{dirty=true;controls();});

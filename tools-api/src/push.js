@@ -126,6 +126,26 @@ export async function deliverDueReminders(env, {now = new Date(), fetcher = fetc
   return {sent, skipped:subscriptions.length - due.length};
 }
 
+// A notification that is not the morning digest: something the owner asked to
+// hear about when it happens, sent to every device that has asked to hear
+// anything. The storage watch uses it, which speaks once per threshold rather
+// than once per day, so there is no per-device day to record.
+export async function notifyDevices(env, {title, body, tag = 'service'}, {fetcher = fetch, log = () => {}} = {}) {
+  const subscriptions = await rows(env, 'push_subscriptions', 'push/subscriptions');
+  if (!subscriptions.length) return {sent:0};
+  const vapid = vapidKeys(env);
+  let sent = 0;
+  for (const row of subscriptions) {
+    try {
+      const result = await sendPush(row.value, JSON.stringify({title, body, url:'/app/', tag}), vapid, {fetcher});
+      if (result.gone) { await forget(env, row.id); log(`push subscription ${row.id} is gone`); continue; }
+      if (!result.ok) { log(`push to ${row.id} failed with ${result.status}`); continue; }
+      sent++;
+    } catch (error) { log(`push to ${row.id} threw: ${error?.message || error}`); }
+  }
+  return {sent};
+}
+
 // Proving it works is the only way to know it works, and it must not have to
 // wait until tomorrow morning.
 export async function sendTestPush(env, {fetcher = fetch} = {}) {

@@ -86,6 +86,26 @@ export function setProgress(bar,value=null) {
   else bar.removeAttribute('aria-valuenow');
   return bar;
 }
+// A measured amount of a fixed limit — storage used of storage allowed. It is
+// deliberately not a `ProgressBar`: nothing is running, so it does not move and
+// it does not borrow the progress tone. It stays neutral while the amount is
+// only a fact, and takes `alert` or `error` once the amount is something to
+// decide about. The number beside it, not the colour, is what is read.
+export function Meter({id,label,value=0,tone='',...props}={}) {
+  const meter=element('div',{id,className:'meter',role:'meter','aria-label':label,'aria-valuemin':'0','aria-valuemax':'100',...props},[element('span',{})]);
+  return setMeter(meter,value,tone);
+}
+export function setMeter(meter,value=0,tone='') {
+  const measured=Number.isFinite(value);
+  const percent=measured?Math.min(100,Math.max(0,value)):0;
+  // A non-zero amount always shows: a sliver the owner can see is the
+  // difference between "almost nothing" and "nothing at all".
+  meter.firstChild.style.width=`${percent>0?Math.max(percent,1.5):0}%`;
+  meter.setAttribute('aria-valuenow',String(Math.round(percent)));
+  meter.setAttribute('aria-valuetext',`${percent>0&&percent<1?'less than 1':Math.round(percent)} percent of the limit`);
+  for(const name of STATUS_TONES)meter.classList.toggle(`meter--${name}`,tone===name);
+  return meter;
+}
 // The label heading a run of records. It is never set below the records it
 // names: a category in smaller, paler type than its own rows inverts the
 // hierarchy, and the list then reads as rows with a caption stuck above them.

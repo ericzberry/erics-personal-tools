@@ -44,6 +44,9 @@ export async function settingsAction(message, chromeApi, request = cloudRequest)
   // The same Google account the tax filing uses, consented again so it also
   // covers reading sent mail.
   if(message.action==='google-connect')return request(token,'/v1/drive/connect',{method:'POST',value:{}});
+  // How much of Cloudflare's storage the account has used. The Worker keeps the
+  // last reading; `refresh` is the owner asking for it now rather than hourly.
+  if(message.action==='storage')return request(token,`/v1/storage${message.refresh?'?refresh=1':''}`);
   // Which model runs which action. The only place in the app a model is named.
   if (message.action === 'ai-tasks') return request(token, '/v1/ai-tasks');
   if (message.action === 'ai-task-save') return request(token, `/v1/ai-tasks/${encodeURIComponent(message.task)}`, {method:'PUT', value:{model:message.model}});

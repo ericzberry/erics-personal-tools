@@ -86,6 +86,18 @@ calendar event. See [reminders](../docs/REMINDERS.md).
 
 `/v1/push/*` delivers the combined Needs attention digest to a phone; reminder-only days retain the existing reminder wording. Apply `push-schema.sql`, set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` with `npx wrangler secret put`, and keep the hourly `triggers.crons` entry in the Wrangler config. `GET /v1/push/key` is public; `PUT`/`DELETE /v1/push/subscriptions/:id` and `POST /v1/push/test` need the bearer token. A subscription's endpoint is a capability URL: it is encrypted at rest and never returned by the listing. See [notifications](../docs/NOTIFICATIONS.md).
 
+`GET /v1/storage` reports how much of Cloudflare's storage the account has used
+against the limit its plan allows, and the Settings screen shows it. D1 refuses
+a Worker's `PRAGMA page_count`, so the figure comes from Cloudflare's own API:
+apply `storage-usage-schema.sql`, set `CLOUDFLARE_ACCOUNT_ID` as a var in
+`wrangler.jsonc`, and set `CLOUDFLARE_API_TOKEN` — a Cloudflare API token scoped
+to **Account · D1 · Read** only, and not this Worker's `API_TOKEN` — with
+`npx wrangler secret put CLOUDFLARE_API_TOKEN`. Without them the route answers
+503 naming what is missing. `CLOUDFLARE_PLAN=paid` switches the limits if the
+account ever leaves the free plan. The hourly cron re-reads the figure and
+notifies every subscribed device once when usage crosses 75%, 90% or 100%. See
+[Cloudflare runtime](../docs/CLOUDFLARE.md#storage-against-the-limit).
+
 ## Subscriptions and attention
 
 Apply the additive `subscriptions-schema.sql` upgrade to the existing D1 database

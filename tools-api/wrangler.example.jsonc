@@ -14,11 +14,21 @@
   // Reminders are delivered at each device's own morning hour, so the Worker
   // wakes every hour and sends only to the devices whose hour it is. The same
   // trigger carries the monthly sweep of the owner's calendar for birthdays,
-  // which decides for itself when a month has passed. Keep this entry in the
+  // which decides for itself when a month has passed, and the hourly check of
+  // how much Cloudflare storage the account has used. Keep this entry in the
   // real wrangler.jsonc too: it is ignored by Git, so a copy that has drifted
   // from this template is the one thing that actually runs.
   "triggers": {
     "crons": ["0 * * * *"]
+  },
+  // The account the Worker reads its own storage usage from. It is an
+  // identifier, not a credential, so it lives here; the token that goes with it
+  // is the `CLOUDFLARE_API_TOKEN` secret, scoped to Account · D1 · Read and
+  // nothing else. Add "CLOUDFLARE_PLAN": "paid" here if the account ever leaves
+  // the free plan, so the limits shown are the ones that actually apply.
+  // See docs/CLOUDFLARE.md.
+  "vars": {
+    "CLOUDFLARE_ACCOUNT_ID": "REPLACE_WITH_ACCOUNT_ID"
   },
   "d1_databases": [
     {

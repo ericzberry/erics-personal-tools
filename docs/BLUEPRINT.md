@@ -194,6 +194,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   when there is none. Subscriptions, Best card, the rewards wallet and
   Restaurants all read it; Finance and quick add resolve their own the same way.
 - **Releases** — `release-check.js` (hourly throttle), `release-banner.js`.
+- **Cloudflare storage** — `quota-data.js`: the D1 limits each plan allows, the
+  thresholds a reading has to cross before it is worth saying out loud, and how
+  a size and its one-line summary are written. Imported by the Worker's
+  `src/quota.js` and by the Settings screen.
 - **Fantasy football** — `draft-*.js`, `espn-*.js`, `manual-draft.js`,
   `player-identity.js`, `recommendations.js`, `session-selection.js`,
   `page-advice.js`, `ranking-import.js`, `sidepanel.js`.
@@ -240,7 +244,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/health`, `/v1/releases/latest`, `/v1/ai-tasks[/:task]`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`,
-  `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`. `/v1/push/key` is public like the release route,
+  `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`,
+  `/v1/storage`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
   body over 64 KB because a statement or document image travels inline;
@@ -275,6 +280,14 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   already settled so nothing is written twice and a deleted one stays deleted.
   It runs on the same hourly `scheduled` trigger, once a month, and on demand
   through its own routes. See [REMINDERS.md](REMINDERS.md).
+- `src/quota.js` — how much of Cloudflare's storage the account has used,
+  against the limit its plan allows. D1 refuses a Worker's `PRAGMA page_count`,
+  so the figure comes from Cloudflare's own API and needs
+  `CLOUDFLARE_ACCOUNT_ID` plus the `CLOUDFLARE_API_TOKEN` secret; `storage_usage`
+  keeps the last reading and the threshold it was last reported at. It rides the
+  same hourly `scheduled` trigger, and notifies once per threshold crossed. The
+  limits and the wording are `chrome-sidebar/src/quota-data.js`, which the
+  Settings screen reads too. See [CLOUDFLARE.md](CLOUDFLARE.md).
 - `src/providers.js` (provider adapters, including the text/image content parts
   every format renders in its own shape) and `src/model-policy.js` (the central
   task → model policy and priced catalogue, where `vision` marks a model that may
@@ -288,6 +301,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `voice-schema.sql` (`voice_profiles`),
   `calendar-schema.sql` (`calendar_scans`),
   `ai-tasks-schema.sql` (`ai_task_models`),
+  `storage-usage-schema.sql` (`storage_usage`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of

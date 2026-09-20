@@ -37,15 +37,34 @@ returns only the host, the time zone and the hour — never the endpoint.
 `lastSentOn` is server-kept and ignored on input: a device cannot tell the
 Worker it has already been notified today.
 
-## Two jobs on one trigger
+## Three jobs on one trigger
 
 The hourly cron drives the morning notification below and, since it is already
 running, the monthly sweep of the owner's calendar for birthdays — see
-[reminders](REMINDERS.md). They are started separately in the `scheduled`
-handler and neither is awaited by the other: reading a calendar must never be
+[reminders](REMINDERS.md) — and the Cloudflare storage watch below. They are
+started separately in the `scheduled`
+handler and none is awaited by the others: reading a calendar must never be
 able to delay, or fail, the morning a phone is waiting for. The sweep decides
 for itself that thirty days have passed, and does nothing at all when Google is
 not connected.
+
+## The other notification: storage before the limit
+
+[`tools-api/src/quota.js`](../tools-api/src/quota.js) measures the account's D1
+storage every hour and sends one notification when the usage crosses 75%, 90% or
+100% of what the plan allows. It goes through `notifyDevices` in `push.js` — the
+same encryption, the same subscriptions — but it is not the morning digest and
+does not wait for anyone's morning: the point is to arrive in time to change the
+plan, and a limit is not reached at a convenient hour.
+
+It speaks once per threshold. Sitting above one says nothing more, or a database
+at 78% would announce itself every hour for a year; falling back below one
+re-arms it. The band last announced is kept in `storage_usage`, beside the
+reading itself.
+
+The notification names the size, the limit and the plan, and nothing else — no
+table, no record count. See [CLOUDFLARE.md](CLOUDFLARE.md#storage-against-the-limit)
+for the limits, the read token it needs, and where the figure is shown.
 
 ## Once, in the morning, only when there is something
 

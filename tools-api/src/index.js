@@ -14,6 +14,7 @@ import {sizes} from './sizes.js';
 import {readCapture} from './capture.js';
 import {pushSubscriptions, sendTestPush, deliverDueReminders} from './push.js';
 import {latestRelease} from './releases.js';
+import {storageUsage,sweepStorage} from './quota.js';
 import {rewardsSettings,researchCardBenefits,readLoyaltyBalances} from './rewards.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
@@ -77,6 +78,9 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(deliverDueReminders(env, {log: message => console.log(message)}));
     ctx.waitUntil(sweepBirthdays(env, {log: message => console.log(message)}));
+    // Cheap, and the only chance to say something before a limit is reached
+    // rather than after. It notifies at a threshold crossing and not otherwise.
+    ctx.waitUntil(sweepStorage(env, {log: message => console.log(message)}));
   },
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -145,6 +149,7 @@ export default {
         if(action==='restaurants')return json(await discoverRestaurants(connection,input));
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
+      if(path==='/v1/storage')return await storageUsage(request,env,json);
       if(path.startsWith('/v1/drive/'))return await drive(request,env,readValue,json);
       if(path.startsWith('/v1/calendar/'))return await calendarRoutes(request,env,readValue,json);
       if(path==='/v1/voice'||path.startsWith('/v1/voice/'))return await voice(request,env,readValue,json);

@@ -13,6 +13,7 @@ The repository is the source of truth for Worker code, schema SQL, dependency me
 | `tools-api/src/providers.js`, `model-policy.js` | Provider dispatch and central task-based model selection |
 | `tools-api/src/push.js`, `web-push.js` | Device subscriptions, the morning digest, and Web Push itself; reached from the `scheduled` handler as well as from routes |
 | `tools-api/src/releases.js` | Public, per-app release metadata lookup |
+| `tools-api/src/quota.js` | The account's D1 storage measured against the plan's limits, and the one notification sent before a limit arrives |
 | `tools-api/*schema.sql` | Explicit D1 schema setup and upgrades |
 | `tools-api/wrangler.example.jsonc` | Versioned configuration template; actual account/database settings live in ignored `wrangler.jsonc` |
 | `tools-api/package.json`, `package-lock.json`, `tests/` | Deployment commands, dependency lock, and behavior checks |
@@ -106,6 +107,44 @@ Moving the clients is therefore two releases, never one:
 2. **Point the clients at it.** Change `CLOUD_URL`, rebuild both apps, package, release and publish — then re-enroll the passkey, and re-add the phone app from the new origin, which is a fresh install with its own storage and access token.
 
 `/` redirects to `/app/`, so the bare hostname opens the phone app rather than returning the `401` every other unrecognized path gets. A Worker route needs a proxied DNS record to match against; a custom domain creates its own.
+
+## Storage against the limit
+
+The account is on the **Workers free plan**: 500 MB per D1 database, 5 GB across
+every database, at most 10 databases. `erics-personal-tools` is the only one,
+and it was 303 kB at 24 tables when this was written — three ten-thousandths of
+what it is allowed. The paid plan's numbers (10 GB per database, 250 GB across
+the account) are in `chrome-sidebar/src/quota-data.js` beside the free ones, and
+`CLOUDFLARE_PLAN=paid` is the whole of the switch if the account ever moves.
+
+**A database cannot measure itself.** `PRAGMA page_count` from the Worker comes
+back `SQLITE_AUTH`, so the size is read from Cloudflare's own API and needs a
+credential nothing else here holds:
+
+- `CLOUDFLARE_ACCOUNT_ID` — a plain var in `wrangler.jsonc`, not a secret.
+- `CLOUDFLARE_API_TOKEN` — a Cloudflare API token scoped to **Account · D1 ·
+  Read** and nothing else, set with `npx wrangler secret put CLOUDFLARE_API_TOKEN`.
+  It reads sizes; it must never be given write scopes, and it is not the
+  Worker's own `API_TOKEN`.
+
+Without both, `GET /v1/storage` answers 503 saying which is missing and the
+hourly sweep logs that it is unconfigured. Neither is a failure of anything
+else, and no size is ever guessed from the rows the Worker can see.
+
+Apply `storage-usage-schema.sql`. Its one `storage_usage` row holds the last
+reading and the threshold band it was last announced at; it is account
+telemetry, so it is not encrypted, no device queues edits to it, and it may be
+deleted at the cost of one repeated notification.
+
+The reading is taken hourly by the cron and stands for an hour, so opening
+Settings normally costs no request to Cloudflare; Refresh there is the owner
+asking for it now. A reading Cloudflare refuses does not replace the one already
+held — the screen keeps the figure and says how old it is.
+
+**Crossing 75%, 90% or 100% sends one notification** to every subscribed device,
+through the same Web Push path as the morning digest. Sitting above a threshold
+sends nothing more; falling back below one re-arms it. This is the point of the
+feature: the plan can be changed before the limit is reached, not after.
 
 ## Resource use
 

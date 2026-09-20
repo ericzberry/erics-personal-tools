@@ -1,7 +1,8 @@
 import {CapabilityPicker} from './capabilities.js';
 import * as UI from './ui.js';
 import {AI_PROVIDERS} from '../ai-providers.js';
-const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Strong,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField}=UI;
+import {usageSummary,formatBytes} from '../quota-data.js';
+const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Strong,Label,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField}=UI;
 export function DraftView() {
   const draft=Section([
     Notice('',{id:'advice-status',className:'notice notice-subtle'}),
@@ -66,7 +67,10 @@ export function VoiceView() {
 export const VoiceLines=(voices=[])=>voices.map(voice=>Stack([
   Strong(voice.name),Note([voice.audience,...voice.markers].filter(Boolean).join(' · '))
 ],{className:'voice-line'}));
-export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),Main([Note('Open a tool, or a site a tool knows.')])],{id:'home-tool',className:'tool-page',hidden:true});
+// The quiet screen, and the one thing it is worth interrupting for: whose
+// birthday it is. Nothing coming leaves it exactly as it was.
+export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),
+  Main([Note('Open a tool, or a site a tool knows.'),Stack([],{id:'home-birthdays'})])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     UI.SettingsList([
@@ -129,6 +133,17 @@ export function AISettingsView() {
           Note('',{id:'settings-cloud-status',role:'status'})],{className:'connection-setup'})
       ],{id:'settings-cloud'}),
       Notice('',{id:'settings-status',role:'status',hidden:true}),
+      // What the account's cloud is holding, against what the plan allows. It
+      // sits with the connection because it is that connection's resource, and
+      // it is the whole of the answer: a size, a limit, and the databases the
+      // size is made of.
+      UI.Panel([
+        SectionTitle('Cloud storage',Button('Refresh',{id:'storage-refresh',variant:'secondary',size:'compact'})),
+        Stack([Strong('—',{id:'storage-headline'}),Label('',{id:'storage-scope'})],{className:'storage-figure'}),
+        UI.Meter({id:'storage-meter',label:'Cloud storage used',value:0}),
+        Stack([],{id:'storage-databases',className:'storage-databases'}),
+        Notice('',{id:'storage-status',role:'status',hidden:true})
+      ],{className:'settings-card storage-card'}),
       Stack([
         Section([SectionTitle('Saved connections'),
           ActionGroup([Button('Add connection',{id:'connection-add',variant:'primary',size:'compact'}),Button('Reload connections',{id:'connection-reload',variant:'secondary',size:'compact'})],{compact:true,id:'connection-actions',hidden:true}),
@@ -180,6 +195,20 @@ export function AISettingsView() {
     ])
   ],{className:'settings-shell'});
 }
+// The cloud storage panel, filled. It lives beside the markup it fills so the
+// Settings controller and the preview harness put the same thing on screen: a
+// size against its limit, the tone that size has earned, and the databases the
+// size is made of. No reading at all reads as a dash, not as zero.
+export function setCloudStorage(root, usage) {
+  const find = id => root.querySelector(`#${id}`);
+  const summary = usageSummary(usage);
+  find('storage-headline').textContent = summary ? summary.headline : '—';
+  find('storage-scope').textContent = summary ? `${summary.scope} · ${usage.plan} plan` : '';
+  UI.setMeter(find('storage-meter'), summary ? summary.percent : 0, summary ? summary.tone : '');
+  find('storage-databases').replaceChildren(...(usage?.databases || []).map(database =>
+    Stack([Label(`${database.name} · ${database.tables} table${database.tables === 1 ? '' : 's'}`), Label(formatBytes(database.bytes))])));
+}
+
 export function mountSettings(root) {root.replaceChildren(AISettingsView());}
 
 export function RewardsView(){return SubPage({id:'rewards-tool',title:'Rewards & benefits',backId:'close-rewards',children:[Stack([],{id:'rewards-root'})]});}
