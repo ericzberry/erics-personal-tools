@@ -25,6 +25,8 @@ The whole intake is one description box. Write the purchase at whatever level of
 
 An amount is optional. With one, results are estimated dollars; without one, results are effective rates over the same reference spend for every card, and a remaining bonus cap is disclosed rather than blended, because it cannot be applied to an unknown amount.
 
+A card's own rewards page is the other way its terms get filled in. Open it with the sidebar beside you and **Rewards & benefits** reads it: `8x on Chase Travel` is Travel through an Issuer portal, `4x on flights and hotels booked direct` is Travel booked Direct, `3x on dining` is Dining through any method, and `All other earnings` is the base rate. Each rate is proposed against the terms of the card it belongs to — a rule that card already holds for the same category and purchase method is that rule at a new rate, never a second one beside it, and the review says which. What narrows a reward is carried into its conditions, so a narrow reward is never quietly widened into a whole category. Your remaining cap, end date, activation and redemption value are yours and are left alone; the review date becomes the day you saved it, because that is the day you read the issuer's own page. A rate whose card you have not saved, or whose card cannot be told from another of yours, or that is stated in points on a card you keep in cash back, is reported and not saved. Nothing is written without a press. See [REWARDS.md](REWARDS.md) for the reading itself.
+
 Offline, or with no saved AI connection, Find best card explains that AI is unavailable and opens the same controls so a category can be set by hand. The comparison itself never needs the network.
 
 The application computes rewards from saved rates rather than asking AI to choose the winner: AI reads the purchase, and saved terms decide the card. Each result names the reward program that applied — the matching bonus, or the base rate when no bonus matched — and how far it is from the next card in points and dollars. Cash back and points are compared as estimated dollars using the owner's cents-per-point valuation. It displays ties, bonus caps and base-rate fallback. It does not combine overlapping bonuses. Expired, inactive, wrong-channel and unconfirmed bonuses are excluded. Conflicted cards and pending deletions are excluded until resolved.
@@ -32,6 +34,8 @@ The application computes rewards from saved rates rather than asking AI to choos
 ## Limits
 
 The issuer determines the actual merchant category. Estimates exclude fees, interest, signup bonuses, and unentered offers. Rewards may depend on card variants, merchant exclusions, account tiers, payment methods and purchase country. Review these against the linked terms. A points valuation is an assumption supplied by the owner, not a guaranteed redemption rate.
+
+A rate read off a card's own page is what that page stated on the day it was read, and the page is the issuer's summary rather than its terms — check the linked terms for the exclusions and caps a summary leaves out. A rate the page does not state is never inferred, and a rate is never converted between points and a percentage.
 
 Remaining spending caps are entered manually and are not decremented by comparisons. For a cap shared across categories, maintain the same remaining amount on the relevant rules. Research sets capped bonus balances to zero and activation-dependent bonuses inactive until the owner supplies their account-specific information. Missing or old review dates are disclosed in calculation details.
 

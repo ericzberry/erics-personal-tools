@@ -69,8 +69,6 @@ state, release checks, launcher) and the content scripts
 `ui.js` (primitives and reusable presentation) · `views.js` (screens composed from
 them) · `tokens.css` (design tokens) · `status.css` (the four status tones and the
 progress indicators, imported by `tokens.css` so every host has them) ·
-`tabs.css` (the tab strip a tool's two concepts are split across, imported by
-`tokens.css` the same way) ·
 `styles.css` (component classes) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns
@@ -123,10 +121,15 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `rewards-sync.js`, `balance-data.js` (points and miles: what a page reading
   may become, which saved balance it updates, and the per-unit totals the
   wallet opens with — shared with mobile and the Worker),
-  `credit-data.js` (the other half of that reading: what an issuer's own
-  tracker says is left of each recurring credit, which saved benefit it fills
-  in, and — through `card-data.js`, where card identity lives — which of the
-  owner's cards it belongs to; shared the same way),
+  `credit-data.js` (the other halves of that reading: what an issuer's own
+  tracker says is left of each recurring credit, the benefits the page states
+  that carry no tracker at all, which saved entry each fills in, and — through
+  `card-data.js`, where card identity lives — which of the owner's cards it
+  belongs to; shared the same way),
+  `rate-data.js` (the last of them: what the card earns, read off the card's
+  own page and folded into that card's saved `rewardRules` in Best card rather
+  than into the wallet — the category, the channel, the rule it replaces and
+  the card it lands on; shared with mobile and the Worker),
   `program-data.js`/`program-offline.js` (the offer
   catalogues reward programs publish, read-only on every host),
   `finance-data.js`/`finance-offline.js` (the ledger: the asset-class and
@@ -170,16 +173,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   checking the copy reads back before offering it),
   `finance-page-read.js` (one
   text snapshot of the tab the owner is looking at, narrowed to the lines that
-  carry a figure and the lines that name one). All five ship to mobile
+  carry a figure — money, or the earning rate a card's own page states instead
+  of money — and the lines that name one). All five ship to mobile
   too, because `finance.js` imports them statically; the page reader needs
   `chrome.scripting` and hides its own button where there is none.
-  `zestimate.js` is the other reader, and the opposite errand: a Zestimate is
-  published rather than held, so it opens the Zillow page saved against a
-  property in a tab behind whatever the owner is looking at, reads the figure
-  off it, and closes the tab. The sidebar's alone — `finance-page.js` hands it
-  to both extension hosts and the phone gets nothing — so it does not ship to
-  mobile; what a link has to be for it to be readable is `zillowHome` in
-  `finance-data.js`, beside the record that carries the link.
   `account-sites.js` holds `FINANCE_SITES`, the registry of institutions worth
   recognizing — each with the page its balances are printed on — and
   `ACCOUNT_SITES`, the five of them whose signed-in pages can be read (E*TRADE,
