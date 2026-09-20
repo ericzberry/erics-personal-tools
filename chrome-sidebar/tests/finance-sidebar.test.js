@@ -60,7 +60,7 @@ test('the finance screen leads with its title, status and one action, and has no
   // alternate — a site's reading, the whole ledger's totals, the page action
   // again, the whole ledger's list — so "Position" under "E*TRADE" read as
   // E*TRADE's position when it was the estate's.
-  assert.deepEqual(headings,['This page','Everything you hold','Add a figure']);
+  assert.deepEqual(headings,['This page','Everything you hold','Add to the ledger']);
   assert.equal(headings.includes('Position'),false,'the NET and ASSETS labels already say that');
   const title=doc.querySelector('.tool-title-block');
   assert.equal(title.querySelector('h1').textContent,'Finance');

@@ -172,7 +172,8 @@ test('several accounts read under one name are counted separately, not folded in
     {...dated,account:'E*TRADE',label:'Traditional IRA -4144 Net Account Value',registration:'ira',value:122666.62},
     {...dated,account:'E*TRADE',label:'DIS',class:1,scope:'holding',registration:'',value:102.67}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
-  assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[1,1668402.54],[2,122666.62]],
+  // Whose money it is, alphabetically — the proposed IRA before the estate.
+  assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[2,122666.62],[1,1668402.54]],
     'both balances are kept, and the IRA is registered as one');
   assert.match(folded.notes.join(' '),/Left out: a total across accounts/);
   assert.match(folded.notes.join(' '),/2 accounts were read under one name and counted separately/);
@@ -238,10 +239,42 @@ test('a page that names no account still states every balance on it, each as wha
   // the only check there is that nothing was lost or counted twice.
   assert.deepEqual(folded.marks.map(row=>[classLabel(row.class),row.amount]),
     [['Liquid securities',1791069.16],['Unvested stock',248422.68]]);
-  // Two lines, not four: what was left out, and why a figure was not split.
-  assert.equal(folded.notes.length,2);
-  assert.match(folded.notes[0],/Left out: 2 gains or returns, a total across accounts\./);
-  assert.match(folded.notes[1],/^E\*TRADE: the 1 holding shown does not add up/);
+  // One line, not four. A last price is no more a holding's value than a day's
+  // gain is, so the top-movers table leaves nothing behind to explain.
+  assert.deepEqual(folded.notes,['Left out: 3 gains or returns, a total across accounts.']);
+});
+
+// A statement of holdings and nothing else is a list of positions, and they are
+// counted. The same list beside an account's stated balance is not: those are
+// positions inside one of the accounts, nothing says which, and counting them
+// adds a figure the page has already counted once.
+test('positions no account claimed are counted alone and refused beside a balance',()=>{
+  const dated={asOf:'2026-09-20',confidence:'high',reason:'',registration:'',account:''};
+  const alone=foldReadings([
+    {...dated,label:'VTI',class:classById('stocks').code,scope:'holding',value:700},
+    {...dated,label:'Treasury 2027',class:classById('bonds').code,scope:'holding',value:300}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
+  assert.deepEqual(alone.marks.map(row=>row.amount),[700,300]);
+
+  const beside=foldReadings([
+    {...dated,account:'Individual Brokerage -4049',label:'Net Account Value',class:classById('liquid').code,scope:'account',value:1668402.54},
+    {...dated,label:'Top Movers - DIS',class:classById('stocks').code,scope:'holding',value:102.67}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
+  assert.deepEqual(beside.marks.map(row=>row.amount),[1668402.54]);
+  assert.match(beside.notes.join(' '),/Left out: 1 position no account claimed\./);
+});
+
+// E*TRADE calls a stock plan's vested half "Current Account Value", which says
+// nothing about vesting at all, so the account is what settles the class.
+test('a stock plan is vested and unvested whatever the reading called the halves',()=>{
+  const dated={asOf:'2026-09-20',confidence:'high',reason:'',registration:'',scope:'account',
+    account:'Stock Plan (DSP) -7605',class:classById('unclassified').code};
+  const folded=foldReadings([
+    {...dated,label:'Current Account Value',value:5000},
+    {...dated,label:'Potential Benefit Value',value:248422.68}
+  ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
+  assert.deepEqual(folded.marks.map(row=>[classLabel(row.class),row.amount]),
+    [['Vested stock',5000],['Unvested stock',248422.68]]);
 });
 
 // Liquid against illiquid is the question the class list cannot answer on its
@@ -303,13 +336,14 @@ test('a bank holding several titles files each account under the one that holds 
     {...dated,account:'Maisie Ava Berry',value:5200},
     {...dated,account:'Celeste Arabella Berry',value:5100}
   ],[{...estate,id:'p1'}],chase);
+  // Whose money it is, alphabetically, whatever order the page listed them in.
   assert.deepEqual(folded.marks.map(row=>[row.name,row.amount]),[
-    [ESTATE,84200.11],
     ['Berry 2020 Descendants’ Irrevocable Trust',250000],
     ['Berry AE 21 Irrevocable Trust',125000],
+    ['Celeste Arabella Berry',5100],
     ['Celsie LLC',41000],
-    ['Maisie Ava Berry',5200],
-    ['Celeste Arabella Berry',5100]
+    [ESTATE,84200.11],
+    ['Maisie Ava Berry',5200]
   ],'six accounts, six titles, and the joint one joins the estate already in the ledger');
   assert.deepEqual(folded.portfolios.map(entry=>[entry.name,registrationLabel(entry.kind)]),[
     ['Berry 2020 Descendants’ Irrevocable Trust','Trust'],

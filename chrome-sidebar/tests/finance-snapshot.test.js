@@ -80,7 +80,9 @@ test('a signed-in account page offers one action, and nothing before that',async
   assert.equal(document.querySelector('#finance-page-block .settings-group-title').textContent,'E*TRADE');
   const panel=document.getElementById('finance-snapshot-body');
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Read my E*TRADE accounts']);
-  assert.match(panel.textContent,/Nothing is saved until you have checked the figures/,'the action says what it will do before it does it');
+  // The heading says which page and the button says what it does, so the block
+  // before a reading is those two things and nothing else.
+  assert.equal(panel.textContent.trim(),'Read my E*TRADE accounts','no sentence under the action repeating it');
   assert.equal(document.getElementById('finance-page-block').className.includes('settings-group'),true);
   assert.equal(panel.querySelector('.record-row'),null);
   tool.site(null);
@@ -151,7 +153,7 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save these figures','Edit','Discard']);
   assert.match(panel.textContent,/2 figures · as of 2026-09-11/,'one shared date is stated once, not on every row');
   assert.equal(writes.length,0,'reading saves nothing');
-  assert.match(document.getElementById('finance-snapshot-status').textContent,/folded into 2\. Nothing is saved yet\./);
+  assert.match(document.getElementById('finance-snapshot-status').textContent,/folded into 2\./);
 
   panel.querySelector('button').click();
   await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 figures.'));

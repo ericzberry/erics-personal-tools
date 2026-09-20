@@ -150,7 +150,8 @@ export function PagePanel({site,rows=[],notes=[],editing=false,disabled=false,on
   read.addEventListener('click',onRead);
   return Stack([
     ...(rows.length?[FoldReview({rows,notes,editing,disabled,onSave,onEdit,onDiscard,onAmount})]:[
-      Note('Reads the accounts on the page in front of you and shows what it found. Nothing is saved until you have checked the figures.'),
+      // The button says what it does and the heading says which page. A
+      // sentence underneath repeating both is a paragraph nobody reads twice.
       ActionGroup([read],{compact:true})
     ])
   ],{className:'snapshot-reading'});
@@ -184,7 +185,7 @@ export function FinanceView(){
       Disclosure('Value over time',[Stack([],{id:'finance-trend'})],{id:'finance-trend-panel'}),
       Stack([],{id:'finance-list',className:'travel-list'})
     ]}),
-    SettingsGroup({title:'Add a figure',level:2,children:[
+    SettingsGroup({title:'Add to the ledger',level:2,children:[
       UI.UploadField({id:'finance-drop',inputId:'finance-file',statusId:'finance-file-status',
         label:'Drop a statement',formats:'PDF, CSV, XLSX or image',accept:ACCEPTED.join(','),
         status:'',resetId:'finance-file-clear',resetLabel:'Remove file'}),
@@ -194,7 +195,7 @@ export function FinanceView(){
       Notice('',{id:'finance-intake-status',role:'status'}),
       Stack([],{id:'finance-drafts'}),
       Stack([],{id:'finance-capital-drafts'}),
-      Disclosure('Enter by hand',[
+      Disclosure('Enter a figure',[
       Form([
         Strong('New figure',{id:'finance-editor-title'}),
         FormField({id:'finance-portfolio',label:'Portfolio',kind:'select',options:[]}),
@@ -212,12 +213,13 @@ export function FinanceView(){
         ActionGroup([Button('Save figure',{id:'finance-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-cancel',variant:'secondary'})])
       ],{id:'finance-form',className:'form-stack'})
       ],{id:'finance-editor'}),
-      // A second form, because it is a second job. A figure is a class and an
-    // amount; an investment is a name, what kind of thing it is, and the four
-    // numbers a capital account statement states about it. Folding the two
-    // together would have made one form that is mostly hidden whichever way it
-    // is used.
-      Disclosure('Record an investment',[
+      // A second form, because it is a second job, and the two names are what
+    // have to say so: "Enter by hand" and "Record an investment" read as the
+    // same offer twice. A figure is a class and an amount; a private investment
+    // is a name, what kind of thing it is, and the four numbers a capital
+    // account statement states about it. Folding them together would have made
+    // one form that is mostly hidden whichever way it is used.
+      Disclosure('Enter a private investment',[
       Form([
         Strong('New investment',{id:'finance-inv-title'}),
         FormField({id:'finance-inv-portfolio',label:'Portfolio',kind:'select',options:[]}),

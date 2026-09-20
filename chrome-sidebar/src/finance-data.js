@@ -639,7 +639,7 @@ function separate(account,notes,dropped){
 // came back as "Day's Gain" would have filed $7,036 as the balance of a $1.6M
 // account, and nobody reading the ledger a year later could tell. So the device
 // refuses a figure that names itself a change, whatever scope it was given.
-const NOT_A_VALUE=/\b(gains?|loss|losses|change|returns?|performance|cost basis|unrealized|realized|yield)\b/i;
+const NOT_A_VALUE=/\b(gains?|loss|losses|change|returns?|performance|cost basis|unrealized|realized|yield|price)\b/i;
 // A stock plan's two halves, named by the page rather than by the reading: the
 // potential, projected or unvested benefit is a schedule, and everything else
 // in the account is stock that is held. The class is forced here because it is
@@ -647,6 +647,12 @@ const NOT_A_VALUE=/\b(gains?|loss|losses|change|returns?|performance|cost basis|
 // called $248,422 of unvested stock an ordinary holding would bury it.
 const UNVESTED=/\b(unvested|potential|projected|unexercis\w*)\b/i;
 const VESTED=/\bvested\b/i;
+// The account that says which of the two a figure is by what it is. Only a
+// stock plan states a current value and a potential one side by side, and
+// E*TRADE calls the vested half "Current Account Value" — a name with nothing
+// in it about vesting at all, which left the class to whatever the reading
+// happened to say.
+const STOCK_PLAN=/\b(stock plan|dsp|espp|rsu|equity (award|plan)|restricted stock)\b/i;
 export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
   const CASH=classById('cash').code,LIQUID=classById('liquid').code;
   // What a figure is in, when the reading did not say. A site answers for its
@@ -660,7 +666,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // value in it would turn the vested balance beside it into a schedule.
     const own=reading.label||'';
     if(UNVESTED.test(own))return classById('unvested').code;
-    if(VESTED.test(own))return classById('vested').code;
+    if(VESTED.test(own)||STOCK_PLAN.test(said))return classById('vested').code;
     if(reading.class!==UNCLASSIFIED)return reading.class;
     if(INVESTED.test(said))return defaultClass===CASH||!defaultClass?LIQUID:defaultClass;
     return defaultClass??reading.class;
@@ -733,6 +739,7 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
       name:portfolio.name,kind:portfolio.kind,currency:portfolio.currency||'USD',isNew:!!portfolio.isNew};
     figures.set(key,{...current,amount:Math.round((current.amount+value)*100)/100,from:[...current.from,...from]});
   };
+  const named=[...accounts.entries()].some(([key,entry])=>key!==UNNAMED&&entry.totals.length);
   for(const account of [...accounts.values()].flatMap(entry=>separate(entry,notes,dropped))){
     const inside=[...account.totals,...account.holdings];
     // Everything the page called this account, in one string: the name it was
@@ -748,6 +755,15 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
     // under it are the positions of both.
     const stated=sum(totals.map(total=>total.value));
     const reconciles=holdings.length&&stated>0&&Math.abs(held-stated)<=stated*RECONCILE;
+    // Positions with no account name of their own are what a statement of
+    // holdings looks like, and they are counted. On a page that also states an
+    // account's balance they are not: they are positions inside one of those
+    // accounts, and nothing says which, so counting them adds a figure the page
+    // already counted. A broker's top-movers table arrives exactly this way.
+    if(holdings.length&&!totals.length&&account.name===institutionName(institution)&&named){
+      dropped.push(`${holdings.length} position${holdings.length===1?'':'s'} no account claimed`);
+      continue;
+    }
     if(holdings.length&&(reconciles||!totals.length)){
       for(const reading of holdings)add(portfolio,classify(reading,`${account.name} ${reading.label}`),reading.asOf,reading.value,[reading.label]);
       continue;
@@ -758,7 +774,13 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   // Said once, at the front, in the order a reader would ask it: what did you
   // not count, and why is a figure not split.
   if(dropped.length)notes.unshift(`Left out: ${[...new Set(dropped)].join(', ')}.`);
-  const marks=[...figures.values()].sort((a,b)=>a.portfolio-b.portfolio||a.class-b.class);
+  // Read in the order it will be read back: whose money it is, then what it is
+  // in. Sorting by portfolio number put the figures in the order the portfolios
+  // happened to be created in, which is no order at all to anyone looking at
+  // them, and interleaved two portfolios' classes when a new one was proposed.
+  const marks=[...figures.values()].sort((a,b)=>
+    a.name.localeCompare(b.name,undefined,{sensitivity:'base'})||a.portfolio-b.portfolio
+    ||ASSET_CLASSES.findIndex(entry=>entry.code===a.class)-ASSET_CLASSES.findIndex(entry=>entry.code===b.class));
   return {marks,portfolios:proposed,notes,today};
 }
 

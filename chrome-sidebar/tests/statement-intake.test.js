@@ -274,6 +274,46 @@ test('the heading an account is grouped under travels with its balance', () => {
   assert.equal(page.text.split('Celsie LLC').length - 1, 1, 'a heading already just kept is not repeated for the next figure under it');
 });
 
+// E*TRADE's complete view, as it is actually laid out: every account card puts
+// a "Show number" link between the account's name and its balances, and a
+// "Show more" under them. Counting those as the two lines that name a figure
+// pushed the account's name out of the snapshot entirely, so the reading had
+// nothing saying which balance was the IRA — and a retirement account, which by
+// law is one person's, was folded into a joint taxable estate.
+test("a card's own links do not stand in for the name of the account", () => {
+  const page = inPage(pageOf({text: [
+    'Individual Brokerage -4049',
+    'Show number',
+    'Net Account Value',
+    '$1,668,402.54',
+    "Day's Gain",
+    '-$7,036.71 (-0.42%)',
+    'Show more',
+    'Traditional IRA -4144',
+    'Show number',
+    'Net Account Value',
+    '$122,666.62',
+    'Show more',
+    'Stock Plan (DSP) -7605',
+    'Show number',
+    'Current Account Value',
+    '$0.00',
+    'Potential Benefit Value',
+    '$248,422.68'
+  ].join('\n')}), HERE);
+  for (const [account, figure] of [
+    ['Individual Brokerage -4049', '\\$1,668,402\\.54'],
+    ['Traditional IRA -4144', '\\$122,666\\.62']
+  ]) assert.match(page.text, new RegExp(`${account.replace(/[-*]/g, '\\$&')}\nNet Account Value\n${figure}`),
+    `${account} travels with its own balance`);
+  // The stock plan states two figures under one name, and the second keeps the
+  // label that says which of the two it is.
+  assert.match(page.text, /Stock Plan \(DSP\) -7605\nCurrent Account Value\n\$0\.00/);
+  assert.match(page.text, /Potential Benefit Value\n\$248,422\.68/);
+  assert.equal(page.text.includes('Show number'), false, 'a link is not a label');
+  assert.equal(page.text.includes('Show more'), false);
+});
+
 test('a page whose figures this filter cannot see is sent whole rather than gutted', () => {
   const page = inPage(pageOf({text: 'Balance\nabout a thousand pounds\nSettings'}), HERE);
   assert.equal(page.filtered, false);

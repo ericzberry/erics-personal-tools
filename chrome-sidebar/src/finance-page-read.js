@@ -31,6 +31,13 @@ export function readAccountPage() {
   const MARKET = /\b(djia|nasdaq|dow jones|s ?& ?p 500|russell \d|ftse|nikkei|indexes|indices|closed|delayed)\b/i;
   // The labels on a chart's axis are not balances.
   const TICK = /^[$€£¥]\s?(0|\d{1,3}(\.\d)?\s?[kmbt])$/i;
+  // The site's own furniture, sitting between an account's name and its
+  // balance. E*TRADE prints "Show number" under "Traditional IRA -4144", so the
+  // two lines above the figure were "Net Account Value" and "Show number" and
+  // the account's name never travelled with its balance at all. The reading
+  // then had nothing saying which balance was the IRA, and a retirement account
+  // was folded into a joint taxable estate — which it cannot be.
+  const CHROME = /^(show (number|more|less|all|details)|view (all|full|details|more)|hide|trade|buy|sell|transfer|deposit|withdraw|quick links|open orders|edit|manage|settings|help|learn more|more|details|\u2026|\.{3})\b/i;
   // No figure of its own, but it names the account or the date the figures
   // around it belong to.
   const CONTEXT = /\b(as of|updated|statement period|period ending|closing date|account (number|no\.?|#)|ending in)\b|\.{3}\s?\d{3}/i;
@@ -54,21 +61,27 @@ export function readAccountPage() {
   const lines = (body.innerText || body.textContent || '').split('\n').map(clean);
   const seen = new Set(tables.join('\n').split('\n').map(line => line.toLowerCase()));
   const kept = [];
-  const push = line => {
+  const push = (line, names = false) => {
     const key = line.toLowerCase();
     // Identical long lines are the same row read twice, once out of the table
     // and once out of the surrounding text. Short ones can be two accounts
     // that genuinely read alike, so they are kept as they come.
-    if (!line || kept.length >= 400 || (line.length >= 16 && seen.has(key))) return;
-    seen.add(key);
+    //
+    // A line that names a figure is not a repeat of anything. Every account
+    // card on a broker page says "Net Account Value" over its balance, and
+    // suppressing the second one left a number under an account's name with
+    // nothing saying what kind of number it was. Only figures are deduplicated;
+    // a name repeated directly under itself is caught by `fresh` instead.
+    if (!line || kept.length >= 400 || (!names && line.length >= 16 && seen.has(key))) return;
+    if (!names) seen.add(key);
     kept.push(line);
   };
   // The three lines above a figure, ignoring the blank ones the layout leaves
   // behind: the nearest of them is usually the name the figure belongs to, and
   // any of them naming an index means the figure is a quote, not a balance.
-  const above = index => {
+  const above = (index, count) => {
     const previous = [];
-    for (let step = index - 1; step >= 0 && previous.length < 3; step--) if (lines[step]) previous.push(lines[step]);
+    for (let step = index - 1; step >= 0 && previous.length < count; step--) if (lines[step]) previous.push(lines[step]);
     return previous;
   };
   // The nearest line above a figure is usually the name it belongs to — but a
@@ -77,13 +90,22 @@ export function readAccountPage() {
   // child's account, that heading is the only thing saying whose balance this
   // is. So the nearest two come along, oldest first, and a line already just
   // kept is not repeated for the next figure under the same heading.
+  //
+  // The site's own controls are not names and never take one of those two
+  // places. Counting them pushed the account's name out of the snapshot on
+  // every broker page that puts a link beside the heading, which is all of them.
   const fresh = label => !kept.slice(-4).some(entry => entry.toLowerCase() === label.toLowerCase());
   lines.forEach((line, index) => {
     if (!wanted(line)) return;
-    const previous = above(index);
-    if (previous.some(entry => MARKET.test(entry))) return;
-    const labels = previous.slice(0, 2).filter(entry => entry.length <= 80 && !MONEY.test(entry) && !blocked(entry)).reverse();
-    for (const label of labels) if (fresh(label)) push(label);
+    // Five candidates for two places: a card can print a link, a tag and a
+    // disclosure between the name and the number. Market data is still judged
+    // on the three nearest lines, because an index named five lines up is on
+    // the other side of the page, not over this figure.
+    const previous = above(index, 5);
+    if (previous.slice(0, 3).some(entry => MARKET.test(entry))) return;
+    const labels = previous.filter(entry => entry.length <= 80 && !MONEY.test(entry) && !blocked(entry) && !CHROME.test(entry))
+      .slice(0, 2).reverse();
+    for (const label of labels) if (fresh(label)) push(label, true);
     push(line);
   });
 

@@ -341,8 +341,14 @@ scopes in one:
    block at all.
 2. **Everything you hold** — the totals, the breakdown, the value over time and
    the holdings list, under one heading that says the scope is the whole ledger.
-3. **Add a figure** — the statement drop zone, what it read, and the two forms:
-   **Enter by hand** and **Record an investment**.
+3. **Add to the ledger** — the statement drop zone, what it read, and the two
+   forms: **Enter a figure** and **Enter a private investment**. The two names
+   have to say they are two jobs; "Enter by hand" beside "Record an investment"
+   read as the same offer twice.
+
+Nothing in any of the three explains itself in a sentence underneath. The
+heading says the scope and the button says what it does, and a paragraph
+repeating both is a paragraph nobody reads twice.
 
 These used to alternate: a site's reading, then the whole ledger's totals under
 a heading that said only *Position*, then the page action again down in *Read an

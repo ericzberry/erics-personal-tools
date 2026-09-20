@@ -1191,6 +1191,28 @@ add up to it, so three CDs beside a $1.6M net account value no longer claim the
 account holds $300: the total is kept whole as **Unclassified**, which counts in
 full and whose name asks to be corrected. The panel says which of these it did.
 
+**A card's own links are not the name of the account.** The snapshot keeps the
+two lines above a figure as what names it. E*TRADE prints "Show number" between
+an account's name and its balances, so those two lines were "Net Account Value"
+and "Show number", the account's name never travelled with its balance, and the
+reading had nothing saying which figure was the IRA — which is how a retirement
+account, one person's by law, was folded into a joint taxable estate. The site's
+own controls are skipped, five candidates are considered for the two places, and
+a line that names a figure is never deduplicated: every card says "Net Account
+Value" over its balance, and dropping the second left a number under an account
+with nothing saying what kind of number it was.
+
+**Positions no account claimed are counted alone and refused beside a balance.**
+A statement listing only holdings is a list of positions. The same list beside an
+account's stated balance is not — those are positions inside one of the accounts,
+nothing says which, and counting them adds a figure the page already counted. A
+broker's top-movers table arrives exactly that way, and a last price is no more a
+holding's value than a day's gain is.
+
+**Read in the order it is read back:** whose money it is, then what it is in.
+Sorting by portfolio number put the figures in whatever order the portfolios
+happened to be created in.
+
 **Two balances that differ are two balances.** A page printing the same number
 under two names — a current value and a net value — has stated one balance
 twice, and the number is what says so. Deciding it by name instead, and keeping
@@ -1227,6 +1249,10 @@ only the id turned every class the model had placed back into Unclassified —
 which is why a page of stocks, cash and a stock plan arrived as one Unclassified
 total, and why the only classes that ever reached the ledger were the ones the
 device filled in afterwards. Both forms are accepted now.
+
+**Only a stock plan states a current value and a potential one side by side**,
+and E*TRADE calls the vested half "Current Account Value" — a name with nothing
+in it about vesting — so the account settles the class rather than the reading.
 
 **A securities total is not unplaced value.** A brokerage, IRA or 401(k) total
 that the page never split is marketable securities whether or not it says so, so
@@ -1311,8 +1337,10 @@ there is any — it is not a liability, nobody can demand all of it today — an
 Committed, Funded, Returned, Unfunded and Value sit under **Private
 investments** in the breakdown. Only the parts that have happened are shown: a
 direct purchase has no commitment, and an investment signed last week has none
-of it. **Record an investment** is a second form because it is a second job, and
-an investment with no statement behind it is a whole record — that is how a
+of it. **Enter a private investment** is a second form because it is a second
+job — and it is named for the job, because "Record an investment" sitting under
+"Enter by hand" read as the same offer twice — and an investment with no
+statement behind it is a whole record — that is how a
 commitment signed this morning is registered, counting as nothing until a figure
 says otherwise.
 

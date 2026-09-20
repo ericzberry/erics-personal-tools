@@ -289,7 +289,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
     fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
     showCapital(result,'file');
     const found=readNote(result,where);
-    status([found?`${found}. Nothing is saved yet.`:none,extra,result.unread].filter(Boolean).join(' '),target,found?'success':'alert');
+    status([found?`${found}.`:none,extra,result.unread].filter(Boolean).join(' '),target,found?'success':'alert');
     return !!found;
   }
   async function read(){
@@ -348,7 +348,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,onSe
       // The heading names a recognized site, so the status does not repeat it;
       // an ordinary page has no name up there, so its host is worth saying.
       const found=readNote(result,site?'':page.host);
-      status([found?`${found}. Nothing is saved yet.`:`No account figures were found on ${page.host}.`,
+      status([found?`${found}.`:`No account figures were found on ${page.host}.`,
         page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
         result.unread].filter(Boolean).join(' '),'snapshot-status',found?'success':'alert');
     },'snapshot-status');
