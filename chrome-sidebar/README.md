@@ -2723,6 +2723,6 @@ New coverage: two cards' offers read off their own pages, keyed apart, each
 linking to the page it came from; both cards folded into one catalogue by a
 partial reading that leaves the other card's offers alone; a card's name
 narrowing the tab to its own offers; and a page of another origin's dropped.
-Validation: 581 extension, 33 mobile and 134 API tests pass from an archive of
+Validation: 578 extension, 33 mobile and 134 API tests pass from an archive of
 HEAD. The Offers tab was reviewed at 380px against a synthetic catalogue holding
 two cards' offers beside a published one. Archive: `release/erics-sidebar-0.6.213.zip`.
