@@ -2690,7 +2690,7 @@ New coverage: an issuer's offers recognized as a program read from text rather
 than markup, a visit to that site injecting no reader and writing nothing, a
 page reading turned into catalogue offers once each with the shouted category
 read as a name, the key that makes a merchant's new offer a new offer, and a
-partial reading folding in beside what was already saved. Validation: 576
+partial reading folding in beside what was already saved. Validation: 577
 extension, 33 mobile and 134 API tests pass from an archive of HEAD. The Offers
 tab was reviewed at 380px against a synthetic wallet holding both catalogues.
 Archive: `release/erics-sidebar-0.6.212.zip`.
