@@ -3383,5 +3383,5 @@ borrowed from a product the card is not a version of.
 
 New coverage: a card whose lookup fails named at the end while the card after it
 is still looked up and still proposed, and nothing saved by the review that
-holds it. Validation: 614 extension, 33 mobile and 135 API tests pass from an
+holds it. Validation: 613 extension, 33 mobile and 135 API tests pass from an
 archive of HEAD. Archive: `release/erics-sidebar-0.6.229.zip`.
