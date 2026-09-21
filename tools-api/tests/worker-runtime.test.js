@@ -99,3 +99,56 @@ test('the Cloudflare storage read uses request options workerd accepts',async()=
     }
   }finally{await mf.dispose();}
 });
+
+// A restore is one D1 batch: a foreign-key pragma, the deletes, and inserts
+// that take each row apart from one JSON parameter. node:sqlite cannot say
+// whether D1 accepts that batch or hands rows back in the shape the backup
+// reads, so the whole round trip runs here against the runtime's own D1.
+test('a backup read and restore round-trips the ledger through D1 in Cloudflare runtime',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const schema=readFileSync(new URL('../finance-schema.sql',import.meta.url),'utf8');
+  const {outputFiles}=await build({stdin:{contents:`
+  import {tableList,readTables,writeTables} from './src/backup.js';
+  const schema=${JSON.stringify(schema)};
+  export default {async fetch(request,env){
+    for(const statement of schema.replace(/--.*$/gm,'').split(';').map(text=>text.trim()).filter(Boolean))
+      await env.DB.prepare(statement).run();
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO finance_portfolios (id, value, revision) VALUES (1, ?, 'r1')").bind(JSON.stringify({v:1,iv:'aXY=',ciphertext:'c2VhbGVk'})),
+      env.DB.prepare('INSERT INTO finance_marks (portfolio, class, firm, as_of, cents) VALUES (1, 1, 3, 20260630, 4300000000), (1, 2, 0, 20260630, 125050)'),
+      env.DB.prepare("INSERT INTO finance_holdings (id, portfolio, value, revision) VALUES (9, 1, 'sealed', 'r9')"),
+      env.DB.prepare('INSERT INTO finance_capital (holding, as_of, cents, contributed, distributed, commitment, unfunded) VALUES (9, 20260630, 1, 2, 3, 4, NULL)')
+    ]);
+    const list=(await tableList(env)).filter(table=>table.name.startsWith('finance_'));
+    const saved=await readTables(env,list);
+    // Damage: a figure overwritten, a portfolio lost with its figures.
+    await env.DB.batch([env.DB.prepare('UPDATE finance_marks SET cents = 1'),env.DB.prepare('DELETE FROM finance_marks'),
+      env.DB.prepare('DELETE FROM finance_capital'),env.DB.prepare('DELETE FROM finance_holdings'),env.DB.prepare('DELETE FROM finance_portfolios')]);
+    // Children first on purpose: the pragma is what lets the order not matter.
+    await writeTables(env,[...saved].reverse());
+    const after=await readTables(env,list);
+    let orphaned=null;
+    try{await writeTables(env,[{...saved.find(table=>table.name==='finance_portfolios'),rows:[]}]);}
+    catch(error){orphaned=error.message;}
+    const kept=await readTables(env,list);
+    return Response.json({saved,after,kept,orphaned,types:await env.DB.prepare('SELECT typeof(cents) AS c, typeof(value) AS v FROM finance_marks, finance_portfolios LIMIT 1').first()});
+  }};`,resolveDir:new URL('../',import.meta.url).pathname},bundle:true,format:'esm',write:false,platform:'browser'});
+  const mf=new Miniflare(convertV4MiniflareOptions({modules:true,compatibilityDate:'2026-09-08',script:outputFiles[0].text,d1Databases:['DB']}));
+  try{
+    const response=await mf.dispatchFetch('http://localhost/');
+    assert.equal(response.status,200,await response.clone().text());
+    const result=await response.json();
+    const marks=result.saved.find(table=>table.name==='finance_marks');
+    assert.deepEqual(marks.columns,['portfolio','class','firm','as_of','cents']);
+    assert.equal(marks.rows.length,2);
+    assert.deepEqual(result.saved.find(table=>table.name==='finance_capital').rows,[[9,20260630,1,2,3,4,null]]);
+    // Every table comes back exactly as it was read, value for value and type
+    // for type: an integer is still an integer, sealed text still text.
+    assert.deepEqual(result.after,result.saved);
+    assert.deepEqual(result.types,{c:'integer',v:'text'});
+    // Emptying the portfolios would orphan their figures, so D1 refuses the
+    // batch and every table is left as it was.
+    assert.match(result.orphaned||'',/Nothing was restored/);
+    assert.deepEqual(result.kept,result.saved);
+  }finally{await mf.dispose();}
+});

@@ -18,8 +18,12 @@
   // how much Cloudflare storage the account has used. Keep this entry in the
   // real wrangler.jsonc too: it is ignored by Git, so a copy that has drifted
   // from this template is the one thing that actually runs.
+  //
+  // The second entry is the quarterly backup's own daily trigger (BACKUP_CRON
+  // in src/backup.js, which must match it exactly). Without it no backup is
+  // ever taken, and nothing else would notice. See docs/BACKUPS.md.
   "triggers": {
-    "crons": ["0 * * * *"]
+    "crons": ["0 * * * *", "0 8 * * *"]
   },
   // The account the Worker reads its own storage usage from. It is an
   // identifier, not a credential, so it lives here; the token that goes with it

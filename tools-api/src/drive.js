@@ -13,7 +13,7 @@ const fail=(status,message)=>{throw {status,message};};
 const AUTH_URL='https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL='https://oauth2.googleapis.com/token';
 const API='https://www.googleapis.com/drive/v3';
-const UPLOAD='https://www.googleapis.com/upload/drive/v3';
+export const UPLOAD='https://www.googleapis.com/upload/drive/v3';
 const FOLDER_TYPE='application/vnd.google-apps.folder';
 // The tax folder already exists and was made by hand, so per-file access
 // cannot reach it. Nothing here deletes: the only writes are creating a year
@@ -112,16 +112,18 @@ export async function accessToken(env,request,fetcher){
 // so it is worth one fresh token and one retry — and no more than one, because
 // a second refusal is the connection itself, which renewing cannot fix. The
 // renewal is where a revoked connection is actually noticed.
-async function driveFetch(env,request,fetcher,path,init={},retried=false){
+// `notFound` names the folder the caller was reaching for, because a 404 here
+// means that folder is out of this account's sight, and which one matters.
+export async function driveFetch(env,request,fetcher,path,init={},{retried=false,notFound='That tax folder is not reachable with the connected Google account.'}={}){
   const token=await accessToken(env,request,fetcher);
   const response=await fetcher(path.startsWith('http')?path:`${API}${path}`,{...init,headers:{Authorization:`Bearer ${token}`,...init.headers}});
-  if(response.status===401&&!retried){cached=null;return driveFetch(env,request,fetcher,path,init,true);}
+  if(response.status===401&&!retried){cached=null;return driveFetch(env,request,fetcher,path,init,{retried:true,notFound});}
   if(response.status===401||response.status===403){
     cached=null;
     const detail=await response.json().catch(()=>({}));
     fail(502,detail?.error?.message?`Google Drive refused the request: ${detail.error.message}`:'Google Drive refused the request. Reconnect and try again.');
   }
-  if(response.status===404)fail(404,'That tax folder is not reachable with the connected Google account.');
+  if(response.status===404)fail(404,notFound);
   if(!response.ok)fail(502,`Google Drive is unavailable (${response.status}).`);
   return response.json();
 }

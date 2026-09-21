@@ -15,6 +15,7 @@ import {readCapture} from './capture.js';
 import {pushSubscriptions, sendTestPush, deliverDueReminders} from './push.js';
 import {latestRelease} from './releases.js';
 import {storageUsage,sweepStorage} from './quota.js';
+import {backupRoutes,sweepBackup,BACKUP_CRON} from './backup.js';
 import {rewardsSettings,researchCardBenefits,readLoyaltyBalances} from './rewards.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
@@ -75,7 +76,15 @@ export default {
   // month has passed. The two are started separately and neither is awaited by
   // the other: reading a calendar must never be able to hold up, or fail, the
   // morning a phone is waiting for.
+  //
+  // The quarterly backup has a daily trigger of its own and runs alone in it:
+  // it reads every table, and D1 counts each of those reads toward the same
+  // per-invocation limit the morning notification needs.
   async scheduled(event, env, ctx) {
+    if (event?.cron === BACKUP_CRON) {
+      ctx.waitUntil(sweepBackup(env, {log: message => console.log(message)}));
+      return;
+    }
     ctx.waitUntil(deliverDueReminders(env, {log: message => console.log(message)}));
     ctx.waitUntil(sweepBirthdays(env, {log: message => console.log(message)}));
     // Cheap, and the only chance to say something before a limit is reached
@@ -151,6 +160,7 @@ export default {
       }
       if(path==='/v1/storage')return await storageUsage(request,env,json);
       if(path.startsWith('/v1/drive/'))return await drive(request,env,readValue,json);
+      if(path==='/v1/backup'||path.startsWith('/v1/backup/'))return await backupRoutes(request,env,readValue,json);
       if(path.startsWith('/v1/calendar/'))return await calendarRoutes(request,env,readValue,json);
       if(path==='/v1/voice'||path.startsWith('/v1/voice/'))return await voice(request,env,readValue,json);
       if(path==='/v1/rewards/programs'||path.startsWith('/v1/rewards/programs/'))return await rewardPrograms(request,env,readValue,json);

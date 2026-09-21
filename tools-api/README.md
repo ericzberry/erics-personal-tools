@@ -98,6 +98,15 @@ account ever leaves the free plan. The hourly cron re-reads the figure and
 notifies every subscribed device once when usage crosses 75%, 90% or 100%. See
 [Cloudflare runtime](../docs/CLOUDFLARE.md#storage-against-the-limit).
 
+`/v1/backup[/files|/run|/restore]` is the quarterly backup: every table, as one
+versioned JSON file in the owner's backup folder in Google Drive, through the
+same Google connection Taxes uses. Apply `npx wrangler d1 execute
+erics-personal-tools --remote --file backup-schema.sql` before deploying it, and
+keep the second `triggers.crons` entry (`0 8 * * *`, the backup's own daily
+trigger) in the Wrangler config. A restore previews unless told `confirm:true`,
+and writes a backup of what it replaces first. `node scripts/backup.mjs` drives
+all of it from a terminal. See [backups](../docs/BACKUPS.md).
+
 ## Finance ledger
 
 Apply `npx wrangler d1 execute erics-personal-tools --remote --file

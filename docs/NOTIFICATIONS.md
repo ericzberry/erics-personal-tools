@@ -46,7 +46,8 @@ started separately in the `scheduled`
 handler and none is awaited by the others: reading a calendar must never be
 able to delay, or fail, the morning a phone is waiting for. The sweep decides
 for itself that thirty days have passed, and does nothing at all when Google is
-not connected.
+not connected. The quarterly backup is not one of them: it reads every table,
+so it has a daily trigger of its own and runs alone in it.
 
 ## The other notification: storage before the limit
 
@@ -65,6 +66,13 @@ reading itself.
 The notification names the size, the limit and the plan, and nothing else — no
 table, no record count. See [CLOUDFLARE.md](CLOUDFLARE.md#storage-against-the-limit)
 for the limits, the read token it needs, and where the figure is shown.
+
+## A quarter without a backup
+
+The [quarterly backup](BACKUPS.md) sends one notification when a quarter still
+has no backup after a second failed day — "No backup yet for 2026-Q4", with the
+reason and that it tries again tomorrow. Once per quarter, through the same
+`notifyDevices`; a backup that works says nothing.
 
 ## Once, in the morning, only when there is something
 

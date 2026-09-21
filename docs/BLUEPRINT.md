@@ -302,7 +302,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`,
-  `/v1/storage`. `/v1/push/key` is public like the release route,
+  `/v1/storage`, `/v1/backup[/files|/run|/restore]`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
   body over 64 KB because a statement or document image travels inline;
@@ -345,6 +345,16 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   same hourly `scheduled` trigger, and notifies once per threshold crossed. The
   limits and the wording are `chrome-sidebar/src/quota-data.js`, which the
   Settings screen reads too. See [CLOUDFLARE.md](CLOUDFLARE.md).
+- `src/backup.js` — the quarterly backup: every table (discovered, not listed)
+  read in one batch and written as one JSON file to the owner's backup folder in
+  Google Drive through the connection `drive.js` holds, then checked against
+  Drive's own checksum; and the table-by-table restore from one, which previews
+  until confirmed and writes a backup of what it replaces first. It runs on a
+  daily trigger of its own (`BACKUP_CRON`, the second entry in
+  `triggers.crons`), not the hourly one. `src/backup-format.js` is the file
+  itself — its format version, digests, upgrades and verification — and is pure,
+  so `scripts/backup.mjs` checks a downloaded file with it offline. See
+  [BACKUPS.md](BACKUPS.md).
 - `src/providers.js` (provider adapters, including the text/image content parts
   every format renders in its own shape) and `src/model-policy.js` (the central
   task → model policy and priced catalogue, where `vision` marks a model that may
@@ -360,6 +370,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `calendar-schema.sql` (`calendar_scans`),
   `ai-tasks-schema.sql` (`ai_task_models`),
   `storage-usage-schema.sql` (`storage_usage`),
+  `backup-schema.sql` (`backup_state`),
   `release-schema.sql` (`app_releases`). Schema changes need an explicit upgrade
   path for existing data.
 - `finance-marks-rebuild.sql` is the one exception to that list's shape: a
@@ -367,7 +378,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   that added `firm`, run by hand and deliberately kept out of
   `finance-schema.sql` so no routine schema apply can repeat it.
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of
-  every app release). `wrangler.example.jsonc` — config template; real config and
+  every app release). `scripts/backup.mjs` — the backup from a terminal: status,
+  list, run one now, verify a downloaded file offline, and restore (preview
+  until `--confirm`); it borrows `finance-intake/api.mjs` for the token. `wrangler.example.jsonc` — config template; real config and
   credentials stay outside Git.
 
 ## site/
@@ -474,6 +487,6 @@ checks, held by `chrome-sidebar/tests/ui-rules.test.js` and the
 `ui-consistency` agent), `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/REWARDS.md`,
-`docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/REWARD_PROGRAMS.md`,
+`docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/BACKUPS.md`, `docs/REWARD_PROGRAMS.md`,
 `docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/QUICK_ADD.md`, `docs/NOTIFICATIONS.md`,
 `chrome-sidebar/RESTAURANTS.md`.
