@@ -29,6 +29,10 @@ A card's own rewards page is the other way its terms get filled in. Open it with
 
 Offline, or with no saved AI connection, Find best card explains that AI is unavailable and opens the same controls so a category can be set by hand. The comparison itself never needs the network.
 
+A reward is not always a category. A card can be good at one shop — a rebate at a named merchant, a partner discount, a rate that only applies through the issuer's own programme — and a bonus rule may name that merchant instead of standing for a whole category. A rule with a merchant is matched on the merchant AI read out of your description, whatever category it chose, and applies nowhere else; a rule with none is matched on the category as it always was. Research fills these in, and the merchant is a field of the rule like any other, so you can add or correct one by hand.
+
+What the merchant gives you beyond a rate is the wallet's, and it is said beside the card rather than added to it: buying at Uber, a card carrying an Uber credit says so under its result, with what is left of it this period and whether it still needs activating. A monthly credit is not a rate on this purchase — spending twice does not earn it twice — so it never moves the money, and a card that earns a point less but hands back a credit you have not spent is a card you can now see.
+
 The application computes rewards from saved rates rather than asking AI to choose the winner: AI reads the purchase, and saved terms decide the card. Each result names the reward program that applied — the matching bonus, or the base rate when no bonus matched — and how far it is from the next card in points and dollars. Cash back and points are compared as estimated dollars using the owner's cents-per-point valuation. It displays ties, bonus caps and base-rate fallback. It does not combine overlapping bonuses. Expired, inactive, wrong-channel and unconfirmed bonuses are excluded. Conflicted cards and pending deletions are excluded until resolved.
 
 ## Limits

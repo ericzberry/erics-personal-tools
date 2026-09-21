@@ -16,7 +16,13 @@ export function rewardRules(value){
     if(!rule||!PURCHASE_CATEGORIES.includes(rule.category)||!['Any',...PURCHASE_CHANNELS].includes(rule.channel)||typeof rule.active!=='boolean')fail('Choose a category, purchase method, and activation status for each rule.');
     const end=text(rule.end??'',10,'bonus end date');
     if(end&&(!/^\d{4}-\d{2}-\d{2}$/.test(end)||!Number.isFinite(Date.parse(end))||new Date(end).toISOString().slice(0,10)!==end))fail('Enter a valid bonus end date.');
-    return {category:rule.category,channel:rule.channel,rate:number(rule.rate,100,'bonus rate'),remaining:rule.remaining===null?null:number(rule.remaining,10000000,'remaining eligible spend'),active:rule.active,end,condition:text(rule.condition??'',500,'bonus conditions')};
+    // A reward can be good at one merchant rather than across a category —
+    // "10% back at Saks", "5% at Amazon", the rebate a card runs with one
+    // partner. Those are rates like any other and are compared like any other;
+    // what differs is what makes them apply, which is the merchant rather than
+    // the kind of shop. The category stays, because a merchant rule still says
+    // what sort of purchase it is for the owner reading it.
+    return {category:rule.category,channel:rule.channel,merchant:text(rule.merchant??'',120,'the merchant a reward is good at'),rate:number(rule.rate,100,'bonus rate'),remaining:rule.remaining===null?null:number(rule.remaining,10000000,'remaining eligible spend'),active:rule.active,end,condition:text(rule.condition??'',500,'bonus conditions')};
   });
 }
 export const CARD_MATCH_LIMIT=6;
@@ -37,12 +43,22 @@ export function normalizeCard(input,previous={}){
 }
 // The amount is optional: without one the comparison reports effective rates
 // rather than dollars, so a description like "gas" still returns a recommendation.
+// Who the purchase is with, as loosely as the two sides happen to write it:
+// "Uber" against "Uber Eats", "Saks" against "Saks Fifth Avenue". One name
+// inside the other is the same merchant; nothing else is, because a rebate at
+// one shop applied at another is worse than no rebate at all.
+export const merchantKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+export function sameMerchant(one,two){
+  const [a,b]=[merchantKey(one),merchantKey(two)];
+  if(!a||!b)return false;
+  return a===b||` ${a} `.includes(` ${b} `)||` ${b} `.includes(` ${a} `);
+}
 export function normalizePurchase(input){
   if(!PURCHASE_CATEGORIES.includes(input.category)||!PURCHASE_CHANNELS.includes(input.channel))fail('Choose a purchase category and method.');
   const blank=input.amount===''||input.amount===null||input.amount===undefined;
   const amount=blank?null:number(input.amount,10000000,'purchase amount');
   if(amount!==null&&amount<=0)fail('Enter a purchase amount greater than zero.');
-  return {category:input.category,channel:input.channel,amount};
+  return {category:input.category,channel:input.channel,amount,merchant:text(input.merchant??'',120,'the merchant')};
 }
 export const REFERENCE_AMOUNT=100;
 // Money calculations are deterministic. AI never supplies the winning card or rates.
@@ -57,7 +73,13 @@ export function compareCards(cards,input,today=new Date().toISOString().slice(0,
     if(card.notes)warnings.push(card.notes);
     let units=spend*card.base/100,matched=null;
     for(const [index,rule] of rewardRules(card.rules).entries()){
-      if(rule.category!==purchase.category||(rule.channel!=='Any'&&rule.channel!==purchase.channel))continue;
+      // A rule naming a merchant is asked about the merchant and nothing else:
+      // a rebate at Saks is a rebate at Saks whether the reading called it
+      // Department stores or Online shopping. A rule naming none is asked about
+      // the category, the way every rule always was. Both answer to the
+      // purchase method.
+      if(rule.merchant?!sameMerchant(rule.merchant,purchase.merchant):rule.category!==purchase.category)continue;
+      if(rule.channel!=='Any'&&rule.channel!==purchase.channel)continue;
       if(!rule.active){warnings.push('An inactive bonus was excluded.');continue;}
       if(rule.end&&rule.end<today){warnings.push('An expired bonus was excluded.');continue;}
       // Conditional rules require explicit purchase-time confirmation, never a guess.
@@ -72,6 +94,32 @@ export function compareCards(cards,input,today=new Date().toISOString().slice(0,
     const dollars=units*card.cpp;
     return {...card,dollars,estimated:purchase.amount!==null,amount:purchase.amount,rate:dollars/spend*100,earned:card.unit==='points'?units*100:units,matched,warnings};
   }).sort((a,b)=>b.dollars-a.dollars||a.name.localeCompare(b.name));
+}
+// What the wallet says a card also gives at this merchant: the monthly credit,
+// the standing discount, the membership that covers the delivery fee. None of
+// it is a rate on this purchase — spending twice does not earn a monthly credit
+// twice — so none of it is folded into the money. It is said beside the card,
+// because which card to use at Uber is answered by the $15 of credit left this
+// month as surely as by a percentage.
+//
+// A perk counts for a merchant when the entry mentions it — in what it is
+// called, in what it is worth, or in the note beside it. The test is a word
+// rather than the whole name, because a benefit is not named after a merchant
+// the way a rule is: the Platinum's Uber credit is called "Uber Cash", and
+// "uber cash" contains no "uber eats". Short words are left out, so a merchant
+// with a two-letter word in its name does not match half the wallet.
+const mentions=(field,merchant)=>{
+  const words=merchantKey(merchant).split(' ').filter(word=>word.length>=4);
+  const text=` ${merchantKey(field)} `;
+  return words.some(word=>text.includes(` ${word} `));
+};
+export function merchantPerks(entries=[],cardId='',merchant=''){
+  if(!cardId||!merchant)return [];
+  return (entries||[]).filter(entry=>entry&&!entry.deleting&&entry.card===cardId
+    &&['benefit','membership'].includes(entry.kind)&&entry.state!=='used'
+    &&[entry.name,entry.value,entry.notes].some(field=>mentions(field,merchant)))
+    .map(entry=>({name:String(entry.name||''),value:String(entry.value||''),
+      remaining:String(entry.remaining||''),state:String(entry.state||'')}));
 }
 export function parseClassification(value){
   if(!value||!PURCHASE_CATEGORIES.includes(value.category)||!['low','medium','high'].includes(value.confidence)||typeof value.reason!=='string'||value.reason.length>800)throw Error('AI returned an invalid category. Choose a category manually or try again.');
@@ -168,8 +216,11 @@ export function walletCards(entries=[],cards=[]){
   const found=[];
   for(const entry of entries||[]){
     if(!entry||entry.deleting)continue;
-    if(entry.kind==='card')found.push({name:String(entry.name||''),digits:/^\d{4}$/.test(String(entry.secretHint||''))?entry.secretHint:cardDigits(entry.name)});
-    else if(['benefit','membership'].includes(entry.kind)&&cardDigits(entry.source))found.push({name:String(entry.source||''),digits:cardDigits(entry.source)});
+    // The wallet's own id for a card entry travels with it, because what the
+    // wallet files under that card — its credits, its discounts, its
+    // memberships — is the other half of what the card gives.
+    if(entry.kind==='card')found.push({id:entry.id||'',name:String(entry.name||''),digits:/^\d{4}$/.test(String(entry.secretHint||''))?entry.secretHint:cardDigits(entry.name)});
+    else if(['benefit','membership'].includes(entry.kind)&&cardDigits(entry.source))found.push({id:'',name:String(entry.source||''),digits:cardDigits(entry.source)});
   }
   const held=[];
   for(const row of found){

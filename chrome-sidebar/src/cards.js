@@ -1,7 +1,7 @@
 import {CardsView,BonusRule,SavedCard,CardMatches,CardIngest,PurchaseConditions,PurchaseReading,ComparisonResults,WalletCards} from './components/cards.js';
 import {Note,setStatus} from './components/ui.js';
 import {aiConnections} from './ai-connection.js';
-import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent,walletCards} from './card-data.js';
+import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent,walletCards,merchantPerks} from './card-data.js';
 // `wallet` is the Rewards wallet's own store, read and never written. It is
 // what already knows which cards the owner holds: a card entry is the card
 // itself, and a credit read off an issuer's page carries the card that page
@@ -37,7 +37,7 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
   }
   function rules(){return [...$('rules').querySelectorAll('[data-rule]')].map(row=>{
     const input=key=>row.querySelector(`[id$="-${key}"]`).value;
-    return {category:input('category'),rate:input('rate'),channel:input('channel'),remaining:input('remaining')===''?null:input('remaining'),active:input('active')==='true',end:input('end'),condition:input('condition')};
+    return {category:input('category'),rate:input('rate'),channel:input('channel'),merchant:input('merchant'),remaining:input('remaining')===''?null:input('remaining'),active:input('active')==='true',end:input('end'),condition:input('condition')};
   });}
   function renderRules(values){$('rules').replaceChildren(...values.map((value,index)=>BonusRule(value,index,()=>{const current=rules();current.splice(index,1);renderRules(current);dirty=true;})));controls();}
   function populate(card){for(const field of fields)$(field).value=card[field]??'';renderRules(rewardRules(card.rules||'[]'));}
@@ -130,14 +130,30 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
     clearResults();showReading();
     return result;
   }
+  // What the wallet says each card also gives at this merchant — the monthly
+  // credit, the standing discount, the membership that covers the fee. It is
+  // not a rate and is never folded into the money; it is what the result says
+  // beside the card, because a card that earns a point less and hands back $15
+  // of Uber credit is the card to use at Uber.
+  function perksAt(merchant){
+    const perks=new Map();
+    if(!merchant||!held.length)return perks;
+    for(const row of walletCards(held,records)){
+      if(!row.card||!row.id)continue;
+      const found=merchantPerks(held,row.id,merchant);
+      if(found.length)perks.set(row.card.id,found);
+    }
+    return perks;
+  }
   function comparison(){
     if(!$('category').value)throw Error('Choose a reward category to compare your saved cards.');
-    const input=normalizePurchase({amount:$('amount').value,category:$('category').value,channel:$('channel').value});
+    const input=normalizePurchase({amount:$('amount').value,category:$('category').value,channel:$('channel').value,merchant:reading?.merchant||''});
     if(records.some(c=>!c.deleting&&!c.conflict&&c.unit==='points'&&c.cpp<=0))throw Error('Enter a redemption value above 0 for each points card before comparing.');
-    const key=JSON.stringify([input.category,input.channel,records]);
+    const key=JSON.stringify([input.category,input.channel,input.merchant,records]);
     if(key!==conditionKey){$('conditions').replaceChildren(...PurchaseConditions(records,input));conditionKey=key;}
     const confirmed=[...$('conditions').querySelectorAll('input:checked')].map(node=>node.getAttribute('data-confirm'));
-    $('results').replaceChildren(...ComparisonResults(compareCards(records,{...input,confirmed}),{unrated}));controls();
+    $('results').replaceChildren(...ComparisonResults(compareCards(records,{...input,confirmed}),
+      {unrated,perks:perksAt(input.merchant)}));controls();
   }
   $('purchase-form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
     // A changed description invalidates the previous reading; an owner-adjusted

@@ -3829,3 +3829,41 @@ of this commit's index, and both apps build. New coverage: the couple's three
 Joint accounts folded into a fund line and a liquid one, with the undrawn line
 still filed as their liability.
 Archive: `release/erics-sidebar-0.6.242.zip`.
+
+## A card is good at shops, not only at categories (0.6.243 / mobile 0.1.193)
+
+**Best card compared categories, and a card's best rewards are often not one.**
+A rebate at one named shop, a partner discount, a rate that only applies through
+the issuer's own programme: research reported them as prose in the notes, where
+nothing could compare them, and the comparison went on answering with the
+category rate — so a card handing back 10% at Saks lost to one earning 3x on
+department stores.
+
+**A bonus rule may now name the merchant it is good at.** Named, the merchant is
+what makes the rule apply — whatever category the reading chose for the purchase
+— and it applies nowhere else: at Saks the rebate; at the shop next door, the
+base rate. A rule naming no merchant is matched on the category exactly as
+before. Research is asked for these by name, and the merchant is an ordinary
+field of the rule, so one can be added or corrected by hand and survives every
+later save.
+
+**And what a card gives beyond a rate is now said beside it.** The wallet knows
+the credits, discounts and memberships filed under each card; buying at Uber,
+the card carrying an Uber credit says so under its own result, with what is left
+of it this period and whether it still needs activating. None of it moves the
+money — a monthly credit is not a rate on this purchase, and spending twice does
+not earn it twice — so the arithmetic stays what it was and the thing the
+arithmetic cannot see is on the screen beside it.
+
+**Research was asked for all of it.** Both lookups now want everything a card
+gives rather than its headline: every rebate at a named merchant, every partner
+discount, every fee waived, every included programme — and a merchant discount
+names its merchant, so it can be found again when the owner is buying there.
+
+New coverage: a rebate at a named merchant compared where that merchant is and
+nowhere else, a category rule still matched on its category, a merchant
+surviving a card's save, one name inside another read as the same shop, and the
+wallet's perks at a merchant found by a word of its name while a used one,
+another card's and an unmentioned merchant's are not. Validation: 623 extension,
+33 mobile and 135 API tests pass from an archive of HEAD. Archive:
+`release/erics-sidebar-0.6.243.zip`.

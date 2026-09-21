@@ -93,13 +93,17 @@ export function BonusRule(rule={},index,onRemove){
   const remove=Button('Remove bonus',{variant:'danger-subtle',size:'compact'});remove.addEventListener('click',onRemove);
   const row=Section([Heading(`Bonus ${index+1}`,3),
     f('category','Category','select',options(PURCHASE_CATEGORIES)),f('rate','Total reward rate','number'),
+    // A reward good at one merchant rather than across a category. Named here,
+    // the merchant is what makes the rule apply, and the category beside it
+    // stays as what sort of purchase it is.
+    f('merchant','Merchant (blank = the whole category)'),
     f('channel','Eligible purchase method','select',options(['Any',...PURCHASE_CHANNELS])),
     f('remaining','Remaining eligible spend (blank = unlimited)','number'),
     f('active','Bonus status','select',[{value:'true',text:'Active'},{value:'false',text:'Inactive / needs activation'}]),
     f('end','Last eligible date (optional)','date'),f('condition','Purchase requirements or exclusions'),
     ActionGroup([remove],{compact:true})
   ],{className:'bonus-rule','data-rule':index});
-  for(const [key,value] of Object.entries({category:'Dining',rate:0,channel:'Any',remaining:'',active:true,end:'',condition:'',...rule})){
+  for(const [key,value] of Object.entries({category:'Dining',rate:0,channel:'Any',merchant:'',remaining:'',active:true,end:'',condition:'',...rule})){
     const input=row.querySelector(`#${prefix}-${key}`);if(input)input.value=value===null?'':String(value);
   }
   for(const input of row.querySelectorAll('input[type=number]')){input.min='0';input.step='any';}
@@ -142,7 +146,7 @@ const near=(a,b)=>Math.abs(a-b)<0.000001;
 // The winning program is always computed from saved terms, never chosen by AI.
 // Each row therefore names the reward program that applied and how far apart the
 // cards actually are.
-export function ComparisonResults(rows,{unrated=0}={}){
+export function ComparisonResults(rows,{unrated=0,perks=new Map()}={}){
   // A recommendation made without a card the owner holds is the one thing this
   // screen can get wrong while looking right, so a card with no rates yet says
   // so beside the result rather than only in the list below it.
@@ -151,7 +155,7 @@ export function ComparisonResults(rows,{unrated=0}={}){
   const top=rows[0].dollars,tied=rows.filter(row=>near(row.dollars,top)).length>1,runnerUp=rows.find(row=>!near(row.dollars,top));
   const estimated=rows[0].estimated;
   const program=row=>row.matched
-    ?`${row.matched.rate}${row.unit==='cash'?'%':'×'} ${row.matched.category} bonus${row.matched.channel==='Any'?'':` · ${row.matched.channel} only`}`
+    ?`${row.matched.rate}${row.unit==='cash'?'%':'×'} ${row.matched.merchant||row.matched.category} bonus${row.matched.channel==='Any'?'':` · ${row.matched.channel} only`}`
     :`${row.base}${row.unit==='cash'?'%':'×'} base rate · no bonus program matched`;
   const why=row=>{
     if(!near(row.dollars,top))return `Behind by ${percent(rows[0].rate-row.rate)}${estimated?` · ${money(top-row.dollars)} less`:''}.`;
@@ -167,6 +171,11 @@ export function ComparisonResults(rows,{unrated=0}={}){
       Heading(estimated?`${money(row.dollars)} · ${percent(row.rate)}`:percent(row.rate),3),
       Note(program(row)),
       Note(why(row),{className:'footnote comparison-why'}),
+      // What this card also gives here, from the wallet. Each one says what is
+      // left of it where the wallet knows, because a credit already spent this
+      // month is not a reason to reach for the card.
+      ...(perks.get(row.id)||[]).map(perk=>Note([perk.name,perk.remaining?`${perk.remaining} left`:perk.value,
+        perk.state==='activation'?'needs activation':''].filter(Boolean).join(' · '),{className:'footnote comparison-perk'})),
       ...(estimated&&row.unit==='points'?[Note(`${row.earned.toFixed(2)} points × ${row.cpp}¢ redemption value`)]:[]),
       Disclosure('Calculation and conditions',[Note(row.matched?`${row.matched.rate}${row.unit==='cash'?'%':'×'} bonus${row.matched.remaining===null?'':` on up to $${row.matched.remaining} remaining eligible spend`}; ${row.base}${row.unit==='cash'?'%':'×'} base on the rest.`:`${row.base}${row.unit==='cash'?'%':'×'} base rate used.`),...row.warnings.map(w=>Note(w)),...(row.source?[Link('Issuer terms',row.source)]:[])])
     ],{className:near(row.dollars,top)?'comparison-result comparison-best':'comparison-result'}))];

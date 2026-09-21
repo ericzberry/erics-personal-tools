@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeCard,compareCards,parseClassification,parsePurchaseIntent,parseCardMatches,walletCards,cardProductName,cardDigits} from '../src/card-data.js';
+import {normalizeCard,compareCards,parseClassification,parsePurchaseIntent,parseCardMatches,walletCards,cardProductName,cardDigits,merchantPerks,sameMerchant} from '../src/card-data.js';
 import {cardsOffline} from '../src/cards-offline.js';
 import {mountCards} from '../src/cards.js';
 import {parseHTML} from 'linkedom';
@@ -197,4 +197,50 @@ test('no wallet, or one that cannot be read, leaves the saved cards exactly as t
     assert.match(h.document.getElementById('cards-list').textContent,/Synthetic card/);
   }
   h.restore();
+});
+
+// A reward good at one shop rather than across a kind of shop.
+test('a rebate at a named merchant is compared where that merchant is, and nowhere else',()=>{
+  const rules=JSON.stringify([
+    {category:'Dining',channel:'Any',rate:3,remaining:null,active:true,end:'',condition:'',merchant:''},
+    {category:'Department stores',channel:'Any',rate:10,remaining:null,active:true,end:'',condition:'',merchant:'Saks Fifth Avenue'}
+  ]);
+  const saved=card({name:'Merchant card',rules});
+  const at=(merchant,category='Online shopping')=>compareCards([saved],{category,channel:'Direct',amount:100,merchant},'2026-09-09')[0];
+  // The merchant decides, not the category the reading happened to choose.
+  assert.equal(at('Saks').dollars,10);
+  assert.equal(at('Saks Fifth Avenue','Department stores').dollars,10);
+  assert.equal(at('Saks').matched.merchant,'Saks Fifth Avenue');
+  // Another shop of the same kind gets the base rate, and so does a purchase
+  // that names no merchant at all.
+  assert.equal(at('Nordstrom').dollars,1);
+  assert.equal(at('').dollars,1);
+  // A rule with no merchant is still a category rule.
+  assert.equal(compareCards([saved],{category:'Dining',channel:'Direct',amount:100},'2026-09-09')[0].dollars,3);
+  // One name inside the other is the same merchant; nothing else is.
+  for(const [a,b] of [['Uber','Uber Eats'],['Saks Fifth Avenue','saks'],['Amazon','amazon.com']])assert.equal(sameMerchant(a,b),true,`${a} / ${b}`);
+  for(const [a,b] of [['Uber','Lyft'],['Saks','Sak'],['',''],['Amazon','']])assert.equal(sameMerchant(a,b),false,`${a} / ${b}`);
+  // A merchant rule survives a card being saved again: it is a stored field,
+  // not something the comparison works out.
+  assert.equal(JSON.parse(normalizeCard({...saved,rules}).rules)[1].merchant,'Saks Fifth Avenue');
+});
+
+test('what the wallet gives at that merchant is said beside the card, never added to it',()=>{
+  const entries=[
+    {id:'w1',kind:'card',name:'The Platinum Card'},
+    {id:'p1',kind:'benefit',name:'Uber Cash',value:'$15 per month',card:'w1',state:'available',remaining:'$15'},
+    {id:'p2',kind:'benefit',name:'Airline fee credit',value:'$200 a year',card:'w1',state:'available'},
+    {id:'p3',kind:'membership',name:'Walmart+ membership',value:'Included',card:'w1',state:'used'},
+    {id:'p4',kind:'benefit',name:'Dining credit',value:'$10 monthly',card:'w1',state:'activation',notes:'Good at Grubhub and Seamless'},
+    {id:'p5',kind:'benefit',name:'Uber Cash',value:'$15 per month',card:'w2',state:'available'}
+  ];
+  // Found by a word of the merchant's name, because a benefit is not named
+  // after the merchant the way a rule is.
+  assert.deepEqual(merchantPerks(entries,'w1','Uber Eats').map(perk=>[perk.name,perk.remaining]),[['Uber Cash','$15']]);
+  // The note beside a benefit counts, and so does what needs activating.
+  assert.deepEqual(merchantPerks(entries,'w1','Grubhub').map(perk=>[perk.name,perk.state]),[['Dining credit','activation']]);
+  // A used perk is not offered, another card's is not this card's, and a
+  // merchant nothing mentions has none.
+  for(const [id,merchant] of [['w1','Walmart'],['w1','Nordstrom'],['','Uber'],['w1','']])
+    assert.deepEqual(merchantPerks(entries,id,merchant),[]);
 });
