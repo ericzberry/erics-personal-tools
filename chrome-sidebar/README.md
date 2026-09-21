@@ -3714,3 +3714,4 @@ Validation: 617 extension, 33 mobile and 135 API tests pass from an extraction o
 this commit's index, and both apps build. New coverage: the three Joint accounts
 and the credit line titled to the estate with nothing proposed, and their three
 balances folded into one figure.
+Archive: `release/erics-sidebar-0.6.238.zip`.
