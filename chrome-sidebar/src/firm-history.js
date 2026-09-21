@@ -26,11 +26,11 @@
 // Nothing in a file says which place it came from, and they are left out rather
 // than gathered under a heading that would name nowhere.
 import {firmLabel} from './account-sites.js';
-import {marksOf,portfoliosOf,heldOn,signed,quarterNumber,quarterName,quarterEnded} from './finance-data.js';
+import {marksOf,portfoliosOf,heldOn,signed,quarterNumber,quarterName,quarterEnded,fromHistoryStart} from './finance-data.js';
 
 const sum=values=>Math.round(values.reduce((total,value)=>total+value,0)*100)/100;
 
-export function firmQuarters(records,{currency='USD',limit=12}={}){
+export function firmQuarters(records,{currency='USD',limit=12,since}={}){
   // Currencies are never added together, here as everywhere else: a firm
   // holding two of them is two series, and the panel shows the one being read.
   const mine=new Set(portfoliosOf(records).filter(portfolio=>(portfolio.currency||'USD')===currency).map(portfolio=>portfolio.number));
@@ -41,7 +41,7 @@ export function firmQuarters(records,{currency='USD',limit=12}={}){
     firms.set(firm,[...(firms.get(firm)||[]),mark]);
   }
   return [...firms].map(([firm,own])=>{
-    const points=[...new Set(own.map(mark=>quarterNumber(mark.asOf)))].sort((a,b)=>a-b)
+    const points=[...new Set(own.map(mark=>quarterNumber(fromHistoryStart(mark.asOf,since))))].sort((a,b)=>a-b)
       .map(period=>{
         // One firm's figures only, so the step function is asked the same
         // question the totals ask it, about a narrower set of rows.
@@ -65,7 +65,9 @@ export function firmQuarters(records,{currency='USD',limit=12}={}){
         // in its first week is that quarter's best available answer and
         // something else, so the row says when it was struck rather than
         // letting the heading claim a date nobody read.
-        struck:point.asOf.slice(5,7)===String((point.period%10)*3).padStart(2,'0')?'':point.asOf};
+        // A figure from before the history starts is read as its first
+        // quarter, and its own earlier date is not shown there either.
+        struck:point.asOf<fromHistoryStart(point.asOf,since)||point.asOf.slice(5,7)===String((point.period%10)*3).padStart(2,'0')?'':point.asOf};
     });
     // Firms are read in the order they matter, which is how much is at them.
     return {firm,label:firmLabel(firm),quarters,latest:quarters.at(-1)?.amount??0};

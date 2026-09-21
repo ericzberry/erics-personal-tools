@@ -26,7 +26,7 @@ test('a quarter is what the firm held at the end of it, not what was read in it'
     // June: only the estate is re-read. The trust is not gone — it stands at
     // its March figure, exactly as it stands in net worth.
     mark(1,LIQUID,UBS,'2026-06-30',1_250_000)
-  ]);
+  ],{since:''});
   assert.deepEqual(ubs.quarters.map(quarter=>[quarter.label,quarter.amount,quarter.figures]),
     [['2026 Q1',5_000_000,2],['2026 Q2',5_250_000,2]]);
   assert.equal(ubs.quarters.at(-1).change,250_000,'and the quarter is measured against the whole of the one before');
@@ -46,7 +46,7 @@ test('a quarter nobody read is not a row',()=>{
     // is not an observation of the summer, and a flat line drawn through it
     // would claim one.
     mark(1,LIQUID,UBS,'2026-09-30',1_400_000)
-  ]);
+  ],{since:''});
   assert.deepEqual(ubs.quarters.map(quarter=>quarter.label),['2026 Q1','2026 Q3']);
   assert.equal(ubs.quarters.at(-1).change,400_000);
 });
@@ -90,7 +90,7 @@ test('a quarter covering less of the firm than the newest one draws no change',(
     // it and the row says how much of the firm it covered.
     mark(1,LIQUID,MS,'2026-03-31',900_000),
     mark(1,LIQUID,MS,'2026-06-30',950_000),mark(2,LIQUID,MS,'2026-06-30',3_000_000)
-  ]);
+  ],{since:''});
   assert.deepEqual(ms.quarters.map(quarter=>[quarter.label,quarter.complete,quarter.change,quarter.figures,quarter.whole]),
     [['2026 Q1',false,null,1,2],['2026 Q2',true,null,2,2]]);
 });
@@ -102,7 +102,7 @@ test('the panel names the firm, dates a reading taken before the quarter closed,
     mark(1,LIQUID,UBS,'2026-06-30',1_000_000),mark(1,LIQUID,UBS,'2026-07-02',1_250_000),
     mark(1,LIQUID,MS,'2026-03-31',400_000),
     mark(1,LIQUID,MS,'2026-06-30',420_000),mark(2,LIQUID,MS,'2026-06-30',80_000)
-  ]),'USD');
+  ],{since:''}),'USD');
   document.querySelector('main').append(node);
   assert.deepEqual([...node.querySelectorAll('.group-title')].map(title=>title.textContent),
     ['UBS','Morgan Stanley'],'the firm is the heading, which is the whole of what was missing');
@@ -114,6 +114,18 @@ test('the panel names the firm, dates a reading taken before the quarter closed,
   assert.match(rows[2],/1 of 2 figures/,'a partial quarter says so in words rather than in a colour');
   assert.equal(node.querySelectorAll('.trend-row--partial').length,1);
   assert.equal(FirmQuarters([]).textContent,'No account page has been read yet.');
+});
+
+// The ledger's history starts in 2026 Q3. A statement dated in June is read
+// as part of that first quarter, never as a quarter of its own, and its June
+// date is not printed against Q3 either.
+test('nothing is shown before 2026 Q3: an earlier figure is read as that quarter',()=>{
+  const [ubs]=firmQuarters([estate,trust,
+    mark(1,LIQUID,UBS,'2026-03-31',1_000_000),mark(2,LIQUID,UBS,'2026-06-30',4_000_000),
+    mark(1,LIQUID,UBS,'2026-12-31',1_100_000)
+  ]);
+  assert.deepEqual(ubs.quarters.map(quarter=>[quarter.label,quarter.amount,quarter.struck]),
+    [['2026 Q3',5_000_000,''],['2026 Q4',5_100_000,'']]);
 });
 
 test('the words a code stands for, and the quarter a date falls in',()=>{

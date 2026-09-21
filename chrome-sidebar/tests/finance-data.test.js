@@ -106,7 +106,7 @@ test('value over time steps between observed figures and never interpolates',()=
     mark(1,1,'2026-01-01',1000),
     mark(1,1,'2026-03-01',1200),
     mark(1,21,'2026-02-01',300)
-  ),{currency:'USD'});
+  ),{currency:'USD',since:''});
   assert.deepEqual(series.map(point=>[point.asOf,point.net]),[['2026-01-01',1000],['2026-02-01',700],['2026-03-01',900]]);
   assert.equal(heldOn([mark(1,1,'2026-03-01',1200)],'2026-01-01').length,0,'nothing counts before its first figure');
 });
@@ -868,8 +868,12 @@ test('a position states what it cost as well as what it is worth, and counts as 
   assert.deepEqual(summary.byRegistration.map(row=>row.label),['Trust']);
   assert.deepEqual(summary.positions,{count:1,committed:1000000,contributed:800000,distributed:250000,value:1100000,unfunded:200000});
   // The day a statement was struck is a day the series has a point on.
-  assert.deepEqual(netWorthSeries(records,{currency:'USD'}).map(point=>[point.asOf,point.net]),
+  assert.deepEqual(netWorthSeries(records,{currency:'USD',since:''}).map(point=>[point.asOf,point.net]),
     [['2026-03-31',900000],['2026-06-30',1100000]]);
+  // The history starts in 2026 Q3, so a statement struck before it is read as
+  // that quarter: one point, holding the newest statement, and nothing earlier.
+  assert.deepEqual(netWorthSeries(records,{currency:'USD'}).map(point=>[point.asOf,point.net]),
+    [['2026-07-01',1100000]]);
   const group=groupFinanceRecords(records).find(entry=>entry.portfolio.number===3);
   assert.equal(group.positions.length,1);
   assert.equal(group.total,1100000);

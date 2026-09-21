@@ -94,7 +94,7 @@ test('a property holds its newest valuation on or before a date, and none before
   assert.equal(propertiesOn(records,'2026-01-01')[0].value,0);
   assert.equal(propertiesOn(records)[0].value,1240000);
   // Every reading is a day the series has a point on, and equity is what moves.
-  assert.deepEqual(netWorthSeries(records).map(point=>[point.asOf,point.net]),
+  assert.deepEqual(netWorthSeries(records,{since:''}).map(point=>[point.asOf,point.net]),
     [['2026-03-31',780000],['2026-06-30',815000],['2026-09-20',850000]]);
 });
 

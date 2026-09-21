@@ -127,10 +127,18 @@ export const REGISTRATIONS=[
 // hold that is to record both: `vehicle` is the settled answer and `stated` is
 // what the statement claimed. A position whose two differ says so on its own
 // line rather than quietly picking one.
+//
+// The kinds also differ in what a statement about them can say. A fund or an
+// SPV is a commitment called over years, so it has a commitment, what has been
+// called against it and what is left to call. Shares bought in a company were
+// paid for once: there is what went in, what came back, and what they are
+// worth, and a form asking about a commitment asks a question that has no
+// answer. `committed` says which, and `holds` is the class a new one of its
+// kind is filed under until somebody says otherwise.
 export const VEHICLES=[
-  {code:1,id:'fund',label:'Direct Fund Investment',short:'Fund'},
-  {code:2,id:'equity',label:'Direct Equity Investment',short:'Equity'},
-  {code:3,id:'spv',label:'SPV Investment',short:'SPV'}
+  {code:1,id:'fund',label:'Direct Fund Investment',short:'Fund',committed:true,holds:'funds'},
+  {code:2,id:'equity',label:'Direct Equity Investment',short:'Equity',committed:false,holds:'other'},
+  {code:3,id:'spv',label:'SPV Investment',short:'SPV',committed:true,holds:'funds'}
 ];
 // How much of a vehicle is this portfolio's. Most positions are all of one and
 // say nothing about it, but a general partner rarely is: the owner holds part
@@ -186,6 +194,13 @@ export const firmCode=id=>FIRMS[String(id||'')]||0;
 export const firmId=code=>Object.keys(FIRMS).find(id=>FIRMS[id]===Number(code))||'';
 // The quarter a date falls in, as one number, for the same reason a date is
 // one: 2026-09-30 is 20263, which sorts and compares like the words for it.
+// The ledger's history starts in 2026 Q3, when it was first filled in. A figure
+// dated earlier — a private fund's capital account arrives a quarter late — is
+// read as part of that first quarter, never as a quarter of its own: a lone
+// June statement stood as "2026 Q2, $392,000" above an $82 million Q3. The
+// figure keeps the date its statement states; only history is floored.
+export const HISTORY_START='2026-07-01';
+export const fromHistoryStart=(asOf,since=HISTORY_START)=>asOf<since?since:asOf;
 export const quarterNumber=asOf=>Number(String(asOf).slice(0,4))*10+Math.floor((Number(String(asOf).slice(5,7))-1)/3)+1;
 export const quarterName=period=>`${Math.floor(period/10)} Q${period%10}`;
 export const quarterEnded=period=>`${Math.floor(period/10)}-${String((period%10)*3).padStart(2,'0')}-${period%10===2||period%10===3?'30':'31'}`;
@@ -216,6 +231,12 @@ export const vehicleOf=code=>VEHICLES.find(entry=>entry.code===Number(code))||nu
 export const vehicleById=id=>VEHICLES.find(entry=>entry.id===id)||null;
 export const vehicleLabel=code=>vehicleOf(code)?.label||'';
 export const vehicleShort=code=>vehicleOf(code)?.short||'';
+// What each figure on a statement is called for this kind of investment, and
+// whether it has a commitment at all. An unknown kind is treated as a fund,
+// which is what every position was before there was a choice.
+export const vehicleFigures=code=>vehicleOf(code)?.committed===false
+  ?{committed:false,value:'Current value',contributed:'Amount invested',distributed:'Proceeds received'}
+  :{committed:true,value:'Capital account value',contributed:'Funded to date',distributed:'Returned to date'};
 export const valueSource=code=>VALUE_SOURCES.find(entry=>entry.code===Number(code))||null;
 export const valueSourceById=id=>VALUE_SOURCES.find(entry=>entry.id===id)||null;
 export const valueSourceLabel=code=>valueSource(code)?.label||'';
@@ -943,7 +964,7 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
   };
 }
 
-export function netWorthSeries(records,{currency='USD'}={}){
+export function netWorthSeries(records,{currency='USD',since=HISTORY_START}={}){
   const mine=new Set(portfoliosOf(records).filter(portfolio=>(portfolio.currency||'USD')===currency).map(portfolio=>portfolio.number));
   const marks=marksOf(records).filter(mark=>mine.has(mark.portfolio));
   // A capital account is a dated figure like any other, so the day a statement
@@ -954,7 +975,7 @@ export function netWorthSeries(records,{currency='USD'}={}){
   // a point on.
   const owned=new Set(propertiesOf(records).filter(property=>mine.has(property.portfolio)).map(property=>property.number));
   const readings=valuationsOf(records).filter(entry=>owned.has(entry.property));
-  const dates=[...new Set([...marks.map(mark=>mark.asOf),...statements.map(entry=>entry.asOf),...readings.map(entry=>entry.asOf)])].sort();
+  const dates=[...new Set([...marks.map(mark=>mark.asOf),...statements.map(entry=>entry.asOf),...readings.map(entry=>entry.asOf)].map(asOf=>fromHistoryStart(asOf,since)))].sort();
   return dates.map(asOf=>{
     const live=[...heldOn(marks,asOf),...livePositions(records,mine,asOf).map(positionFigure),
       ...liveProperties(records,mine,asOf).flatMap(propertyFigures)];

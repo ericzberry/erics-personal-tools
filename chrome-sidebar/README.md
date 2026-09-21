@@ -3961,3 +3961,14 @@ row ("Contributions Cumulative"). What was read is now a single "Copy what was
 read" button beside the Read button, shown only when a reading found nothing.
 Checked in `tests/statement-intake.test.js` and `tests/finance-snapshot.test.js`.
 Archive: `release/erics-sidebar-0.6.249.zip`.
+
+## Nothing before 2026 Q3 (0.6.250 / mobile 0.1.200)
+
+The ledger's history starts in 2026 Q3, when it was first filled in.
+`HISTORY_START` in `src/finance-data.js` floors every dated history — Value over
+time and each firm's quarters — at 1 July 2026, so a figure dated earlier, like
+the Vista fund's 30 June capital account, is read as part of Q3 rather than as
+a quarter of its own, and its June date is not printed against Q3. The figure
+itself keeps the date its statement states. Checked in
+`tests/firm-history.test.js` and `tests/finance-data.test.js`. Archive:
+`release/erics-sidebar-0.6.250.zip`.
