@@ -54,6 +54,8 @@ here.
 | **UI-32** | A harness loads what its host loads, in the same order. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-27** | One column of money: every figure in a list ends on the same right edge, a group's own total included, and the lines that hold them reserve their row actions' slot in one shared declaration. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-33** | A record's verbs ride on its own line and a group's on its heading line — never in a row of their own at the foot of the block it opens. Stated in full under [From a complaint](#from-a-complaint). | `tests/finance-ledger.test.js` |
+| **UI-34** | An amount is one word. Every class that renders money declares `white-space:nowrap`, in a sheet both hosts load; the column gives way before the figure does. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
+| **UI-35** | Sections at one level of a screen all open the same way. A bare list standing beside three disclosures is the odd one out; it becomes a disclosure too, and the one the screen is opened for is the one that starts open. Stated in full under [From a complaint](#from-a-complaint). | `tests/finance-ledger.test.js` |
 
 ## Ratcheting
 
@@ -273,6 +275,35 @@ does the aiming, the verbs take room in the flow, so the heading's name takes
 its own line and the total follows underneath in the column the figures land in
 (UI-27). Checked on the rendered ledger in `tests/finance-ledger.test.js`.
 
+**UI-34 — an amount is one word.** *Enforced.* The net worth block printed
+"$7,496," on one line and "850" on the next in a 374px sidebar, which reads as
+seven thousand. A currency figure has no break point a reader can recover from:
+the comma that would take the break is the same comma that carries the
+magnitude. So the amount never wraps, and what gives instead is the thing
+around it — a totals column takes the next row whole, a qualifier drops under
+the figure it qualifies, a long account name wraps while the number beside it
+does not. `.record-line > .record-figure` had said this since the wallet was
+written, but only in `styles.css`, which only the extension loads, and only for
+a record line; the phone and every figure outside a record line were left to
+chance. It is on `.amount` now, in `travel.css`, which both hosts load. The
+check in `tests/ui-rules.test.js` holds the list of classes that render money
+and requires each one to declare it.
+
+**UI-35 — sections at one level open the same way.** *Enforced.* The Net worth
+tab grew three disclosures — Breakdown, Value over time, Institutions over time
+— and then ran the list of entities underneath them as a bare stack of rows
+with no head and no bounds. Four things at one level of a screen, three of them
+boxes that open and one of them loose text: the loose one reads as the page's
+remainder rather than as the section it is, and there is no way to put it away
+to reach the three above it. So it is a disclosure too, with the same banded
+head and inset block as its neighbours (UI-22). The screen still says which
+section it is for by which one starts open — here Entities, since the ledger is
+what the tab is opened to read — and a reader who wants it shut can shut it.
+This is the reason UI-22 is not only about how a disclosure looks: a screen
+whose sections do not agree on whether they are sections is uneven before any
+of them is drawn. Checked on the rendered ledger in
+`tests/finance-ledger.test.js`.
+
 ## Open
 
 **UI-Q1 — what is the spacing scale?** DESIGN.md says 4px increments. The
@@ -310,6 +341,19 @@ cannot tell a component the phone renders from one it merely carries
 means walking the phone's screens and scanning the rendered DOM for classes no
 loaded sheet matches. Until then, a component that both hosts render is styled
 in a sheet both hosts load, by precedent rather than by rule.
+
+**UI-Q5 — when may a word break in the middle?** A trust's position read
+"Opportunit / ies GP I LLC" in the 280px sidebar, because `.travel-wallet` sets
+`overflow-wrap:anywhere` once at the top of the wallet and it inherits to every
+name under it. `anywhere` also makes a flex item's min-content one character
+wide, so the name column collapses further than it needs to and breaks words
+that would have fit on a line of their own; `break-word` breaks only a word
+that genuinely cannot fit. But `anywhere` is right for the things that have no
+word boundaries — a masked account number, a URL, a monospace token — and there
+are 32 declarations of it across the two hosts' sheets, some of each kind.
+Sorting them is a pass of its own with a 280px sweep behind it, not a token
+swapped in a shared sheet. Decide which classes hold text with words in it,
+give those `break-word`, and make the rest a ratcheting budget.
 
 ## Iterating
 

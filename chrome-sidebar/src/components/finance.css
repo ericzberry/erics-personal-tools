@@ -1,7 +1,12 @@
-.finance-totals{display:flex;flex-wrap:wrap;gap:8px 16px}
+/* Two to a row where there is room for two, one where there is not. The net
+   and the day it stands at share the first line; what is held and what is
+   owed against it share the second. */
+.finance-totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(120px,100%),1fr));gap:8px 16px}
 .figure{display:flex;flex-direction:column;gap:2px;min-width:96px}
 .figure-label{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.figure-value{font-size:1.05rem;font-variant-numeric:tabular-nums}
+/* An amount is one word. "$7,496,850" broken after a comma reads as a
+   different number, so the column gives way before the figure does. UI-34. */
+.figure-value{font-size:1.05rem;font-variant-numeric:tabular-nums;white-space:nowrap}
 .figure-value--negative{color:var(--danger)}
 /* Not money. The date the figures stand at qualifies them, so it is set below
    their weight rather than beside it as a fifth amount. */

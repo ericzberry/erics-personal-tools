@@ -102,10 +102,13 @@ test('a capital account statement is read into an investment, reviewed, and save
   const list=document.getElementById('finance-list').textContent;
   assert.match(list,/Acme Ventures Fund III, L\.P\. · Fund/);
   assert.match(list,/Commitment \$1,000,000 · Funded \$800,000 · Returned \$250,000 · Unfunded \$200,000 · 1\.69×/);
-  // It counts like any other figure, and what is still owed on the commitment
-  // is said beside the totals rather than inside them.
+  // It counts like any other figure. What is still owed on the commitment is
+  // not a total of the ledger — it is neither held nor owed today — so it is
+  // read against the commitment in the breakdown and never up in the totals.
   assert.match(document.getElementById('finance-totals').textContent,/Net\$1,100,000/);
-  assert.match(document.getElementById('finance-totals').textContent,/Unfunded\$200,000/);
+  assert.equal(document.getElementById('finance-totals').textContent.includes('Unfunded'),false,
+    'unfunded is a fifth total again; it belongs to the Private investments breakdown');
+  assert.match(document.getElementById('finance-breakdown').textContent,/Unfunded\$200,000/);
   assert.match(document.getElementById('finance-breakdown').textContent,/Private investments/);
   // A breakdown line carries its own share of the group it is in, between the
   // class and the amount.

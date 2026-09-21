@@ -284,3 +284,20 @@ test('an override out-specifies, and a harness loads what its host loads',()=>{
     assert.deepEqual(own,[],`${file} links a component sheet beside panel-cascade.css`);
   }
 });
+
+// UI-34. A total wrapped mid-number in the sidebar: "$7,496," on one line and
+// "850" on the next, which reads as seven thousand. The column an amount sits
+// in is the thing that has to give — take the next row whole, or drop the
+// qualifier under it — and the figure itself never splits. Every class that
+// renders money says so, in a sheet both hosts load.
+test('an amount is one word, wherever either host draws it',()=>{
+  const MONEY=['.amount','.figure-value','.snapshot-figure strong'];
+  const shared=sheets().map(name=>[name,sheet(name)]);
+  for(const selector of MONEY){
+    const owner=shared.find(([,css])=>
+      new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\{[^}]*white-space: *nowrap`).test(css)
+      ||new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')} *\\{[^}]*white-space: *nowrap`).test(css));
+    assert.ok(owner,`${selector} renders an amount and lets it break across lines. `+
+      'See UI-34 in docs/UI_RULES.md.');
+  }
+});

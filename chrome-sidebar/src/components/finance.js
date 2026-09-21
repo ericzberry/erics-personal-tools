@@ -24,7 +24,13 @@ export function AccountPages(sites=[]){
   });
 }
 
-export const Figure=({label,value,id,tone=''})=>Stack([Label(label,{className:'figure-label'}),Strong(value,{id,className:`figure-value${tone?` figure-value--${tone}`:''}`})],{className:'figure'});
+// One total: its name above it, and the number itself never broken across two
+// lines — the totals grid gives it a column, and a column is either wide enough
+// for the number or the figure takes the next row whole.
+export const Figure=({label,value,id,tone=''})=>Stack([
+  Label(label,{className:'figure-label'}),
+  Strong(value,{id,className:`figure-value${tone?` figure-value--${tone}`:''}`})
+],{className:'figure'});
 export const classOptions=()=>ASSET_CLASSES.map(entry=>({text:`${entry.label}${entry.side==='liability'?' (liability)':''}`,value:String(entry.code)}));
 export const registrationOptions=()=>REGISTRATIONS.map(entry=>({text:entry.label,value:String(entry.code)}));
 export const vehicleOptions=()=>VEHICLES.map(entry=>({text:entry.label,value:String(entry.code)}));
@@ -292,7 +298,7 @@ export function PagePanel({site,rows=[],editing=false,disabled=false,source=null
 }
 
 export function FinanceView(){
-  return Stack([
+  const view=Stack([
     ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
     // Three scopes, one at a time: the page in front of you, what the whole
     // ledger comes to, and the ways of putting a figure in. They used to run
@@ -338,7 +344,12 @@ export function FinanceView(){
           Disclosure('Institutions over time',[
             Stack([],{id:'finance-firms'})
           ],{id:'finance-firms-panel',className:'ledger-panel',hidden:true}),
-          Stack([],{id:'finance-list',className:'travel-list'})
+          // The entities are a section like the three above them, and the one
+          // the tab is opened for — so it is the one that starts open. A
+          // reader who wants the list out of the way can shut it, and the
+          // panel says what the list is either way.
+          Disclosure('Entities',[Stack([],{id:'finance-list',className:'travel-list'})],
+            {id:'finance-entities-panel',className:'ledger-panel'})
         ]})},
       {key:'add',label:'Figures',content:
         SettingsGroup({id:'finance-add',children:[
@@ -422,6 +433,8 @@ export function FinanceView(){
         ]})}
     ]})
   ],{className:'finance-ledger'});
+  view.querySelector('#finance-entities-panel').open=true;
+  return view;
 }
 
 // One portfolio, its own total, and a line per asset class. The date sits with

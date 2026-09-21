@@ -3867,3 +3867,52 @@ wallet's perks at a merchant found by a word of its name while a used one,
 another card's and an unmentioned merchant's are not. Validation: 621 extension,
 33 mobile and 135 API tests pass from an archive of HEAD. Archive:
 `release/erics-sidebar-0.6.243.zip`.
+
+## Entities is a section, and a total is read with its pair (0.6.244 / mobile 0.1.194)
+
+The Net worth tab had grown three disclosures — Breakdown, Value over time,
+Institutions over time — and then ran the entities underneath them as a bare
+stack of rows with no head and no bounds. Four things at one level of the
+screen, three of them boxes that open and one of them loose: the loose one read
+as the page's remainder rather than as the section it is, and there was no way
+to put it away to reach the three above it. It is a disclosure now, with the
+same banded head and inset block as its neighbours, and it is the one that
+starts open, because the ledger is what the tab is opened to read.
+
+The totals above it are read in pairs, and there are two of them. **Net** and
+**As of** share the first line; **Assets** and the **Liabilities** standing
+against them share the second, the liability in parentheses and in the danger
+ink, so what is held and what is owed are one glance apart instead of two rows.
+The block is a grid rather than a wrapped row, which is what keeps the second
+pair in the first pair's columns at every width down to 280px.
+
+**Unfunded** is gone from that block. It was never a total of the ledger —
+nobody can demand all of a commitment today, and the money is neither held nor
+owed — so as a fifth figure among four it was a number the eye had to discount
+every time it read the top of the tab. It is still there where it answers
+something: on the Private investments breakdown, beside the commitment it is
+unfunded against, and on the position itself.
+
+And an amount is now one word wherever either host draws it. A total printed
+"$7,496," on one line and "850" on the next in a 374px sidebar, which reads as
+seven thousand; a currency figure has no break point a reader recovers from,
+because the comma that takes the break is the comma that carries the magnitude.
+`.record-line > .record-figure` had said as much since the wallet was written,
+but only in the sheet the extension alone loads and only for a record line. It
+is on `.amount` now, in the sheet both hosts load.
+
+Two rules were extracted from this and added to the register: UI-34, an amount
+is one word, with a check that holds the list of classes rendering money and
+requires each to declare it; and UI-35, sections at one level of a screen all
+open the same way, checked on the rendered ledger. A third thing was measured
+and left open as UI-Q5 — `overflow-wrap:anywhere` is set 32 times across the
+two hosts, right for a masked account number and wrong for a trust's name, and
+sorting them is a pass of its own.
+
+Validation: 623 extension, 33 mobile and 135 API tests pass from an archive of
+this commit's base plus these hunks, and both apps build. Reviewed in the
+finance ledger harness against the panel's own cascade at 374px and at the
+280px minimum: the totals hold two columns with nothing wrapped and no
+horizontal scroll, and an entity opens into the shared inset block with its
+figures on the one money column. Archive:
+`release/erics-sidebar-0.6.244.zip`.

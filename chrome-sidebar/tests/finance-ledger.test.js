@@ -106,11 +106,15 @@ test('a portfolio wears its account type, and assets appear only when something 
   const totals=document.getElementById('finance-totals').textContent;
   assert.match(totals,/Net\$1,791,070/);
   assert.equal(totals.includes('Assets'),false,'with nothing owed, assets are the net figure printed twice');
-  // A mortgage against the estate, and both figures earn their place.
+  // A mortgage against the estate, and both figures earn their place — what is
+  // held, and beside it in parentheses what is owed against it. A liability is
+  // read with the assets it stands against, not as a total two rows away.
   document.querySelector('main').replaceChildren();
   const owing=ledger(document,[...AMENDED,mark(1,21,'2026-09-20',400000)]);
-  await settle(()=>document.getElementById('finance-totals').textContent.includes('Liabilities'));
-  assert.match(document.getElementById('finance-totals').textContent,/Assets\$1,791,070/);
+  await settle(()=>document.getElementById('finance-totals').textContent.includes('Assets'));
+  const owed=document.getElementById('finance-totals');
+  assert.match(owed.textContent,/Assets\$1,791,070Liabilities\(\$400,000\)/);
+  assert.ok(owed.querySelector('.figure-value--negative'),'and it is read as what is owed');
   tool.stop();owing.stop();
 });
 
@@ -144,6 +148,25 @@ test('value over time offers no grain to choose: the table is quarterly and says
   const view=FinanceView();
   assert.equal(view.querySelector('#finance-trend-switch'),null);
   assert.equal([...view.querySelectorAll('button')].some(b=>/Quarterly|Daily/.test(b.textContent)),false);
+});
+
+// UI-35. The entities ran as a bare stack under three disclosures — four
+// things at one level, three of them boxes that open and one loose. It is a
+// section like its neighbours now, and the one the tab is opened for, so it is
+// the one that starts open.
+test('every section of the net worth tab is a section, and the entities are the one that starts open',()=>{
+  setup();
+  const view=FinanceView();
+  const list=view.querySelector('#finance-list');
+  const panel=list.closest('details.ledger-panel');
+  assert.ok(panel,'the entities are a loose stack beside three disclosures. See UI-35 in docs/UI_RULES.md.');
+  assert.equal(panel.querySelector('summary').textContent,'Entities');
+  assert.equal(panel.open,true,'the section the tab is opened to read starts shut');
+  // Nothing else in that run is open, or the screen answers a question nobody
+  // asked before the one it was opened for.
+  const siblings=[...panel.parentElement.children].filter(node=>node.tagName==='DETAILS');
+  assert.equal(siblings.length,4,'the run of sections changed shape');
+  assert.deepEqual(siblings.filter(node=>node.open).map(node=>node.querySelector('summary').textContent),['Entities']);
 });
 
 test('value over time is read quarterly by default, each quarter shown by its last reading',()=>{

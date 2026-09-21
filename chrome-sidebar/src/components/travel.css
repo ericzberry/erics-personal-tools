@@ -62,6 +62,12 @@
 .travel-wallet details[open]>summary,.travel-wallet .record-row-toggle[aria-expanded=true]{margin-inline:-8px;padding:6px 8px;background:var(--wallet-open);border-bottom:1px solid var(--wallet-line);border-radius:7px 7px 0 0}
 .travel-wallet .record-row-toggle[aria-expanded=true]{padding-right:26px}
 @media(hover:hover){.travel-wallet details[open]>summary:hover,.travel-wallet .record-row-toggle[aria-expanded=true]:hover{background:var(--wallet-open-hover)}}
+/* An amount is one word: "$7,496,850" broken after a comma reads as a
+   different number, so the line it sits on gives way before the figure does.
+   `.record-line > .record-figure` says this in styles.css, which only the
+   extension loads and only for a record line; an amount is an amount wherever
+   either host draws it. UI-34. */
+.amount{white-space:nowrap}
 /* An amount that is negative reads as one: parentheses from `money()`, and the
    danger ink here. Unscoped, because an amount is an amount on every screen
    either host draws. */

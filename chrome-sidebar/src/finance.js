@@ -287,18 +287,24 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // disagrees with this one.
     const newest=series.at(-1)?.asOf||'';
     $('totals').replaceChildren(
+      // What it comes to, and the day it stands at, on the first line. On the
+      // second, what is held and what is owed against it, each under its own
+      // name in the column above it — assets and their liability are read as a
+      // pair, not two rows apart.
       Figure({label:'Net',value:money(summary.net,currency),tone:summary.net<0?'negative':''}),
+      ...(newest?[Figure({label:'As of',value:newest,tone:'date'})]:[]),
       // Assets on their own are news only when something is owed against them.
       // With no liabilities they are the net worth again, and the pair read as
       // one number printed twice under two names.
-      ...(summary.liabilities?[Figure({label:'Assets',value:money(summary.assets,currency)})]:[]),
-      ...(summary.liabilities?[Figure({label:'Liabilities',value:money(summary.liabilities,currency)})]:[]),
-      // What is still owed on a commitment is money already spoken for, and it
-      // appears only when there is some. It is not a liability — nobody can
-      // demand all of it today — so it sits beside the totals rather than in
-      // them.
-      ...(summary.positions.unfunded?[Figure({label:'Unfunded',value:money(summary.positions.unfunded,currency)})]:[]),
-      ...(newest?[Figure({label:'As of',value:newest,tone:'date'})]:[])
+      //
+      // What is still owed on a commitment is not a total of the ledger —
+      // nobody can demand all of it today, and it is neither held nor owed —
+      // so it is read in the Private investments breakdown, beside the
+      // commitment it belongs to, and not up here among the four that are.
+      ...(summary.liabilities?[
+        Figure({label:'Assets',value:money(summary.assets,currency)}),
+        Figure({label:'Liabilities',value:money(-summary.liabilities,currency),tone:'negative'})
+      ]:[])
     );
     $('stale').hidden=!summary.stale.length;
     $('stale').textContent=summary.stale.length?`${summary.stale.length} portfolio${summary.stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${summary.stale[0].name}${summary.stale[0].asOf?` from ${summary.stale[0].asOf}`:''}. Totals still count ${summary.stale.length===1?'it':'them'} at ${summary.stale.length===1?'its':'their'} last known figure.`:'';
