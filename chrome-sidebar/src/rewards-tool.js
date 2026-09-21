@@ -591,7 +591,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     return {token,connection:await connections.id(token)};
   }
   const lookupCard=(token,connection,name)=>
-    remote(token,`/v1/ai-connections/${connection}/card-benefits`,{method:'POST',value:{name},timeoutMs:130000});
+    remote(token,`/v1/ai-connections/${connection}/card-benefits`,{method:'POST',value:{name},timeoutMs:180000});
   // Every card the wallet already holds, looked up in one press. The intake
   // beside this is for a card the wallet has never heard of; this is for the
   // ones it has, where what is missing is what they give — and what it proposes

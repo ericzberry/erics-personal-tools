@@ -18,7 +18,7 @@ export const IMAGE_TOKENS = 1700;
 export const TASK_POLICIES = {
   'cards.category':{label:'Purchase reading',level:1,outputTokens:600,web:false,maxCost:0.01},
   'cards.research':{label:'Card issuer research',level:3,outputTokens:4000,web:true,maxCost:0.10},
-  'rewards.benefits':{label:'Card benefit research',level:3,outputTokens:6000,web:true,maxCost:0.15},
+  'rewards.benefits':{label:'Card benefit research',level:3,outputTokens:9000,web:true,maxCost:0.15},
   // One press reads the page for everything it states about the owner's
   // rewards: the balances, the credit trackers a card prints beside them, what
   // the card earns, and the benefits that carry no figure at all. A premium

@@ -3984,3 +3984,16 @@ found". The device now accepts either spelling, and grid cells whose text wraps
 ("Remaining / Commitment") are read as one value. Checked in
 `tests/finance-data.test.js` and `tests/statement-intake.test.js`.
 Archive: `release/erics-sidebar-0.6.254.zip`.
+
+## Card research finds every benefit (0.6.256 / mobile 0.1.206)
+
+Researching the J.P. Morgan Reserve returned two benefits, because the one page
+read was the rewards programme agreement, which names only the credits that
+touch points. Benefit research now reads the benefits page and guide to
+benefits as well, checks every kind of benefit a card carries — credits,
+lounges, Global Entry, elite status, memberships, travel, purchase and phone
+protections — and has the time and output budget for twenty or more. Card
+notes are facts, never commentary on the document read. The review lost its
+box inside the editor, sets each benefit's fine print smaller under its amount,
+and puts the issuer link with the card. Recorded as UI-39. Archive:
+`release/erics-sidebar-0.6.256.zip`.

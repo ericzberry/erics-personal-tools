@@ -43,6 +43,15 @@ you must check. A name that fits more than one real card returns the products it
 could be, each with what separates it, and researches nothing until one is
 chosen — `blue cash` is two different cards with two different annual fees.
 
+Research never stops at the first document. A rewards programme agreement
+names only the credits that touch points, and a guide to benefits names only
+the protections, so it reads the card's benefits page, its guide to benefits
+and, for a private or upgrade-only card, the published product it is a version
+of — and checks for every kind of benefit a card carries: credits, lounges,
+Global Entry, elite status, partner memberships, travel, purchase and phone
+protections. A premium card comes back with twenty or more. The review shows
+each as its name, what it is worth, and its fine print set smaller beneath.
+
 Nothing is saved by research. The card and its benefits are listed the way they
 will be stored, and **Save this card and N benefits** writes them: the card
 first, so the benefits can name it. If a save stops part way, what is left stays

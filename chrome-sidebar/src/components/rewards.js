@@ -111,12 +111,18 @@ export function CardBenefits(input,{onSave,onDiscard}){
     :`Save ${count} across ${results.length} cards`,{variant:'primary',size:'compact'});
   const discard=Button('Discard',{variant:'subtle',size:'compact'});
   save.addEventListener('click',onSave);discard.addEventListener('click',onDiscard);
+  // Each line has one job and one weight: the name, then what it is worth in
+  // ink, then the fine print smaller and muted, so a premium card's two dozen
+  // benefits read down as names and amounts rather than a wall of terms. The
+  // page it came from sits with the card it describes, not after the last
+  // benefit. No box around it: the editor it sits in is already the boundary.
   return [...results.map(({card,benefits})=>Section([
     Strong(card.name),
-    Note([card.source,card.value].filter(Boolean).join(' · ')),
-    ...(card.notes?[Note(card.notes)]:[]),
-    ...benefits.map(benefit=>Stack([Strong(benefit.name),Note(benefitLine(benefit)),...(benefit.notes?[Note(benefit.notes)]:[])],{className:'reward-found'})),
-    ...(card.url?[Link('Issuer page used',card.url)]:[])
+    Note([card.source,card.value].filter(Boolean).join(' · '),{className:'footnote reward-found-value'}),
+    ...(card.notes?[Note(card.notes,{className:'footnote reward-found-notes'})]:[]),
+    ...(card.url?[Link('Issuer page used',card.url)]:[]),
+    ...benefits.map(benefit=>Stack([Strong(benefit.name),Note(benefitLine(benefit),{className:'footnote reward-found-value'}),
+      ...(benefit.notes?[Note(benefit.notes,{className:'footnote reward-found-notes'})]:[])],{className:'reward-found'}))
   ],{className:'reward-ingest'})),ActionGroup([save,discard],{compact:true})];
 }
 

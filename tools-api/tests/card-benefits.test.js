@@ -50,3 +50,13 @@ test('a field research got wrong is dropped, but a benefit the wallet cannot sto
   await assert.rejects(researchCardBenefits(connection,{name:'synthetic'},responder({card:{...card,url:''},benefits})),e=>e.status===502);
   await assert.rejects(researchCardBenefits({provider:'anthropic',apiKey:'k'},{name:'synthetic'},responder({card,benefits})),e=>e.status===400);
 });
+
+test('benefit research reads past the first document to every benefit the card carries',async()=>{
+  let body;
+  const fetcher=async(url,init)=>{if(!url.endsWith('/models'))body=init.body;return responder({card,benefits})(url);};
+  await researchCardBenefits(connection,{name:'jp morgan reserve'},fetcher);
+  // A programme agreement names two credits; the J.P. Morgan Reserve carries two dozen.
+  assert.match(body,/never stop at the first page/);
+  for(const kind of ['lounge access','Global Entry','elite status','trip delay','purchase protection','cell phone protection'])assert.match(body,new RegExp(kind));
+  assert.match(body,/never commentary on which document you read/);
+});

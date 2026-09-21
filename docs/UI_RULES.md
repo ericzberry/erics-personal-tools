@@ -59,8 +59,9 @@ here.
 | **UI-36** | A band reaches both edges of its block. Whatever bleeds sideways with a negative margin widens by the same amount in the same rule, because a negative margin moves a box and does not stretch it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-37** | A way out of a problem appears only while there is one. Connection settings stands in place of Refresh when a tool has no token or reached nothing, and not beside it when everything worked. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/attention-tools.test.js` |
 | **UI-38** | Never ask for what the app can find out. Research fills in a point's value; the owner is asked only for what only the owner knows. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/cards.test.js` |
+| **UI-39** | Fine print is set below what it qualifies: name, amount in ink, conditions smaller and muted, and no box around a review inside an editor. Stated in full under [From a complaint](#from-a-complaint). | By eye |
 | **UI-39** | Evidence for someone else is a Copy button, not a transcript. Diagnostic text meant to be pasted elsewhere is one Copy button, shown only while there is a problem to diagnose. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-snapshot.test.js` |
-| **UI-41** | A list of classes holds only classes. A single holding among the lines that name whole classes is grouped under its class's line and opens from it, and a name keeps no kind-word run onto it. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js` |
+| **UI-41** | A list of classes holds only classes. A single holding among the lines that name whole classes is grouped under its class's line and opens from it, a name keeps no kind-word run onto it, and its figures read one to a line. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js` |
 
 ## Ratcheting
 
@@ -374,10 +375,23 @@ wraps over three lines, a kind-word and a date trailing it, and four flows hung
 underneath — is a different kind of thing in the same column and stops the
 column. So holdings are grouped under one line for their class, the way houses
 are under Real estate, and open from it; inside, a holding is its own name,
-with no vehicle word run onto it. *From Finance → a portfolio holding the Vista
-Equity Partners fund: "This looks so goofy - the way Vista is listed."* Checked
+with no vehicle word run onto it, and its figures read down one to a line
+with each one's name beside it — never run together with middots into a
+sentence that wraps wherever the width falls. *From Finance → a portfolio holding the Vista
+Equity Partners fund: "This looks so goofy - the way Vista is listed." And
+of its figures on one wrapped line: "Jamming it all into one line is silly."* Checked
 in `chrome-sidebar/tests/finance-investments.test.js`; Real estate was already
 shaped this way.
+
+**UI-39 — fine print is set below what it qualifies.** *By eye.* A list of
+found things reads as names and amounts: the name, what it is worth in ink,
+and conditions smaller and muted beneath it — never three lines of equal grey.
+A review sitting inside an editor draws no box of its own; the editor is the
+boundary. The page a reading came from sits with the thing it describes, not
+after the last item. *From Rewards' card research, where two benefits of the
+J.P. Morgan Reserve came back as a boxed wall of same-weight paragraphs: "the
+formatting is a bit off."* Look at every research review — Rewards' card
+intake and Best card's summary — at sidebar width.
 
 ## Open
 
