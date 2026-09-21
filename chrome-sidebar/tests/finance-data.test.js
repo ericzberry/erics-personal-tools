@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,
   parseFinanceUpdates,foldReadings,financeAttention,legacyLedger,titledOwner,titledHolder,holdsManyTitles,
-  holdsPositionsOnly,managedVehicle,shareText,WHOLE_SHARE,
+  holdsPositionsOnly,managedVehicle,shareText,WHOLE_SHARE,statementSource,holdingsOf,
   institutionName,registrationLabel,registrationFromName,
-  markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,
+  markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,MAX_HOLDINGS,
   holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel,
   LEGACY_CLASSES,SITE_CLASSES,ASSET_CLASSES,classGroup,classSide,canonicalClass} from '../src/finance-data.js';
 
@@ -801,7 +801,13 @@ const capital=(entry)=>({...normalizeFinance({row:'capital',...entry}),id:capita
 
 test('an investment and its capital account are their own rows, addressed apart from every other',()=>{
   const fund=normalizeFinance({row:'holding',number:1,portfolio:3,name:'Acme Ventures Fund III, L.P.',vehicle:1,class:4,stated:3});
-  assert.deepEqual(Object.keys(fund),['row','number','portfolio','name','vehicle','class','stated','share']);
+  assert.deepEqual(Object.keys(fund),['row','number','portfolio','name','vehicle','class','stated','share','follows']);
+  // A position states its own figures unless it is pointed at one that holds
+  // them, and it can never be pointed at itself.
+  assert.equal(fund.follows,0);
+  assert.equal(normalizeFinance({row:'holding',number:2,portfolio:3,name:'A fund',vehicle:1,class:4,follows:1}).follows,1);
+  for(const bad of [2,-1,MAX_HOLDINGS+1,1.5,'abc'])
+    assert.throws(()=>normalizeFinance({row:'holding',number:2,portfolio:3,name:'A fund',vehicle:1,class:4,follows:bad}),undefined,String(bad));
   // Almost every investment is the whole of its vehicle, and an investment
   // filed before the share existed is one too.
   assert.equal(fund.share,WHOLE_SHARE);
@@ -1338,6 +1344,66 @@ test('a fund administrator states a capital account, and the investor named on i
 // the fund sends states the GP's whole capital account — so the position is
 // that statement scaled, and the same vehicle is a separate position in every
 // portfolio that holds a piece of it.
+// A general partner sends one capital account covering every holder of it, so
+// the figure read off Carta has to reach all of them. Each holder is its own
+// position at its own share, and the statement is filed once against the one
+// that holds the vehicle; the rest read it.
+test('one vehicle states one capital account, and every holder of it reads that',()=>{
+  const statement={asOf:'2026-09-20',value:850000,contributed:850000,distributed:0,commitment:2119150};
+  const records=ledger({...trust,id:'p3'},
+    holding(1,'Averin Health Opportunities GP I LLC',1,1,{share:3500}),
+    holding(2,'Averin Health Opportunities GP I LLC',1,3,{share:6500,follows:1}),
+    capital({holding:1,...statement}));
+  const held=(rows,portfolio)=>positionsOn(rows,'2026-12-31').find(position=>position.holding.portfolio===portfolio);
+  assert.equal(held(records,1).value,297500);
+  assert.equal(held(records,3).value,552500,'the trust reads the same statement at its own share');
+  assert.equal(held(records,3).from,1);
+  assert.equal(held(records,3).commitment,1377447.5);
+  assert.equal(held(records,3).current.value,850000,'and the statement is still the vehicle’s');
+
+  // The figure Carta states next is filed once, against the position that
+  // holds the vehicle. Nothing is typed against the trust and the trust moves.
+  const later=[...records,capital({holding:1,asOf:'2026-12-31',value:1000000,contributed:1000000,distributed:0,commitment:2119150})];
+  assert.equal(held(later,1).value,350000);
+  assert.equal(held(later,3).value,650000);
+  // A statement filed against a follower by an older client is not read: the
+  // vehicle states one account, and the one it is filed against answers.
+  const stray=[...records,capital({holding:2,asOf:'2026-12-31',value:9,contributed:9,distributed:0,commitment:9})];
+  assert.equal(held(stray,3).value,552500);
+
+  // A link whose target is gone leaves the position reading its own statements
+  // rather than nothing at all, and a cycle stops where it started.
+  const orphan=ledger({...trust,id:'p3'},holding(2,'Averin Health Opportunities GP I LLC',1,3,{share:6500,follows:9}));
+  assert.equal(statementSource(holdingsOf(orphan),holdingsOf(orphan)[0]),2);
+  const cycle=ledger(holding(1,'A fund',1,1,{follows:2}),holding(2,'B fund',1,1,{follows:1}));
+  assert.equal(statementSource(holdingsOf(cycle),holdingsOf(cycle).find(entry=>entry.number===1)),1);
+
+  // Reading the trust's own entity for a vehicle he manages proposes the
+  // trust's position and points it at the one already held, rather than
+  // starting a second set of statements that would drift out of step.
+  const arriving=name=>parseFinanceUpdates({readings:[],unread:'',capital:[
+    {fund:name,holder:'Berry Family Trust',vehicle:'fund',asOf:'2026-12-31',value:1000000,
+      commitment:2119150,contributed:1000000,distributed:0,confidence:'high',reason:'The row states the period end.'}]}).capital;
+  const base=ledger({...trust,id:'p3'},holding(1,'Averin Health Opportunities GP I LLC',1,1,{share:3500}),capital({holding:1,...statement}));
+  const managed=foldCapital(arriving('Averin Health Opportunities GP I LLC'),base,{institution:'Carta',today:'2027-01-05'});
+  assert.equal(managed.rows[0].isNew,true);
+  assert.equal(managed.rows[0].follows,1);
+  assert.equal(managed.rows[0].filed,1,'the statement is filed against the position that holds the vehicle');
+  assert.equal(managed.holdings[0].follows,1);
+  // And a follower already in the ledger files its statement the same way.
+  const onto=foldCapital(arriving('Averin Health Opportunities GP I LLC'),records,{institution:'Carta',today:'2027-01-05'});
+  assert.equal(onto.rows[0].holding,2);
+  assert.equal(onto.rows[0].filed,1);
+
+  // A fund he merely invested in is not shared: two holders of an LP interest
+  // each have a capital account of their own, and linking them would report
+  // one investor's balance as the other's.
+  const lp=ledger({...trust,id:'p3'},holding(1,'C2V Tributary Fund II, LP',1,1));
+  const separate=foldCapital(arriving('C2V Tributary Fund II, LP'),lp,{institution:'Carta',today:'2027-01-05'});
+  assert.equal(separate.rows[0].follows,0);
+  assert.equal(separate.rows[0].filed,separate.rows[0].holding);
+});
+
 test('a position is this portfolio’s share of a vehicle, and the statement still states all of it',()=>{
   assert.equal(shareText(WHOLE_SHARE),'100%');
   assert.equal(shareText(3500),'35%');

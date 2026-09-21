@@ -158,3 +158,52 @@ test('an investment can be recorded by hand, with or without a statement behind 
   assert.match(document.getElementById('finance-list').textContent,/no statement yet/);
   tool.stop();restore();
 });
+
+// The second holder of a general partner. Eric holds part of Averin's GP and a
+// trust holds the rest, and Carta states one capital account for the vehicle —
+// so the trust's position is mapped onto the one already held and asks for no
+// figures of its own. Whatever Carta says next reaches both.
+test('a second holder maps onto the vehicle already held and takes its figures from there',async()=>{
+  const {document,restore}=setup();
+  const estate={id:'p2',row:'portfolio',revision:'r1',number:2,name:'Eric and Ariana Berry Estate',kind:1,currency:'USD'};
+  const gp={id:'h1',row:'holding',revision:'r1',number:1,portfolio:2,
+    name:'Averin Health Opportunities GP I LLC',vehicle:1,class:4,stated:0,share:3500,follows:0};
+  const account={id:'h1-20260920',row:'capital',revision:'r1',holding:1,asOf:'2026-09-20',
+    value:850000,contributed:850000,distributed:0,commitment:2119150};
+  const {tool,writes}=financeHost(document,{saved:[trust,estate,gp,account]});
+  await ready(document);
+  const set=(id,value)=>{document.getElementById(id).value=value;};
+  const follows=document.getElementById('finance-inv-follows');
+  // The field is there because there is a vehicle to point at, and it offers
+  // the one that holds its own statements.
+  assert.equal(document.getElementById('finance-inv-follows-field').hidden,false);
+  assert.deepEqual([...follows.options].map(option=>option.textContent),
+    ['Its own statements','Averin Health Opportunities GP I LLC · Eric and Ariana Berry Estate']);
+  assert.equal(document.getElementById('finance-inv-figures').hidden,false);
+
+  set('finance-inv-name','Averin Health Opportunities GP I LLC');
+  set('finance-inv-portfolio','p1');
+  set('finance-inv-share','65');
+  follows.value='1';
+  follows.dispatchEvent(new document.defaultView.Event('change'));
+  // Mapped onto a vehicle, the boxes that would ask for its figures are gone:
+  // they are the vehicle's, filed once, and a second copy is what this exists
+  // to avoid.
+  assert.equal(document.getElementById('finance-inv-figures').hidden,true);
+
+  document.getElementById('finance-inv-form').dispatchEvent(new document.defaultView.Event('submit'));
+  await settle(()=>writes.length>=1);
+  assert.deepEqual(writes.map(write=>write.row),['holding'],'no second capital account is written');
+  assert.equal(writes[0].follows,1);
+  assert.equal(writes[0].share,6500);
+  assert.equal(writes[0].portfolio,1);
+
+  // And it reads the vehicle's statement at its own share, without a figure
+  // having been typed against it.
+  await settle(()=>document.getElementById('finance-list').textContent.includes('65%'));
+  const list=document.getElementById('finance-list').textContent;
+  assert.match(list,/65% of the vehicle/);
+  assert.match(list,/\$552,500/);
+  assert.match(list,/\$297,500/,'and the position it was mapped onto is unchanged');
+  tool.stop();restore();
+});

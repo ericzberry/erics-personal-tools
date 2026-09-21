@@ -3504,3 +3504,54 @@ owner's own view of it, and the reading itself was run against the deployed
 intake, which returned the commitment, the contributions, the distributions and
 the NAV as one capital account.
 Archive: `release/erics-sidebar-0.6.232.zip`.
+
+## One vehicle, one capital account, several holders (0.6.232 / mobile 0.1.183)
+
+The share that arrived with 0.6.223 could say a general partner was 35% his. It
+could not say who held the other 65%, and entering the trust that does meant a
+second investment with a second copy of the same capital account — two sets of
+figures for one vehicle, kept in step by hand, drifting the first time Carta
+stated a new one and only one of them was updated.
+
+**An investment can now be mapped onto a vehicle already held.** `follows` is a
+holding number on the position: the position it points at is where the
+vehicle's statements are filed, and a follower reads them and scales them by
+its own share. Carta states $850,000 called against the GP, it is filed once,
+and his 35% reads $297,500 while the trust's 65% reads $552,500 — with nothing
+typed against the trust at all. The next figure off the page moves both. The
+link is resolved rather than trusted: a source that has been deleted, or
+dropped by an older client that never knew the field, leaves the position
+reading its own statements rather than reading nothing, and a cycle stops where
+it started.
+
+**Same vehicle as** is the field, on the investment form between the share and
+the figures, listing every position that holds its own statements. Choosing one
+takes the figure boxes away, because they are the vehicle's and are already
+filed: the second copy this exists to prevent cannot be typed. The field is not
+there at all until the ledger holds something to point at.
+
+A reading does the same by itself. A vehicle the owner manages is one capital
+account however many portfolios hold a piece of it, so reading a second
+holder's Carta entity proposes that holder's position and points it at the one
+already held rather than starting a second statement stream. A fund he merely
+invested in is not shared — two holders of an LP interest each have a capital
+account of their own, and linking those would report one investor's balance as
+the other's.
+
+Two edges are now stated rather than discovered. Deleting the position that
+holds a vehicle says how many others read its figures and will have none. And a
+follower's form holds no claim on the statement on screen, so saving it can
+neither move nor delete a statement another portfolio owns.
+
+Validation: 616 extension, 135 API and 33 mobile tests pass from an archive of
+this release, and both apps build. New coverage: the link stored, defaulted,
+and refused when it points at itself or out of range; a trust reading the same
+statement at its own share and moving when the next one is filed; a statement
+filed against a follower by an older client ignored; a broken link and a cycle
+both resolving; a managed vehicle's second holder proposed as a follower while
+an LP fund's is not; and the form writing a holding and no capital account, the
+figure boxes gone, the list showing 65% of a statement nobody typed. Reviewed
+in the ledger harness at 380px and 280px, which gained a trust holding the rest
+of that general partner: no page overflow at 280px, and both delete
+confirmations read as they should.
+Archive: `release/erics-sidebar-0.6.232.zip`.

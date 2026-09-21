@@ -609,10 +609,20 @@ export function normalizeFinance(input,previous={}){
     const held=get('share');
     const share=held===undefined||held===null||held===''?WHOLE_SHARE:Math.round(Number(held));
     if(!Number.isFinite(share)||share<1||share>WHOLE_SHARE)fail('Enter the share of this investment held here, between 0.01% and 100%.');
-    return {row:'holding',number:counting(get('number'),'an investment number',MAX_HOLDINGS),
+    const number=counting(get('number'),'an investment number',MAX_HOLDINGS);
+    // Which position holds this vehicle's capital account. A general partner is
+    // held by the owner and by one or more trusts at once and sends one
+    // statement covering all of them, so the statement is filed against one
+    // position and the others follow it: a figure read off Carta reaches every
+    // holder without being typed again, each at its own share. 0 is a position
+    // with statements of its own, which is almost all of them.
+    const source=Number(get('follows')??0);
+    if(!Number.isInteger(source)||source<0||source>MAX_HOLDINGS)fail('Choose which investment this one takes its figures from.');
+    if(source===number)fail('An investment cannot take its figures from itself.');
+    return {row:'holding',number,
       portfolio:counting(get('portfolio'),'a portfolio number',MAX_PORTFOLIOS),
       name:text(get('name'),120,'an investment name',true),vehicle:kind,class:cls,
-      stated:vehicleOf(claimed)?claimed:0,share};
+      stated:vehicleOf(claimed)?claimed:0,share,follows:source};
   }
   // One capital account statement. Contributions and distributions are held
   // inception-to-date rather than per period, because that is what a statement
@@ -723,10 +733,33 @@ export const signed=mark=>classSide(mark.class)==='liability'?-mark.amount:mark.
 // An investment with no statement yet is still a position. Registering one
 // before its first capital account is how a commitment gets recorded on the day
 // it is signed, and it counts as nothing until a figure says otherwise.
+// Which position's statements answer for this one. A follower points at the
+// position the vehicle's capital account is filed against, and the link is
+// resolved rather than trusted: a source that has been deleted, or dropped by
+// an older client that never knew the field, leaves the position reading its
+// own statements rather than reading nothing at all. A cycle stops where it
+// started, for the same reason.
+export function statementSource(holdings,holding){
+  const byNumber=new Map(holdings.map(entry=>[entry.number,entry]));
+  const seen=new Set();
+  let at=holding;
+  while(at?.follows&&!seen.has(at.number)){
+    seen.add(at.number);
+    const next=byNumber.get(at.follows);
+    if(!next)break;
+    at=next;
+  }
+  return at?.number??holding.number;
+}
 export function positionsOn(records,when){
   const statements=capitalOf(records);
-  return holdingsOf(records).map(holding=>{
-    const history=statements.filter(entry=>entry.holding===holding.number&&(!when||entry.asOf<=when))
+  const holdings=holdingsOf(records);
+  return holdings.map(holding=>{
+    // One vehicle states one capital account, however many portfolios hold a
+    // piece of it, so a follower reads the statements filed against the
+    // position that holds it and scales them by its own share.
+    const from=statementSource(holdings,holding);
+    const history=statements.filter(entry=>entry.holding===from&&(!when||entry.asOf<=when))
       .sort((a,b)=>b.asOf.localeCompare(a.asOf));
     const current=history[0]||null;
     // The statement states the vehicle; the position is this portfolio's share
@@ -736,7 +769,7 @@ export function positionsOn(records,when){
     const part=figure=>Math.round(figure*share/100)/100;
     const commitment=part(current?.commitment||0),contributed=part(current?.contributed||0);
     const distributed=part(current?.distributed||0),value=part(current?.value||0);
-    return {holding,current,history,share,commitment,contributed,distributed,value,
+    return {holding,current,history,share,from,follows:holding.follows||0,commitment,contributed,distributed,value,
       // What is still owed on the commitment — the statement's own figure where
       // it states one, and the subtraction everywhere else. A fund that has
       // called more than it committed is at zero rather than at a negative
@@ -1584,6 +1617,15 @@ export function foldCapital(statements,records,{institution='',today=new Date().
     const already=bestMatch(statement.name,madeHoldings.filter(mine));
     if(already)return already;
     const said=vehicleById(statement.stated);
+    // A vehicle the owner manages sends one capital account for every holder of
+    // it, so one already held in another portfolio is followed rather than
+    // given a second set of statements that would then have to be kept in step
+    // by hand. A fund he merely invested in is not: two holders of an LP
+    // interest each have a capital account of their own, and linking them would
+    // report one investor's balance as the other's.
+    const shared=managedVehicle(statement.name)
+      ?holdings.find(entry=>!entry.follows&&matchKey(entry.name)===matchKey(statement.name))||null
+      :null;
     const fresh={row:'holding',number:nextNumber(holdings,madeHoldings),portfolio:portfolio.number,
       name:statement.name.slice(0,120),
       // What it says it is, until the owner says otherwise. Nothing here
@@ -1594,7 +1636,8 @@ export function foldCapital(statements,records,{institution='',today=new Date().
       // edit moves it, and the row is where that edit is offered.
       class:classById('funds').code,
       // All of it, unless this is a vehicle the owner runs rather than owns.
-      share:managedVehicle(statement.name)?.share??WHOLE_SHARE,isNew:true};
+      share:managedVehicle(statement.name)?.share??WHOLE_SHARE,
+      follows:shared?.number??0,isNew:true};
     madeHoldings.push(fresh);
     return fresh;
   };
@@ -1612,7 +1655,10 @@ export function foldCapital(statements,records,{institution='',today=new Date().
   for(const statement of statements){
     const portfolio=resolvePortfolio(statement.holder);
     const holding=resolveHolding(statement,portfolio);
-    const previous=holding.isNew?null:preceding(holding.number,statement.asOf);
+    // Where the statement itself is filed, which is not always the position it
+    // belongs to: every holder of one vehicle reads the same capital account.
+    const filed=statementSource([...holdings,...madeHoldings],holding);
+    const previous=holding.isNew&&filed===holding.number?null:preceding(filed,statement.asOf);
     const running=(stated,period,before,what)=>{
       if(stated!==null)return stated;
       if(period===null)return before;
@@ -1633,7 +1679,7 @@ export function foldCapital(statements,records,{institution='',today=new Date().
       notes.push(`${statement.name}: the statement calls this ${vehicleById(statement.stated).label.toLowerCase()} and it is filed as ${vehicleLabel(holding.vehicle).toLowerCase()}. Saving does not change how it is filed.`);
     if(managedVehicle(statement.name))runs.push(`${statement.name} at ${shareText(holding.share??WHOLE_SHARE)}`);
     rows.push({holding:holding.number,name:holding.name,vehicle:holding.vehicle,class:holding.class,
-      share:holding.share??WHOLE_SHARE,
+      share:holding.share??WHOLE_SHARE,follows:holding.follows||0,filed,
       stated:vehicleById(statement.stated)?.code||0,isNew:!!holding.isNew,
       portfolio:portfolio.number,portfolioName:portfolio.name,portfolioKind:portfolio.kind,
       portfolioIsNew:!!portfolio.isNew,currency:portfolio.currency||'USD',

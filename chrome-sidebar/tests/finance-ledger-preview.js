@@ -13,7 +13,7 @@ const mark=(portfolio,cls,asOf,amount,firm=0)=>{
   const value={row:'mark',portfolio,class:cls,asOf,amount,firm};
   return {...value,id:markRef(value),revision:String(amount)};
 };
-const holding=(number,portfolio,name,vehicle,cls,share=10000)=>({id:holdingRef(number),row:'holding',revision:'r1',number,portfolio,name,vehicle,class:cls,stated:0,share});
+const holding=(number,portfolio,name,vehicle,cls,share=10000,follows=0)=>({id:holdingRef(number),row:'holding',revision:'r1',number,portfolio,name,vehicle,class:cls,stated:0,share,follows});
 const capital=(entry)=>({...entry,row:'capital',id:capitalRef(entry),revision:String(entry.value)});
 const property=(number,portfolio,name,link='')=>({id:propertyRef(number),row:'property',revision:'r1',number,portfolio,name,link});
 const valuation=(entry)=>({...entry,row:'valuation',id:valuationRef(entry),revision:String(entry.value)});
@@ -40,6 +40,7 @@ const SETTLED=[
   portfolio(1,'Eric and Ariana Berry Estate',1),
   portfolio(2,'Eric Berry',2),
   portfolio(3,'Berry Children’s Custodial Account with a Very Long Name',7),
+  portfolio(4,'Berry 2020 Irrevocable Family Trust',5),
   ...['2025-03-31','2025-06-30','2025-09-30','2025-12-31','2026-03-31','2026-06-30','2026-09-20']
     .flatMap((asOf,index)=>[
       // Where each figure was read, which is what puts a firm in the panel
@@ -62,6 +63,9 @@ const SETTLED=[
   // that is the whole of its fund and says nothing.
   holding(2,1,'Synthetic Health Opportunities GP I LLC',1,4,3500),
   capital({holding:2,asOf:'2026-09-20',value:850000,contributed:850000,distributed:0,commitment:2119150}),
+  // The rest of that general partner, held by a trust and reading the one
+  // capital account above rather than a second copy of it.
+  holding(3,4,'Synthetic Health Opportunities GP I LLC',1,4,6500,2),
   // Two houses: one owned outright, one with a mortgage against it, so the
   // row that has an equity to state sits beside the one that does not.
   property(1,1,'118 Riverside Drive, Apt 7B, New York, NY 10024','https://www.zillow.com/homedetails/synthetic/1234_zpid/'),

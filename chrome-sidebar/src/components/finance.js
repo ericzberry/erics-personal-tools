@@ -386,12 +386,20 @@ export function FinanceView(){
             FormField({id:'finance-inv-vehicle',label:'Kind',kind:'select',options:vehicleOptions()}),
             FormField({id:'finance-inv-class',label:'Asset class',kind:'select',options:investedClassOptions()}),
             FormField({id:'finance-inv-share',label:'Share held here (%)',kind:'text',placeholder:'100'}),
-            FormField({id:'finance-inv-commitment',label:'Commitment',kind:'text',placeholder:'0.00'}),
-            FormField({id:'finance-inv-value',label:'Capital account value',kind:'text',placeholder:'0.00'}),
-            FormField({id:'finance-inv-funded',label:'Funded to date',kind:'text',placeholder:'0.00'}),
-            FormField({id:'finance-inv-returned',label:'Returned to date',kind:'text',placeholder:'0.00'}),
-            FormField({id:'finance-inv-unfunded',label:'Unfunded commitment',kind:'text',placeholder:'0.00'}),
-            FormField({id:'finance-inv-asOf',label:'As of',kind:'date'}),
+            // Shown only where there is something to point at. One vehicle
+            // states one capital account however many portfolios hold a piece
+            // of it, so a position mapped onto one already held takes its
+            // figures from there and stops asking for them.
+            Stack([FormField({id:'finance-inv-follows',label:'Same vehicle as',kind:'select',options:[]})],
+              {id:'finance-inv-follows-field',hidden:true}),
+            Stack([
+              FormField({id:'finance-inv-commitment',label:'Commitment',kind:'text',placeholder:'0.00'}),
+              FormField({id:'finance-inv-value',label:'Capital account value',kind:'text',placeholder:'0.00'}),
+              FormField({id:'finance-inv-funded',label:'Funded to date',kind:'text',placeholder:'0.00'}),
+              FormField({id:'finance-inv-returned',label:'Returned to date',kind:'text',placeholder:'0.00'}),
+              FormField({id:'finance-inv-unfunded',label:'Unfunded commitment',kind:'text',placeholder:'0.00'}),
+              FormField({id:'finance-inv-asOf',label:'As of',kind:'date'})
+            ],{id:'finance-inv-figures'}),
             Notice('',{id:'finance-inv-status',role:'status'}),
             ActionGroup([Button('Save investment',{id:'finance-inv-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-inv-cancel',variant:'secondary'})])
             ],{id:'finance-inv-form',className:'form-stack',hidden:true}),

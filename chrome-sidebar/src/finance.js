@@ -148,9 +148,33 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     $('inv-portfolio').replaceChildren(...options.map(option=>Option(option.text,option.value)));
     $('inv-portfolio').value=options.some(option=>option.value===selected)?selected:(options[0]?.value||'');
   }
+  // The investments whose statements another position could take. Only ones
+  // that hold their own — a follower of a follower is a chain nobody can read
+  // back — and never the position being edited. The list is empty until the
+  // ledger holds a vehicle, which is why the field is not there to begin with:
+  // a choice with one option is not a choice.
+  function fillInvestmentSources(selected=''){
+    const sources=holdings().filter(entry=>!entry.follows&&entry.number!==investing?.number)
+      .map(entry=>({text:`${entry.name} · ${portfolioOf(entry.portfolio)?.name||''}`,value:String(entry.number)}));
+    // A vehicle others already follow cannot itself start following one.
+    const followed=holdings().some(entry=>entry.follows===investing?.number);
+    const options=[{text:'Its own statements',value:'0'},...sources];
+    $('inv-follows').replaceChildren(...options.map(option=>Option(option.text,option.value)));
+    $('inv-follows').value=options.some(option=>option.value===selected)?selected:'0';
+    $('inv-follows-field').hidden=!sources.length||followed;
+    syncInvestmentForm();
+  }
+  // A position that takes its figures from another states none of its own, so
+  // the boxes that would ask for them are not shown. They are the vehicle's
+  // figures, filed once, and a second copy of them here is the thing this
+  // whole mapping exists to avoid.
+  function syncInvestmentForm(){
+    $('inv-figures').hidden=$('inv-follows').value!=='0';
+  }
   function clearInvestmentForm(){
     investing=null;
     fillInvestmentPortfolios();
+    fillInvestmentSources();
     $('inv-name').value='';$('inv-vehicle').value=String(VEHICLES[0].code);$('inv-class').value=String(classById('funds').code);
     // Left empty rather than filled in with 100: almost every investment is the
     // whole of its vehicle, and a field nobody has to touch says so best by
@@ -162,9 +186,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   }
   function fillInvestment(position){
     const holding=position.holding,current=position.current;
+    // The statement on screen belongs to this position only when it is filed
+    // against it. A follower shows the vehicle's, which another portfolio owns,
+    // so this form holds no claim on it: saving must not move or delete it.
+    const own=!holding.follows&&current;
     investing={number:holding.number,id:holding.id,revision:holding.revision,
-      capitalId:current?.id||'',capitalRevision:current?.revision??null};
+      capitalId:own?current.id:'',capitalRevision:own?current.revision:null};
     fillInvestmentPortfolios(portfolioRef(holding.portfolio));
+    fillInvestmentSources(String(holding.follows||0));
     $('inv-name').value=holding.name;$('inv-vehicle').value=String(holding.vehicle);$('inv-class').value=String(holding.class);
     $('inv-share').value=(holding.share??WHOLE_SHARE)===WHOLE_SHARE?'':shareText(holding.share).replace('%','');
     // The statement, not the position: these boxes hold what the vehicle
@@ -570,7 +599,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         else{
           holding=nextHolding();
           if(!await saveHolding({number:holding,portfolio,name:row.name,vehicle:row.vehicle,class:row.class,
-            stated:row.stated,share:row.share},target))break;
+            stated:row.stated,share:row.share,follows:row.follows},target))break;
           madeHoldings.set(row.holding,holding);
         }
       }
@@ -582,8 +611,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         if(current&&(current.share??WHOLE_SHARE)!==(row.share??WHOLE_SHARE)
           &&!await saveHolding({...current,share:row.share},target))break;
       }
-      if(!await saveCapital({holding,asOf:row.asOf,value:row.value,contributed:row.contributed,
-        distributed:row.distributed,commitment:row.commitment,unfunded:row.unfunded??null},target))break;
+      // One vehicle, one capital account: a statement for a position that
+      // follows another is filed against the one that holds it, where every
+      // holder of that vehicle reads it.
+      if(!await saveCapital({holding:row.follows||row.filed||holding,asOf:row.asOf,value:row.value,
+        contributed:row.contributed,distributed:row.distributed,commitment:row.commitment,
+        unfunded:row.unfunded??null},target))break;
       capital.rows.shift();saved++;
     }
     if(!capital.rows.length){
@@ -597,7 +630,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',
       value:normalizeAndStamp({row:'holding',number:holding.number,portfolio:holding.portfolio,name:holding.name,
         vehicle:holding.vehicle,class:holding.class,stated:holding.stated??0,
-        share:holding.share??WHOLE_SHARE},id,existing)}),target);
+        share:holding.share??WHOLE_SHARE,follows:holding.follows??0},id,existing)}),target);
   }
   function saveCapital(entry,target='inv-status'){
     const value={row:'capital',holding:entry.holding,asOf:entry.asOf,value:entry.value,
@@ -736,7 +769,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // row says so instead of choosing.
     const investment=(portfolio,position,against)=>{
       const holding=position.holding,current=position.current;
-      const confirm=Stack([Note(`Permanently delete “${holding.name}” and every capital account filed for it, from all devices?`),ActionGroup([
+      const followers=holdings().filter(entry=>entry.follows===holding.number);
+      const confirm=Stack([Note([`Permanently delete “${holding.name}” and every capital account filed for it, from all devices?`,
+        followers.length?`${followers.length} other position${followers.length===1?'':'s'} in this vehicle read${followers.length===1?'s':''} those figures and will have none.`:''].filter(Boolean).join(' ')),ActionGroup([
         action('Delete investment',async()=>{if(await remove(holding))onChanged();},'danger'),
         action('Keep it',()=>{confirm.hidden=true;})
       ],{compact:true})],{hidden:true});
@@ -939,6 +974,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       const open=$('entry').open;
       fillPortfolioChoices(open?$('portfolio').value:'');
       fillInvestmentPortfolios(open?$('inv-portfolio').value:'');
+      // The vehicles a position could be mapped onto are the ledger's own, so
+      // the field appears with the first investment in it rather than only
+      // after the form is next cleared.
+      fillInvestmentSources(open?$('inv-follows').value:'');
       fillPropertyPortfolios(open?$('prop-portfolio').value:'');
       connectionNote();
       // A house whose page is saved and whose figure is not is not waiting for
@@ -982,6 +1021,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_BYTES});
   $('cancel').addEventListener('click',()=>{clearForm();$('entry').open=false;});
   $('portfolio').addEventListener('change',syncForm);
+  $('inv-follows').addEventListener('change',syncInvestmentForm);
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();
     if(busy||!loaded)return;
@@ -1021,15 +1061,18 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // are as of are not a record at all — and that is settled before
       // anything is written, so a refused statement does not leave an
       // investment saved behind it.
-      const asOf=$('inv-asOf').value.trim();
-      const figures=['inv-value','inv-commitment','inv-funded','inv-returned'].map(key=>$(key).value.trim());
+      // A position that follows another states no figures of its own, so the
+      // date and the boxes under it are not read at all.
+      const asOf=$('inv-follows').value!=='0'?'':$('inv-asOf').value.trim();
+      const figures=$('inv-follows').value!=='0'?[]:['inv-value','inv-commitment','inv-funded','inv-returned'].map(key=>$(key).value.trim());
       if(!asOf&&figures.some(Boolean)){status('Give the date these figures are as of, or clear them.','inv-status','alert');return;}
       // A blank share is the whole vehicle. Anything else is a percentage,
       // kept as basis points so twelve and a half per cent is a whole number.
       const typed=$('inv-share').value.trim();
+      const follows=Number($('inv-follows').value||0);
       if(!await saveHolding({number,portfolio,name:$('inv-name').value,vehicle:Number($('inv-vehicle').value),
         class:Number($('inv-class').value),stated:holdingOf(number)?.stated??0,
-        share:typed===''?WHOLE_SHARE:Math.round(Number(typed)*100)}))return;
+        share:typed===''?WHOLE_SHARE:Math.round(Number(typed)*100),follows}))return;
       if(asOf&&!await saveCapital({holding:number,asOf,value:$('inv-value').value||0,
         contributed:$('inv-funded').value||0,distributed:$('inv-returned').value||0,commitment:$('inv-commitment').value||0,
         unfunded:$('inv-unfunded').value.trim()||null}))return;
