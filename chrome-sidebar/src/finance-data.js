@@ -441,6 +441,33 @@ export function titledHolder(institution,said){
     .flatMap(holder=>holder.match.filter(name=>key.includes(name)).map(name=>({holder,length:name.length})))
     .sort((a,b)=>b.length-a.length)[0]?.holder||null;
 }
+// Whose a statement is when the name on it is the only evidence there is. The
+// institution's roster above answers first and knows most — but a capital
+// account statement dropped as a file names no site at all, and a fund
+// administrator nobody has written an entry for names none either.
+//
+// "Eric Berry" is the couple's estate. The portfolio literally called Eric
+// Berry is his IRA, so matching the name exactly filed a partnership interest
+// inside a retirement account, which is the one mistake this distinction
+// exists to prevent and the reason Carta and iCapital each spell it out. The
+// answer does not depend on which administrator sent the statement, so it is
+// the owner's standing answer rather than one site's, and it is read wherever
+// the site's own roster says nothing.
+export const STANDING_TITLES=[
+  {owner:'Eric and Ariana Berry Estate',registration:'taxable',
+    match:['ericberry','ericzberry','ericandariana','ericariana','arianacooperberry']},
+  {owner:'Celsie LLC',registration:'entity',match:['celsie']}
+];
+// The longest fragment that appears wins, exactly as it does for an
+// institution's own roster: a name contained in another name cannot take its
+// statements.
+export function standingHolder(said){
+  const key=matchKey(said);
+  if(!key)return null;
+  return STANDING_TITLES
+    .flatMap(entry=>entry.match.filter(name=>key.includes(name)).map(name=>({holder:entry,length:name.length})))
+    .sort((a,b)=>b.length-a.length)[0]?.holder||null;
+}
 // Does this place hold accounts for more than one title? Where it does, an
 // account nobody recognized keeps its own name instead of falling into the one
 // portfolio that happens to be registered the same way.
@@ -1652,7 +1679,9 @@ export function foldCapital(statements,records,{institution='',today=new Date().
     // match: “Eric Berry” at Carta is the couple's estate, while the portfolio
     // literally called Eric Berry is his IRA, and matching on the name alone
     // would file a partnership interest inside a retirement account.
-    const titled=titledHolder(institution,holder);
+    // The site's roster first, because it knows this place; the owner's
+    // standing answer behind it, because a dropped file names no place at all.
+    const titled=titledHolder(institution,holder)||standingHolder(holder);
     const named=titled?.owner||holder;
     const found=named&&bestMatch(named,portfolios);
     if(found)return found;

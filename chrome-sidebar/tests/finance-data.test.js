@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,
   parseFinanceUpdates,foldReadings,financeAttention,legacyLedger,titledOwner,titledHolder,holdsManyTitles,
-  holdsPositionsOnly,managedVehicle,shareText,WHOLE_SHARE,statementSource,holdingsOf,
+  holdsPositionsOnly,managedVehicle,shareText,standingHolder,WHOLE_SHARE,statementSource,holdingsOf,
   institutionName,registrationLabel,registrationFromName,
   markRef,portfolioRef,parseRef,dateNumber,dateText,classById,classLabel,heldOn,MAX_PORTFOLIOS,MAX_HOLDINGS,
   holdingRef,capitalRef,positionsOn,foldCapital,vehicleLabel,
@@ -1282,9 +1282,21 @@ test('a cap-table page states positions, never balances, and the fund he runs is
   assert.equal(classLabel(bought.rows[0].class),'Fund investments');
   assert.equal(bought.rows[0].commitment,150000);
   assert.equal(bought.portfolios.length,0);
-  // Away from Carta the roster says nothing, and a statement addressed to
-  // "Eric Berry" still matches the portfolio of that name exactly.
-  assert.equal(foldCapital([fund('C2V Tributary Fund II, LP','Eric Berry')],ledger(),{today:'2026-09-20'}).rows[0].portfolio,2);
+  // And it is the estate wherever the statement was read: a capital account
+  // dropped as a file names no site, so the site's roster says nothing, and
+  // the portfolio literally called "Eric Berry" is the IRA a partnership
+  // interest cannot sit in. The owner's standing answer covers it.
+  for(const where of [{},{institution:'Morgan Stanley'},{institution:'Some Fund Administrator'}])
+    assert.equal(foldCapital([fund('C2V Tributary Fund II, LP','Eric Berry')],ledger(),{...where,today:'2026-09-20'}).rows[0].portfolioName,
+      ESTATE,JSON.stringify(where));
+  // A name the standing roster does not know still resolves by matching a
+  // portfolio, and proposes one when it matches none.
+  assert.equal(foldCapital([fund('C2V Tributary Fund II, LP','Berry 2020 Irrevocable Family Trust')],
+    ledger({row:'portfolio',number:3,name:'Berry 2020 Irrevocable Family Trust',kind:5,currency:'USD',id:'p3'}),
+    {today:'2026-09-20'}).rows[0].portfolio,3);
+  assert.equal(standingHolder('Eric Z. Berry')?.owner,ESTATE);
+  assert.equal(standingHolder('Celsie LLC')?.owner,'Celsie LLC');
+  assert.equal(standingHolder('Nobody At All'),null);
 
   // The general partner of a fund he manages arrives at his share of it. The
   // statement states the GP's whole capital account and no page says what part

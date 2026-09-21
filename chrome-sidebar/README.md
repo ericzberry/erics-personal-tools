@@ -3780,3 +3780,35 @@ of this commit's index, and both apps build. New coverage: the fund account and
 the managed accounts of all three trusts folded apart, and no class forced on
 the estate, whose accounts nobody has described that way.
 Archive: `release/erics-sidebar-0.6.240.zip`.
+
+## A capital account addressed to Eric Berry is the estate's (0.6.241 / mobile 0.1.191)
+
+Carta and iCapital each said so in their own roster entry, and away from those
+two the rule did not exist. A capital account statement dropped as a file
+names no site at all, so the site's roster answered nothing and the name was
+matched against the portfolios directly — where the portfolio literally called
+*Eric Berry* is his IRA. A partnership interest bought personally cannot sit
+inside one, and that is exactly where it went.
+
+The answer does not depend on which administrator sent the statement, so it is
+no longer written per site: `STANDING_TITLES` is the owner's own answer about
+his structure, read whenever the institution's roster says nothing. *Eric
+Berry*, *Eric Z. Berry*, *Eric and Ariana* and *Ariana Cooper Berry* are the
+Eric and Ariana Berry Estate; *Celsie* is Celsie LLC. The longest fragment that
+appears wins, exactly as it does for an institution's own roster, so a name
+contained in another name cannot take its statements. A holder the standing
+roster does not know still matches a portfolio by name and still proposes one
+when it matches none.
+
+It is read for a capital account and nothing else. A balance at a broker is a
+different question — an account titled *Eric Berry* there may well be his IRA,
+and the registration printed on it says so — but a capital account is a
+partnership interest, and one of those is the couple's however the paperwork
+addresses him.
+
+Validation: 621 extension, 33 mobile and 135 API tests pass from an archive of
+this release, and both apps build. New coverage: the same statement filed to
+the estate with no institution, at one whose roster does not name him, and at
+one that has no roster at all; a trust still matching its own portfolio; and
+the longest-fragment rule.
+Archive: `release/erics-sidebar-0.6.241.zip`.
