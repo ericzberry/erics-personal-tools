@@ -155,7 +155,7 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   const panel=document.getElementById('finance-snapshot-body');
   assert.match(panel.textContent,/\$124,501|\$124,500\.50/,'each figure shows what was read for it');
   assert.match(panel.textContent,new RegExp(ESTATE),'a taxable account joins the portfolio it is titled to');
-  assert.match(panel.textContent,/Rollover IRA · new/,'the IRA heads its own group and says it would be made');
+  assert.match(panel.textContent,/Eric Berry · new/,'the IRA is titled to its owner, heads its own group and says it would be made');
   assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save these figures','Edit','Discard']);
   assert.match(panel.textContent,/^as of 2026-09-11/m,'one shared date is stated once, not on every row');
   assert.equal(/figures? read|folded into/.test(panel.textContent),false,'and the figures are not counted back at you');
@@ -176,10 +176,10 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   assert.deepEqual(writes.filter(write=>write.row==='mark').map(write=>write.firm),[1,1],
     'every figure in one reading carries the site it was read at');
   assert.equal(writes[0].revision,null,'a date with no figure yet is an append');
-  // E*TRADE settles no titling of its own, so the IRA is named after the
-  // account rather than guessed at — but it is registered as an IRA, which is
-  // what keeps it out of the joint estate. A second IRA reading joins it.
-  assert.deepEqual([writes[1].name,writes[1].kind],['Rollover IRA',2]);
+  // E*TRADE titles its IRA to Eric Berry, so the IRA is proposed under his name
+  // rather than the account's — and registered as an IRA, which is what keeps
+  // it out of the joint estate. A second IRA reading joins it.
+  assert.deepEqual([writes[1].name,writes[1].kind],['Eric Berry',2]);
   assert.equal(writes[1].number,2,'and it is numbered around the portfolio already there');
   assert.equal(document.getElementById('finance-snapshot-body').textContent.includes('Liquid securities'),false,'saved figures leave the panel');
   tool.stop();restore();

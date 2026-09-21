@@ -210,8 +210,8 @@ test('several accounts read under one name are counted separately, not folded in
     {...dated,account:'E*TRADE',label:'Traditional IRA -4144 Net Account Value',registration:'ira',value:122666.62},
     {...dated,account:'E*TRADE',label:'DIS',class:1,scope:'holding',registration:'',value:102.67}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
-  // Whose money it is, alphabetically — the proposed IRA before the estate.
-  assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[2,122666.62],[1,1668402.54]],
+  // Whose money it is, alphabetically — the estate before Eric Berry's IRA.
+  assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[1,1668402.54],[2,122666.62]],
     'both balances are kept, and the IRA is registered as one');
   assert.match(folded.notes.join(' '),/Left out: a total across accounts/);
   assert.match(folded.notes.join(' '),/2 accounts were read under one name and counted separately/);
@@ -318,7 +318,7 @@ test('an account states its own registration when the reading did not',()=>{
     {...dated,account:'Traditional IRA -4144',value:122666.62}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE',defaultClass:classById('liquid').code});
   assert.deepEqual(folded.marks.map(row=>[row.name,registrationLabel(row.kind),row.amount]),
-    [['Eric and Ariana Berry Estate','Taxable',1668402.54],['Traditional IRA -4144','IRA',122666.62]]);
+    [['Eric and Ariana Berry Estate','Taxable',1668402.54],['Eric Berry','IRA',122666.62]]);
   // Roth before IRA, because a Roth IRA is both.
   assert.equal(registrationFromName('Roth IRA -8820').id,'roth');
   assert.equal(registrationFromName('Traditional IRA -4144').id,'ira');
@@ -737,6 +737,14 @@ test('an institution that settles its own titling answers however the name is sp
   // An IRA is registered to one person by law and cannot sit in a joint estate.
   assert.equal(titledOwner('Charles Schwab','ira'),'Eric Berry');
   assert.equal(titledOwner('Schwab Bank','roth'),'Eric Berry');
+  // E*TRADE titles its IRA and nothing else: "Traditional IRA -4144" is Eric
+  // Berry's IRA, not a portfolio of its own.
+  assert.equal(titledOwner('E*TRADE','ira'),'Eric Berry');
+  const ira={row:'portfolio',id:'p10',number:10,name:'Eric Berry',kind:2,currency:'USD'};
+  const etrade=foldReadings([{asOf:'2026-09-21',confidence:'high',reason:'',class:9,scope:'account',
+    account:'Traditional IRA -4144',label:'Net Account Value',registration:'ira',value:122666.62}],
+  [{...estate,id:'p1'},ira],{institution:'E*TRADE',firm:1});
+  assert.deepEqual(etrade.marks.map(row=>[row.portfolio,row.amount,!!row.isNew]),[[10,122666.62,false]]);
   // A place that holds accounts for several titles settles none of them by
   // itself; the account in front of the reader is what answers.
   assert.equal(titledOwner('Chase'),'');

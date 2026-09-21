@@ -302,6 +302,12 @@ export const matchKey=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/
 export const ACCOUNT_TITLES=[
   {institution:'Schwab',match:['schwab'],owner:'Eric and Ariana Berry Estate',
     byRegistration:{ira:'Eric Berry',roth:'Eric Berry','401k':'Eric Berry'}},
+  // E*TRADE settles only the IRA. The page names it by product and number —
+  // "Traditional IRA -4144" — and that name started a portfolio of its own
+  // beside Eric Berry's, which is the same IRA. Nothing else here has a
+  // standing title, so a taxable account still answers as it always did.
+  {institution:'E*TRADE',match:['etrade'],
+    byRegistration:{ira:'Eric Berry',roth:'Eric Berry','401k':'Eric Berry'}},
   // Where an institution's cards are titled. A card names a product, never a
   // holder, so nothing on it says whose debt it is — and unlike an asset, the
   // answer is not dangerous to settle once: every card behind this sign-on is
