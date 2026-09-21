@@ -1288,6 +1288,24 @@ const PLAN_VALUE=/\b(unvested|potential|projected|unexercis\w*)\b[^\n]*\b(value|
 // describe — and it is the reason this map holds accounts rather than a rule
 // about the word "brokerage".
 const FUND_ACCOUNTS={ubs:/\bbrokerage\b|\b63541\b/i};
+// A private fund, named on the line the figure sits on. Everything else in
+// this list is about what could be sold this week, and a partnership interest
+// could not be sold at all — which is the whole of what separates Fund
+// investments from the marketable securities it is printed beside. Left to the
+// reading, that line arrives as stocks: a page states "Vista Equity Partners
+// Fund VIII" under Alternative Investments, a model asked whether that is
+// equity answers yes and is right, the device folds stocks into Liquid
+// securities and is right, and a ten-year commitment is filed as money
+// available on Friday.
+//
+// Recognized by what only a private fund says, and never by the word "fund"
+// alone: a mutual fund and an ETF both have it in the name and both are
+// marketable securities, which is the distinction this class exists to draw.
+// So either the words that mean private markets and nothing else, or a fund or
+// partnership named with a series number — Fund VIII, Partners III, Ventures 2
+// — which is how a private fund is named and a public one is not. "Vanguard
+// Total Stock Market Index Fund" says neither.
+const PRIVATE_FUND=/\b(private (equity|credit|fund|placement)|venture capital|alternative investments?|buyout|growth equity|co-?invest(ment)?s?|special purpose vehicle|spv|feeder fund|access fund|capital commitment)\b|\b(fund|partners|ventures|partnership)\s+(?:[ivx]{1,5}|\d{1,2})\b/i;
 // `firm` is the code from FIRMS for the place this reading was taken, and it
 // rides onto every figure the fold produces. It is passed in rather than looked
 // up from `institution` because the caller already knows which site the page
@@ -1328,6 +1346,11 @@ export function foldReadings(readings,portfolios,{institution='',firm=0,defaultC
     // securities is reporting the page faithfully and the ledger wrongly.
     const holds=FUND_ACCOUNTS[matchKey(institution)];
     if(holds&&holds.test(`${reading.account||''} ${own}`))return classById('funds').code;
+    // On the figure's own name, for the reason the stock plan is: an account
+    // holding one fund among twenty holdings would otherwise make all twenty
+    // illiquid, and an entity's ordinary brokerage account is titled to an LLC
+    // without holding a partnership interest at all.
+    if(PRIVATE_FUND.test(own))return classById('funds').code;
     // Stocks and bonds are both Liquid securities. The ledger asks how much
     // could be sold this week, not what it is invested in, and an equity sleeve
     // answers that the same way the municipal ladder beside it does. Split

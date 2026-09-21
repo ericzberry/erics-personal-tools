@@ -1281,6 +1281,30 @@ test('a cap-table page states positions, never balances, and the fund he runs is
   assert.equal(managedVehicle('C2V Tributary Fund II, LP'),null);
 });
 
+// Everything held through a fund is one class, and the ledger asks one
+// question of it: not what the fund owns, but whether it could be sold this
+// week. A page states "Vista Equity Partners Fund VIII" under Alternative
+// Investments, a reading asked whether that is equity says yes, and stocks are
+// folded into Liquid securities — so a ten-year commitment arrived as money
+// available on Friday.
+test('a private fund is fund investments, whatever the reading called it',()=>{
+  const reading=(account,label,cls)=>({account,label,class:classById(cls).code,registration:'',
+    scope:'holding',value:100000,asOf:'2026-09-20',confidence:'high',reason:''});
+  const filed=said=>foldReadings([said],[estate,ira],{institution:'Schwab',today:'2026-09-20'})
+    .marks.map(mark=>classLabel(mark.class))[0];
+  for(const name of ['Vista Equity Partners Fund VIII U.S. Access Fund, L.P.','C2V Tributary Fund II, LP',
+    'Alternative Investments','Sequoia Capital Growth Equity','Acme Private Credit Feeder Fund',
+    'Thrive Ventures 2','Co-Investment in Acme'])
+    assert.equal(filed(reading('Joint Brokerage -4049',name,'stocks')),'Fund investments',name);
+  // And the word "fund" on its own is not one: a mutual fund and an ETF are
+  // marketable securities, which is what this class exists to tell them from.
+  for(const name of ['Vanguard Total Stock Market Index Fund','Fidelity Contrafund','iShares Core S&P 500 ETF'])
+    assert.equal(filed(reading('Joint Brokerage -4049',name,'stocks')),'Liquid securities',name);
+  // It is read off the figure's own line, so one fund among twenty holdings
+  // does not make the account it sits in illiquid.
+  assert.equal(filed(reading('Acme Ventures III, L.P. Brokerage -4049','Net Account Value','liquid')),'Liquid securities');
+});
+
 // iCapital is the second of them, and the platform the owner's fund
 // commitments are actually administered on. Its reporting page states one
 // investment at a time — committed, called, distributed, the net asset value

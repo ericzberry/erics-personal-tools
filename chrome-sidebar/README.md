@@ -3651,3 +3651,45 @@ release. The entity list was read at 374px, and the tones, gifts and reading
 harnesses were opened under the panel cascade to confirm they render as the
 panel renders them. Native iPhone and installed Chrome behavior were not
 directly tested. Archive: `release/erics-sidebar-0.6.236.zip`.
+
+## A private fund is Fund investments, not a liquid security (0.6.237 / mobile 0.1.187)
+
+Read off a statement rather than off iCapital, the Vista position landed in
+**Liquid securities** — money that could be sold this week. It is a ten-year
+partnership interest.
+
+Nothing in the reading was careless. The intake's own list of classes never
+mentioned `funds` at all, and it said "an ETF or an equity fund is stocks"; a
+model shown *Vista Equity Partners Fund VIII* under Alternative Investments and
+asked whether that is equity answers yes, correctly. The device then folds
+stocks into Liquid securities — rightly, for stocks — and a capital commitment
+came out the other end as cash-like.
+
+**Two fixes, because one of them is a prompt.** The intake is now told what the
+class is for: a position in or a commitment to a private fund is `funds` —
+private equity, buyout, growth, venture, private credit, a feeder or access
+fund into one, an SPV, a co-investment, anything filed under Alternative
+Investments — however much stock the fund itself owns. And the device no longer
+depends on being told: a figure whose own line names a private fund is filed as
+fund investments whatever class the reading gave it, the way a stock plan and a
+UBS alternatives account already were.
+
+**Recognized by what only a private fund says, never by the word "fund".** A
+mutual fund and an ETF have "fund" in the name and are marketable securities,
+which is the distinction the class exists to draw. So either the words that
+mean private markets and nothing else, or a fund or partnership named with a
+series number — *Fund VIII*, *Partners III*, *Ventures 2* — which is how a
+private fund is named and a public one is not. *Vanguard Total Stock Market
+Index Fund* says neither and stays liquid.
+
+It reads the figure's own line and not the account around it, for the reason
+the stock-plan rule does: one fund among twenty holdings must not make the
+other nineteen illiquid, and an entity's ordinary brokerage account is titled
+to an LLC without holding a partnership interest at all.
+
+Validation: 617 extension, 33 mobile and 135 API tests pass from an archive of
+this release, and both apps build. New coverage: seven private-fund names filed
+as fund investments against a reading that called them stocks, three public
+funds left as liquid securities, and an account named after a partnership
+keeping its own total liquid.
+Archive: `release/erics-sidebar-0.6.237.zip`.
