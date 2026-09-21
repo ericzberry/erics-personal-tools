@@ -1,0 +1,66 @@
+/* Charts: a line for a figure over time, a bar for the parts of a whole.
+
+   The data is the only loud thing. Marks are thin, the grid is a hairline one
+   step off the surface, and every label is set in the text inks — a colour is
+   carried by the mark beside a name, never by the name itself.
+
+   Both hosts style a bare `button` as an outlined control, the wallet through
+   `.travel-wallet button` and the phone through `button`, and a chart's points
+   are buttons so a keyboard can reach them. Each of those declarations is
+   restated here under two classes, which is what it takes to out-specify
+   them; the hover state takes three. */
+
+/* The line. Room is kept on the right for the newest reading's own label, and
+   a little on the left so the first point clears the tick above the grid. */
+.line-chart{display:flex;flex-direction:column;gap:6px;padding:14px 60px 0 12px;min-width:0;container-type:inline-size}
+.line-chart-plot{position:relative;height:var(--chart-height,180px)}
+.line-chart-grid{position:absolute;left:-12px;right:-60px;height:0;border-top:1px solid var(--grid)}
+.line-chart-tick{position:absolute;left:0;bottom:3px;color:var(--muted);font-size:10px;line-height:1;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.line-chart-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.line-chart-line{fill:none;stroke:var(--liquid);stroke-width:2px;stroke-linejoin:round;stroke-linecap:round}
+.line-chart-wash-top{stop-color:var(--liquid);stop-opacity:.10}
+.line-chart-wash-bottom{stop-color:var(--liquid);stop-opacity:0}
+/* A reading is an 8px dot ringed in the surface, inside a 24px target: the
+   ring keeps it clear of the line it sits on, and the target keeps it from
+   having to be landed on dead centre. */
+.line-chart .line-chart-point{position:absolute;width:24px;height:24px;min-height:0;margin:-12px 0 0 -12px;padding:0;
+  border:0;border-radius:50%;background:transparent;cursor:default;z-index:1}
+.line-chart .line-chart-point:hover:not(:disabled){background:transparent}
+.line-chart .line-chart-point::after{content:'';position:absolute;inset:8px;border-radius:50%;
+  background:var(--liquid);box-shadow:0 0 0 2px var(--surface)}
+/* Now, in brass: the one point on the line that is not history yet. */
+.line-chart .line-chart-point--last::after{inset:7px;background:var(--illiquid)}
+.line-chart .line-chart-point.is-active::after{inset:6px}
+.line-chart .line-chart-point:focus-visible{outline:2px solid var(--forest);outline-offset:0}
+.line-chart-end{position:absolute;transform:translate(12px,-50%);color:var(--ink);font-size:12px;font-weight:600;
+  font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none}
+.line-chart-rule{position:absolute;top:0;bottom:0;width:0;border-left:1px solid var(--line);pointer-events:none}
+.line-chart-rule[hidden],.line-chart-tip[hidden]{display:none}
+.line-chart-tip{position:absolute;top:0;z-index:2;display:flex;flex-direction:column;gap:1px;padding:6px 8px;
+  border:1px solid var(--line);border-radius:6px;background:var(--surface);pointer-events:none;
+  font-size:12px;line-height:1.35;white-space:nowrap}
+.line-chart-tip[data-side=right]{transform:translateX(10px)}
+.line-chart-tip[data-side=left]{transform:translateX(calc(-100% - 10px))}
+.line-chart-tip strong{font-weight:600;font-variant-numeric:tabular-nums}
+.line-chart-tip-label,.line-chart-tip-note{color:var(--muted)}
+.line-chart-axis{position:relative;height:16px}
+.line-chart-label{position:absolute;transform:translateX(-50%);color:var(--muted);font-size:11px;white-space:nowrap}
+.line-chart-label[hidden]{display:none}
+@container (max-width:300px){.line-chart-label[data-step=odd]{display:none}}
+
+/* The bar. Runs are set apart by a wider gap than the parts inside them, and
+   the gap is the surface showing through rather than a stroke drawn round a
+   mark. The ends are rounded; the joins between parts are not. */
+.proportion-bar{display:flex;gap:4px;height:12px}
+.proportion-run{display:flex;gap:2px;min-width:2px;flex-basis:0}
+.proportion-part{flex-basis:0;min-width:2px;height:100%;background:var(--unplaced);transition:opacity .15s ease}
+.proportion-run--liquid>.proportion-part{background:var(--liquid)}
+.proportion-run--illiquid>.proportion-part{background:var(--illiquid)}
+.proportion-bar>.proportion-run:first-child>.proportion-part:first-child{border-radius:4px 0 0 4px}
+.proportion-bar>.proportion-run:last-child>.proportion-part:last-child{border-radius:0 4px 4px 0}
+.proportion-bar>.proportion-run:only-child>.proportion-part:only-child{border-radius:4px}
+/* Pointing at one part sets the rest back, in the bar and in the list that
+   names them, so the two are read as one thing. */
+[data-active] .proportion-part:not(.is-active){opacity:.35}
+@media(prefers-reduced-motion:reduce){.proportion-part{transition:none}}

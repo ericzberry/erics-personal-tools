@@ -1,6 +1,7 @@
 /* Canonical palette and typography for every app host. */
 @import url('./status.css');
 @import url('./tabs.css');
+@import url('./charts.css');
 :root {
   --page-inset: 14px;
   --section-gap: 12px;
@@ -24,6 +25,16 @@
   --danger: #8c2f26;
   --share-bar: #eff2eb;
   --accent: #ad8050;
+  /* Charts. What could be sold this week is drawn in the forest the product is
+     built on and what is locked up in its brass, so a split reads in the
+     product's own two colours rather than a legend to learn; the pair holds
+     apart under every kind of colour blindness (ΔE 27). Value nobody has
+     placed is a quiet grey that never competes with either, and the grid is a
+     hairline one step off the surface. */
+  --liquid: var(--forest);
+  --illiquid: var(--accent);
+  --unplaced: #c4c7bb;
+  --grid: #ebebe3;
   --radius: 14px;
   /* The one system stack. Every sheet that needs a family in a `font`
      shorthand takes it from here rather than writing the list again — there

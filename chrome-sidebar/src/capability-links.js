@@ -18,8 +18,11 @@ export function openFinanceTool({quiet=false}={}){
   const root=document.getElementById('finance-tool');
   if(!root)return null;
   finance??=(async()=>{
-    const [{mountExtensionFinance},{readOpenAccountPage}]=await Promise.all([import('./finance-page.js'),import('./finance-page-read.js')]);
-    return mountExtensionFinance(root,{quiet,readPage:()=>readOpenAccountPage(),onSettings:()=>document.getElementById('open-settings')?.click()});
+    const [{mountExtensionFinance,openFinanceDetails},{readOpenAccountPage}]=await Promise.all([import('./finance-page.js'),import('./finance-page-read.js')]);
+    // The panel keeps what it all comes to and the ways a figure gets in; the
+    // ledger itself, entity by entity, is read on its own page.
+    return mountExtensionFinance(root,{quiet,layout:'panel',openDetails:()=>openFinanceDetails(),
+      readPage:()=>readOpenAccountPage(),onSettings:()=>document.getElementById('open-settings')?.click()});
   })();
   finance.then(tool=>tool.quiet(quiet)).catch(()=>{/* A tool that will not mount reports itself through its own caller. */});
   return finance;

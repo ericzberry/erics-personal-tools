@@ -141,7 +141,9 @@ for(const [label,answer,site,quiet,read=reading] of states){
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:16px 0 8px;color:#666';
   const host=document.createElement('div');
   root.append(heading,host);
-  const tool=mountFinance(host,{vault:vault({answer}),credentials,offline,quiet,
+  // Laid out as the side panel lays it out, because that is the host this
+  // fixture stands in for; the ledger's own page has its own preview.
+  const tool=mountFinance(host,{vault:vault({answer}),credentials,offline,quiet,layout:'panel',openDetails:()=>{},
     // The open state stands in for the sidebar, the one host that sits beside a
     // logged-in account page, so the page action can be reviewed too.
     ...(answer==='open'?{readPage:async()=>({text:'Synthetic balances from the open page',host:'accounts.example',title:'',trimmed:0,tables:1})}:{}),

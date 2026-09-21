@@ -269,7 +269,7 @@ test('an override out-specifies, and a harness loads what its host loads',()=>{
   // A harness previews one host and loads that host's sheets. The three that
   // are not panel screens say which host they are, and why.
   const elsewhere={'ai-models':'settings.html','storage-preview':'settings.html',
-    'restaurant':'restaurants.html','espn-page':null};
+    'restaurant':'restaurants.html','finance-page':'finance.html','espn-page':null};
   for(const file of readdirSync(new URL('.',import.meta.url)).filter(name=>name.endsWith('-preview.html'))){
     const markup=read(file),own=links(markup),host=Object.entries(elsewhere).find(([key])=>file.startsWith(key));
     if(host&&host[1]===null){assert.deepEqual(own,[],`${file} links sheets but claims to need none`);continue;}
@@ -291,7 +291,7 @@ test('an override out-specifies, and a harness loads what its host loads',()=>{
 // qualifier under it — and the figure itself never splits. Every class that
 // renders money says so, in a sheet both hosts load.
 test('an amount is one word, wherever either host draws it',()=>{
-  const MONEY=['.amount','.figure-value','.snapshot-figure strong'];
+  const MONEY=['.amount','.figure-value','.snapshot-figure strong','.line-chart-end','.line-chart-tick','.line-chart-tip'];
   const shared=sheets().map(name=>[name,sheet(name)]);
   for(const selector of MONEY){
     const owner=shared.find(([,css])=>

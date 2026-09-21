@@ -39,6 +39,8 @@ The catalogue below describes existing exports, not a promise that each componen
 | Settings | `SettingsList`, `SettingsItem`, `SettingsLink`, `SettingsGroup` | Flat navigation; named groups for status, fields, and maintenance |
 | Feedback and facts | `Notice`, `Badge`, `StatusCard`, `SourceNote` | Use truthful text; `Notice` provides status semantics, not an entire error workflow |
 | Data comparison | `DataTable`, `List` | Keep headers meaningful; choose records over a table when columns add no value |
+| A figure over time, or the parts of a whole | `LineChart`, `ProportionBar`, `linkParts` in `components/charts.js` | One series in the forest, liquid and illiquid in their two colours; every chart has a table or list beside it, and positions go through the CSSOM. See [Charts](DESIGN.md#charts) |
+| A tool's detail on its own page | `OverviewSection` and the Finance compositions in `components/finance-overview.js` | Open sections under a Georgia heading and a full-width hairline; see [A tool's own page](DESIGN.md#a-tools-own-page) |
 | Research results | `ResultBlock`, `EvidenceList`, `OutputText` | Separate evidence, generated conclusions, and operation status |
 | One generated thing, end to end | `ResultSection` | One section per function — its name, its action, its status and its editable result; keep editing and copying available and preserve edits across async work |
 | Upload | `UploadField` with `attachFileDrop` | Shared browse/drop handling, validation, and inline feedback |

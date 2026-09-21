@@ -154,22 +154,63 @@ test('value over time offers no grain to choose: the table is quarterly and says
 });
 
 // UI-35. The entities ran as a bare stack under three disclosures — four
-// things at one level, three of them boxes that open and one loose. It is a
-// section like its neighbours now, and the one the tab is opened for, so it is
-// the one that starts open.
-test('every section of the net worth tab is a section, and the entities are the one that starts open',()=>{
+// things at one level, three of them boxes that open and one loose. On the
+// ledger's own page every section is open, because there is room for all of
+// them, and so every one of them is the same kind of thing: a heading over what
+// it names, never a disclosure beside a loose list.
+test('every section of the ledger\u2019s page opens the same way, and none of them has to be opened',()=>{
   setup();
   const view=FinanceView();
   const list=view.querySelector('#finance-list');
-  const panel=list.closest('details.ledger-panel');
-  assert.ok(panel,'the entities are a loose stack beside three disclosures. See UI-35 in docs/UI_RULES.md.');
-  assert.equal(panel.querySelector('summary').textContent,'Entities');
-  assert.equal(panel.open,true,'the section the tab is opened to read starts shut');
-  // Nothing else in that run is open, or the screen answers a question nobody
-  // asked before the one it was opened for.
-  const siblings=[...panel.parentElement.children].filter(node=>node.tagName==='DETAILS');
-  assert.equal(siblings.length,4,'the run of sections changed shape');
-  assert.deepEqual(siblings.filter(node=>node.open).map(node=>node.querySelector('summary').textContent),['Entities']);
+  const section=list.closest('.overview-section');
+  assert.ok(section,'the entities are a loose stack beside the other sections. See UI-35 in docs/UI_RULES.md.');
+  assert.equal(section.querySelector('.overview-title').textContent,'Entities');
+  const ledger=view.querySelector('#finance-ledger');
+  assert.equal(ledger.querySelector(':scope details'),null,'a section on the page is put away behind a disclosure');
+  assert.deepEqual([...ledger.querySelectorAll('.overview-title')].map(node=>node.textContent),
+    ['Allocation','Entities','Value over time','Private investments','Real estate','Institutions over time']);
+});
+
+// The side panel keeps what it all comes to and the ways a figure gets in.
+// Every line of the ledger — the classes inside each entity, the positions, the
+// houses, the quarters — is on the page Open details goes to. "Rather than
+// jamming everything into the sidebar." UI-45.
+test('the side panel answers what it comes to, and sends the detail to its own page',async()=>{
+  const document=setup();
+  let opened=0;
+  const records=[...AMENDED,mark(1,12,'2026-09-20',248422.68),mark(1,21,'2026-09-20',400000)];
+  const tool=mountFinance(document.querySelector('main'),{
+    vault:unlockedVault(),credentials:{get:async()=>'token'},layout:'panel',openDetails:()=>{opened++;},
+    remote:async()=>({connections:[]}),offline:{request:async()=>({records})}
+  });
+  await settle(()=>document.getElementById('finance-totals').textContent.includes('Net'));
+  for(const id of ['finance-list','finance-hero','finance-positions','finance-properties','finance-trend','finance-firms'])
+    assert.equal(document.getElementById(id),null,`${id} is ledger detail, and the panel carries it again`);
+  assert.match(document.getElementById('finance-totals').textContent,/Net\$1,639,492As of2026-09-20Assets\$2,039,492Liabilities\(\$400,000\)/);
+  // How much could be sold this week, and who holds it.
+  const liquidity=document.getElementById('finance-liquidity');
+  assert.match(liquidity.textContent,/Liquid88%\$1,791,070/);
+  assert.match(liquidity.textContent,/Illiquid12%\$248,423/);
+  assert.equal(liquidity.querySelectorAll('.proportion-part').length,3,'one part per class held');
+  assert.match(document.getElementById('finance-breakdown').textContent,/By entity/);
+  assert.match(document.getElementById('finance-breakdown').textContent,/Eric and Ariana Berry Estate/);
+  // The way to the rest of it, and one press is the whole errand.
+  const details=document.getElementById('finance-details');
+  assert.equal(details.closest('.action-group').hidden,false);
+  details.click();
+  assert.equal(opened,1);
+  tool.stop();
+});
+
+test('a panel with no page to send anyone to offers no way there',async()=>{
+  const document=setup();
+  const tool=mountFinance(document.querySelector('main'),{
+    vault:unlockedVault(),credentials:{get:async()=>'token'},layout:'panel',
+    remote:async()=>({connections:[]}),offline:{request:async()=>({records:AMENDED})}
+  });
+  await settle(()=>document.getElementById('finance-totals').textContent.includes('Net'));
+  assert.equal(document.getElementById('finance-details').closest('.action-group').hidden,true);
+  tool.stop();
 });
 
 test('value over time is read quarterly by default, each quarter shown by its last reading',()=>{

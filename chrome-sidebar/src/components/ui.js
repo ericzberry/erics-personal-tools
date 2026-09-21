@@ -9,6 +9,11 @@ function element(tag, props={}, children=[]) {
     if(key==='text')node.textContent=value;
     else if(key==='className')node.className=value;
     else if(key==='hidden'||key==='disabled')node[key]=value;
+    // Through the CSSOM rather than as an attribute: the phone's pages forbid
+    // inline style attributes (`style-src 'self'`), and a width or a position
+    // written as one is silently dropped there, while a declaration set on
+    // the element's own style object is not.
+    else if(key==='style')node.style.cssText=value;
     else node.setAttribute(key,String(value));
   }
   node.append(...children.filter(Boolean));return node;

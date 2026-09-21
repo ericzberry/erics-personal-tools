@@ -3,10 +3,13 @@
 export function travelChanges(onChange,{resource='travel',storage=globalThis.chrome?.storage,Channel=globalThis.BroadcastChannel}={}) {
   const key=`${resource}-record-change`;
   if(storage?.local?.set&&storage?.onChanged){
-    const listener=(changes,area)=>{if(area==='local'&&changes[key])onChange();};
+    // The marker is handed to the listener and returned by `publish`, so a view
+    // can tell its own save from another view's: storage reports a change to
+    // every extension page, the one that made it included.
+    const listener=(changes,area)=>{if(area==='local'&&changes[key])onChange(changes[key].newValue);};
     storage.onChanged.addListener(listener);
     return {
-      publish:()=>storage.local.set({[key]:crypto.randomUUID()}).catch(()=>{}),
+      publish:()=>{const marker=crypto.randomUUID();storage.local.set({[key]:marker}).catch(()=>{});return marker;},
       close:()=>storage.onChanged.removeListener(listener)
     };
   }

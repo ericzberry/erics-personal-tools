@@ -1,9 +1,11 @@
-import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionFigures,FigureList,propertyDetail} from './components/finance.js';
+import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionFigures,FigureList,propertyDetail,quarterPoints,quarterChange} from './components/finance.js';
+import {NetWorthHero,NetWorthChart,Allocation,LiquiditySummary,PositionsTable,PropertiesTable,allocationGroups,changeText} from './components/finance-overview.js';
+import {share} from './components/charts.js';
 import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,valueSourceLabel,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
 import {firmLabel} from './account-sites.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {firmQuarters} from './firm-history.js';
@@ -18,7 +20,12 @@ const today=()=>new Date().toISOString().slice(0,10);
 // property's own page and read what it publishes the house is worth. The
 // extension can, the phone cannot, and where it is missing a property is worth
 // whatever was typed against it.
-export function mountFinance(root,{credentials,offline,remote,readPage=null,readZestimate=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false}){
+// `layout` is how much of the ledger this host has room for. The side panel is
+// `panel`: what it all comes to and the ways a figure gets in, with the rest a
+// press away on a page of its own through `openDetails`. That page, and the
+// phone — which has no second page to send anyone to — are `page`, and read
+// the whole ledger.
+export function mountFinance(root,{credentials,offline,remote,readPage=null,readZestimate=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false,layout='page',openDetails=null}){
   const gate=mountVaultGate(root,{
     id:'finance-vault',title:'Finance',
     // A tool built because the tab beside the panel is a finance page raises no
@@ -28,7 +35,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     ...(vault?{vault}:{}),
     onChange:unlocked=>{unlocked?refresh():clear();}
   });
-  gate.content.replaceChildren(FinanceView());
+  gate.content.replaceChildren(FinanceView({layout}));
   const $=id=>gate.content.querySelector(`#finance-${id}`);
   let records=[],editing=null,busy=false,loaded=false,activeToken='',generation=0,currency='USD',connection='';
   // What was read, before any of it is saved. A reading is a proposal: the
@@ -294,7 +301,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     $('currency-switch').hidden=currencies.length<2;
     $('currency-switch').replaceChildren(...(currencies.length<2?[]:currencies.map(entry=>{
       const button=Button(`${entry.currency} (${entry.count})`,{variant:entry.currency===currency?'primary':'secondary',size:'compact','aria-pressed':String(entry.currency===currency)});
-      button.addEventListener('click',()=>{currency=entry.currency;renderPosition();});
+      button.addEventListener('click',()=>{currency=entry.currency;render();});
       return button;
     })));
     const summary=financeSummary(records,{currency});
@@ -303,59 +310,62 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // qualifies are. Every line underneath then carries a date only when it
     // disagrees with this one.
     const newest=series.at(-1)?.asOf||'';
-    $('totals').replaceChildren(
+    const quarters=quarterPoints(series);
+    const change=quarterChange(quarters);
+    // What is held and what is owed against it, each under its own name —
+    // assets and their liability are read as a pair, not two rows apart.
+    // Assets on their own are news only when something is owed against them.
+    // With no liabilities they are the net worth again, and the pair read as
+    // one number printed twice under two names.
+    //
+    // What is still owed on a commitment is not a total of the ledger —
+    // nobody can demand all of it today, and it is neither held nor owed — so
+    // it is read beside the commitment it belongs to, and not up here.
+    const owed=summary.liabilities?[
+      Figure({label:'Assets',value:money(summary.assets,currency)}),
+      Figure({label:'Liabilities',value:money(-summary.liabilities,currency),tone:'negative'})
+    ]:[];
+    // What can be sold this week and what cannot, class by class. Only what is
+    // held: what is owed has no liquidity to speak of.
+    const held=allocationGroups(summary.byClass);
+    const heldTotal=held.reduce((total,group)=>total+group.total,0);
+    const stale=summary.stale;
+    $('stale').hidden=!stale.length;
+    $('stale').textContent=stale.length?`${stale.length} portfolio${stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${stale[0].name}${stale[0].asOf?` from ${stale[0].asOf}`:''}. Totals still count ${stale.length===1?'it':'them'} at ${stale.length===1?'its':'their'} last known figure.`:'';
+    // Currencies are never added together, so say what a total covers.
+    const only=currencies.length>1?` · ${currency} only`:'';
+    if(layout==='panel'){
       // What it comes to, and the day it stands at, on the first line. On the
-      // second, what is held and what is owed against it, each under its own
-      // name in the column above it — assets and their liability are read as a
-      // pair, not two rows apart.
-      Figure({label:'Net',value:money(summary.net,currency),tone:summary.net<0?'negative':''}),
-      ...(newest?[Figure({label:'As of',value:newest,tone:'date'})]:[]),
-      // Assets on their own are news only when something is owed against them.
-      // With no liabilities they are the net worth again, and the pair read as
-      // one number printed twice under two names.
-      //
-      // What is still owed on a commitment is not a total of the ledger —
-      // nobody can demand all of it today, and it is neither held nor owed —
-      // so it is read in the Private investments breakdown, beside the
-      // commitment it belongs to, and not up here among the four that are.
-      ...(summary.liabilities?[
-        Figure({label:'Assets',value:money(summary.assets,currency)}),
-        Figure({label:'Liabilities',value:money(-summary.liabilities,currency),tone:'negative'})
-      ]:[])
-    );
-    $('stale').hidden=!summary.stale.length;
-    $('stale').textContent=summary.stale.length?`${summary.stale.length} portfolio${summary.stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${summary.stale[0].name}${summary.stale[0].asOf?` from ${summary.stale[0].asOf}`:''}. Totals still count ${summary.stale.length===1?'it':'them'} at ${summary.stale.length===1?'its':'their'} last known figure.`:'';
-    // A ledger with nothing in it needs one line saying so, not the same line
-    // under four headings that break down nothing.
-    $('breakdown').replaceChildren(...summary.figures?[
-      // Liquid against illiquid first: it is the question the class list cannot
-      // answer on its own, and the one the classes underneath it explain.
-      BreakdownList('By liquidity',summary.byGroup,currency),
-      BreakdownList('By asset class',summary.byClass,currency),
-      BreakdownList('By portfolio',summary.byPortfolio,currency),
-      // "By registration" is the paperwork's word for it. What the owner is
-      // being told apart here is what kind of account each figure sits in, and
-      // that is what the tag on every portfolio underneath says too.
-      BreakdownList('By account type',summary.byRegistration,currency),
-      // A house nobody has valued yet is a property and not yet a figure: the
-      // heading over it would have nothing under it but the line saying so,
-      // which is a breakdown of nothing under a title.
-      ...(summary.properties.value||summary.properties.debt?[BreakdownList('Real estate',[
-        {label:'Value',total:summary.properties.value},
-        // What is owed and what is left appear only when something is owed. A
-        // house with no mortgage has equity equal to its value, and two more
-        // lines saying so would say nothing.
-        ...(summary.properties.debt?[{label:'Owed',total:summary.properties.debt},
-          {label:'Equity',total:summary.properties.equity}]:[])
-      ],currency,{shares:false})]:[]),
-      ...(summary.positions.count?[BreakdownList('Private investments',[
-        {label:'Committed',total:summary.positions.committed},
-        {label:'Funded',total:summary.positions.contributed},
-        {label:'Returned',total:summary.positions.distributed},
-        {label:'Unfunded',total:summary.positions.unfunded},
-        {label:'Value',total:summary.positions.value}
-      ],currency,{shares:false})]:[])
-    ]:[Note('Nothing recorded yet.')]);
+      // second, what is held and what is owed against it.
+      // A ledger with nothing in it — or one this device has not loaded — says
+      // so in one line and what to do about it, never as a total of $0.00.
+      $('totals').hidden=!summary.figures;
+      $('totals').replaceChildren(...(summary.figures?[
+        Figure({label:'Net',value:money(summary.net,currency),tone:summary.net<0?'lead negative':'lead'}),
+        ...(newest?[Figure({label:'As of',value:newest,tone:'date'})]:[]),
+        ...owed]:[]));
+      $('change').hidden=!change;
+      $('change').textContent=change?`${changeText(change,currency)}.`:'';
+      $('liquidity').replaceChildren(...(summary.figures&&heldTotal>0?[LiquiditySummary({groups:held,total:heldTotal,currency})]:[]));
+      $('breakdown').replaceChildren(summary.figures?BreakdownList(`By entity${only}`,summary.byPortfolio,currency)
+        :Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one by hand.'));
+      $('details-actions').hidden=!openDetails||!summary.figures;
+      return;
+    }
+    // A ledger with nothing in it says so in one line, rather than a headline
+    // of $0.00 that pretends to be a figure.
+    $('hero').replaceChildren(summary.figures?NetWorthHero({net:summary.net,asOf:newest,change,currency,figures:owed,
+      // A line needs two readings a quarter apart that both hold the whole
+      // ledger. Until there are two, the figure above is the whole story.
+      chart:quarters.filter(point=>point.complete).length>1
+        ?NetWorthChart({points:quarters.filter(point=>point.complete),currency}):null}):Note('Nothing recorded yet.'));
+    $('breakdown-panel').hidden=!summary.figures||heldTotal<=0;
+    $('breakdown-panel-aside').replaceChildren(...(only?[Note(`${currency} only`)]:[]));
+    // "By registration" is the paperwork's word for it. What the owner is
+    // being told apart here is what kind of account each figure sits in, and
+    // that is what the tag on every portfolio underneath says too.
+    $('breakdown').replaceChildren(...(summary.figures&&heldTotal>0?[Allocation({groups:held,total:heldTotal,currency,
+      accounts:{title:'Account types',rows:summary.byRegistration}})]:[]));
     $('trend').replaceChildren(TrendTable(series,currency));
     // Each firm's own quarters. The panel is absent rather than empty until a
     // firm has been read at least once, because a heading over nothing is a
@@ -363,8 +373,6 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     const firms=firmQuarters(records,{currency});
     $('firms-panel').hidden=!firms.length;
     $('firms').replaceChildren(FirmQuarters(firms,currency));
-    // Currencies are never added together, so say what a total covers.
-    $('breakdown-panel').querySelector('summary').textContent=currencies.length>1?`Breakdown · ${currency} only`:'Breakdown';
   }
 
   function renderAttachment(){
@@ -751,8 +759,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     return run(token=>offline.request(token,`/v1/finance/${record.id}`,{method:'DELETE',value:record}),target);
   }
 
-  // The totals and the ledger, built only when they have been asked for.
+  // The totals and the ledger, built only when they have been asked for. The
+  // side panel keeps only the totals; the entities, the positions and the
+  // houses, with every verb that acts on them, are the page's.
   function renderLedger(){
+    if(layout==='panel'){renderPosition();return;}
     const groups=groupFinanceRecords(records).filter(group=>(group.portfolio.currency||'USD')===currency);
     // The date cascades instead of repeating. The ledger's newest date is
     // stated once above the totals; a portfolio says its own only when it is
@@ -939,6 +950,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         ...owing
       ];
     };
+    // Each entity's part of the whole, the way a breakdown line states one:
+    // what is owed is not a part of anything, so the whole is what is held.
+    const whole=groups.reduce((total,group)=>total+Math.max(0,group.total),0);
     $('list').replaceChildren(...(groups.length?groups.map(group=>{
       const portfolio=group.portfolio;
       const confirm=Stack([Note(`Permanently delete “${portfolio.name}” and every figure in it, from all devices?`),ActionGroup([
@@ -959,6 +973,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         ...group.properties.map(entry=>entry.current?.asOf||'')].filter(Boolean).sort().at(-1)||'';
       return PortfolioGroup({
         name:portfolio.name,currency:portfolio.currency,total:group.total,
+        share:whole>0&&group.total>0&&groups.length>1?share(group.total/whole):'',
         open:openPortfolios.has(portfolio.id),
         onToggle:isOpen=>{if(isOpen)openPortfolios.add(portfolio.id);else openPortfolios.delete(portfolio.id);},
         // What kind of account this is, as a tag on the name. Under it, only
@@ -973,12 +988,64 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
           ...(group.properties.length?realEstate(portfolio,group.properties,asOf):[]),confirm]
       });
     }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one by hand.')]));
+    renderHoldings(groups,newest);
     renderPosition();
+  }
+  // The private positions and the houses, each set out as one table across
+  // every entity. In the list above they sit inside the entity that holds
+  // them, which answers whose they are; here they sit beside each other, which
+  // answers how they compare — how much of each commitment has been called,
+  // which fund is ahead, how much of each house is the owner's.
+  function renderHoldings(groups,newest){
+    const since=asOf=>asOf&&asOf!==newest?`as of ${asOf}`:'';
+    const positions=groups.flatMap(group=>group.positions.map(position=>({portfolio:group.portfolio,position})))
+      .sort((a,b)=>b.position.value-a.position.value||a.position.holding.name.localeCompare(b.position.holding.name));
+    $('positions-panel').hidden=!positions.length;
+    const sum=pick=>Math.round(positions.reduce((total,{position})=>total+(pick(position)||0),0)*100)/100;
+    const committed=({position})=>vehicleFigures(position.holding.vehicle).committed;
+    const totals={committed:sum(position=>vehicleFigures(position.holding.vehicle).committed?position.commitment:0),
+      contributed:sum(position=>position.contributed),distributed:sum(position=>position.distributed),
+      unfunded:sum(position=>vehicleFigures(position.holding.vehicle).committed?position.unfunded:0),
+      value:sum(position=>position.value)};
+    totals.multiple=totals.contributed>0?Math.round(((totals.value+totals.distributed)/totals.contributed)*100)/100:null;
+    $('positions').replaceChildren(...(positions.length?[PositionsTable({currency,
+      // A total of one row is that row again.
+      totals:positions.length>1?totals:null,
+      rows:positions.map(entry=>{
+        const {portfolio,position}=entry,holding=position.holding,current=position.current,owes=committed(entry);
+        return {name:holding.name,pending:!!holding.pending,
+          meta:[portfolio.name,vehicleShort(holding.vehicle),
+            (position.share??WHOLE_SHARE)===WHOLE_SHARE?'':`${shareText(position.share)} of the vehicle`,
+            current?since(current.asOf):'no statement yet',holding.pending?'waiting to sync':''].filter(Boolean).join(' · '),
+          called:owes&&position.commitment>0?position.contributed/position.commitment:null,
+          committed:owes?position.commitment:null,contributed:position.contributed,distributed:position.distributed,
+          unfunded:owes?position.unfunded:null,value:position.value,multiple:position.multiple,
+          flows:owes?['Funded','Returned']:['Invested','Proceeds'],
+          notes:position.disputed?[`The statement calls this a ${vehicleLabel(holding.stated)}.`]:[],
+          actions:[rowAction(EDIT_GLYPH,`Edit ${holding.name}`,()=>fillInvestment(position))]};
+      })})]:[]));
+    const houses=groups.flatMap(group=>group.properties.map(entry=>({portfolio:group.portfolio,entry})))
+      .sort((a,b)=>b.entry.value-a.entry.value||a.entry.property.name.localeCompare(b.entry.property.name));
+    $('properties-panel').hidden=!houses.length;
+    const add=pick=>Math.round(houses.reduce((total,{entry})=>total+pick(entry),0)*100)/100;
+    $('properties').replaceChildren(...(houses.length?[PropertiesTable({currency,
+      totals:{value:add(entry=>entry.value),debt:add(entry=>entry.debt),equity:add(entry=>entry.equity)},
+      rows:houses.map(({portfolio,entry})=>{
+        const property=entry.property,current=entry.current;
+        return {name:property.name,pending:!!property.pending,value:entry.value,debt:entry.debt,equity:entry.equity,
+          asOf:current?.asOf||'',
+          meta:[portfolio.name,current?valueSourceLabel(entry.source):'not valued yet',property.pending?'waiting to sync':''].filter(Boolean).join(' · '),
+          actions:[
+            ...(readZestimate&&zillowHome(property.link)
+              ?[rowAction(REFRESH_GLYPH,`Read the Zestimate for ${property.name}`,()=>fileZestimate(entry))]:[]),
+            rowAction(EDIT_GLYPH,`Edit ${property.name}`,()=>fillProperty(entry))]};
+      })})]:[]));
   }
   // Not hidden figures: figures that were never put on the page.
   function sealLedger(){
-    for(const id of ['currency-switch','totals','breakdown','trend','firms','list'])$(id).replaceChildren();
-    $('currency-switch').hidden=true;$('stale').hidden=true;$('firms-panel').hidden=true;
+    for(const id of ['currency-switch','totals','hero','breakdown','liquidity','trend','firms','list','positions','properties'])$(id)?.replaceChildren();
+    $('currency-switch').hidden=true;$('stale').hidden=true;
+    for(const id of ['firms-panel','breakdown-panel','positions-panel','properties-panel','change','details-actions'])if($(id))$(id).hidden=true;
   }
   function render(){
     // What the ledger holds — the totals and the saved figures — waits to be
@@ -1093,6 +1160,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   }
 
   $('read').addEventListener('click',read);
+  // The rest of the ledger is a page of its own, opened by the host that has
+  // one to open.
+  $('details')?.addEventListener('click',()=>openDetails?.());
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_BYTES});
   $('cancel').addEventListener('click',()=>{clearForm();$('entry').open=false;});
   $('portfolio').addEventListener('change',syncForm);
@@ -1242,5 +1312,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     site=next||null;snapshot=null;snapshotEditing=false;
     status('','snapshot-status');renderSnapshot();render();
   }
-  return {refresh,clear,site:detected,quiet:arrival,stop(){gate.stop();}};
+  // Another view saved something. Caught up the way a return to the tab is:
+  // not while a form is open under the owner's hands.
+  return {refresh,clear,changed:reload,site:detected,quiet:arrival,stop(){gate.stop();}};
 }

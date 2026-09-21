@@ -108,8 +108,9 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
   tool.site(ETRADE);
   assert.equal(tab(document,'ledger').hidden,true,'the ledger is not even a tab until it is asked for');
   // Not hidden figures — figures that were never built.
-  for(const id of ['finance-totals','finance-list','finance-breakdown','finance-trend'])
+  for(const id of ['finance-hero','finance-list','finance-breakdown','finance-trend','finance-positions','finance-properties'])
     assert.equal(document.getElementById(id).textContent,'',id);
+  assert.equal(document.getElementById('finance-totals'),null,'the totals are not built to be hidden');
   assert.equal(document.body.textContent.includes('100,000'),false,'no balance is anywhere on the page');
 
   // Everything that puts a figure into the ledger is ready without asking.

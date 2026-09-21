@@ -116,14 +116,18 @@ test('a capital account statement is read into an investment, reviewed, and save
   assert.match(list,/Commitment\$1,000,000Funded\$800,000Returned\$250,000Unfunded\$200,000Multiple1\.69×/);
   // It counts like any other figure. What is still owed on the commitment is
   // not a total of the ledger — it is neither held nor owed today — so it is
-  // read against the commitment in the breakdown and never up in the totals.
+  // read against the commitment, in the private investments set out side by
+  // side, and never up in the totals.
   assert.match(document.getElementById('finance-totals').textContent,/Net\$1,100,000/);
   assert.equal(document.getElementById('finance-totals').textContent.includes('Unfunded'),false,
-    'unfunded is a fifth total again; it belongs to the Private investments breakdown');
-  assert.match(document.getElementById('finance-breakdown').textContent,/Unfunded\$200,000/);
-  assert.match(document.getElementById('finance-breakdown').textContent,/Private investments/);
-  // A breakdown line carries its own share of the group it is in, between the
-  // class and the amount.
+    'unfunded is a fifth total again; it belongs beside the commitment it is owed on');
+  const positions=document.getElementById('finance-positions-panel');
+  assert.equal(positions.hidden,false);
+  assert.match(positions.querySelector('.overview-title').textContent,/Private investments/);
+  const unfunded=[...positions.querySelectorAll('.overview-row:not(.overview-row--head) [data-label=Unfunded]')].map(cell=>cell.textContent);
+  assert.deepEqual(unfunded,['$200,000']);
+  // A class line carries its own share of what is held, between the class
+  // and the amount.
   assert.match(document.getElementById('finance-breakdown').textContent,/Fund investments100%\$1,100,000/);
   tool.stop();restore();
 });

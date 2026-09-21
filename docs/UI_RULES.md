@@ -65,6 +65,7 @@ here.
 | **UI-42** | What has happened is not offered again. A dropped statement is read when it arrives; a Read button exists only for a file that could not be read, and no line says a thing is ready once it has been done. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js` |
 | **UI-43** | A review's actions are the bare verbs — Save, Edit, Discard. The review above them is what they act on, so the label never restates or counts it. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-snapshot.test.js`, `finance-investments.test.js`, `rewards-tool.test.js` |
 | **UI-44** | A reading reports only what went wrong. A figure it left out on purpose, or one that is part of a figure it did report, is not a warning; what was refused is said only when nothing was found. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/finance.test.js`, `chrome-sidebar/tests/finance-snapshot.test.js` |
+| **UI-45** | A side panel answers; a page holds the detail. A panel tool says what it all comes to and takes new records in; the record-by-record detail — every entity, every holding, every quarter — is read on the tool's own page, one press away, and the panel does not carry it again. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-ledger.test.js` |
 
 ## Ratcheting
 
@@ -310,7 +311,11 @@ section it is for by which one starts open — here Entities, since the ledger i
 what the tab is opened to read — and a reader who wants it shut can shut it.
 This is the reason UI-22 is not only about how a disclosure looks: a screen
 whose sections do not agree on whether they are sections is uneven before any
-of them is drawn. Checked on the rendered ledger in
+of them is drawn. Since the ledger moved to its own page (UI-45) the same rule
+is kept the other way round: there every section — Allocation, Entities, Value
+over time, Private investments, Real estate, Institutions over time — is a
+heading over what it names and none of them has to be opened, because a page
+that wide has no reason to put anything away. Checked on the rendered ledger in
 `tests/finance-ledger.test.js`.
 
 **UI-36 — a band reaches both edges of its block.** *Enforced.* An open
@@ -435,6 +440,26 @@ the roster keeps out, refused because they should be and printed in the alert
 tone under nearly every page reading. It is now said only when a reading found
 nothing, where it is the explanation; `finance-snapshot.test.js` holds that.
 Rewards already showed its unread line only when a page gave nothing.
+
+**UI-45 — a side panel answers; a page holds the detail.** *Enforced for
+Finance.* The side panel is a column beside the page the work comes from, and
+a ledger of seven entities, forty class lines, a run of private positions and
+a table of quarters read down it one disclosure at a time is a ledger nobody
+can compare anything in. *"Rather than jamming everything into the sidebar of
+finance, you can show net worth and stuff, and let me enter investments in the
+sidebar, but when I want to look at details open a special extension-managed
+page."* So the panel keeps what it all comes to — the net figure and its date,
+what is owed against it, how much could be sold this week, each entity's total
+— and every way a figure gets in; **Open details** brings `finance.html` to
+the front, or opens it, where the same records are laid out at a width that
+makes them comparisons: the figure beside the line it has drawn, the classes in
+two columns under one bar, the private positions as a table, the houses with
+what is left of each. The panel does not carry the detail again, and the page
+is also what the phone shows, since it has no second page to send anyone to.
+The next panel tool that grows a ledger is the next case: its answer stays in
+the panel and its rows go to a page. `tests/finance-ledger.test.js` holds that
+the panel builds no entity list, table or series, and that Open details is
+there only where a page can be opened.
 
 ## Open
 

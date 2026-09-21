@@ -203,6 +203,53 @@ A tool heading is 22px Georgia. When it carries one primary action, that action 
 
 In the extension a closed row carries nothing but the name, its traveler and the chevron: the number and its verbs arrive together when the record is opened, so nothing is copied out of a row nobody looked at and the markers stay in one column however many verbs a record has. In the unlocked mobile wallet the number is always under its program name, carrying that same line of verbs, and the disclosure keeps the rest of the record's detail. Mobile numbers are set like the extension's; do not add another traveler line to every collapsed mobile row. Icons retain accessible names and tooltips. A search field may use a visually hidden associated label and the visible placeholder “find record.” Routine successful synchronization has no banner; pending changes, errors, and offline state remain discoverable. Connection maintenance belongs in Settings.
 
+### Charts
+
+Two pictures of money, shared by every host: a line for a figure over time and
+a bar for the parts of a whole (`LineChart` and `ProportionBar` in
+`chrome-sidebar/src/components/charts.js`, styled by `charts.css`, which
+`tokens.css` imports). The data is the only loud thing: a 2px line, 8px points
+ringed in the surface inside a 24px target, a hairline grid one step off the
+surface with its values set small above each line, and labels in the text inks
+— a colour is carried by the mark beside a name, never by the name.
+
+Money has two chart colours and they mean one thing: what could be sold this
+week is `--liquid` (the forest) and what is locked up is `--illiquid` (the
+brass), with `--unplaced` grey for value nobody has placed. The pair holds
+apart under every kind of colour blindness. Parts of the same side share its
+colour and are told apart by a 2px surface gap, by their order and by the list
+that names each one beside the bar; pointing at a part in either marks it in
+both. The newest point on a line is brass — the one reading that is not history
+yet — and it alone is labelled on the chart.
+
+A line is drawn only between readings that hold the whole ledger, a quarter
+apart, and only once there are two. Its axis is drawn around where the figure
+moved rather than from zero, and its wash fades out well above the floor so it
+never reads as an area measured from a baseline. Every chart has its table:
+the quarterly table under Value over time, the class columns under the bar. A
+tooltip is a convenience and never the only way to read a value.
+
+Positions are set through the CSSOM, never as a `style` attribute: the phone's
+pages forbid inline style attributes, and a width written as one is silently
+dropped there.
+
+### A tool's own page
+
+A side panel answers; a page holds the detail (UI-45). A panel tool with a
+ledger behind it shows what it all comes to and takes new records in, and one
+press — **Open details** — brings its page to the front or opens it. The page
+reads the same records at a width where they become comparisons, and the phone
+shows that page as the tool, since it has no second page to send anyone to.
+
+The page is held to 1120px and every section on it is open: a Georgia heading
+over what it names, closed by a hairline the width of the page, with what
+qualifies the section at the other end of the same line. The one boundary is
+round the headline figure and its line, because they are one statement. Tables
+set each figure in a column read down its right edge and, in a column narrower
+than 880px, become a stack of small statements — the name and its verbs, then
+each figure on its own line with its name beside it. A form on the page keeps
+the side panel's width.
+
 ### Implementation and scope
 
 `Button` in `chrome-sidebar/src/components/ui.js` accepts a role through `variant` and a density through `size`. Use `size: 'compact'` with `primary`, `secondary`, `subtle`, `danger-subtle`, or `danger`. Use `RowAction` with `COPY_GLYPH` for number copying. Do not supply custom padding or a feature-specific button class.

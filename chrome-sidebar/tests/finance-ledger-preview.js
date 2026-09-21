@@ -1,5 +1,7 @@
-// Local synthetic fixture for the Net worth block. Not copied into release
-// builds. The view, the controller and the styles are the real modules; only
+// Local synthetic fixture for the side panel's Net worth block — what it all
+// comes to, how much of it is liquid, each entity's total, and the way to the
+// ledger's own page. The page itself, entity by entity, is previewed by
+// finance-page-preview.html. Not copied into release builds. The view, the controller and the styles are the real modules; only
 // the records, the vault and the connection are synthetic, so the states a
 // person actually meets can be inspected at sidebar widths without a
 // connection and without their own figures on the screen.
@@ -136,10 +138,9 @@ for(const [label,records] of states){
   // looks no further, so each fills its own.
   mountFinance(host,{
     vault,credentials:{get:async()=>'synthetic-preview-token-at-least-32-characters'},
-    remote:async()=>({connections:[]}),readZestimate,
+    remote:async()=>({connections:[]}),readZestimate,layout:'panel',
+    openDetails:()=>window.open('finance-page-preview.html?state=year','_blank','noopener'),
     offline:{request:async()=>({records})}
   });
 }
-// The disclosures start closed, and this page exists to look at what is inside
-// them.
-setTimeout(()=>{for(const panel of root.querySelectorAll('details'))if(panel.id?.includes('breakdown')||panel.id?.includes('trend'))panel.open=true;},50);
+

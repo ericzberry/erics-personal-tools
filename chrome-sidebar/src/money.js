@@ -11,3 +11,19 @@ export function money(value,currency='USD'){
     maximumFractionDigits:Math.abs(value)>=1000?0:2}).format(value);}
   catch{return `${value.toLocaleString('en-US',{maximumFractionDigits:2})} ${currency}`;}
 }
+
+// The same notation at a glance: an axis tick or a figure beside a bar, where
+// $82,410,337 is eleven characters nobody reads and $82.4M is the answer.
+// Never a figure the owner might copy or compare to the cent — that is money().
+export function moneyShort(value,currency='USD'){
+  // Below a thousand there is nothing to shorten.
+  if(!(Math.abs(value)>=1000))return money(value,currency);
+  try{
+    // Compact notation drops the accounting sign, so the parentheses are put
+    // back by hand: what is owed never reads as a hyphen here either.
+    const text=new Intl.NumberFormat('en-US',{style:'currency',currency,notation:'compact',
+      maximumFractionDigits:Math.abs(value)>=1e9?2:1}).format(Math.abs(value));
+    return value<0?`(${text})`:text;
+  }
+  catch{return money(value,currency);}
+}

@@ -38,7 +38,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
 | `rewards.html` | `src/rewards.js` | Rewards & benefits |
 | `cards.html` | `src/cards-page.js` | Best card |
-| `finance.html` | `src/finance-page.js` | Finance ledger (passkey-gated); also mounts inside the side panel |
+| `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation, entities, private positions, houses, institutions — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
 | `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
@@ -78,7 +78,14 @@ modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `fi
 `vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js`,
-`workspace.css`, `sidebar-launcher.js`.
+`workspace.css`, `sidebar-launcher.js`. `charts.{js,css}` are the two pictures
+of money every host can draw — `LineChart` (a figure over time) and
+`ProportionBar` (the parts of a whole, in runs), positioned through the CSSOM
+because the phone forbids inline style attributes — and `tokens.css` imports
+`charts.css` so every host has it. `finance-overview.js` composes the ledger's
+page out of them: `NetWorthHero`, `NetWorthChart`, `Allocation`,
+`LiquiditySummary` (the panel's version), `PositionsTable`, `PropertiesTable`
+and `OverviewSection`.
 See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 
 ### `src/` shared core (used by more than one host or feature)
@@ -96,14 +103,17 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `home-page.js`; mobile mounts it in its own `capabilities.js`.
 - **Links** — `public-url.js`: the one reading of "a link safe to show and
   open", used by gift links and restaurant booking links alike.
-- **Money** — `money.js`: the one currency formatter, accounting notation, no
+- **Money** — `money.js`: the one currency formatter (and `moneyShort`, the
+  same notation compacted for an axis tick), accounting notation, no
   DOM — so a data module the Worker imports can use it without pulling the
   component library in. `components/ui.js` re-exports it and builds `Amount`
   on top, which carries the negative ink.
 - **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),
   `offline-storage.js` (encrypted IndexedDB), `cloud-storage.js` (`CLOUD_URL`,
   `cloudRequest`, `cloudUpload` for a file too big to travel as JSON,
-  `CONNECTION_KEY`), `travel-changes.js` (cross-window change notification),
+  `CONNECTION_KEY`), `travel-changes.js` (cross-window change notification —
+  one resource name per tool, and the marker it hands back lets a view tell its
+  own save from another's; the Finance panel and its page use it as `finance`),
   `private-disconnect.js`.
 - **Device-held secrets** — `secret-vault.js` (WebAuthn PRF key derivation,
   sealed envelopes, the recovery code, `sharedVault()` — one vault per host so a

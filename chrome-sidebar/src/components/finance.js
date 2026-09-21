@@ -2,6 +2,7 @@ import * as UI from './ui.js';
 import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,classLabel,registrationLabel,vehicleLabel,vehicleShort,vehicleFigures,valueSourceLabel,classSide,signed,shareText} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
 import {FINANCE_SITES} from '../account-sites.js';
+import {OverviewSection,Figure} from './finance-overview.js';
 const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link,Tabs,Amount}=UI;
 export const {money}=UI;
 
@@ -24,13 +25,7 @@ export function AccountPages(sites=[]){
   });
 }
 
-// One total: its name above it, and the number itself never broken across two
-// lines — the totals grid gives it a column, and a column is either wide enough
-// for the number or the figure takes the next row whole.
-export const Figure=({label,value,id,tone=''})=>Stack([
-  Label(label,{className:'figure-label'}),
-  Strong(value,{id,className:`figure-value${tone?` figure-value--${tone}`:''}`})
-],{className:'figure'});
+export {Figure} from './finance-overview.js';
 export const classOptions=()=>ASSET_CLASSES.map(entry=>({text:`${entry.label}${entry.side==='liability'?' (liability)':''}`,value:String(entry.code)}));
 export const registrationOptions=()=>REGISTRATIONS.map(entry=>({text:entry.label,value:String(entry.code)}));
 export const vehicleOptions=()=>VEHICLES.map(entry=>({text:entry.label,value:String(entry.code)}));
@@ -311,7 +306,7 @@ export function PagePanel({site,rows=[],editing=false,disabled=false,source=null
   ],{className:'snapshot-reading'});
 }
 
-export function FinanceView(){
+export function FinanceView({layout='page'}={}){
   const view=Stack([
     ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
     // Three scopes, one at a time: the page in front of you, what the whole
@@ -341,30 +336,7 @@ export function FinanceView(){
           // something else.
           Stack([],{id:'finance-capital-page'})
         ]})},
-      {key:'ledger',label:'Net worth',content:
-        SettingsGroup({id:'finance-ledger',children:[
-          Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
-          Stack([],{id:'finance-totals',className:'finance-totals'}),
-          Notice('',{id:'finance-stale',hidden:true}),
-          Disclosure('Breakdown',[Stack([],{id:'finance-breakdown'})],{id:'finance-breakdown-panel',className:'ledger-panel'}),
-          Disclosure('Value over time',[
-            Stack([],{id:'finance-trend'})
-          ],{id:'finance-trend-panel',className:'ledger-panel'}),
-
-          // The same question asked of each place the money is held. A figure
-          // is filed under whose money it is, so where it sits survives only in
-          // the firm the figure carries — and a figure entered by hand carries
-          // none. Closed, and absent altogether until a firm has been read.
-          Disclosure('Institutions over time',[
-            Stack([],{id:'finance-firms'})
-          ],{id:'finance-firms-panel',className:'ledger-panel',hidden:true}),
-          // The entities are a section like the three above them, and the one
-          // the tab is opened for — so it is the one that starts open. A
-          // reader who wants the list out of the way can shut it, and the
-          // panel says what the list is either way.
-          Disclosure('Entities',[Stack([],{id:'finance-list',className:'travel-list'})],
-            {id:'finance-entities-panel',className:'ledger-panel'})
-        ]})},
+      {key:'ledger',label:'Net worth',content:layout==='panel'?PanelLedger():PageLedger()},
       {key:'add',label:'Figures',content:
         SettingsGroup({id:'finance-add',children:[
           UI.UploadField({id:'finance-drop',inputId:'finance-file',statusId:'finance-file-status',
@@ -451,9 +423,56 @@ export function FinanceView(){
           Disclosure('Open an account page',AccountPages(FINANCE_SITES),{id:'finance-account-pages'})
         ]})}
     ]})
-  ],{className:'finance-ledger'});
-  view.querySelector('#finance-entities-panel').open=true;
+  ],{className:`finance-ledger finance-ledger--${layout}`});
   return view;
+}
+
+// The side panel's answer to what it all comes to, and nothing more: the
+// figure and the day it stands at, how much of it could be sold this week, and
+// what each entity holds. Every line of the ledger — the classes inside each
+// entity, the positions, the houses, the quarters — is on the page Open
+// details goes to, where there is room to read it. The panel keeps the ways a
+// figure gets in, beside the account page the figure comes from.
+function PanelLedger(){
+  return SettingsGroup({id:'finance-ledger',children:[
+    Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
+    Stack([],{id:'finance-totals',className:'finance-totals finance-totals--panel'}),
+    Note('',{id:'finance-change',className:'footnote finance-change',hidden:true}),
+    Notice('',{id:'finance-stale',hidden:true}),
+    Stack([],{id:'finance-liquidity'}),
+    Stack([],{id:'finance-breakdown'}),
+    ActionGroup([Button('Open details',{id:'finance-details',variant:'secondary',size:'compact'})],
+      {compact:true,id:'finance-details-actions',className:'action-group action-group--compact finance-details-actions',hidden:true})
+  ]});
+}
+
+// The whole ledger, for a page with room to lay it out: the figure and its
+// line over time first, then where the money is, then who holds it, then the
+// private positions and the houses side by side, and last each quarter and
+// each institution. Every section is open, because nothing on a page this
+// wide has to be put away to reach the next thing.
+function PageLedger(){
+  return Stack([
+    Stack([],{id:'finance-currency-switch',className:'currency-switch',hidden:true}),
+    Stack([],{id:'finance-hero'}),
+    Notice('',{id:'finance-stale',hidden:true}),
+    OverviewSection({id:'finance-breakdown-panel',title:'Allocation',hidden:true,children:[Stack([],{id:'finance-breakdown'})]}),
+    // Who holds it, and beside it what it has come to quarter by quarter: the
+    // two summaries a reader moves between, and the list is read at a width
+    // where a name and its total are still one line apart rather than a trip
+    // across the screen.
+    Stack([
+      OverviewSection({id:'finance-entities-panel',title:'Entities',children:[Stack([],{id:'finance-list',className:'travel-list'})]}),
+      OverviewSection({id:'finance-trend-panel',title:'Value over time',children:[Stack([],{id:'finance-trend'})]})
+    ],{className:'overview-pair'}),
+    OverviewSection({id:'finance-positions-panel',title:'Private investments',hidden:true,children:[Stack([],{id:'finance-positions'})]}),
+    OverviewSection({id:'finance-properties-panel',title:'Real estate',hidden:true,children:[Stack([],{id:'finance-properties'})]}),
+    // The same question asked of each place the money is held. A figure is
+    // filed under whose money it is, so where it sits survives only in the
+    // firm the figure carries — and a figure entered by hand carries none.
+    // Absent until a firm has been read.
+    OverviewSection({id:'finance-firms-panel',title:'Institutions over time',hidden:true,children:[Stack([],{id:'finance-firms'})]})
+  ],{id:'finance-ledger',className:'finance-overview'});
 }
 
 // One portfolio, its own total, and a line per asset class. The date sits with
@@ -478,7 +497,10 @@ export function FinanceView(){
 // the summary with it — a date behind the rest of the ledger, or a portfolio
 // still waiting to reach the cloud, are facts about the entity and would be
 // hidden by the very row that should be reporting them.
-export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[],open=false,onToggle}){
+// `share` is the part of the whole the entity holds, printed before its total
+// the way a breakdown line prints one, so seven totals are also read as seven
+// proportions without anyone dividing in their head.
+export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[],open=false,onToggle,share=''}){
   // The heading is a name, a number and the portfolio's own two verbs, which
   // ride at its end exactly as a class figure's ride at the end of its line —
   // the same component, the same slot, the same behaviour under a pointer and
@@ -495,7 +517,7 @@ export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[]
     Stack([GroupTitle(name,{className:'record-group-title group-title--name'}),
       kind?Badge(kind,{className:'pill portfolio-kind'}):null,
       meta?Note(meta):null],{className:'group-name'}),
-    Stack([Amount(total,currency),verbs],{className:'group-figure'})
+    Stack([share?Label(share,{className:'breakdown-share'}):null,Amount(total,currency),verbs],{className:'group-figure'})
   ],{className:'breakdown-row group-line'});
   const group=Disclosure(heading,[...rows],{className:'record-group portfolio-group'});
   group.open=open;
@@ -534,6 +556,31 @@ export function BreakdownList(title,rows,currency,{shares=true}={}){
 
 export const quarterOf=asOf=>`${asOf.slice(0,4)} Q${Math.floor((Number(asOf.slice(5,7))-1)/3)+1}`;
 
+// The series as quarters: each quarter shown by the last reading taken in it,
+// marked complete when that reading holds every figure the newest one does,
+// and starting at the first quarter that does — a quarter from before the
+// ledger was first whole is not part of its history. `x` is the quarter's place
+// on a time axis, so a quarter nobody read is a gap rather than a point skipped.
+export function quarterPoints(series){
+  if(!series.length)return [];
+  // The newest point carries every figure the ledger holds, because a figure
+  // stands until a later one replaces it. So it is the measure of a full
+  // reading, and an older point is partial exactly when it holds fewer.
+  const whole=series.at(-1).figures;
+  // A later reading in the same quarter replaces the earlier one in the map,
+  // so each quarter keeps the last reading taken in it.
+  const points=[...new Map(series.map(point=>[quarterOf(point.asOf),point])).values()];
+  const marked=points.map(point=>({...point,label:quarterOf(point.asOf),complete:point.figures>=whole,
+    x:Number(point.asOf.slice(0,4))*4+Math.floor((Number(point.asOf.slice(5,7))-1)/3)}));
+  return marked.slice(marked.findIndex(point=>point.complete));
+}
+// What the newest full quarter did against the full quarter before it — the
+// one comparison worth leading with. Nothing until there are two to compare.
+export function quarterChange(points){
+  const full=points.filter(point=>point.complete);
+  return full.length>1?{amount:Math.round((full.at(-1).net-full.at(-2).net)*100)/100,since:full.at(-2).label}:null;
+}
+
 // Value over time, read off a ledger that is still being filled in.
 //
 // Two dated points are only comparable when the same figures stand behind both.
@@ -551,19 +598,8 @@ export const quarterOf=asOf=>`${asOf.slice(0,4)} Q${Math.floor((Number(asOf.slic
 // second list of the same numbers.
 export function TrendTable(series,currency){
   if(!series.length)return Note('No dated figures yet.');
-  // The newest point carries every figure the ledger holds, because a figure
-  // stands until a later one replaces it. So it is the measure of a full
-  // reading, and an older point is partial exactly when it holds fewer.
   const whole=series.at(-1).figures;
-  // A later reading in the same quarter replaces the earlier one in the map,
-  // so each quarter keeps the last reading taken in it.
-  const points=[...new Map(series.map(point=>[quarterOf(point.asOf),point])).values()];
-  const marked=points.map(point=>({...point,label:quarterOf(point.asOf),complete:point.figures>=whole}));
-  // A quarter from before the ledger was first whole is not part of its
-  // history: a lone capital account dated a quarter back stood as "2026 Q2,
-  // $392,000" above an $82 million Q3, a row that said nothing about value
-  // over time. The table starts at the first full picture.
-  const rows=marked.slice(marked.findIndex(point=>point.complete)).slice(-12);
+  const rows=quarterPoints(series).slice(-12);
   const full=rows.filter(row=>row.complete);
   const change=full.length>1?full.at(-1).net-full[0].net:null;
   const headline=change!==null?`${money(change,currency)} ${change<0?'lower':'higher'} than ${full[0].label}.`:'';

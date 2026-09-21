@@ -3997,3 +3997,28 @@ notes are facts, never commentary on the document read. The review lost its
 box inside the editor, sets each benefit's fine print smaller under its amount,
 and puts the issuer link with the card. Recorded as UI-39. Archive:
 `release/erics-sidebar-0.6.256.zip`.
+
+## Finance details open on a page of their own (0.6.260 / mobile 0.1.210)
+
+The side panel answers what it all comes to and takes figures in; the ledger is
+read on its own page. Finance in the panel now shows the net figure and its
+date, what is owed against it, how much could be sold this week (one bar,
+liquid in forest and illiquid in brass), each entity's total, and **Open
+details**, which brings `finance.html` to the front — or opens it — without a
+second copy. Statements, page readings and entries by hand stay in the panel.
+
+The page leads with the figure beside the line its quarters draw (once two
+quarters hold the whole ledger), then where the money is — every class under
+one bar, liquid and illiquid in two columns, account types in a third — then
+the entities beside the quarterly table, the private positions as one table
+(committed, funded, returned, unfunded, value and multiple, with how much of
+each commitment has been called), the houses with what is owed and what is
+left, and each institution's quarters side by side. Every row keeps its verbs.
+The phone shows the same page as its Finance tool. A save in the panel reaches
+an open page at once, and the reverse. Shared: `components/charts.js` (a line
+and a bar of parts, positioned through the CSSOM because the phone forbids
+inline style attributes — which also restores the share bars behind breakdown
+lines there) and `components/finance-overview.js`. Recorded as UI-45. Checked
+in `tests/finance-overview.test.js` and `tests/finance-ledger.test.js`;
+previews at `tests/finance-page-preview.html` and
+`tests/finance-ledger-preview.html`. Archive: `release/erics-sidebar-0.6.260.zip`.

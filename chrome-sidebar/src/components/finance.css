@@ -228,3 +228,153 @@
 .figure-list{display:grid;grid-template-columns:max-content minmax(0,max-content);column-gap:12px;row-gap:2px;margin-top:2px;font-variant-numeric:tabular-nums}
 .figure-list>.figure-list-name{color:var(--muted)}
 .figure-list>.figure-list-value{color:var(--ink);white-space:nowrap}
+
+/* ── The side panel's answer ─────────────────────────────────────────────
+   What it all comes to, set as the one figure worth reading first, then how
+   much of it could be sold this week, then who holds it. Everything else is
+   on the ledger's own page, one press away. */
+.finance-totals--panel .figure-value--lead{font:500 24px/1.15 Georgia,serif;letter-spacing:-.3px;font-variant-numeric:normal}
+.finance-change{margin:-6px 0 0;color:var(--muted)}
+.finance-change[hidden]{display:none}
+.liquidity-summary{display:flex;flex-direction:column;gap:8px}
+/* Two lines read down like the entities under them, the amounts on the same
+   right edge, so the panel has one column of money rather than two. UI-27. */
+.liquidity-legend{display:flex;flex-direction:column;gap:2px}
+.liquidity-line{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:baseline;column-gap:8px;
+  padding:2px 5px;font-variant-numeric:tabular-nums}
+.liquidity-line strong{font-weight:600}
+.liquidity-name{color:var(--ink)}
+.swatch{flex:none;width:9px;height:9px;border-radius:50%;background:var(--unplaced);align-self:center}
+.swatch--liquid{background:var(--liquid)}
+.swatch--illiquid{background:var(--illiquid)}
+.finance-details-actions[hidden]{display:none}
+
+/* ── The ledger's own page ───────────────────────────────────────────────
+   A page, not a panel stretched wide: the reading column opens to a width
+   where a comparison can be columns, and stops before a line of figures
+   becomes a trip across the screen. The phone reads the same page, one column
+   down. Sized by the container rather than the window, so it answers to the
+   room it is actually given. */
+.vault-section:has(.finance-ledger--page){max-width:1120px}
+@media(min-width:900px){.vault-section:has(.finance-ledger--page){padding:32px 40px 64px}}
+.finance-overview{display:flex;flex-direction:column;gap:36px;container-type:inline-size;min-width:0}
+.finance-overview>.notice:empty{display:none}
+
+/* The figure first, in the serif the product keeps for its titles and its
+   largest numbers, and beside it — once there are two quarters to draw one
+   between — the line it has made. The one boundary on the page is round
+   these two, because they are one thing: the figure and its history. */
+.net-worth-hero{display:grid;gap:24px 40px;padding:24px 28px 20px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+@container (max-width:420px){.net-worth-hero{padding:18px 16px 14px}}
+@container (min-width:760px){.net-worth-hero--charted{grid-template-columns:minmax(280px,5fr) 7fr;align-items:center}}
+.hero-figure{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hero-figure>.figure{gap:6px}
+.figure-value--hero{font:500 46px/1.05 Georgia,serif;letter-spacing:-.8px;color:var(--ink);font-variant-numeric:normal}
+.figure-value--hero.figure-value--negative{color:var(--danger)}
+@container (max-width:420px){.figure-value--hero{font-size:34px;letter-spacing:-.4px}}
+.hero-meta{display:flex;flex-wrap:wrap;gap:2px 14px;color:var(--muted);font-size:13px}
+.hero-date{display:flex;gap:4px}
+.hero-figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(120px,100%),1fr));gap:8px 16px;
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+/* With no line to draw yet, what is held and what is owed stand at the other
+   end of the figure's own line instead of under it, so the one box on the page
+   reads as a whole rather than a figure with a space beside it. */
+@container (min-width:760px){
+  .net-worth-hero:not(.net-worth-hero--charted) .hero-figure{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:48px;row-gap:6px}
+  .net-worth-hero:not(.net-worth-hero--charted) .hero-figure>:not(.hero-figures){grid-column:1}
+  .net-worth-hero:not(.net-worth-hero--charted) .hero-figures{grid-column:2;grid-row:1/span 3;align-self:end;min-width:300px;
+    margin:0;padding:0 0 4px 28px;border-top:0;border-left:1px solid var(--line)}
+}
+.hero-chart{min-width:0}
+
+/* A section is a name over what it names, closed by a hairline the width of
+   the page; what the section is qualified by rides at the other end of the
+   same line. */
+.overview-section{display:flex;flex-direction:column;gap:14px;min-width:0}
+.overview-section[hidden]{display:none}
+.overview-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.travel-wallet .overview-title{margin:0;font:500 19px/1.25 Georgia,serif;letter-spacing:-.2px;color:var(--ink)}
+.overview-aside{color:var(--muted);font-size:12px}
+.overview-aside .footnote{margin:0}
+.overview-pair{display:grid;gap:36px 48px;align-items:start}
+@container (min-width:860px){.overview-pair{grid-template-columns:minmax(0,1.9fr) minmax(280px,1fr)}}
+
+/* Where the money is. The bar holds every class; under it a column per side
+   names them, each with the thinnest possible bar of its own so the column is
+   read down as proportions as well as amounts. */
+.allocation{display:flex;flex-direction:column;gap:20px}
+.allocation .proportion-bar{height:14px}
+.allocation-columns{display:grid;gap:20px 48px;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));align-items:start}
+.allocation-column{display:flex;flex-direction:column;gap:0;min-width:0}
+.allocation-line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;column-gap:10px;
+  padding:6px 6px 7px;border-radius:4px;font-variant-numeric:tabular-nums}
+.allocation-line--group{grid-template-columns:auto minmax(0,1fr) auto auto;margin-bottom:4px;padding-bottom:7px;
+  border-bottom:1px solid var(--line);border-radius:0}
+.allocation-line--group>.allocation-name{font-weight:600}
+.allocation-name{min-width:0;overflow-wrap:break-word}
+.allocation-share{color:var(--muted);font-size:12px}
+.allocation-line strong{font-weight:600}
+.allocation-track{grid-column:1/-1;height:3px;margin-top:5px;border-radius:999px;background:var(--grid)}
+.allocation-fill{height:100%;border-radius:999px;background:var(--unplaced)}
+.allocation-fill--liquid{background:var(--liquid)}
+.allocation-fill--illiquid{background:var(--illiquid)}
+.allocation-fill--plain{background:var(--muted)}
+.allocation-line[data-key]{cursor:default}
+.allocation-line.is-active{background:var(--sage)}
+.allocation-line:focus-visible{outline:2px solid var(--forest);outline-offset:0}
+
+/* Each institution's quarters side by side rather than one long column: a
+   reader compares UBS with Morgan Stanley across, and reads one of them down. */
+.overview-section .trend-table:has(>.record-group){display:grid;gap:22px 40px;grid-template-columns:repeat(auto-fill,minmax(min(270px,100%),1fr));align-items:start}
+
+/* Positions and houses, one row each and a column per figure. Every column of
+   money ends on one edge and is read down it; a dash says a kind of
+   investment has no such figure rather than printing a zero that would claim
+   one. The last column holds the row's own verbs, which wait for the pointer
+   the way every row's do. */
+.overview-table{display:flex;flex-direction:column;min-width:0;font-variant-numeric:tabular-nums}
+.overview-row{display:grid;grid-template-columns:minmax(240px,3.4fr) repeat(6,minmax(78px,1fr)) 56px;column-gap:16px;
+  align-items:baseline;padding:10px 0 11px;border-bottom:1px solid var(--line)}
+.overview-table--properties .overview-row{grid-template-columns:minmax(240px,3.4fr) repeat(3,minmax(96px,1fr)) minmax(92px,.9fr) 56px}
+.overview-row--head{padding:0 0 7px;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.overview-row--total{border-bottom:0;font-weight:600}
+.overview-row--total .overview-name{font-weight:600}
+.overview-cell{min-width:0;text-align:end;white-space:nowrap}
+.overview-cell--name{display:flex;flex-direction:column;gap:2px;text-align:start;white-space:normal}
+.overview-cell--date{color:var(--muted)}
+.overview-name{font-weight:500;overflow-wrap:break-word}
+.overview-meta{color:var(--muted);font-size:12px}
+.overview-cell--name .footnote{margin:2px 0 0}
+.overview-none{color:var(--muted)}
+.overview-row strong.amount{font-weight:500}
+.overview-row .overview-cell--value strong.amount,.overview-row--total strong.amount{font-weight:600}
+.called-track{height:3px;max-width:240px;margin-top:7px;border-radius:999px;background:var(--grid)}
+.called-fill{height:100%;border-radius:999px;background:var(--illiquid)}
+.overview-cell--actions{display:flex;justify-content:flex-end;align-self:center;gap:2px}
+.travel-wallet .overview-row:is(:hover,:focus-within) .row-action{opacity:1}
+.travel-wallet .overview-row:is(:hover,:focus-within) .row-action:disabled{opacity:.4}
+.overview-row--pending .overview-name{color:var(--muted)}
+/* In a column narrower than the table's own columns need — a name and six
+   figures take about 880px — the table becomes a stack of small statements: the name
+   and its verbs on the first line, then each figure on a line of its own with
+   its name beside it. A dash has nothing to say there and is left out. */
+@container (max-width:879px){
+  .overview-row,.overview-table--properties .overview-row{grid-template-columns:minmax(0,1fr) auto;row-gap:3px;column-gap:12px}
+  .overview-row--head{display:none}
+  .overview-cell--name{grid-column:1;grid-row:1;margin-bottom:4px}
+  .overview-cell--actions{grid-column:2;grid-row:1;align-self:start}
+  .overview-cell:not(.overview-cell--name):not(.overview-cell--actions){grid-column:1/-1;display:flex;justify-content:space-between;gap:12px}
+  .overview-cell[data-label]::before{content:attr(data-label);color:var(--muted);font-weight:400}
+  .overview-table .overview-row>.overview-cell:has(>.overview-none){display:none}
+}
+.allocation-line--plain{grid-template-columns:minmax(0,1fr) auto auto}
+/* The page's own navigation, held to the page's width and set to one side:
+   the tool list is a way out of the page, not the first thing on it. */
+.ledger-page .capability-navigation{padding:8px max(16px,calc((100% - 1120px)/2 + 40px));background:var(--paper)}
+.ledger-page .capability-navigation .form-field{grid-template-columns:auto minmax(0,260px);align-items:center;justify-content:end;column-gap:10px}
+.ledger-page .capability-navigation label{color:var(--muted);font-size:12px}
+/* A form keeps a readable width on a wide page: the ways a figure gets in are
+   the same few fields the side panel holds, and stretched across the page a
+   date box a thousand pixels wide is the only thing anyone would notice. */
+.finance-ledger--page .tabs>[role=tabpanel]>.settings-group{max-width:640px}
+.finance-totals[hidden]{display:none}
