@@ -3555,3 +3555,41 @@ in the ledger harness at 380px and 280px, which gained a trust holding the rest
 of that general partner: no page overflow at 280px, and both delete
 confirmations read as they should.
 Archive: `release/erics-sidebar-0.6.233.zip`.
+
+## A portfolio's verbs ride on its heading (0.6.234 / mobile 0.1.184)
+
+*"Looks weird when I expand an entity."* Opening a trust drew its two figures,
+then a hairline, then twelve pixels of nothing, then a pencil and a bin sitting
+alone at the foot of the block. The verbs belong to the name three lines above
+them; at the foot they read as something the last figure was asking to have
+done, and the rule over them was one more boundary in a list that already draws
+one per row.
+
+**They ride at the end of the heading line**, which is where a class figure's
+verbs ride at the end of its own — the same component, the same reserved slot,
+the same behaviour: floating just left of the total under a pointer, appearing
+on hover, costing no width; taking room in the flow under a finger, which has
+no hover. The heading is also the press that opens the group, so a verb on it
+prevents that press rather than moving off it: pressing Rename opens the form
+and leaves the group exactly as open as it was.
+
+**On touch the heading wraps.** Three verb widths beside a name and a total
+leave 43px for the name at 280px, which is one word per line. There the name
+takes the line and the total follows underneath, in the same column the class
+figures land in — what UI-27 has said about a heading since the ledger had one.
+On a pointer the verbs cost nothing and the heading stays a single line.
+
+**UI-33** names the general case: a record's verbs ride on its own line and a
+group's on its heading line, never in a row of their own at the foot of the
+block it opens. `tests/finance-ledger.test.js` holds it on the rendered ledger —
+the verbs are in the heading, no row survives at the foot, and a press on one is
+prevented from toggling the group. DESIGN.md stated both arrangements in two
+paragraphs, which is how the second one got written; the paragraph that
+permitted a row at the foot is the one that went.
+
+Validation: 616 extension, 33 mobile and 135 API tests pass from an archive of
+this release, and both apps build. Checked in the ledger preview with an entity
+open at 1024px with a pointer and at 304px emulating touch: every figure in the
+block ends on one edge, the heading is one line on a pointer and two on touch,
+and no row of verbs is left at the foot. Archive:
+`release/erics-sidebar-0.6.234.zip`.
