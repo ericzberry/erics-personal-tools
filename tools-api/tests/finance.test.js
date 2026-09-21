@@ -338,6 +338,8 @@ test('a live account page dates its own balances, and its furniture is left out'
   // Coin has a class of its own, so the reading is told what belongs in it
   // rather than leaving an exchange balance to land in Other.
   assert.match(prompt,/crypto \(Crypto\)/);
+  // A company stake bought outright is not a fund position.
+  assert.match(prompt,/private-stock \(Private stock\)/);
   assert.match(prompt,/a coin, a token or an exchange's own balance in one/);
   assert.match(prompt,/market or index quote/);
   assert.match(prompt,/news, education or promotional panel/);

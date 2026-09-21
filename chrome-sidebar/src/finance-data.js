@@ -95,6 +95,12 @@ export const ASSET_CLASSES=[
   // know about it — how much of the pile is in coin — is exactly what being
   // filed with the furniture took away.
   {code:13,id:'crypto',label:'Crypto',side:'asset',group:'liquid'},
+  // Shares held directly in a private company — bought once, not called over
+  // years through a fund. They were filed under Fund investments, which they
+  // are not, or Other, which nobody reads a number out of. They cannot be sold
+  // this week, so they are illiquid like a fund, and they are their own class
+  // because a stake in one company is not a partnership interest in many.
+  {code:14,id:'private-stock',label:'Private stock',side:'asset',group:'illiquid'},
   {code:21,id:'mortgage',label:'Mortgage',side:'liability',group:''},
   {code:22,id:'loan',label:'Loan',side:'liability',group:''},
   {code:23,id:'credit',label:'Credit',side:'liability',group:''}
@@ -137,7 +143,7 @@ export const REGISTRATIONS=[
 // kind is filed under until somebody says otherwise.
 export const VEHICLES=[
   {code:1,id:'fund',label:'Direct Fund Investment',short:'Fund',committed:true,holds:'funds'},
-  {code:2,id:'equity',label:'Direct Equity Investment',short:'Equity',committed:false,holds:'other'},
+  {code:2,id:'equity',label:'Direct Equity Investment',short:'Equity',committed:false,holds:'private-stock'},
   {code:3,id:'spv',label:'SPV Investment',short:'SPV',committed:true,holds:'funds'}
 ];
 // How much of a vehicle is this portfolio's. Most positions are all of one and
@@ -1759,10 +1765,11 @@ export function foldCapital(statements,records,{institution='',today=new Date().
       // What it says it is, until the owner says otherwise. Nothing here
       // second-guesses the paperwork; the disagreement is recorded, not decided.
       vehicle:(said||vehicleById('fund')).code,stated:said?said.code:0,
-      // Fund investments is the class a private position lands in, because
-      // splitting venture from buyout off a fund's name would be a guess. One
-      // edit moves it, and the row is where that edit is offered.
-      class:classById('funds').code,
+      // The class its kind usually is: Fund investments for a fund or an SPV,
+      // because splitting venture from buyout off a fund's name would be a
+      // guess, and Private stock for shares in a company. One edit moves it,
+      // and the row is where that edit is offered.
+      class:classById((said||vehicleById('fund')).holds).code,
       // All of it, unless this is a vehicle the owner runs rather than owns.
       share:managedVehicle(statement.name)?.share??WHOLE_SHARE,
       follows:shared?.number??0,isNew:true};

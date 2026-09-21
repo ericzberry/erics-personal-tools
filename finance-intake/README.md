@@ -112,7 +112,7 @@ resolved in one place for every script here.
 `portfolio` accepts its number (`p2` or `2`), an exact name, or a unique
 fragment of one. **A fragment matching two portfolios is an error, not a coin
 flip** — use the number. `class` is one of `stocks`, `bonds`, `cash`, `liquid`,
-`crypto`, `pe`, `vc`, `hedge`, `property`, `unvested`, `other`, `unclassified`,
+`crypto`, `pe`, `vc`, `hedge`, `private-stock`, `property`, `unvested`, `other`, `unclassified`,
 `mortgage`, `loan`, `credit`. `registration` is one of `taxable`, `ira`,
 `roth`, `401k`, `trust`, `entity`, `custodial`. `amount` is always a positive number; a debt goes under a liability
 class and the app applies the sign.

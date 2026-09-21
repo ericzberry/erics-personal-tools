@@ -188,7 +188,7 @@ test('a direct equity investment asks for what was invested and what it is worth
   assert.ok(!shown('finance-inv-commitment')&&!shown('finance-inv-unfunded'));
   assert.deepEqual(['finance-inv-value','finance-inv-funded','finance-inv-returned'].map(label),
     ['Current value','Amount invested','Proceeds received']);
-  assert.equal(document.getElementById('finance-inv-class').value,'8','a company stake is not filed as a fund');
+  assert.equal(document.getElementById('finance-inv-class').value,'14','a company stake is Private stock, not a fund');
 
   set('finance-inv-name','Rhythmic Technologies Inc');
   set('finance-inv-value','40000');
@@ -196,7 +196,7 @@ test('a direct equity investment asks for what was invested and what it is worth
   set('finance-inv-asOf','2026-09-21');
   document.getElementById('finance-inv-form').dispatchEvent(new document.defaultView.Event('submit'));
   await settle(()=>writes.length>=2);
-  assert.deepEqual([writes[0].vehicle,writes[0].class],[2,8]);
+  assert.deepEqual([writes[0].vehicle,writes[0].class],[2,14]);
   assert.deepEqual([writes[1].value,writes[1].contributed,writes[1].commitment],[40000,25000,0],
     'a commitment typed before the kind changed is not saved');
   await settle(()=>document.getElementById('finance-list').textContent.includes('Rhythmic'));
