@@ -393,17 +393,23 @@
 .travel-wallet .firm-name{margin:0;font:500 17px/1.25 Georgia,serif;letter-spacing:-.1px;color:var(--ink)}
 .firm-figure{flex:none;display:flex;align-items:center;gap:4px}
 .firm-figure strong.amount{font-size:15px;font-weight:600}
-/* The card's own verb answers to the card, the way a group's answers to its
+/* The card's own verb is words, because what it records is not the card
+   (UI-46). It answers to the card the way a group's verb answers to its
    heading line, and a finger sees it all the time. */
-.travel-wallet .firm-card:is(:hover,:focus-within) .firm-head .row-action{opacity:1}
+.travel-wallet .firm-head .firm-figure>.action-group>button{white-space:nowrap}
 /* On a pointer the verb floats just left of the balance, on the card's own
    ground, so the balance ends on the card's edge with the figures under it;
-   a finger keeps it in the flow. UI-27. */
+   a finger keeps it in the flow, and the name takes a line of its own before
+   the verb and the balance are squeezed. UI-27. */
 @media(hover:hover){
   .firm-figure{position:relative}
   .firm-figure>.action-group{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin:0 4px 0 0;
     padding:0 2px;border-radius:4px;background:var(--surface)}
+  .travel-wallet .firm-head .firm-figure>.action-group>button{opacity:0;transition:opacity .12s ease}
+  .travel-wallet .firm-card:is(:hover,:focus-within) .firm-head .firm-figure>.action-group>button{opacity:1}
 }
+@media(hover:none){.firm-head{flex-wrap:wrap}.firm-figure{margin-left:auto}}
+@media(prefers-reduced-motion:reduce){.travel-wallet .firm-head .firm-figure>.action-group>button{transition:none}}
 .firm-performance{display:flex;flex-direction:column;gap:3px}
 .firm-return-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px}
 .firm-return{font:500 26px/1.1 Georgia,serif;letter-spacing:-.3px;color:var(--ink);white-space:nowrap}

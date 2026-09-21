@@ -4035,7 +4035,8 @@ chained, so a firm handed $500,000 is not read as having earned it.
 
 Cash is recorded under **Enter by hand → Cash in or out** in either the panel
 or the page — an institution, Added or Taken out, an amount (typed as
-"$500,000" if you like) and a date — or from the **+** on a firm's card. It is
+"$500,000" if you like) and a date — or from **Record cash in or out** on a
+firm's card, which opens the same form with that firm chosen (UI-46). It is
 a new ledger row, `f<firm>-<date>` in the new `finance_flows` table, one net
 amount per firm and day: a second movement on the same day joins the first.
 It moves no balance; the next reading does. Cash moved before a firm's first
@@ -4046,3 +4047,13 @@ nobody read is not a row, a partial reading is not an observation, currencies
 are never mixed — carry over to `firmPerformance` in `firm-history.js`, checked
 in `tests/firm-history.test.js`. Apply `finance-schema.sql` before deploying.
 Archive: `release/erics-sidebar-0.6.261.zip`.
+
+## Recording cash on a firm's card says so (0.6.262 / mobile 0.1.212)
+
+The **+** on each institution's card is now the words **Record cash in or
+out**. Beside the balance the + read as the balance's sign, and it did not say
+what it would add. It still appears when the card is pointed at, and a phone
+shows it before the balance. There is no longer a glyph for adding in
+`ui.js`: a glyph with no words carries only a verb on the record it sits on
+(UI-46).
+Archive: `release/erics-sidebar-0.6.262.zip`.

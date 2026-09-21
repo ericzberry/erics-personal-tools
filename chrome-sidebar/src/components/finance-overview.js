@@ -247,8 +247,9 @@ const DAY=86400000;
 // that return has drawn, each quarter's share of it, and the cash itself.
 //
 // `firm` is what firmPerformance returns, with the verbs added by the caller:
-// `actions` on the card (record cash in or out), and `actions`/`extra` on each
-// flow (edit, delete and the confirmation delete raises).
+// `actions` on the card (Record cash in or out, in words — UI-46), and
+// `actions`/`extra` on each flow (edit, delete and the confirmation delete
+// raises).
 export function InstitutionCard(firm,{currency='USD'}={}){
   const total=firm.total;
   const drawn=firm.points.filter(point=>point.index!==null);
@@ -257,8 +258,10 @@ export function InstitutionCard(firm,{currency='USD'}={}){
     Stack([
       Stack([Heading(firm.label,3,{className:'firm-name'}),
         Label(firm.asOf?`as of ${firm.asOf}`:'not read yet',{className:'overview-meta'})],{className:'firm-title'}),
-      Stack([firm.value===null?null:Amount(firm.value,currency),
-        ActionGroup(firm.actions||[],{compact:true,className:'action-group action-group--compact record-actions'})],{className:'firm-figure'})
+      // The verb comes first so the balance ends the line; a pointer floats it
+      // out of the flow anyway, and a finger reads it before the figure.
+      Stack([ActionGroup(firm.actions||[],{compact:true,className:'action-group action-group--compact record-actions'}),
+        firm.value===null?null:Amount(firm.value,currency)],{className:'firm-figure'})
     ],{className:'firm-head'}),
     total?Stack([
       Stack([Strong(returnText(total.return),{className:`firm-return${total.return<0?' firm-return--down':''}`}),

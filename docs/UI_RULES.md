@@ -66,6 +66,7 @@ here.
 | **UI-43** | A review's actions are the bare verbs — Save, Edit, Discard. The review above them is what they act on, so the label never restates or counts it. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-snapshot.test.js`, `finance-investments.test.js`, `rewards-tool.test.js` |
 | **UI-44** | A reading reports only what went wrong. A figure it left out on purpose, or one that is part of a figure it did report, is not a warning; what was refused is said only when nothing was found. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/finance.test.js`, `chrome-sidebar/tests/finance-snapshot.test.js` |
 | **UI-45** | A side panel answers; a page holds the detail. A panel tool says what it all comes to and takes new records in; the record-by-record detail — every entity, every holding, every quarter — is read on the tool's own page, one press away, and the panel does not carry it again. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-ledger.test.js` |
+| **UI-46** | A glyph alone carries a verb on the record whose line it rides. An action that makes something new — cash for an institution — says what it makes in words; there is no glyph for adding. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js`, `finance-overview.test.js` |
 
 ## Ratcheting
 
@@ -460,6 +461,19 @@ The next panel tool that grows a ledger is the next case: its answer stays in
 the panel and its rows go to a page. `tests/finance-ledger.test.js` holds that
 the panel builds no entity list, table or series, and that Open details is
 there only where a page can be opened.
+
+**UI-46 — a glyph alone carries a verb on its own record.** *Enforced.* Edit,
+Delete, Show, Copy, History: each acts on the record whose line it sits at the
+end of, so the glyph and the line between them say what would happen. Adding
+is not one of those. It makes a different record, and a + cannot say which —
+on an institution's card it sat just left of the balance, where it read as the
+balance's sign rather than as "record cash moved in or out of UBS". *"The plus
+icon in the finance view isn't super intuitive."* So an action that makes
+something new under a record is a word that names it — **Record cash in or
+out** — revealed with the card's verbs on a pointer and always shown to a
+finger. `ui.js` exports no glyph for adding, the glyphs it does export are a
+closed list in `tests/ui-rules.test.js`, and `finance-overview.test.js` holds
+the card's verb to its words.
 
 ## Open
 

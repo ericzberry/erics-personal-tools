@@ -330,3 +330,25 @@ test('a band that bleeds to its block edge widens by what it bleeds',()=>{
     }
   }
 });
+
+// UI-46. A glyph with no words carries a verb on the record whose line it
+// rides, and nothing else. Adding makes a different record, and a + cannot say
+// which: on an institution's card it sat beside the balance, where it read as
+// the balance's sign — "the plus icon in the finance view isn't super
+// intuitive." So the verbs a glyph may carry are a closed list, and a new one
+// is an argument to have here rather than an export to slip into ui.js.
+test('a glyph alone carries a verb on its own record, and adding is said in words',async()=>{
+  const ui=await import('../src/components/ui.js');
+  const RECORD_VERBS=['EDIT','DELETE','DONE','UNDO','SHOW','HIDE','COPY','NOTES','OPEN','SEARCH','HISTORY','REFRESH'];
+  const glyphs=Object.keys(ui).filter(name=>name.endsWith('_GLYPH')).map(name=>name.slice(0,-'_GLYPH'.length));
+  for(const verb of glyphs)assert.ok(RECORD_VERBS.includes(verb),
+    `ui.js exports ${verb}_GLYPH, which is not a verb on the record it rides. If it makes something new, `+
+    'say what it makes in words. See UI-46 in docs/UI_RULES.md.');
+  const src=new URL('../src/',import.meta.url);
+  const walk=dir=>readdirSync(new URL(dir,src),{withFileTypes:true}).flatMap(entry=>
+    entry.isDirectory()?walk(`${dir}${entry.name}/`):[`${dir}${entry.name}`]);
+  for(const file of walk('').filter(name=>name.endsWith('.js'))){
+    assert.doesNotMatch(readFileSync(new URL(file,src),'utf8'),/['"]M12 5v14 ?M5 12h14['"]/,
+      `${file} draws a + of its own. See UI-46 in docs/UI_RULES.md.`);
+  }
+});

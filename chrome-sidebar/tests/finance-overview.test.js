@@ -234,9 +234,17 @@ test('cash is recorded against a firm, one way or the other, and a second moveme
   await settle(()=>/Recorded/.test(document.getElementById('finance-status').textContent));
   assert.equal(document.getElementById('finance-status').textContent,'Recorded $250,000 taken out of Chase on 2026-09-12.');
 
-  // The + on a card opens the form for that firm, going the default way.
-  await settle(()=>document.querySelector('.firm-card[aria-label=UBS]')||document.querySelector('.firm-card'));
-  fillAt(document,5);
+  // The card's own verb opens the form for that firm, going the default way.
+  // It is said in words — a + beside the balance read as the balance's sign,
+  // and did not say what it would add. UI-46.
+  await settle(()=>document.querySelector('.firm-card[aria-label=UBS] .firm-figure button'));
+  const verb=document.querySelector('.firm-card[aria-label=UBS] .firm-figure button');
+  assert.equal(verb.textContent,'Record cash in or out');
+  assert.equal(verb.getAttribute('aria-label'),'Record cash in or out of UBS');
+  assert.equal(verb.querySelector('svg'),null,'no glyph stands in for the words');
+  verb.click();
+  await settle(()=>document.getElementById('finance-flow-firm').value==='5');
+  assert.equal(document.querySelector('#finance-flow-direction button[aria-pressed=true]').textContent,'Added');
   document.getElementById('finance-flow-amount').value='100000';
   document.getElementById('finance-flow-asOf').value='2026-09-10';
   submit();
@@ -246,10 +254,3 @@ test('cash is recorded against a firm, one way or the other, and a second moveme
   await settle(()=>/now comes to/.test(document.getElementById('finance-status').textContent));
   tool.stop();
 });
-// Opening the flow form for a firm the way its card does, without depending on
-// the card being on screen in this ledger.
-function fillAt(document,firm){
-  document.getElementById('finance-tabs-add-tab').click();
-  [...document.querySelectorAll('#finance-entry-switch button')].find(button=>button.textContent==='Cash in or out').click();
-  document.getElementById('finance-flow-firm').value=String(firm);
-}

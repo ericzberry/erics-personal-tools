@@ -1,7 +1,7 @@
 import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionFigures,FigureList,propertyDetail,quarterPoints,quarterChange} from './components/finance.js';
 import {NetWorthHero,NetWorthChart,Allocation,LiquiditySummary,PositionsTable,PropertiesTable,Institutions,allocationGroups,changeText} from './components/finance-overview.js';
 import {share} from './components/charts.js';
-import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,ADD_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
+import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
@@ -297,7 +297,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     formTitle('flow-title');status('','flow-status');renderFlowDirection();
   }
   // A saved movement opens for editing; a bare firm opens a new one there,
-  // which is what the + on an institution's card asks for.
+  // which is what Record cash in or out on an institution's card asks for.
   function fillFlow(flow){
     if(flow.id){
       flowing={id:flow.id,revision:flow.revision,firm:flow.firm,asOf:flow.asOf};flowSign=flow.amount<0?-1:1;
@@ -420,8 +420,16 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // the tool cannot yet answer.
     const firms=firmPerformance(records,{currency});
     $('firms-panel').hidden=!firms.length;
+    // Cash for a firm is a new record under the card, not a verb on it, so it
+    // is said in words: a + beside the balance read as the balance's sign.
+    // UI-46.
+    const recordCash=firm=>{
+      const button=action('Record cash in or out',()=>fillFlow({firm:firm.firm}),'subtle');
+      button.setAttribute('aria-label',`Record cash in or out of ${firm.label}`);
+      return button;
+    };
     $('firms').replaceChildren(Institutions(firms.map(firm=>({...firm,
-      actions:[rowAction(ADD_GLYPH,`Record cash added to or taken out of ${firm.label}`,()=>fillFlow({firm:firm.firm}))],
+      actions:[recordCash(firm)],
       flows:firm.flows.map(entry=>{
         const flow=entry.flow,moved=`${money(Math.abs(flow.amount),currency)} ${flow.amount<0?'taken out of':'added to'} ${firm.label} on ${flow.asOf}`;
         // Deleting a movement changes every return measured across it, so it
