@@ -556,3 +556,39 @@ test('one press looks up every saved card, proposes only what is missing, and sa
  assert.match($('reward-card-status').textContent,/Saved 2 benefits across 2 cards/);
  tool.stop();h.restore();
 });
+
+// The card an issuer publishes nothing about — invitation-only, private bank —
+// is the one research cannot finish, and it is never the end of the sweep.
+test('a card research cannot answer is named, and the cards after it are still looked up',async()=>{
+ const h=harness();
+ const asked=[];
+ const remote=async(token,path,options)=>{
+  if(path==='/v1/ai-connections')return {connections:[{id:CONNECTION,name:'Synthetic',provider:'openai',hasApiKey:true}]};
+  asked.push(options.value.name);
+  if(options.value.name==='Synthetic Reserve Card')throw Object.assign(Error('No published terms for this card.'),{status:502});
+  return {card:{name:'Synthetic Cash Card',source:'Synthetic Bank',value:'6% groceries',url:'',notes:''},
+   benefits:[{kind:'benefit',name:'Streaming credit',value:'$7 per month',state:'available',cadence:'monthly',notes:''}]};
+ };
+ const saved=[
+  {id:'c1',kind:'card',name:'Synthetic Reserve Card',source:'Synthetic Bank',value:'',state:'available',card:'',updatedAt:new Date().toISOString(),revision:'r1'},
+  {id:'c2',kind:'card',name:'Synthetic Cash Card',source:'Synthetic Bank',value:'',state:'available',card:'',updatedAt:new Date().toISOString(),revision:'r2'}
+ ];
+ const written=[];
+ const offline={request:async(token,path,options)=>{
+  if(options?.method)written.push(options.value);
+  return {records:saved.map(entry=>({...entry}))};
+ }};
+ const tool=mountRewards(h.document.querySelector('main'),{credentials:{get:async()=>'token'},vault:fakeVault(),offline,remote});
+ await tool.refresh();
+ const $=id=>h.document.getElementById(id);
+ $('reward-card-sweep').click();
+ await settle(()=>$('reward-card-status').textContent.includes('Review them'));
+ // The card that failed did not take the one after it with it.
+ assert.deepEqual(asked,['Synthetic Reserve Card','Synthetic Cash Card']);
+ assert.match($('reward-card-review').textContent,/Streaming credit/);
+ // And it is named, with the one thing that does answer a card like it.
+ assert.match($('reward-card-status').textContent,/Nothing came back for Synthetic Reserve Card/);
+ assert.match($('reward-card-status').textContent,/Open the card's own page/);
+ assert.equal(written.length,0,'reviewing saves nothing');
+ tool.stop();h.restore();
+});

@@ -70,7 +70,20 @@ it had not reached.
 The one thing a sweep cannot settle is a name that fits more than one real
 product: choosing between them means asking, and a sweep that stopped to ask
 would be the presses it replaced. Those cards are named when it finishes and
-left to the intake above, which is where choosing belongs.
+left to the intake above, which is where choosing belongs. A card research
+cannot answer at all is named the same way, and the sweep carries on to the
+rest.
+
+A card the issuer publishes nothing about — invitation-only, private bank, or
+offered only as an upgrade — is the case research is weakest on, and the
+J.P. Morgan Reserve is the example: Chase keeps no public page of its terms.
+Where such a card is a version of a product the issuer does publish, research
+answers from that product's pages, keeps the name of the card you hold, and says
+in its notes which product the terms came from and that the issuer publishes
+none of its own. Borrowed terms are never presented as the card's confirmed
+ones. The better source for a card like that is the card's own page: open it
+with the sidebar beside you and read it, which is where its credits, its
+benefits and what it earns are all stated for your account.
 
 Earning rates are Best card's, not the wallet's: [BEST_CARD.md](BEST_CARD.md)
 lists the cards this wallet holds and finds the rates for one with a press of

@@ -606,12 +606,19 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const cards=entries.filter(entry=>entry.kind==='card'&&!entry.deleting);
     if(!cards.length)throw Error('No saved cards to look up yet. Name one below and it will be researched as it is added.');
     const {token,connection}=await lookupReady();
-    const results=[],asked=[];
+    const results=[],asked=[],missed=[];
     for(const [index,card] of cards.entries()){
       cardStatus(`Looking up ${card.name} · ${index+1} of ${cards.length}…`,'progress');
-      const result=await lookupCard(token,connection,card.name);
-      if(result.matches){asked.push(card.name);continue;}
-      const read=parseCardBenefits(result);
+      // One card that cannot be researched is not the end of the sweep. An
+      // invitation-only card whose issuer publishes nothing, a name research
+      // cannot place, a request that timed out: each of those is one card, and
+      // the other five are still worth the press. They are named at the end.
+      let read;
+      try{
+        const result=await lookupCard(token,connection,card.name);
+        if(result.matches){asked.push(card.name);continue;}
+        read=parseCardBenefits(result);
+      }catch{missed.push(card.name);continue;}
       const fresh=unheldBenefits(read.benefits,entries.filter(entry=>entry.card===card.id&&!entry.deleting));
       // The card itself is saved again only where research fills a blank in it:
       // what it earns, said in the issuer's words, on a card that never said.
@@ -624,10 +631,17 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('reward-card-matches').replaceChildren();
     showFound();
     const total=results.reduce((sum,result)=>sum+result.benefits.length,0);
-    const named=asked.length?` ${asked.join(' and ')} fits more than one card — name it below to choose.`:'';
-    cardStatus(total
-      ?`Found ${total} benefit${total===1?'':'s'} your wallet does not have. Review them, then save.${named}`
-      :`Nothing new for ${cards.length===1?'that card':'those cards'}.${named}`,total?'success':'alert');
+    const list=names=>names.join(names.length>2?', ':' and ');
+    const named=[asked.length?`${list(asked)} fits more than one card — name it below to choose.`:'',
+      // A card the issuer publishes nothing about is the one research cannot
+      // finish, and the answer to it is the card's own page, which this tool
+      // reads beside the panel.
+      missed.length?`Nothing came back for ${list(missed)}. Open the card's own page and read it there.`:'']
+      .filter(Boolean).join(' ');
+    cardStatus([total
+      ?`Found ${total} benefit${total===1?'':'s'} your wallet does not have. Review them, then save.`
+      :`Nothing new for ${cards.length===1?'that card':'those cards'}.`,named].filter(Boolean).join(' '),
+      total?'success':'alert');
   }
   async function researchCard(name){
     const {token,connection}=await lookupReady();

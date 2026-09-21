@@ -3358,3 +3358,30 @@ the ledger naming a firm only where a portfolio holds that class at two. The
 deployed service was confirmed up and routing; an authenticated round trip
 against it was not possible from here, so the first real proof is a page read
 in the extension. Archive: `release/erics-sidebar-0.6.227.zip`.
+
+## The card an issuer publishes nothing about (0.6.229 / mobile 0.1.179)
+
+**Research reads the issuer's own pages, and some cards have none.** The
+J.P. Morgan Reserve is invitation-only: Chase keeps no public page of its terms,
+so the one press that looks up every card in the wallet had nothing to find for
+it — and worse, the error it came back with ended the sweep, taking the cards
+behind it with one card's silence.
+
+**A card research cannot answer is now one card.** The sweep names it when it
+finishes, carries on to the rest, and says the thing that does answer a card
+like that: open its own page and read it there, where its credits, its benefits
+and what it earns are all stated for the account that holds it.
+
+**And where there is a published version of the same card, research uses it.**
+A card offered only by invitation, only to a private bank's clients, or only as
+an upgrade is usually a version of a product the issuer does publish. Research
+may now answer from that product's pages — keeping the name of the card the
+owner holds, citing the published product's page, and saying in the notes which
+product the terms came from and that the issuer publishes none of its own.
+Borrowed terms are never presented as the card's confirmed ones, and nothing is
+borrowed from a product the card is not a version of.
+
+New coverage: a card whose lookup fails named at the end while the card after it
+is still looked up and still proposed, and nothing saved by the review that
+holds it. Validation: 614 extension, 33 mobile and 135 API tests pass from an
+archive of HEAD. Archive: `release/erics-sidebar-0.6.229.zip`.
