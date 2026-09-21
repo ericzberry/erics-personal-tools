@@ -57,6 +57,7 @@ here.
 | **UI-34** | An amount is one word. Every class that renders money declares `white-space:nowrap`, in a sheet both hosts load; the column gives way before the figure does. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-35** | Sections at one level of a screen all open the same way. A bare list standing beside three disclosures is the odd one out; it becomes a disclosure too, and the one the screen is opened for is the one that starts open. Stated in full under [From a complaint](#from-a-complaint). | `tests/finance-ledger.test.js` |
 | **UI-36** | A band reaches both edges of its block. Whatever bleeds sideways with a negative margin widens by the same amount in the same rule, because a negative margin moves a box and does not stretch it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
+| **UI-37** | A way out of a problem appears only while there is one. Connection settings stands in place of Refresh when a tool has no token or reached nothing, and not beside it when everything worked. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/attention-tools.test.js` |
 
 ## Ratcheting
 
@@ -315,6 +316,17 @@ doesn't go all the way to the right, it looks goofy."* Every rule that bleeds
 sideways declares `width:calc(100% + <left + right>)` alongside the margin; a
 fixed-width box such as `.sr-only` is not a band and is exempt. Look at an
 open record in Travel and an open panel in Rewards, at sidebar width.
+
+**UI-37 — a way out of a problem appears only while there is one.** *Enforced
+for Needs attention.* Every tool swapped Refresh for Connection settings when it
+could not load — except Needs attention, which drew both on every visit, so a
+clean "6 of 6 sources checked" still sat under a button asking to reconnect.
+*"Why is 'Needs attention' asking me for connection settings here — this should
+only come up if there's a problem."* A tool shows Refresh while it is reaching
+its records and Connection settings instead of it when there is no token or not
+one source answered; a partial failure keeps Refresh, since retrying is the
+remedy. Checked in `chrome-sidebar/tests/attention-tools.test.js`; the other
+tools' `loaded ? Refresh : Connection settings` is read in their controllers.
 
 ## Open
 

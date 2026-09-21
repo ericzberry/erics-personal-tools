@@ -46,3 +46,15 @@ test('review actions preserve terms and show failed acknowledgment beside the re
   assert.equal(records[0].reviewedCharges.length,0);fail=false;button().click();
   await settle(()=>!button());assert.equal(records[0].state,'Canceled');assert.equal(records[0].reviewedCharges.length,1);
 });
+test('attention offers Connection settings only when nothing could be reached',async()=>{
+  const labels=root=>[...root.querySelectorAll('#attention-actions button')].map(b=>b.textContent);
+  let {root}=setup();mountAttention(root,{vault,credentials,stores:{reminders:{request:async()=>({records:[]})}}});
+  await settle(()=>root.textContent.includes('1 of 1 sources checked'));
+  assert.deepEqual(labels(root),['Refresh']);
+  ({root}=setup());mountAttention(root,{vault,credentials,stores:{reminders:{request:async()=>{throw Error('Unauthorized');}}}});
+  await settle(()=>root.textContent.includes('0 of 1 sources checked'));
+  assert.deepEqual(labels(root),['Connection settings']);
+  ({root}=setup());mountAttention(root,{vault,credentials:{get:async()=>''},stores:{reminders:{request:async()=>({records:[]})}}});
+  await settle(()=>root.textContent.includes('Open Settings to connect this device.'));
+  assert.deepEqual(labels(root),['Connection settings']);
+});

@@ -3916,3 +3916,14 @@ finance ledger harness against the panel's own cascade at 374px and at the
 horizontal scroll, and an entity opens into the shared inset block with its
 figures on the one money column. Archive:
 `release/erics-sidebar-0.6.244.zip`.
+
+## Connection settings only when something is wrong (0.6.246 / mobile 0.1.196)
+
+Needs attention drew Refresh and Connection settings side by side on every
+visit, so a clean "6 of 6 sources checked" still sat under a button asking to
+reconnect. Every other tool already swapped one for the other. Needs attention
+does the same now: Refresh while it can reach its records, Connection settings
+in its place only when the device has no token or not one source answered. A
+partial failure keeps Refresh, since retrying is what fixes it. Recorded as
+UI-37 and checked in `tests/attention-tools.test.js`. Archive:
+`release/erics-sidebar-0.6.246.zip`.
