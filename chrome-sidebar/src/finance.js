@@ -3,7 +3,7 @@ import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
 import {firmLabel} from './account-sites.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {firmQuarters} from './firm-history.js';
@@ -813,15 +813,38 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         ...(position.history.length>1?[rowAction(HISTORY_GLYPH,`Earlier figures for ${holding.name}`,()=>{past.hidden=!past.hidden;})]:[]),
         rowAction(DELETE_GLYPH,`Delete ${holding.name}`,()=>{confirm.hidden=false;},true)
       ];
-      const meta=[current?dated(current.asOf,against):'no statement yet',
-        holding.pending?'Waiting to sync':''].filter(Boolean).join(' · ');
-      // The row's own title already says how it is filed, so the claim gets a
-      // line of its own saying only the part the title cannot: what the
-      // paperwork calls it. Run into the figures it reads as one of them.
-      const notes=[positionDetail(position,portfolio.currency),
+      // The date leads the figures it dates rather than trailing the name: set
+      // after a legal name that wraps, it hung as "L.P. ·" with the date alone
+      // on the line under it.
+      const meta=holding.pending?'Waiting to sync':'';
+      // What the paperwork calls it gets a line of its own. Run into the
+      // figures it reads as one of them.
+      const notes=[[current?dated(current.asOf,against):'no statement yet',
+        positionDetail(position,portfolio.currency)].filter(Boolean).join(' · '),
         position.disputed?`The statement calls this a ${vehicleLabel(holding.stated)}.`:''];
-      return RecordRow({title:`${holding.name} · ${vehicleShort(holding.vehicle)}`,
+      // The name alone. What kind of vehicle it is was run onto the name, and
+      // a fund's long legal name then wrapped into "… L.P. · Fund ·" with the
+      // date stranded under it; the line it opens from already says what these
+      // are, and Funded against Invested says which kind.
+      return RecordRow({title:holding.name,
         figure:Amount(position.value,portfolio.currency),meta,notes,actions,extra:[past,confirm]});
+    };
+    // Every private position in one portfolio, as one line of the ledger — the
+    // same shape as Real estate, for the same reason. A portfolio is read down
+    // its asset classes, and one fund set among them, with its legal name
+    // wrapping over three lines and four figures hung under it, stopped the
+    // column dead and was the loudest thing on the card. The line says what
+    // the positions come to; the positions, their flows and their verbs are
+    // behind it for whoever wants them.
+    const privateInvestments=(portfolio,held,against)=>{
+      const value=held.reduce((total,position)=>total+position.value,0);
+      const inside=Stack(held.map(position=>investment(portfolio,position,against)),{className:'estate-detail position-detail',hidden:true});
+      const asOf=held.map(position=>position.current?.asOf||'').filter(Boolean).sort().at(-1)||'';
+      const meta=[asOf?dated(asOf,against):'no statement yet',
+        held.some(position=>position.holding.pending)?'Waiting to sync':''].filter(Boolean).join(' · ');
+      return RecordRow({title:'Private investments',figure:Amount(value,portfolio.currency),meta,
+        actions:[rowAction(SHOW_GLYPH,`Show the private investments in ${portfolio.name}`,()=>{inside.hidden=!inside.hidden;})],
+        extra:[inside]});
     };
     // A property reads as what it is: an address, what it is worth, and
     // underneath, the two things the value alone cannot say — where the number
@@ -923,7 +946,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         actions:[rowAction(EDIT_GLYPH,`Rename ${portfolio.name}`,()=>fillPortfolio(portfolio)),
           rowAction(DELETE_GLYPH,`Delete ${portfolio.name}`,()=>{confirm.hidden=false;},true)],
         rows:[...rows.map(row=>figure(portfolio,row)),
-          ...group.positions.map(position=>investment(portfolio,position,asOf)),
+          ...(group.positions.length?[privateInvestments(portfolio,group.positions,asOf)]:[]),
           ...(group.properties.length?realEstate(portfolio,group.properties,asOf):[]),confirm]
       });
     }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one by hand.')]));

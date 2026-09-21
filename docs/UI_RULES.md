@@ -60,6 +60,7 @@ here.
 | **UI-37** | A way out of a problem appears only while there is one. Connection settings stands in place of Refresh when a tool has no token or reached nothing, and not beside it when everything worked. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/attention-tools.test.js` |
 | **UI-38** | Never ask for what the app can find out. Research fills in a point's value; the owner is asked only for what only the owner knows. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/cards.test.js` |
 | **UI-39** | Evidence for someone else is a Copy button, not a transcript. Diagnostic text meant to be pasted elsewhere is one Copy button, shown only while there is a problem to diagnose. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-snapshot.test.js` |
+| **UI-41** | A list of classes holds only classes. A single holding among the lines that name whole classes is grouped under its class's line and opens from it, and a name keeps no kind-word run onto it. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js` |
 
 ## Ratcheting
 
@@ -365,6 +366,18 @@ investments: "this isn't really a fund investment. It's just an investment I
 made in a company one time."* Checked in
 `chrome-sidebar/tests/finance-investments.test.js`; the statement review uses
 the same field list, and the Figure and Property forms have no such choice.
+
+**UI-41 — a list of classes holds only classes.** *Enforced for Finance's
+portfolios.* A portfolio is read down its asset classes, one name and one
+amount a line. A single holding set among them — a fund with a legal name that
+wraps over three lines, a kind-word and a date trailing it, and four flows hung
+underneath — is a different kind of thing in the same column and stops the
+column. So holdings are grouped under one line for their class, the way houses
+are under Real estate, and open from it; inside, a holding is its own name,
+with no vehicle word run onto it. *From Finance → a portfolio holding the Vista
+Equity Partners fund: "This looks so goofy - the way Vista is listed."* Checked
+in `chrome-sidebar/tests/finance-investments.test.js`; Real estate was already
+shaped this way.
 
 ## Open
 

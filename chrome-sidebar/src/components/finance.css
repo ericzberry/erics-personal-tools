@@ -188,6 +188,7 @@
   .finance-ledger .group-line>.group-figure>.action-group:empty{display:flex}
 }
 .finance-ledger .estate-detail{--verbs:4}
+.finance-ledger .position-detail{--verbs:3}
 /* The houses behind a Real estate line, shown only when they are asked for.
    Set in from the line they add up to, and ruled along their edge, so a run of
    addresses reads as what is inside that figure rather than as more figures

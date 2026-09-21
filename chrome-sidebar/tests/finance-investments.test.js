@@ -100,7 +100,15 @@ test('a capital account statement is read into an investment, reviewed, and save
   assert.match(document.getElementById('finance-snapshot-status').textContent,/Saved 1 capital account\./);
   assert.equal(document.getElementById('finance-intake-status').textContent,'');
   const list=document.getElementById('finance-list').textContent;
-  assert.match(list,/Acme Ventures Fund III, L\.P\. · Fund/);
+  // A position is read inside one Private investments line, like a house
+  // inside Real estate: its own name, with no vehicle word run onto it. UI-41.
+  assert.match(list,/Private investments\$1,100,000Acme Ventures Fund III, L\.P\.\$1,100,000/);
+  assert.equal(list.includes('L.P. · Fund'),false,'the vehicle is not run onto the name');
+  const inside=document.querySelector('#finance-list .position-detail');
+  assert.equal(inside.hidden,true,'the positions wait behind their line');
+  [...document.querySelectorAll('#finance-list button')]
+    .find(node=>node.getAttribute('aria-label')?.startsWith('Show the private investments')).click();
+  assert.equal(inside.hidden,false);
   assert.match(list,/Commitment \$1,000,000 · Funded \$800,000 · Returned \$250,000 · Unfunded \$200,000 · 1\.69×/);
   // It counts like any other figure. What is still owed on the commitment is
   // not a total of the ledger — it is neither held nor owed today — so it is
