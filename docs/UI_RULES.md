@@ -58,6 +58,7 @@ here.
 | **UI-35** | Sections at one level of a screen all open the same way. A bare list standing beside three disclosures is the odd one out; it becomes a disclosure too, and the one the screen is opened for is the one that starts open. Stated in full under [From a complaint](#from-a-complaint). | `tests/finance-ledger.test.js` |
 | **UI-36** | A band reaches both edges of its block. Whatever bleeds sideways with a negative margin widens by the same amount in the same rule, because a negative margin moves a box and does not stretch it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-37** | A way out of a problem appears only while there is one. Connection settings stands in place of Refresh when a tool has no token or reached nothing, and not beside it when everything worked. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/attention-tools.test.js` |
+| **UI-38** | Never ask for what the app can find out. Research fills in a point's value; the owner is asked only for what only the owner knows. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/cards.test.js` |
 
 ## Ratcheting
 
@@ -327,6 +328,18 @@ its records and Connection settings instead of it when there is no token or not
 one source answered; a partial failure keeps Refresh, since retrying is the
 remedy. Checked in `chrome-sidebar/tests/attention-tools.test.js`; the other
 tools' `loaded ? Refresh : Connection settings` is read in their controllers.
+
+**UI-38 — never ask for what the app can find out.** *Enforced for Best card
+research.* A value the app can look up — what a point is worth, a card's
+rates, a date it already knows — is looked up and filled in, and the owner is
+asked only for what nobody but the owner knows: a remaining cap, whether a
+bonus was activated. A form never opens itself to demand a field research
+could have answered, and saving never refuses for want of one. *From Best card,
+where researching J.P. Morgan Reserve opened every field of Card terms and
+refused to save until he typed a cents-per-point figure: "'Enter your
+redemption value in cents per point' is a thing you can figure out."* Checked
+in `tools-api/tests/cards.test.js`; look at every other create surface for a
+field it could fill itself.
 
 ## Open
 

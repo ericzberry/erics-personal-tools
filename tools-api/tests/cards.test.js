@@ -56,6 +56,17 @@ test('issuer research requires web evidence and rejects incomplete or ungrounded
  assert.equal((await researchCard(connection,{name:'Synthetic Cash'},fetcher)).card.base,2);
  evidence=false;await assert.rejects(researchCard(connection,{name:'Synthetic Cash'},fetcher),e=>e.status===502);
 });
+test('research works out what a point is worth instead of asking the owner',async()=>{
+ let reply={...fixture,unit:'points',cpp:1.5,rules:[]},body;
+ const fetcher=async(url,init)=>{if(url.endsWith('/models'))return Response.json({data:[{id:'gpt-5-mini'}]});body=init.body;return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[{url:fixture.source}]}},{type:'message',content:[{type:'output_text',text:JSON.stringify(reply)}]}]});};
+ assert.equal((await researchCard(connection,{name:'Synthetic Points'},fetcher)).card.cpp,1.5);
+ assert.doesNotMatch(body,/until the user enters a redemption value/);
+ assert.match(body,/never return 0/);
+ // A model that still leaves it at 0 hands back the floor and says so, never a card that cannot be saved.
+ reply={...reply,cpp:0};
+ const card=(await researchCard(connection,{name:'Synthetic Points'},fetcher)).card;
+ assert.equal(card.cpp,1);assert.match(card.notes,/1¢ per point is assumed/);
+});
 test('a loose card name returns the products it could be instead of guessed terms',async()=>{
  let searched=true,reply={matches:[{name:'Synthetic Cash Card (United States)',note:'No annual fee'},{name:'Synthetic Cash Plus (United States)',note:'$95 annual fee'}]};
  const fetcher=async url=>url.endsWith('/models')?Response.json({data:[{id:'gpt-5-mini'}]}):Response.json({status:'completed',output:[...(searched?[{type:'web_search_call',action:{sources:[{url:fixture.source}]}}]:[]),{type:'message',content:[{type:'output_text',text:JSON.stringify(reply)}]}]});

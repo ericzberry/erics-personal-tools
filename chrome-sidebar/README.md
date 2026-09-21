@@ -3927,3 +3927,14 @@ in its place only when the device has no token or not one source answered. A
 partial failure keeps Refresh, since retrying is what fixes it. Recorded as
 UI-37 and checked in `tests/attention-tools.test.js`. Archive:
 `release/erics-sidebar-0.6.246.zip`.
+
+## Research works out what a point is worth (0.6.247 / mobile 0.1.197)
+
+Researching a points card left its value at 0¢, opened every field of Card
+terms, and refused to save until the owner typed a cents-per-point figure.
+Research now fills it in from the program's own published redemption value for
+that card — cash or travel portal, whichever is higher, never transfer
+partners — and falls back to 1¢ with a note when it finds none. Card terms
+stays shut after research, and the notes are facts rather than offers to do
+more. Recorded as UI-38 and checked in `tools-api/tests/cards.test.js`.
+Archive: `release/erics-sidebar-0.6.247.zip`.

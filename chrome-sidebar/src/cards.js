@@ -61,12 +61,10 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
     const card=normalizeCard(result.card);
     $('matches').replaceChildren();populate(card);dirty=true;
     $('summary').replaceChildren(...CardIngest(card));
-    // Only a points card still needs something from the owner, so only it opens
-    // the terms; everything else is ready to save after a look at the summary.
-    $('details').open=card.unit==='points';
-    status(card.unit==='points'
-      ?'Found these rewards. Add your redemption value in cents per point, then save.'
-      :'Found these rewards. Check them against the issuer terms, then save.','research-status');
+    // Research fills in everything, a point's value included, so the card is
+    // ready to save after a look at the summary; the terms stay shut.
+    $('details').open=false;
+    status('Found these rewards. Check them, then save.','research-status');
   }
   // A card the wallet holds and this tool has no rates for needs only its rates,
   // so the intake is filled with the card's own name and researched as though
@@ -181,7 +179,7 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
   },'research-status');});
   $('form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
     const card=normalizeCard({...Object.fromEntries(fields.map(key=>[key,$(key).value])),rules:JSON.stringify(rules())});
-    if(card.unit==='points'&&card.cpp<=0)throw Error('Enter your redemption value in cents per point.');
+    if(card.unit==='points'&&card.cpp<=0){$('details').open=true;throw Error('Enter what one point is worth, in cents.');}
     if(!card.checked)throw Error('Review the card terms and enter the review date before saving.');
     const result=await request(`/v1/cards/${selected?.id||newId}`,{method:'PUT',value:{...card,revision:selected?.revision??null}});
     records=result.records;edit();$('editor').open=false;clearResults();render();status(result.syncMessage||'Card saved.','status',result.syncMessage?'alert':'success');

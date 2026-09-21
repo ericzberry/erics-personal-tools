@@ -81,7 +81,7 @@ export function CardIngest(card){
     rule.end?`through ${rule.end}`:'',rule.condition].filter(Boolean).join(' · ');
   return [Section([
     Strong(card.name),
-    Note(`${rate(card.base)} base · ${rules.length} bonus ${rules.length===1?'category':'categories'}${card.unit==='points'?` · ${card.cpp>0?`${card.cpp}¢ per point`:'redemption value needed'}`:''}`),
+    Note(`${rate(card.base)} base · ${rules.length} bonus ${rules.length===1?'category':'categories'}${card.unit==='points'?` · ${`${card.cpp}¢ per point`}`:''}`),
     ...rules.map(rule=>Note(detail(rule),{className:'footnote card-ingest-rule'})),
     ...(card.notes?[Note(card.notes)]:[]),
     ...(card.source?[Link('Issuer terms used',card.source)]:[])
