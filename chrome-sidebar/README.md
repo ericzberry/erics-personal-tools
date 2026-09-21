@@ -3828,3 +3828,4 @@ Validation: 619 extension, 33 mobile and 135 API tests pass from an extraction
 of this commit's index, and both apps build. New coverage: the couple's three
 Joint accounts folded into a fund line and a liquid one, with the undrawn line
 still filed as their liability.
+Archive: `release/erics-sidebar-0.6.242.zip`.
