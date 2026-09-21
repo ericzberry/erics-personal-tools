@@ -349,23 +349,33 @@ export const ACCOUNT_TITLES=[
   // spelling and cannot be the descendants' trust, whose name puts "des"
   // exactly where "irr" would have to be.
   //
-  // Two accounts here name a Morgan Stanley product rather than a holder — the
-  // Platinum CashPlus and the Active Assets Account — and both are the estate's.
-  // They are named rather than left unclaimed because a place holding several
-  // titles starts a portfolio of its own for an account it does not recognize,
-  // which is the right answer for a title nobody has confirmed and the wrong
-  // one for these two. The fragments are short, and short is safe only because
-  // the longest match wins: a trust's own Active Assets Account would say both
-  // "aaa" and the trust's name, and the trust's name is four times the length.
+  // Half of the accounts here name no holder at all. Morgan Stanley lists them
+  // by product — Platinum CashPlus, AAA, Select UMA — and the title is on the
+  // account's own page, two lines under the number: "ERIC BERRY TTEE / BERRY AE
+  // 2021 IRREVOCABLE FAMILY TR". Nothing on the list says it, and reading a
+  // product name for a holder is how "AAA -1785" was filed to the estate when
+  // it is the 2021 trust's.
+  //
+  // So those are answered by number, which is the one thing about an account
+  // that never changes: the page prints it beside every product name, the owner
+  // has read the title off each account's page once, and the answer is written
+  // here rather than guessed from the list again. A number outranks every
+  // fragment, because it is evidence and a fragment is a resemblance — "aaa"
+  // would otherwise take all three Active Assets Accounts into whichever title
+  // happened to name it.
   {institution:'Morgan Stanley',match:['morganstanley'],holders:[
     {owner:'Eric and Ariana Berry Estate',registration:'taxable',
-      match:['ericandariana','cashplus','aaa']},
+      accounts:['6392','4120','6792'],
+      // "ERIC BERRY & ARIANA BERRY JT TEN" is how an account's own page writes
+      // the couple, and it contains neither "ericandariana" nor "ericariana":
+      // the surname sits between the two names.
+      match:['ericandariana','ericberryariana','jtten']},
     {owner:'Berry 2020 Irrevocable Family Trust',registration:'trust',
-      match:['berry2020irr']},
+      accounts:['4123'],match:['berry2020irr']},
     {owner:'Berry 2020 Descendants’ Irrevocable Trust',registration:'trust',
-      match:['berry2020des']},
+      accounts:['4125'],match:['berry2020des']},
     {owner:'Berry AE 21 Irrevocable Trust',registration:'trust',
-      match:['berryae2021']}
+      accounts:['1785','6393','4122'],match:['berryae2021']}
   ]},
   // Carta signs one person in to everything he has anything to do with: the
   // funds he put money into, the general partner of the fund he runs, and the
@@ -411,6 +421,15 @@ export const titledOwner=(institution,registrationId='')=>{
 export function titledHolder(institution,said){
   const entry=titledAccount(institution),key=matchKey(said);
   if(!entry?.holders?.length||!key)return null;
+  // An account number the owner has already looked up. It is the strongest
+  // thing a page can say about whose an account is — it never changes, and it
+  // is printed where a product name stands in for a title — so it is asked
+  // first and answered outright, and a fragment that happens to appear in the
+  // same line cannot overrule it.
+  const numbered=accountDigits(said)
+    .map(number=>entry.holders.find(holder=>holder.accounts?.includes(number)))
+    .find(Boolean);
+  if(numbered)return numbered;
   return entry.holders
     .flatMap(holder=>holder.match.filter(name=>key.includes(name)).map(name=>({holder,length:name.length})))
     .sort((a,b)=>b.length-a.length)[0]?.holder||null;

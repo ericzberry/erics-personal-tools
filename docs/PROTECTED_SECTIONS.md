@@ -214,7 +214,20 @@ and the children's accounts — so its entry carries a `holders` roster instead 
 one owner, and the account in front of the reader says which of them it is.
 Each holder lists the fragments its title is recognized by; every one of those
 titles contains "Berry", so no fragment is "berry", and the longest fragment
-that appears wins. **A place with a roster has no default title.** An account
+that appears wins.
+
+**Some pages name no title at all, and there a holder lists account numbers.**
+Morgan Stanley lists its accounts by product — Platinum CashPlus, AAA, Select
+UMA — and prints the title only on each account's own page, so three Active
+Assets Accounts belonging to two different titles look alike on the list and a
+fragment can only guess between them. A holder may therefore carry `accounts`,
+the numbers the page prints beside those names, read off each account's own page
+once by the owner. A number outranks every fragment, because it is evidence
+where a fragment is a resemblance, and because an account number does not
+change. It is not an identifier the ledger stores: nothing is written to D1 but
+the portfolio the figure lands in.
+
+**A place with a roster has no default title.** An account
 the roster does not name is filed under the name the page gave it, registered by
 what that name says it is — a trust is a trust, an LLC is an entity — and never
 joined to the one portfolio that happens to be registered the same way, because

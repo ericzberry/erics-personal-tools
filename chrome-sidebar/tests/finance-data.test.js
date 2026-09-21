@@ -1107,13 +1107,33 @@ test('Morgan Stanley abbreviates its titles, and its accounts join the trusts al
     ['BERRY AE 2021 IRR FAMILY TR -0641',ae.name],
     ['BERRY AE 2021 IRREV FAMILY TR -0618',ae.name],
     ['ERIC AND ARIANA BERRY ESTATE -0155',ESTATE],
-    // A product name is not a holder, and these two are the estate's.
+    // Half the list names a product rather than a holder, and the number is the
+    // only thing on the row that says whose it is. Three Active Assets Accounts
+    // are two different titles; three Select UMAs are three.
+    ['AAA -1785',ae.name],
+    ['AAA -6392',ESTATE],
+    ['AAA -6393',ae.name],
+    ['Select UMA -4120',ESTATE],
+    ['Select UMA -4122',ae.name],
+    ['Select UMA -4123',family.name],
+    ['Select UMA -4125',descendants.name],
     ['Platinum CashPlus -6792',ESTATE],
-    ['AAA -1785',ESTATE]
+    // The account's own page, where the title sits two lines under the number.
+    // "ERIC BERRY & ARIANA BERRY JT TEN" puts the surname between the two
+    // names, so neither of the fragments the other sites are known by appears
+    // in it.
+    ['AAA -6392 ERIC BERRY & ARIANA BERRY JT TEN',ESTATE],
+    ['Select UMA -4123 KATELYN COOPER TTEE BERRY 2020 IRREVOCABLE FAMILY TRUST',family.name],
+    ['Select UMA -4125 MICHAEL COOPER TTEE BERRY 2020 DESCENDANTS IRRV TRUST',descendants.name]
   ]) assert.equal(titledHolder('Morgan Stanley',said)?.owner,owner,said);
-  // The trust's own Active Assets Account says both "aaa" and its trust's name,
-  // and the longer of the two is what it is.
+  // A number is evidence and a fragment is a resemblance, so the number wins:
+  // this row says "aaa", it says the descendants' trust, and it is the 2021
+  // trust's account.
+  assert.equal(titledHolder('Morgan Stanley','BERRY 2020 DES IRR TR AAA -1785')?.owner,ae.name);
+  // And a title with no number anybody has mapped is still read from its name.
   assert.equal(titledHolder('Morgan Stanley','BERRY 2020 DES IRR TR AAA -0607')?.owner,descendants.name);
+  assert.equal(titledHolder('Morgan Stanley','Select UMA -9999'),null,
+    'an account number nobody has looked up names nobody');
   assert.equal(holdsManyTitles('Morgan Stanley'),true,'an unrecognized account must not fall into the estate');
 
   const reading=(account,label,cls,value,registration='')=>({account,label,class:classById(cls).code,
@@ -1149,9 +1169,12 @@ test('Morgan Stanley abbreviates its titles, and its accounts join the trusts al
   const filed=Object.fromEntries(folded.marks.map(mark=>[mark.portfolio,mark.amount]));
   assert.equal(filed[descendants.number],4117247.70);
   assert.equal(filed[family.number],4098903.92);
-  assert.equal(filed[ae.number],5263684.19);
-  // The estate's own account, and the two accounts named after a product.
-  assert.equal(filed[estate.number],18252185.23);
+  // Its three accounts on the list, and the Active Assets Account the list
+  // names only by product: the number is what puts that $558.94 here rather
+  // than in the estate, where the product name had it.
+  assert.equal(filed[ae.number],5264243.13);
+  // The estate's own account, and the CashPlus, which is the estate's.
+  assert.equal(filed[estate.number],18251626.29);
   assert.notEqual(filed[family.number],filed[descendants.number]);
   // Available Cash is a part of Total Assets, not a second balance: counted as
   // its own figure it put the estate's spare cash on top of the estate's own

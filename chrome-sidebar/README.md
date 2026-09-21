@@ -3420,3 +3420,36 @@ eleven sheets loaded — no rule under any name, one hairline between entities,
 and the totals still ending on the row's right edge. Native iPhone and
 installed Chrome behavior were not directly tested. Archive:
 `release/erics-sidebar-0.6.230.zip`.
+
+## The number is the only thing that says whose (0.6.231 / mobile 0.1.181)
+
+Half of Morgan Stanley's accounts name no holder at all. The list calls them
+Platinum CashPlus, AAA and Select UMA; the title is on each account's own page,
+two lines under the number — *ERIC BERRY TTEE / BERRY AE 2021 IRREVOCABLE FAMILY
+TR*. Three Active Assets Accounts on that list belong to two different titles and
+read identically, so the fragment that filed **AAA -1785** to the estate last
+release was a guess, and a wrong one: -1785 is the 2021 trust's, and the estate
+was carrying its money.
+
+**A holder can carry account numbers now, and a number outranks every fragment.**
+The owner read the title off each account's page once; it is written down rather
+than guessed from the list again, and an account number never changes. A fragment
+is a resemblance and a number is evidence, so "aaa" can no longer take all three
+Active Assets Accounts into whichever title happens to contain it. Nothing new is
+stored anywhere: D1 still holds the portfolio a figure lands in, and nothing about
+the account it came from.
+
+The list's own rows are untouched by this — *BERRY 2020 DES IRR TR -0607* carries
+its title in the name and the fragments still read it — and a number nobody has
+looked up still names nobody, so its account proposes a portfolio of its own
+rather than joining somebody else's. The account pages also spell the couple
+*ERIC BERRY & ARIANA BERRY JT TEN*, which contains neither fragment the other
+sites are known by, because the surname sits between the two names.
+
+Validation: 613 extension, 33 mobile and 135 API tests pass from an extraction of
+this commit's index, and both apps build. New coverage: all eight accounts placed
+by number, two of them Active Assets Accounts of different titles; the account
+pages' own wording for the couple and for both Cooper-trusteed trusts; a row
+saying both "aaa" and a trust's name filed by its number rather than by either;
+an unmapped number naming nobody; and the folded figure for the 2021 trust
+carrying the $558.94 the estate used to hold.
