@@ -3779,3 +3779,4 @@ Validation: 619 extension, 33 mobile and 135 API tests pass from an extraction
 of this commit's index, and both apps build. New coverage: the fund account and
 the managed accounts of all three trusts folded apart, and no class forced on
 the estate, whose accounts nobody has described that way.
+Archive: `release/erics-sidebar-0.6.240.zip`.
