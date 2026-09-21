@@ -222,3 +222,21 @@ test('one column of money: a heading total reserves the same slot as the rows un
   assert.match(css,/\.trend-row \.footnote:empty\{display:block\}/,
     'an empty change collapses, so the first quarter\u2019s amount ends on its own edge. See UI-27 in docs/UI_RULES.md.');
 });
+
+// UI-29. A heading's title runs inline so a tag can follow its last word, and a
+// border on inline text underlines the words and stops where they stop — which
+// left the rule half the width of the list and dropped a tag that wrapped
+// underneath the very rule meant to close the heading. The rule belongs to
+// whatever holds the whole heading.
+test('a rule closes the whole heading, never the words in it',()=>{
+  const css=readFileSync(new URL('../src/components/finance.css',import.meta.url),'utf8');
+  const inline=/\.group-name>\.record-group-title\{([^}]*)\}/.exec(css);
+  assert.ok(inline,'no rule makes a heading title inline');
+  assert.match(inline[1],/display:inline/);
+  assert.match(inline[1],/border-bottom:0/,
+    'an inline title carries the rule on its words — put it on the heading. See UI-29 in docs/UI_RULES.md.');
+  // And something does carry it, with air on both sides. UI-30.
+  const heading=/\.snapshot-group>\.group-name\{([^}]*)\}/.exec(css);
+  assert.ok(heading&&/border-bottom:1px/.test(heading[1]),'the reading’s holder heading carries no rule at all');
+  assert.match(heading[1],/margin:0 0 4px/,'the figures start on the rule — see UI-30');
+});

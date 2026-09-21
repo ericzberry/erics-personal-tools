@@ -49,6 +49,7 @@ here.
 | **UI-21** | One focus ring: 2px, in the forest token, in every sheet either host loads. Offsets may differ — inside a tile, outside a control — but the width and the colour may not. The one exception is the gear on the forest header, which rings in `currentColor` because forest on forest is no ring at all. | `tests/ui-rules.test.js` |
 | **UI-22** | Everything that expands opens the same way: one inset block with a banded head, and no sheet carries a list of disclosures exempt from it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-26** | One currency formatter, in `ui.js`, and it writes a negative in parentheses. No other module builds a currency format. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
+| **UI-29** | A rule closes the whole heading: the name, the tag and the date are above it and it runs the width of the list. A title never carries the border itself. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-27** | One column of money: every figure in a list ends on the same right edge, a group's own total included, and the lines that hold them reserve their row actions' slot in one shared declaration. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 
 ## Ratcheting
@@ -90,6 +91,7 @@ fails the suite for everyone at HEAD.
 | **UI-12** | One spacing scale per screen: 2–4px inside a record, 8–12px between groups. Gaps within a group are always smaller than gaps between them. | The full scroll, not a cropped component |
 | **UI-13** | Hit targets hold: 44px for touch form controls, 32px for the actions inside an expanded record. A row of glyphs is drawn to its line only where a pointer does the aiming; a finger keeps the touch size. | Sidebar and phone, hover and touch |
 | **UI-14** | Every visual boundary explains a relationship. No card inside a card, no shadow that separates nothing, no rule with nothing under it. | Wherever a boundary was added |
+| **UI-30** | Nothing sits on a rule: at least 4px under a hairline before what it introduces, and no less above it than below. Stated in full under [From a complaint](#from-a-complaint). | Every group heading, at the narrow width |
 | **UI-28** | A list of groups opens one group at a time, and a closed group's heading carries its own number — its name, its kind, its total, and anything a reader needs before deciding to open it. Stated in full under [From a complaint](#from-a-complaint). | The list closed, one group open, and after a refresh |
 | **UI-15** | Reviewed at the real sizes with no horizontal overflow: 380px and the 280px sidebar minimum, 390px and 320px on the phone, and a desktop viewport for full-tab pages. | [VISUAL_QA.md](VISUAL_QA.md) harnesses |
 
@@ -215,6 +217,24 @@ groups are open survives a redraw, because these lists refresh themselves while
 they are being read. *"I think you could have entity level numbers and an
 option to expand per entity vs showing everything at once."* Look at the list
 closed, with one group open, and after a refresh.
+
+**UI-29 — a rule closes the whole heading.** *Enforced in part.* Everything
+that belongs to a heading is above the rule that closes it — its name, its
+tag, its date — and the rule runs the width of the list, not the width of the
+words. A border on inline text underlines the words and stops where they stop,
+so the rule goes on whatever holds the heading and never on the title itself.
+*"The way Trust goes onto another line below the horizontal for Berry 2020
+Descendants' Irrevocable Trust isn't good."* The title carrying no border of
+its own is checked in `tests/ui-rules.test.js`; that the right container
+carries one is read on the screen.
+
+**UI-30 — nothing sits on a rule.** *By eye.* A hairline separates two things,
+so both of them stand clear of it: at least 4px under a rule before whatever it
+introduces, and no less above it than below. A figure printed hard against the
+line above it reads as though it belongs to the line rather than to the list.
+*"The way the elements under each line are almost touching the lines isn't
+good."* Look at every group heading in a reading and in the ledger, at the
+narrow width where the padding is tightest.
 
 ## Open
 

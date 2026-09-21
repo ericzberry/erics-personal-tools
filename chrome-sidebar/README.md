@@ -3273,3 +3273,46 @@ one day kept apart; a figure with no firm belonging to none; currencies kept
 side by side; a partial quarter drawing no change; and the panel's headings,
 struck date and one column of money. Checked in the ledger preview at 420px
 and 320px. Archive: `release/erics-sidebar-0.6.226.zip`.
+
+## A rule closes its heading, and money owns the right edge (0.6.228 / mobile 0.1.178)
+
+**Two things a reading got wrong, and both were about a hairline.** The rule
+under a holder's name was drawn on the name itself. A border on inline text
+underlines the words and stops where they stop, so the rule ran half the width
+of the list — and when a tag would not fit beside a long name it wrapped
+*below* the rule meant to close the heading: "Berry 2020 Descendants'
+Irrevocable Trust" with "Trust" hanging underneath its own line. The figures
+then started on the rule rather than clear of it.
+
+The rule belongs to whatever holds the whole heading. It now runs the width of
+the list with the name, the tag and the date above it, and the figures begin
+4px below it. UI-29 and UI-30 in the register: a rule closes the whole heading,
+and nothing sits on a rule.
+
+**And the entity list stopped hanging its totals in mid-air.** Every row held a
+96px slot open for verbs that wait at opacity 0 until the row is pointed at, so
+once a portfolio was closed to a single line there was nothing in that slot but
+emptiness, and seven totals floated a third of the way in from the edge with a
+void beside them.
+
+A portfolio's own verbs now live in the block it opens, ruled off at its foot,
+which is what this guide has always said a record that opens into a block
+should do with them. The heading is a name, what kind of account it is, and its
+total. Inside the block a class row's verbs float on a pointer, just left of
+the figure they act on and on the row's own ground, so nothing reflows when
+they appear; a finger has no hover and sees them always, so on touch they stay
+in the flow and keep the slot that holds the column.
+
+The result is one column: measured at 374px, every entity total and every class
+figure inside an open one ends at the row's right edge, x=328. The entities
+themselves are rows in a list rather than cards in a stack — a hairline between
+two names and no eighteen-pixel gap on top of it.
+
+New coverage: a heading title carries no border of its own and the heading does,
+with air under it; a portfolio heading holds nothing to press but the heading,
+and its rename and delete are in the block with the right accessible names.
+Validation: 612 extension and 33 mobile tests pass from an archive of this
+release. The reading was measured across eight synthetic holder headings — rule
+on the heading, full width, every tag above it, 4px under it — and the ledger
+at 374px with a pointer. Native iPhone and installed Chrome behavior were not
+directly tested. Archive: `release/erics-sidebar-0.6.228.zip`.

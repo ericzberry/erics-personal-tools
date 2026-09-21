@@ -199,17 +199,18 @@ test('a portfolio is closed to its own total, and opens on its own',async()=>{
   tool.stop();
 });
 
-// A verb on the heading acts on the portfolio; inside a summary every click is
-// also a press on the disclosure, so these have to stop there.
-test('renaming or deleting a portfolio does not open it',async()=>{
+// The heading is a name and a number. A portfolio's own verbs are in the block
+// it opens, the way any record that opens into a block keeps them: on the
+// heading they either held 96px of nothing open beside every total, or floated
+// over the end of a long name and cut it off under the pointer.
+test('a portfolio heading is a name and a total, and its verbs are in the block',async()=>{
   const document=setup();
   const tool=ledger(document,AMENDED);
   await settle(()=>document.getElementById('finance-list').textContent.includes('Liquid securities'));
   const group=document.querySelector('#finance-list .portfolio-group');
-  const verb=group.querySelector('summary .record-actions button');
-  assert.ok(verb,'the heading carries the portfolio’s own verbs');
-  const press=new document.defaultView.Event('click',{bubbles:true,cancelable:true});
-  verb.dispatchEvent(press);
-  assert.equal(press.defaultPrevented,true,'the press is spent on the verb, not on the disclosure');
+  assert.equal(group.querySelector('summary button'),null,'nothing on the heading to press but the heading');
+  const verbs=[...group.querySelectorAll(':scope > .portfolio-actions button')];
+  assert.deepEqual(verbs.map(button=>button.getAttribute('aria-label')),
+    ['Rename Eric and Ariana Berry Estate','Delete Eric and Ariana Berry Estate']);
   tool.stop();
 });

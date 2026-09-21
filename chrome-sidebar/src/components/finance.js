@@ -421,20 +421,19 @@ export function FinanceView(){
 // still waiting to reach the cloud, are facts about the entity and would be
 // hidden by the very row that should be reporting them.
 export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[],open=false,onToggle}){
-  const verbs=ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'});
-  // A verb on the heading acts on the portfolio. Inside a summary every click
-  // is also a press on the disclosure, so these stop there.
-  verbs.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();});
+  // The heading is a name and a number. The portfolio's own verbs live in the
+  // block it opens, the way any record that opens into a block keeps them: on
+  // the heading they either held 96px of nothing open beside every total, or
+  // floated over the end of a long name and cut it off under the pointer.
   const heading=Stack([
     Stack([GroupTitle(name,{className:'record-group-title group-title--name'}),
       kind?Badge(kind,{className:'pill portfolio-kind'}):null,
       meta?Note(meta):null],{className:'group-name'}),
-    // The total and the portfolio's verbs are one block, so a narrow sidebar
-    // drops them under the name together instead of stranding the actions on
-    // a line of their own.
-    Stack([Amount(total,currency),verbs],{className:'group-figure'})
+    Stack([Amount(total,currency)],{className:'group-figure'})
   ],{className:'breakdown-row group-line'});
-  const group=Disclosure(heading,rows,{className:'record-group portfolio-group'});
+  const verbs=actions.length?Stack([ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})],
+    {className:'portfolio-actions'}):null;
+  const group=Disclosure(heading,[...rows,verbs],{className:'record-group portfolio-group'});
   group.open=open;
   group.addEventListener('toggle',()=>onToggle?.(group.open));
   return group;

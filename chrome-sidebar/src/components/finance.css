@@ -42,7 +42,12 @@
    "Berry 2020 Descendants' Irrevocable Trust" left 75px for its own name and
    broke into three lines with the total jammed against them. */
 .group-name{flex:1 1 100%;min-width:0;overflow-wrap:break-word}
-.group-name>.record-group-title{display:inline}
+/* The title runs inline so a tag follows its last word. It carries no rule of
+   its own: a border on inline text underlines the words and stops where they
+   stop, and a tag that wraps lands under the rule that was meant to close it —
+   "Berry 2020 Descendants' Irrevocable Trust" with "Trust" hanging beneath its
+   own heading. The rule belongs to whatever holds the whole heading. UI-29. */
+.group-name>.record-group-title{display:inline;padding:0;border-bottom:0}
 .portfolio-kind{margin-inline-start:6px;vertical-align:2px}
 /* A portfolio's heading is its name, its total, and its own two verbs, ruled
    off from the figures under it as one line. In a narrow sidebar the total
@@ -55,7 +60,13 @@
 /* An entity sits at the same inset whether it is open or shut, so the column of
    totals does not step 8px sideways as one is opened. Open, the block's own
    padding supplies it; closed, this does. */
-.finance-ledger .portfolio-group{padding:2px 8px;border:1px solid transparent}
+.finance-ledger .portfolio-group{padding:0 8px;border:1px solid transparent}
+/* Rows in a list, not cards in a stack: a hairline between two entities and no
+   gap on top of it. Eighteen pixels between every name and the next was the
+   whitespace that made seven trusts read as seven separate things. */
+.finance-ledger .travel-list:has(>.portfolio-group){gap:0}
+.finance-ledger .portfolio-group+.portfolio-group{border-top-color:var(--wallet-line)}
+.finance-ledger .portfolio-group[open]{margin:6px 0}
 /* The chevron leads the heading rather than closing it: the right-hand column
    of a ledger line is money, and the panels this list sits under — Breakdown,
    Value over time — already open from a marker on the left. */
@@ -66,10 +77,15 @@
   transform:translateY(-1px) rotate(-45deg);transition:transform .15s ease}
 .finance-ledger .portfolio-group[open]>summary::before{transform:translateY(-2px) rotate(45deg)}
 @media(prefers-reduced-motion:reduce){.finance-ledger .portfolio-group>summary::before{transition:none}}
-.finance-ledger .portfolio-group>summary>.group-line{flex:1 1 auto;min-width:0}
-/* The heading is the press, but the verbs on it are not. */
-.finance-ledger .portfolio-group .record-actions{cursor:default}
-.breakdown-row.group-line>.group-name>.record-group-title{min-width:0;padding:0;border-bottom:0}
+.finance-ledger .portfolio-group>summary>.group-line{flex:1 1 auto;min-width:0;flex-wrap:nowrap;align-items:baseline;gap:8px}
+/* Name and total on one line: the name takes what the total leaves and wraps
+   inside it, and the total stays on the first line at the right edge. */
+.finance-ledger .portfolio-group .group-name{flex:1 1 auto}
+/* A portfolio's own verbs close its block, ruled off from the figures they
+   act on, and they are shown rather than waiting for a pointer: the block is
+   open because it was asked for, so what can be done to it is the point. */
+.finance-ledger .portfolio-actions{display:flex;justify-content:flex-end;margin-top:4px;padding-top:4px;border-top:1px solid var(--wallet-line)}
+.finance-ledger .portfolio-actions .row-action{opacity:1}
 .group-figure{flex:0 0 auto;display:flex;align-items:center;gap:8px;margin-inline-start:auto}
 .breakdown-row strong,.trend-row strong{font-weight:600}
 /* An amount never breaks across lines. "$1,720,000" split after the "0" reads
@@ -110,16 +126,38 @@
    the touch sizes underneath keep it honest. */
 .finance-ledger{--verb:26px;--verbs:3}
 @media(hover:none){.finance-ledger{--verb:32px}}
-/* One column of money down the whole ledger. A portfolio's total and every
-   class figure under it reserve the same slot for the verbs that ride at the
-   end of a line, so they end on the same edge whatever verbs a row carries.
-   Without it the heading total sat 104px right of the figures it totals. */
-.finance-ledger .record-line>.record-figure>.action-group,
-.finance-ledger .group-line>.group-figure>.action-group{flex:none;min-width:calc(var(--verbs)*var(--verb));justify-content:flex-end}
+/* Money owns the right edge. On a pointer a row's verbs wait at opacity 0 until
+   the row is pointed at, so a slot held open for them was 96px of nothing at
+   the end of every line: seven totals hung mid-row over a void. There they
+   float instead, just left of the figure they act on, on the row's own ground
+   so they read cleanly over a long name; nothing reflows as they appear, and
+   every figure — an entity's total and each class inside it — ends on the
+   row's edge. A finger has no hover and sees the verbs all the time, so on
+   touch they stay in the flow and keep the slot that holds the column. UI-27,
+   UI-30. */
+.finance-ledger{--row-ground:var(--paper)}
+.finance-ledger .portfolio-group[open]{--row-ground:var(--wallet-surface)}
+.finance-ledger .portfolio-group[open]>summary{--row-ground:var(--wallet-open)}
+@media(hover:hover){
+  .finance-ledger .record-figure,.finance-ledger .group-figure{position:relative}
+  .finance-ledger .record-line>.record-figure>.action-group,
+  .finance-ledger .group-line>.group-figure>.action-group{position:absolute;right:100%;top:50%;transform:translateY(-50%);
+    flex-wrap:nowrap;width:max-content;margin:0 4px 0 0;padding:0 2px;border-radius:4px}
+  /* The ground appears with the verbs and not before, or it would blank a strip
+     of every name in the list. */
+  .finance-ledger .record-row:is(:hover,:focus-within) .record-figure>.action-group,
+  .finance-ledger .group-line:is(:hover,:focus-within) .group-figure>.action-group{background:var(--row-ground);box-shadow:-8px 0 6px -2px var(--row-ground)}
+}
+@media(hover:none){
+  .finance-ledger .record-line>.record-figure>.action-group,
+  .finance-ledger .group-line>.group-figure>.action-group{flex:none;min-width:calc(var(--verbs)*var(--verb));justify-content:flex-end}
+}
 /* A row with no verbs at all — what is owed on the houses — still keeps the
    slot, or its figure would run out to the edge past every figure above it. */
-.finance-ledger .record-line>.record-figure>.action-group:empty,
-.finance-ledger .group-line>.group-figure>.action-group:empty{display:flex}
+@media(hover:none){
+  .finance-ledger .record-line>.record-figure>.action-group:empty,
+  .finance-ledger .group-line>.group-figure>.action-group:empty{display:flex}
+}
 .finance-ledger .estate-detail{--verbs:4}
 /* The houses behind a Real estate line, shown only when they are asked for.
    Set in from the line they add up to, and ruled along their edge, so a run of
@@ -141,7 +179,9 @@
    own rows, and a clear gap before the next holder's. The gap belongs between
    two groups rather than above every one, so the first sits under the date
    line where it was. */
-.snapshot-group>.record-group-title{padding:0 0 2px}
+/* A holder's heading closes on a rule the width of the list, with the tag above
+   it, and the figures start clear of it rather than on it. UI-29, UI-30. */
+.snapshot-group>.group-name{padding:0 0 4px;margin:0 0 4px;border-bottom:1px solid var(--wallet-line)}
 .snapshot-group+.snapshot-group{margin-block-start:10px}
 /* Ruled off from the figures by a gap. `.settings-group .action-group` sets
    margin 0 for every action group inside a panel, so this has to out-specify
