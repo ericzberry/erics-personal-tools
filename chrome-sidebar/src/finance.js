@@ -395,7 +395,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // The institution reaches the capital fold too: it is what says whose
     // portfolio a statement read off a page belongs to, and a dropped file that
     // names no site simply passes nothing.
-    return {...folded,capital:foldCapital(parsed.capital||[],records,{institution,today:today()}),
+    // A fund read off a page joins the capital accounts rather than the class
+    // figures, because that is what it is: one investment, kept apart from the
+    // next one, instead of a number added into Fund investments where the two
+    // become indistinguishable.
+    return {...folded,capital:foldCapital([...(parsed.capital||[]),...folded.positions],records,{institution,today:today()}),
       unread:parsed.unread,read:parsed.readings.length};
   }
   function renderFold(){

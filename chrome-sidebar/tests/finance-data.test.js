@@ -1315,17 +1315,55 @@ test('a private fund is fund investments, whatever the reading called it',()=>{
     scope:'holding',value:100000,asOf:'2026-09-20',confidence:'high',reason:''});
   const filed=said=>foldReadings([said],[estate,ira],{institution:'Schwab',today:'2026-09-20'})
     .marks.map(mark=>classLabel(mark.class))[0];
-  for(const name of ['Vista Equity Partners Fund VIII U.S. Access Fund, L.P.','C2V Tributary Fund II, LP',
-    'Alternative Investments','Sequoia Capital Growth Equity','Acme Private Credit Feeder Fund',
-    'Thrive Ventures 2','Co-Investment in Acme'])
+  for(const name of ['Alternative Investments','Sequoia Capital Growth Equity',
+    'Acme Private Credit Feeder Fund','Co-Investment in Acme','Buyout sleeve','Private equity'])
     assert.equal(filed(reading('Joint Brokerage -4049',name,'stocks')),'Fund investments',name);
-  // And the word "fund" on its own is not one: a mutual fund and an ETF are
+  // A fund named as the partnership it is goes further than a class and is
+  // filed as its own position, which the fold beside this one covers.
+  // And the word "fund" on its own is neither: a mutual fund and an ETF are
   // marketable securities, which is what this class exists to tell them from.
   for(const name of ['Vanguard Total Stock Market Index Fund','Fidelity Contrafund','iShares Core S&P 500 ETF'])
     assert.equal(filed(reading('Joint Brokerage -4049',name,'stocks')),'Liquid securities',name);
   // It is read off the figure's own line, so one fund among twenty holdings
-  // does not make the account it sits in illiquid.
-  assert.equal(filed(reading('Acme Ventures III, L.P. Brokerage -4049','Net Account Value','liquid')),'Liquid securities');
+  // does not make the account it sits in illiquid, and an account merely
+  // titled to a partnership is still an account.
+  assert.equal(filed({...reading('Acme Ventures III, L.P. Brokerage -4049','Net Account Value','liquid'),scope:'account'}),'Liquid securities');
+});
+
+// Two funds in one portfolio are one Fund investments figure, because the
+// ledger keeps one amount per portfolio, class and date — so Vista and KKR
+// Health add up, neither can be seen, and the next reading showing only one of
+// them writes its figure over both. A fund with a name of its own is filed as
+// a position instead, which is the one record that keeps its identity.
+test('two funds are two positions, and do not overwrite each other',()=>{
+  const reading=(label,value)=>({account:'Alternative Investments',label,class:classById('stocks').code,
+    registration:'',scope:'holding',value,asOf:'2026-09-20',confidence:'high',reason:''});
+  const folded=foldReadings([
+    reading('Vista Equity Partners Fund VIII U.S. Access Fund, L.P.',392000),
+    reading('KKR Health Care Strategic Growth Fund II, L.P.',118220)
+  ],[estate,ira],{institution:'Schwab',today:'2026-09-20'});
+  // Neither is a class figure any more, and nothing was added together.
+  assert.deepEqual(folded.marks,[]);
+  assert.deepEqual(folded.positions.map(entry=>[entry.name,entry.value]),[
+    ['Vista Equity Partners Fund VIII U.S. Access Fund, L.P.',392000],
+    ['KKR Health Care Strategic Growth Fund II, L.P.',118220]]);
+  // Filed, they are two investments under the estate, each with its own row.
+  const filed=foldCapital(folded.positions,ledger(),{institution:'Schwab',today:'2026-09-20'});
+  assert.deepEqual(filed.rows.map(row=>[row.name,row.value,row.portfolioName]),[
+    ['Vista Equity Partners Fund VIII U.S. Access Fund, L.P.',392000,ESTATE],
+    ['KKR Health Care Strategic Growth Fund II, L.P.',118220,ESTATE]]);
+  assert.equal(new Set(filed.holdings.map(entry=>entry.number)).size,2,'two investments, not one');
+  // A broker page states what a position is worth and never what was committed
+  // to it, so the rest of the capital account is left to the fund's own
+  // statement rather than zeroed.
+  assert.deepEqual(folded.positions.map(entry=>entry.commitment),[null,null]);
+  // The page's own heading over several funds names none of them and stays a
+  // class figure.
+  const bucket=foldReadings([{account:'Joint Brokerage -4049',label:'Alternative Investments',
+    class:classById('unclassified').code,registration:'',scope:'account',value:510220,
+    asOf:'2026-09-20',confidence:'high',reason:''}],[estate,ira],{institution:'Schwab',today:'2026-09-20'});
+  assert.deepEqual(bucket.positions,[]);
+  assert.deepEqual(bucket.marks.map(mark=>[classLabel(mark.class),mark.amount]),[['Fund investments',510220]]);
 });
 
 // iCapital is the second of them, and the platform the owner's fund

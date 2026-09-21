@@ -1313,6 +1313,27 @@ const FUND_ACCOUNTS={ubs:/\bbrokerage\b|\b63541\b/i};
 // — which is how a private fund is named and a public one is not. "Vanguard
 // Total Stock Market Index Fund" says neither.
 const PRIVATE_FUND=/\b(private (equity|credit|fund|placement)|venture capital|alternative investments?|buyout|growth equity|co-?invest(ment)?s?|special purpose vehicle|spv|feeder fund|access fund|capital commitment)\b|\b(fund|partners|ventures|partnership)\s+(?:[ivx]{1,5}|\d{1,2})\b/i;
+// And which of them is one investment rather than a word for the shelf they
+// sit on. The ledger keeps one figure per portfolio, class and date, so two
+// funds folded into Fund investments are one number: Vista and KKR Health add
+// up, neither can be seen, and the next reading that shows only one of them
+// writes its figure over both. A fund with a name of its own is filed as the
+// position it is — its own row, its own commitment, its own capital account
+// — and only the page's own heading over several of them stays a class figure,
+// because it names none of them.
+//
+// Named, here, means a partnership: a series number or a partnership suffix,
+// which is what a private fund has and "Alternative Investments" has not.
+const NAMED_FUND=/\b(fund|partners|ventures|partnership|capital)\b[^\n]{0,60}?\b(l\.? ?p\.?|lllp|llp|llc)\b|\b(fund|partners|ventures|partnership)\s+(?:[ivx]{1,5}|\d{1,2})\b/i;
+// What such a reading is, once it is filed as a position: a capital account
+// stating this quarter's value and nothing else. Every other figure is left
+// null so the fold carries forward what the fund's own statement said last
+// — a broker page prints what the position is worth and never what was
+// committed to it.
+const positionRead=(reading,portfolio)=>({name:String(reading.label||'').slice(0,120),stated:'',
+  holder:portfolio.name,asOf:reading.asOf,value:reading.value,
+  commitment:null,contributed:null,distributed:null,periodContributed:null,periodDistributed:null,
+  unfunded:null,currency:'',confidence:reading.confidence,reason:reading.reason});
 // `firm` is the code from FIRMS for the place this reading was taken, and it
 // rides onto every figure the fold produces. It is passed in rather than looked
 // up from `institution` because the caller already knows which site the page
@@ -1490,6 +1511,10 @@ export function foldReadings(readings,portfolios,{institution='',firm=0,defaultC
       name:portfolio.name,kind:portfolio.kind,currency:portfolio.currency||'USD',isNew:!!portfolio.isNew};
     figures.set(key,{...current,amount:Math.round((current.amount+value)*100)/100,from:[...current.from,...from]});
   };
+  // Funds pulled out of the reading to be filed as positions instead. They
+  // leave the class totals entirely: a position counts under its own class
+  // wherever it is counted, so adding it here as well would count it twice.
+  const positions=[];
   const named=[...accounts.entries()].some(([key,entry])=>key!==UNNAMED&&entry.totals.length);
   for(const account of [...accounts.values()].flatMap(entry=>separate(entry,notes,dropped))){
     const inside=[...account.totals,...account.holdings];
@@ -1523,8 +1548,17 @@ export function foldReadings(readings,portfolios,{institution='',firm=0,defaultC
       dropped.push(`${holdings.length} position${holdings.length===1?'':'s'} no account claimed`);
       continue;
     }
+    // A fund named on its own line, or any holding inside an account the page
+    // files under private markets. Only into a portfolio that already exists:
+    // a position proposes an investment, and proposing the portfolio to put it
+    // in from two folds at once would offer the same new portfolio twice.
+    const fund=reading=>!portfolio.isNew
+      &&(NAMED_FUND.test(reading.label||'')||PRIVATE_FUND.test(account.name||''));
     if(holdings.length&&(reconciles||!totals.length)){
-      for(const reading of holdings)add(portfolio,classify(reading,`${account.name} ${reading.label}`),reading.asOf,reading.value,[reading.label]);
+      for(const reading of holdings){
+        if(fund(reading)){positions.push(positionRead(reading,portfolio));continue;}
+        add(portfolio,classify(reading,`${account.name} ${reading.label}`),reading.asOf,reading.value,[reading.label]);
+      }
       continue;
     }
     if(holdings.length)notes.push(about(account.name,`the ${holdings.length} holding${holdings.length===1?'':'s'} shown ${holdings.length===1?'does':'do'} not add up to the total, so it was kept whole.`));
@@ -1554,7 +1588,7 @@ export function foldReadings(readings,portfolios,{institution='',firm=0,defaultC
   const marks=[...figures.values()].sort((a,b)=>
     a.name.localeCompare(b.name,undefined,{sensitivity:'base'})||a.portfolio-b.portfolio
     ||ASSET_CLASSES.findIndex(entry=>entry.code===a.class)-ASSET_CLASSES.findIndex(entry=>entry.code===b.class));
-  return {marks,portfolios:proposed,notes,today};
+  return {marks,positions,portfolios:proposed,notes,today};
 }
 
 // Turning a capital account statement into what is kept. This is the device's

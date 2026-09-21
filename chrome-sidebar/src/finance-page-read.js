@@ -226,9 +226,25 @@ export function readAccountPage(options) {
     const rows = cells.map(row => row.join('  |  ')).filter(Boolean);
     const figures = rows.filter(row => row.length <= 400 && !blocked(row) && (figure(row) || CONTEXT.test(row)));
     const kept = new Set(figures);
-    cells.forEach(row => {if (kept.has(row.join('  |  '))) row.forEach(cell => celled.add(cell.toLowerCase()));});
+    // A cell that is not itself a figure is what names the ones beside it. A
+    // row without one has said nothing about what it holds, and a table whose
+    // rows and header are all figures has said nothing at all.
+    //
+    // A private fund's dashboard is laid out exactly that way: a component
+    // library renders the row of tiles as a table, so the six figures arrive
+    // as "341K | 4K | 392K | 395K | 1.16x | 7.92%" under a header row the page
+    // never shows, and every label stays outside it. Sent like that the
+    // reading had a row of numbers naming neither a column nor a fund, and
+    // said so: the figures are there and there is nothing to do with them.
+    const labelled = row => row.some(cell => cell && !figure(cell));
+    // Worse than useless, because the loose lines that did carry the labels
+    // were then dropped as duplicates of these cells. What a row has already
+    // said travels with it; what it has not said must be left where it was
+    // said properly.
+    cells.forEach(row => {if (kept.has(row.join('  |  ')) && labelled(row)) row.forEach(cell => celled.add(cell.toLowerCase()));});
     // The header row states what the columns mean, so it travels with them.
-    if (figures.length) tables.push([...new Set([rows[0], ...figures])].join('\n'));
+    const shown = [...new Set([rows[0], ...figures])].filter(Boolean);
+    if (figures.length && shown.some(row => labelled(row.split('  |  ')))) tables.push(shown.join('\n'));
   }
 
   // A figure often sits on its own line under the name it belongs to, so a

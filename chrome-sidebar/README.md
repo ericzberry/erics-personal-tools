@@ -3715,3 +3715,46 @@ this commit's index, and both apps build. New coverage: the three Joint accounts
 and the credit line titled to the estate with nothing proposed, and their three
 balances folded into one figure.
 Archive: `release/erics-sidebar-0.6.238.zip`.
+
+## A fund is one investment, and the page that states it is a table (0.6.239 / mobile 0.1.189)
+
+Pressed on the real iCapital page, Read answered *No account figures were
+found* — on a page showing six of them. The reconstruction it was built
+against was a list of lines; the page itself lays the row of tiles out as a
+**table**. So the figures arrived as one row, `341K | 4K | 392K | 395K | 1.16x
+| 7.92%`, under a header row the page never shows — and the loose lines that
+carried *Contributions*, *NAV* and the date were then dropped as duplicates of
+those cells. The reading said what it saw: a row of numbers naming neither a
+column nor a fund.
+
+**A cell only silences the line that says the same thing when its row has said
+it.** A row without a single non-figure cell has named nothing, so it no
+longer suppresses anything — and a table whose rows and header are all figures
+is not sent at all, because it tells a reader nothing it could act on. A table
+that does name its columns is read exactly as before, loose copies dropped and
+header attached.
+
+**And a named fund is now a position, not a line in a class total.** The
+ledger keeps one amount per portfolio, asset class and date, so two funds
+folded into Fund investments are one number: Vista and KKR Health add up,
+neither can be seen, and the next reading that shows only one of them writes
+its figure over both. A fund with a name of its own — a series number or a
+partnership suffix — is filed as the investment it is, with its own row, its
+own commitment and its own capital account, and so is any holding inside an
+account the page files under private markets. Only the page's own heading over
+several of them stays a class figure, because it names none of them.
+
+A broker page states what a position is worth and never what was committed to
+it, so a fund read that way carries its value and leaves the rest of the
+capital account to the fund's own statement rather than zeroing it. An account
+merely titled to a partnership is still an account: the test is the figure's
+own line, so one fund among twenty holdings does not make the other nineteen
+illiquid. And a portfolio that does not exist yet keeps the old behaviour,
+because two folds proposing the same new portfolio would offer it twice.
+
+Validation: 619 extension, 33 mobile and 135 API tests pass from an archive of
+this release, and both apps build. New coverage: the tile table dropped with
+every label, figure, date and the fund's name surviving beside it; a named
+table still read as one; two funds filed as two positions under the estate
+with nothing added together; and the bucket heading left as a class figure.
+Archive: `release/erics-sidebar-0.6.239.zip`.

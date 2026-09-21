@@ -837,3 +837,30 @@ test('the digits and the letter naming a retirement plan are not an amount', () 
   assert.equal(held.filtered, true);
   assert.match(held.text, /401K Plan\n412K/);
 });
+
+
+// The same page, as the browser actually builds it. A component library lays
+// the row of tiles out as a table, so the six figures arrive as one row under
+// a header the page never shows — and the loose lines that carry their labels
+// were then dropped as duplicates of those cells. What reached the reading was
+// "341K | 4K | 392K | 395K | 1.16x | 7.92%", naming neither a column nor a
+// fund, and the reading said so: no account figures found on a page holding
+// six of them.
+test('a row of tiles rendered as a table does not silence the lines that name them', () => {
+  const tiles = {rows: [
+    cells(['', '', '', '', '', '']),
+    cells(['341K', '4K', '392K', '395K', '1.16x', '7.92%']),
+    cells(['30-Jun-2026', '30-Jun-2026', '30-Jun-2026', '30-Jun-2026', '30-Jun-2026', '30-Jun-2026'])
+  ]};
+  const page = inPage(pageOf({text: FUND_PAGE, tables: [tiles]}), VISTA);
+  assert.equal(page.tables.length, 0, 'a table of figures with no heading states nothing');
+  assert.match(page.text, /Contributions\n341K\n30-Jun-2026/);
+  assert.match(page.text, /NAV\n392K\n30-Jun-2026/);
+  assert.match(page.text, /Eric Berry - iCapital-Vista Equity Partners Fund VIII U\.S\. Access Fund, L\.P\./);
+  // And a table that does name its columns is still read as one, with the
+  // loose copies of its cells still dropped.
+  const named = {rows: [cells(['Account', 'Balance']), cells(['Brokerage', '$1,284,300.55'])]};
+  const broker = inPage(pageOf({text: 'Brokerage $1,284,300.55\n\n$1,284,300.55', tables: [named]}), HERE);
+  assert.equal(broker.tables.length, 1);
+  assert.match(broker.tables[0], /Account {2}\| {2}Balance/);
+});
