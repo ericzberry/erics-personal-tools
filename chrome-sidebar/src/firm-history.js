@@ -8,15 +8,14 @@
 // carries the firm it was read at, which fixes that and makes this question
 // answerable in the same stroke: how UBS is doing, as against Morgan Stanley.
 //
-// Quarterly, because that is the grain a firm is judged on. A row per reading
-// would be a log of when a browser tab happened to be open; four numbers a year
-// is what tells you whether a place is earning its keep. Each quarter is what
-// the firm held at the end of it, which is the ledger's own step function
-// applied to one firm's figures: an account read in March and not since still
-// counts in December at its March figure, exactly as it counts towards net
-// worth. That is the whole reason this is computed rather than written down at
-// the moment of reading — a stored sum could only ever hold the reading it came
-// from, so re-reading half the accounts would read as a collapse.
+// Quarterly, because that is the grain a firm is judged on: four numbers a year
+// is what tells you whether a place is earning its keep. What the firm holds at
+// any moment is the ledger's own step function applied to that firm's figures —
+// an account read in March and not since still counts in December at its March
+// figure, exactly as it counts towards net worth — which is why this is
+// computed rather than written down at the moment of reading: a stored sum could
+// only ever hold the reading it came from, so re-reading half the accounts
+// would read as a collapse.
 //
 // A firm appears in a quarter only when it was actually read in it. A quarter
 // nobody looked at is not a flat line, it is a question nobody asked, and
@@ -26,50 +25,101 @@
 // Nothing in a file says which place it came from, and they are left out rather
 // than gathered under a heading that would name nowhere.
 import {firmLabel} from './account-sites.js';
-import {marksOf,portfoliosOf,heldOn,signed,quarterNumber,quarterName,quarterEnded,fromHistoryStart} from './finance-data.js';
+import {marksOf,portfoliosOf,flowsOf,financeCurrencies,heldOn,signed,quarterNumber,quarterName,fromHistoryStart} from './finance-data.js';
 
 const sum=values=>Math.round(values.reduce((total,value)=>total+value,0)*100)/100;
 
-export function firmQuarters(records,{currency='USD',limit=12,since}={}){
-  // Currencies are never added together, here as everywhere else: a firm
-  // holding two of them is two series, and the panel shows the one being read.
+// How each firm has actually performed: what it earned, with the money the
+// owner put in or took out taken back out of it.
+//
+// A balance that rose by $500,000 in a quarter in which $500,000 was wired in
+// earned nothing, and a balance on its own cannot tell the two apart. So
+// the cash that moved is recorded as its own row — a flow, dated, per firm —
+// and every figure here is net of it.
+//
+// The periods run between readings rather than between quarter ends. A firm is
+// only ever observed when one of its pages is read, and a return measured
+// between two observations is a return somebody saw; one measured to a quarter
+// end nobody read would be the step function's guess dressed up as a result.
+// Inside a period the cash is weighted by how long it was there (Modified
+// Dietz): a deposit the day after one reading worked for the whole period, one
+// made the day before the next barely at all. The periods are then chained, so
+// a return over a quarter or since the first reading is time-weighted — it
+// says how the firm did with the money it had, not how much money it was given.
+//
+// Only readings that hold every figure the newest one does are observations:
+// while a firm's accounts are still being entered, a smaller total is a
+// smaller ledger, not a loss. A reading from before the first full one, and
+// cash moved before it, are simply before the record starts. Cash moved since
+// the newest reading waits for the next one, which is the first to have seen
+// it.
+//
+// Quarters are what a firm is judged on, so the periods are also added up by
+// the quarter they end in; the line is drawn through every observation, because
+// that is where the firm was actually seen.
+const DAY=86400000;
+const days=asOf=>Date.parse(`${asOf}T00:00:00Z`)/DAY;
+const chain=returns=>returns.some(value=>value===null)?null
+  :Math.round((returns.reduce((total,value)=>total*(1+value),1)-1)*1e6)/1e6;
+
+export function firmPerformance(records,{currency='USD',since}={}){
   const mine=new Set(portfoliosOf(records).filter(portfolio=>(portfolio.currency||'USD')===currency).map(portfolio=>portfolio.number));
-  const firms=new Map();
+  const marks=new Map(),moves=new Map();
   for(const mark of marksOf(records)){
     const firm=Number(mark.firm||0);
     if(!firm||!mine.has(mark.portfolio))continue;
-    firms.set(firm,[...(firms.get(firm)||[]),mark]);
+    marks.set(firm,[...(marks.get(firm)||[]),mark]);
   }
-  return [...firms].map(([firm,own])=>{
-    const points=[...new Set(own.map(mark=>quarterNumber(fromHistoryStart(mark.asOf,since))))].sort((a,b)=>a-b)
-      .map(period=>{
-        // One firm's figures only, so the step function is asked the same
-        // question the totals ask it, about a narrower set of rows.
-        const live=heldOn(own,quarterEnded(period));
-        return {period,label:quarterName(period),amount:sum(live.map(signed)),figures:live.length,
-          asOf:live.map(mark=>mark.asOf).sort().at(-1)||''};
-      });
-    // The newest quarter carries every figure this firm has, because a figure
-    // stands until a later one replaces it. So it is the measure of a full
-    // picture, and an older quarter is partial exactly when it holds fewer —
-    // the ledger was still being filled in then, and subtracting a smaller
-    // ledger from a larger one reports a rise nobody earned.
-    const whole=points.at(-1).figures;
-    let previous=null;
-    const quarters=points.slice(-limit).map(point=>{
-      const complete=point.figures>=whole;
-      const change=complete&&previous?Math.round((point.amount-previous.amount)*100)/100:null;
-      if(complete)previous=point;
-      return {...point,complete,change,whole,
-        // A quarter read in its closing month is a quarter-end figure. One read
-        // in its first week is that quarter's best available answer and
-        // something else, so the row says when it was struck rather than
-        // letting the heading claim a date nobody read.
-        // A figure from before the history starts is read as its first
-        // quarter, and its own earlier date is not shown there either.
-        struck:point.asOf<fromHistoryStart(point.asOf,since)||point.asOf.slice(5,7)===String((point.period%10)*3).padStart(2,'0')?'':point.asOf};
+  // Cash carries no currency of its own: it is recorded in the ledger's main
+  // one, the currency most portfolios are kept in, and counts only there. A
+  // firm's second-currency series is judged on its balances alone.
+  const main=financeCurrencies(records)[0]?.currency||'USD';
+  if(currency===main)for(const flow of flowsOf(records))moves.set(flow.firm,[...(moves.get(flow.firm)||[]),flow]);
+  return [...new Set([...marks.keys(),...moves.keys()])].map(firm=>{
+    const own=marks.get(firm)||[],cash=moves.get(firm)||[];
+    const seen=[...new Set(own.map(mark=>fromHistoryStart(mark.asOf,since)))].sort().map(asOf=>{
+      const live=heldOn(own,asOf);
+      return {asOf,value:sum(live.map(signed)),figures:live.length};
     });
-    // Firms are read in the order they matter, which is how much is at them.
-    return {firm,label:firmLabel(firm),quarters,latest:quarters.at(-1)?.amount??0};
-  }).sort((a,b)=>Math.abs(b.latest)-Math.abs(a.latest)||a.label.localeCompare(b.label));
+    const whole=seen.at(-1)?.figures??0;
+    const observed=seen.slice(Math.max(0,seen.findIndex(point=>point.figures>=whole)));
+    const periods=observed.slice(1).map((end,index)=>{
+      const start=observed[index];
+      const inside=cash.filter(flow=>flow.asOf>start.asOf&&flow.asOf<=end.asOf);
+      const span=days(end.asOf)-days(start.asOf);
+      const flow=sum(inside.map(entry=>entry.amount));
+      const weighted=inside.reduce((total,entry)=>total+entry.amount*(days(end.asOf)-days(entry.asOf))/span,0);
+      const gain=Math.round((end.value-start.value-flow)*100)/100;
+      const base=start.value+weighted;
+      // A firm that holds nothing, or only what is owed to it — a card, a
+      // margin loan — has no return to speak of, whatever its balance did.
+      return {from:start.asOf,to:end.asOf,start:start.value,value:end.value,flow,gain,
+        return:base>0?Math.round(gain/base*1e6)/1e6:null};
+    });
+    let index=1;
+    const points=observed.map((point,at)=>{
+      if(at){const period=periods[at-1];index=period.return===null||index===null?null:index*(1+period.return);}
+      return {asOf:point.asOf,value:point.value,index:index===null?null:Math.round(index*1e6)/1e6};
+    });
+    const byQuarter=new Map();
+    for(const period of periods){
+      const key=quarterNumber(period.to);
+      byQuarter.set(key,[...(byQuarter.get(key)||[]),period]);
+    }
+    const quarters=[...byQuarter].sort((a,b)=>a[0]-b[0]).map(([period,list])=>({period,label:quarterName(period),
+      value:list.at(-1).value,asOf:list.at(-1).to,flow:sum(list.map(entry=>entry.flow)),
+      gain:sum(list.map(entry=>entry.gain)),return:chain(list.map(entry=>entry.return)),
+      // A quarter last read before its closing month is that quarter's best
+      // available answer and not its end, so the row says the day it was
+      // struck rather than letting the heading claim a date nobody read.
+      struck:list.at(-1).to.slice(5,7)===String((period%10)*3).padStart(2,'0')?'':list.at(-1).to}));
+    const first=observed[0]?.asOf||'',last=observed.at(-1)?.asOf||'';
+    return {firm,label:firmLabel(firm),value:observed.at(-1)?.value??null,asOf:last,from:first,points,periods,quarters,
+      total:periods.length?{flow:sum(periods.map(entry=>entry.flow)),gain:sum(periods.map(entry=>entry.gain)),
+        return:chain(periods.map(entry=>entry.return))}:null,
+      // Every flow recorded for the firm, newest first, each saying whether the
+      // figures above count it yet.
+      flows:[...cash].reverse().map(flow=>({flow,counted:!!first&&flow.asOf>first&&flow.asOf<=last,
+        waiting:!first||flow.asOf>last,before:!!first&&flow.asOf<=first}))};
+  }).sort((a,b)=>Math.abs(b.value??0)-Math.abs(a.value??0)||a.label.localeCompare(b.label));
 }

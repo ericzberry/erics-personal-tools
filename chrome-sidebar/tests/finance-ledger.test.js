@@ -168,7 +168,7 @@ test('every section of the ledger\u2019s page opens the same way, and none of th
   const ledger=view.querySelector('#finance-ledger');
   assert.equal(ledger.querySelector(':scope details'),null,'a section on the page is put away behind a disclosure');
   assert.deepEqual([...ledger.querySelectorAll('.overview-title')].map(node=>node.textContent),
-    ['Allocation','Entities','Value over time','Private investments','Real estate','Institutions over time']);
+    ['Allocation','Entities','Value over time','Institutions','Private investments','Real estate']);
 });
 
 // The side panel keeps what it all comes to and the ways a figure gets in.

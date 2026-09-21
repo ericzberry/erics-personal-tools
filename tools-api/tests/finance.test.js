@@ -468,3 +468,23 @@ test('the longest page a device may send fits under the prompt ceiling',async()=
   const result=await readFinanceUpdates(connection,{text:page,live:true,institution:'UBS',today:'2026-09-20'},fetcher);
   assert.equal(result.readings.length,1);
 });
+
+// Cash put into a firm or taken out of it. Nothing but three integers is
+// stored, a replay replaces its own row, and an amount of nothing is refused.
+test('cash in or out is kept per firm and day, signed, and read back with the ledger',async()=>{
+  const {sql,env}=environment('finance-schema.sql');
+  const put=(ref,value)=>request(env,`/v1/finance/${ref}`,'PUT',value);
+  assert.equal((await put('f5-20260910',{amount:0,revision:null})).status,400,'nothing moved is not a movement');
+  assert.equal((await put('f0-20260910',{amount:5,revision:null})).status,404,'firm 0 names no firm');
+  const saved=(await (await put('f5-20260910',{amount:500000,revision:null})).json()).record;
+  assert.deepEqual(saved,{id:'f5-20260910',row:'flow',revision:'50000000',firm:5,asOf:'2026-09-10',amount:500000});
+  assert.equal((await put('f5-20260910',{amount:250000,revision:null})).status,409,'a stale replay is refused');
+  await put('f5-20260910',{amount:250000,revision:'50000000'});
+  await put('f3-20261002',{amount:-100000.5,revision:null});
+  assert.deepEqual(sql.prepare('SELECT * FROM finance_flows ORDER BY firm').all().map(row=>({...row})),
+    [{firm:3,as_of:20261002,cents:-10000050},{firm:5,as_of:20260910,cents:25000000}],'one row per firm and day, in cents');
+  const records=(await (await request(env,'/v1/finance')).json()).records.filter(record=>record.row==='flow');
+  assert.deepEqual(records.map(record=>[record.id,record.amount]),[['f3-20261002',-100000.5],['f5-20260910',250000]]);
+  assert.equal((await request(env,'/v1/finance/f3-20261002','DELETE',{revision:'-10000050'})).status,200);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_flows').get().n,1);
+});

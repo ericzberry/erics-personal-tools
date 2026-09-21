@@ -561,6 +561,8 @@ export const HISTORY_GLYPH='M12 7.5V12l3.2 1.9 M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.
 // Read it again, now: a record whose figure is published somewhere else and
 // stands until it is looked up again.
 export const REFRESH_GLYPH='M19.5 12a7.5 7.5 0 1 1-2.2-5.3 M19.5 4v5h-5';
+// Add one more to what a group already holds: a line of cash to a firm.
+export const ADD_GLYPH='M12 5v14 M5 12h14';
 // A record's own action, at the end of its line. The glyph is the verb and the
 // label is what a screen reader and a paused pointer are told, so it names the
 // record it would act on rather than saying "Delete" twelve times down a list.

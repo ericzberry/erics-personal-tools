@@ -1,15 +1,14 @@
 import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionFigures,FigureList,propertyDetail,quarterPoints,quarterChange} from './components/finance.js';
-import {NetWorthHero,NetWorthChart,Allocation,LiquiditySummary,PositionsTable,PropertiesTable,allocationGroups,changeText} from './components/finance-overview.js';
+import {NetWorthHero,NetWorthChart,Allocation,LiquiditySummary,PositionsTable,PropertiesTable,Institutions,allocationGroups,changeText} from './components/finance-overview.js';
 import {share} from './components/charts.js';
-import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
+import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,ADD_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,valueSourceLabel,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,valueSourceLabel,zillowHome,flowRef,FIRMS,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
 import {firmLabel} from './account-sites.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
-import {firmQuarters} from './firm-history.js';
-import {FirmQuarters} from './components/firms.js';
+import {firmPerformance} from './firm-history.js';
 const today=()=>new Date().toISOString().slice(0,10);
 
 // `readPage` is the host's ability to read the tab the owner is looking at.
@@ -54,6 +53,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // `housing` is the property currently open in the third form. A house is an
   // address and a dated pair of numbers, so editing one edits both rows.
   let capital=null,capitalEditing=false,capitalSource='file',investing=null,housing=null;
+  // The fourth form: cash put into a firm or taken out of it. `flowing` is the
+  // movement open for editing, and `flowSign` which way the money went — a
+  // switch rather than a minus sign the owner has to remember to type.
+  let flowing=null,flowSign=1;
   // Which of the three records the one drawer is currently offering to enter.
   let entering='figure';
   // Arriving because the tab is a finance page is not the owner asking to see
@@ -266,11 +269,55 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     showEntry('property');$('prop-name').focus();
   }
 
+  // The institutions cash can be recorded against: the ones already read
+  // first, since those are the ones money moves between, then every other the
+  // ledger knows by name. Nothing is chosen until the owner chooses — a form
+  // that defaulted to the first firm in a list would file a wire to the wrong
+  // bank for anyone who skipped the field.
+  function fillFlowFirms(selected=''){
+    const read=[...new Set(records.filter(record=>record.row==='mark'&&record.firm).map(record=>record.firm))];
+    const byName=(a,b)=>firmLabel(a).localeCompare(firmLabel(b));
+    const codes=[...read.sort(byName),...Object.values(FIRMS).filter(code=>!read.includes(code)).sort(byName)];
+    const options=[{text:'Choose an institution',value:''},...codes.map(code=>({text:firmLabel(code),value:String(code)}))];
+    $('flow-firm').replaceChildren(...options.map(option=>Option(option.text,option.value)));
+    $('flow-firm').value=options.some(option=>option.value===selected)?selected:'';
+  }
+  function renderFlowDirection(){
+    $('flow-direction').replaceChildren(...[[1,'Added'],[-1,'Taken out']].map(([sign,label])=>{
+      const chosen=sign===flowSign;
+      const button=Button(label,{variant:chosen?'primary':'secondary',size:'compact','aria-pressed':String(chosen),disabled:busy||!loaded});
+      button.addEventListener('click',()=>{flowSign=sign;renderFlowDirection();});
+      return button;
+    }));
+  }
+  function clearFlowForm(){
+    flowing=null;flowSign=1;
+    fillFlowFirms();
+    $('flow-amount').value='';$('flow-asOf').value=today();
+    formTitle('flow-title');status('','flow-status');renderFlowDirection();
+  }
+  // A saved movement opens for editing; a bare firm opens a new one there,
+  // which is what the + on an institution's card asks for.
+  function fillFlow(flow){
+    if(flow.id){
+      flowing={id:flow.id,revision:flow.revision,firm:flow.firm,asOf:flow.asOf};flowSign=flow.amount<0?-1:1;
+      fillFlowFirms(String(flow.firm));
+      $('flow-amount').value=String(Math.abs(flow.amount));$('flow-asOf').value=flow.asOf;
+      formTitle('flow-title',`Editing ${firmLabel(flow.firm)} · ${flow.asOf}`);
+    }else{clearFlowForm();fillFlowFirms(String(flow.firm));}
+    renderFlowDirection();showEntry('flow');$('flow-amount').focus();
+  }
+  function saveFlow(flow,target='flow-status'){
+    const id=flowRef(flow),existing=records.find(record=>record.id===id);
+    return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp({row:'flow',...flow},id,existing)}),target);
+  }
+
   // Which record is being entered, chosen where it applies. The three forms
   // live in one drawer and one of them is shown; the switch is the currency
   // switch's pattern, because it is the same kind of choice — which of several
   // things this block is currently about.
-  const ENTRY_KINDS=[['figure','Figure','form'],['investment','Private investment','inv-form'],['property','Property','prop-form']];
+  const ENTRY_KINDS=[['figure','Figure','form'],['investment','Private investment','inv-form'],['property','Property','prop-form'],
+    ['flow','Cash in or out','flow-form']];
   function renderEntrySwitch(){
     $('entry-switch').replaceChildren(...ENTRY_KINDS.map(([kind,label])=>{
       const chosen=kind===entering;
@@ -367,12 +414,26 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     $('breakdown').replaceChildren(...(summary.figures&&heldTotal>0?[Allocation({groups:held,total:heldTotal,currency,
       accounts:{title:'Account types',rows:summary.byRegistration}})]:[]));
     $('trend').replaceChildren(TrendTable(series,currency));
-    // Each firm's own quarters. The panel is absent rather than empty until a
-    // firm has been read at least once, because a heading over nothing is a
-    // question the tool cannot yet answer.
-    const firms=firmQuarters(records,{currency});
+    // Each institution's performance, with the cash that moved taken out of it.
+    // The section is absent rather than empty until a firm has been read or had
+    // cash recorded against it, because a heading over nothing is a question
+    // the tool cannot yet answer.
+    const firms=firmPerformance(records,{currency});
     $('firms-panel').hidden=!firms.length;
-    $('firms').replaceChildren(FirmQuarters(firms,currency));
+    $('firms').replaceChildren(Institutions(firms.map(firm=>({...firm,
+      actions:[rowAction(ADD_GLYPH,`Record cash added to or taken out of ${firm.label}`,()=>fillFlow({firm:firm.firm}))],
+      flows:firm.flows.map(entry=>{
+        const flow=entry.flow,moved=`${money(Math.abs(flow.amount),currency)} ${flow.amount<0?'taken out of':'added to'} ${firm.label} on ${flow.asOf}`;
+        // Deleting a movement changes every return measured across it, so it
+        // asks in words, under the line it would remove.
+        const confirm=Stack([Note(`Delete the ${moved}, from all devices?`),ActionGroup([
+          action('Delete cash movement',async()=>{if(await remove(flow))onChanged();},'danger'),
+          action('Keep it',()=>{confirm.hidden=true;})
+        ],{compact:true})],{hidden:true});
+        return {...entry,extra:[confirm],actions:[
+          rowAction(EDIT_GLYPH,`Edit the ${moved}`,()=>fillFlow(flow)),
+          rowAction(DELETE_GLYPH,`Delete the ${moved}`,()=>{confirm.hidden=false;},true)]};
+      })})),{currency}));
   }
 
   function renderAttachment(){
@@ -1062,10 +1123,13 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-unfunded','inv-asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['prop-portfolio','prop-name','prop-link','prop-value','prop-source','prop-debt','prop-asOf'])$(key).disabled=busy||!loaded;
+    for(const key of ['flow-firm','flow-amount','flow-asOf'])$(key).disabled=busy||!loaded;
+    renderFlowDirection();
     renderEntrySwitch();
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
     $('inv-save').disabled=busy||!loaded;$('inv-cancel').disabled=busy;
     $('prop-save').disabled=busy||!loaded;$('prop-cancel').disabled=busy;
+    $('flow-save').disabled=busy||!loaded;$('flow-cancel').disabled=busy;
     $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;syncRead();
     $('drop').disabled=busy||!loaded;
     // Beside the title, only what applies: a quiet arrival can be asked for the
@@ -1122,6 +1186,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // after the form is next cleared.
       fillInvestmentSources(open?$('inv-follows').value:'');
       fillPropertyPortfolios(open?$('prop-portfolio').value:'');
+      fillFlowFirms(open?$('flow-firm').value:'');
       connectionNote();
       // A house whose page is saved and whose figure is not is not waiting for
       // the owner to type anything: it is waiting to be looked up. Not awaited,
@@ -1134,7 +1199,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     generation++;records=[];loaded=false;activeToken='';connection='';attachment=null;
     fold=null;foldEditing=false;snapshot=null;snapshotEditing=false;pageSource=null;engaged=false;
     capital=null;capitalEditing=false;capitalSource='file';
-    clearForm();clearInvestmentForm();clearPropertyForm();renderFold();renderCapital();renderAttachment();renderSnapshot();
+    clearForm();clearInvestmentForm();clearPropertyForm();clearFlowForm();renderFold();renderCapital();renderAttachment();renderSnapshot();
     status('','snapshot-status');
     status('Unlock this section with your passkey.','status','alert');
     render();
@@ -1233,6 +1298,40 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       clearInvestmentForm();$('entry').open=false;onChanged();
     }catch(error){status(vaultReason(error),'inv-status','error');}
   });
+  $('flow-cancel').addEventListener('click',()=>{clearFlowForm();$('entry').open=false;});
+  $('flow-form').addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(busy||!loaded)return;
+    try{
+      const firm=Number($('flow-firm').value||0),asOf=$('flow-asOf').value.trim();
+      // Typed the way a statement prints it — "$500,000" — and read as the
+      // number it is. Which way it went is the switch above, so the box takes
+      // only how much.
+      const typed=$('flow-amount').value.replace(/[$,\s]/g,'');
+      const size=Number(typed);
+      if(!typed||!Number.isFinite(size)||size<=0){status('Enter how much was added or taken out.','flow-status','alert');return;}
+      const amount=Math.round(flowSign*size*100)/100;
+      // Checked before anything is written, so a missing firm or date is said
+      // here rather than half-saved.
+      normalizeFinance({row:'flow',firm,asOf,amount});
+      const id=flowRef({firm,asOf});
+      // A second movement at the same firm on the same day is part of that
+      // day's one net movement — the balance saw them together — so it is
+      // added to what is already there rather than written over it.
+      const already=records.find(record=>record.id===id&&!record.deleting);
+      const joins=already&&flowing?.id!==id;
+      const total=joins?Math.round((already.amount+amount)*100)/100:amount;
+      if(joins&&!total){if(await remove(already,'flow-status')){clearFlowForm();$('entry').open=false;onChanged();
+        status(`That cancels the ${money(Math.abs(already.amount),currency)} already recorded at ${firmLabel(firm)} on ${asOf}, so neither is kept.`,'status','success');}return;}
+      if(!await saveFlow({firm,asOf,amount:total}))return;
+      // A movement moved to another firm or day is a different row. The one it
+      // came from is removed, so an edit cannot leave two.
+      if(flowing&&flowing.id!==id)await remove(records.find(record=>record.id===flowing.id)||{id:flowing.id,revision:flowing.revision},'flow-status');
+      clearFlowForm();$('entry').open=false;onChanged();
+      status(`Recorded ${money(Math.abs(amount),currency)} ${amount<0?'taken out of':'added to'} ${firmLabel(firm)} on ${asOf}.`
+        +(joins?` That day now comes to ${money(total,currency)}.`:''),'status','success');
+    }catch(error){status(vaultReason(error),'flow-status','error');}
+  });
   $('prop-cancel').addEventListener('click',()=>{clearPropertyForm();$('entry').open=false;});
   $('prop-form').addEventListener('submit',async event=>{
     event.preventDefault();
@@ -1279,7 +1378,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       if(unread)status(unread,'status','alert');
     }catch(error){status(vaultReason(error),'prop-status','error');}
   });
-  clearForm();clearInvestmentForm();clearPropertyForm();renderEntrySwitch();clear();
+  clearForm();clearInvestmentForm();clearPropertyForm();clearFlowForm();renderEntrySwitch();clear();
   if(gate.unlocked())refresh();
   const reload=()=>{if(gate.unlocked()&&!$('entry').open)refresh();};
   window.addEventListener('online',reload);

@@ -47,6 +47,10 @@
 .line-chart-axis{position:relative;height:16px}
 .line-chart-label{position:absolute;transform:translateX(-50%);color:var(--muted);font-size:11px;white-space:nowrap}
 .line-chart-label[hidden]{display:none}
+/* Named only at its two ends, a small chart's dates hang inward from them
+   rather than centring on a point at the edge and running off it. */
+.line-chart-axis--ends>.line-chart-label[data-step=edge]:first-child{transform:none}
+.line-chart-axis--ends>.line-chart-label[data-step=edge]:last-child{transform:translateX(-100%)}
 @container (max-width:300px){.line-chart-label[data-step=odd]{display:none}}
 
 /* The bar. Runs are set apart by a wider gap than the parts inside them, and

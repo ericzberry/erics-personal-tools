@@ -416,7 +416,20 @@ export function FinanceView({layout='page'}={}){
             FormField({id:'finance-prop-asOf',label:'As of',kind:'date'}),
             Notice('',{id:'finance-prop-status',role:'status'}),
             ActionGroup([Button('Save property',{id:'finance-prop-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-prop-cancel',variant:'secondary'})])
-            ],{id:'finance-prop-form',className:'form-stack',hidden:true})
+            ],{id:'finance-prop-form',className:'form-stack',hidden:true}),
+            // Cash put into an institution or taken out of it. It moves no
+            // balance — the next reading does that — and exists so a firm handed
+            // $500,000 is not read as a firm that earned it. Which way the money
+            // went is a switch, not a sign the owner has to remember to type.
+            Form([
+            Strong('',{id:'finance-flow-title',hidden:true}),
+            FormField({id:'finance-flow-firm',label:'Institution',kind:'select',options:[]}),
+            Stack([],{id:'finance-flow-direction',className:'currency-switch entry-switch',role:'group','aria-label':'Which way the cash went'}),
+            FormField({id:'finance-flow-amount',label:'Amount',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-flow-asOf',label:'Date',kind:'date'}),
+            Notice('',{id:'finance-flow-status',role:'status'}),
+            ActionGroup([Button('Save cash movement',{id:'finance-flow-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-flow-cancel',variant:'secondary'})])
+            ],{id:'finance-flow-form',className:'form-stack',hidden:true})
           ],{id:'finance-entry'}),
           // Closed until it is wanted. Getting to the figures is a way of putting
           // one in the ledger, which is the scope this tab already has.
@@ -465,13 +478,14 @@ function PageLedger(){
       OverviewSection({id:'finance-entities-panel',title:'Entities',children:[Stack([],{id:'finance-list',className:'travel-list'})]}),
       OverviewSection({id:'finance-trend-panel',title:'Value over time',children:[Stack([],{id:'finance-trend'})]})
     ],{className:'overview-pair'}),
+    // How each place the money is held has done, with the cash that went in or
+    // out taken back out. A figure is filed under whose money it is, so where
+    // it sits survives only in the firm the figure carries — and a figure
+    // entered by hand carries none. Absent until a firm has been read or has
+    // had cash recorded against it.
+    OverviewSection({id:'finance-firms-panel',title:'Institutions',hidden:true,children:[Stack([],{id:'finance-firms'})]}),
     OverviewSection({id:'finance-positions-panel',title:'Private investments',hidden:true,children:[Stack([],{id:'finance-positions'})]}),
-    OverviewSection({id:'finance-properties-panel',title:'Real estate',hidden:true,children:[Stack([],{id:'finance-properties'})]}),
-    // The same question asked of each place the money is held. A figure is
-    // filed under whose money it is, so where it sits survives only in the
-    // firm the figure carries — and a figure entered by hand carries none.
-    // Absent until a firm has been read.
-    OverviewSection({id:'finance-firms-panel',title:'Institutions over time',hidden:true,children:[Stack([],{id:'finance-firms'})]})
+    OverviewSection({id:'finance-properties-panel',title:'Real estate',hidden:true,children:[Stack([],{id:'finance-properties'})]})
   ],{id:'finance-ledger',className:'finance-overview'});
 }
 

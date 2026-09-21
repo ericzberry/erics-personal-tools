@@ -10,7 +10,7 @@
 // private and no houses) and `empty`.
 import {mountFinance} from '../src/finance.js';
 import {CapabilityPicker} from '../src/components/capabilities.js';
-import {markRef,capitalRef,holdingRef,propertyRef,valuationRef} from '../src/finance-data.js';
+import {markRef,capitalRef,holdingRef,propertyRef,valuationRef,flowRef} from '../src/finance-data.js';
 
 const vault={idleMs:900000,available:()=>true,unlocked:()=>true,touch(){},lock(){},
   async key(){return null;},async open(){return '';},async unlockWithRecoveryCode(){return null;},recoveryCode:()=>'EV1-SYNTHETIC'};
@@ -23,6 +23,7 @@ const holding=(number,portfolio,name,vehicle,cls,share=10000,follows=0)=>({id:ho
 const capital=entry=>({unfunded:null,...entry,row:'capital',id:capitalRef(entry),revision:String(entry.value)});
 const property=(number,portfolio,name,link='')=>({id:propertyRef(number),row:'property',revision:'r1',number,portfolio,name,link});
 const valuation=entry=>({...entry,row:'valuation',id:valuationRef(entry),revision:String(entry.value)});
+const flow=(firm,asOf,amount)=>({row:'flow',firm,asOf,amount,id:flowRef({firm,asOf}),revision:String(Math.round(amount*100))});
 
 const PORTFOLIOS=[
   portfolio(1,'Eric and Ariana Berry Estate',1),
@@ -41,12 +42,14 @@ function ledger(dates){
   dates.forEach((asOf,index)=>{
     const f=drift[index];
     records.push(
-      mark(1,10,asOf,Math.round(9318774*f),5),mark(1,10,asOf,Math.round(4102885*f),2),
-      mark(1,3,asOf,2101804+index*38000,2),mark(1,23,asOf,15834+index*1200),
+      // The cash recorded below reaches the balances it went into, so the
+      // cards have something true to take back out.
+      mark(1,10,asOf,Math.round(9318774*f)+(dates.length>1&&index>=1?500000:0),5),mark(1,10,asOf,Math.round(4102885*f),2),
+      mark(1,3,asOf,2101804+index*38000-(dates.length>1&&index>=2?250000:0),2),mark(1,23,asOf,15834+index*1200),
       mark(2,10,asOf,Math.round(3090776*f),5),mark(2,4,asOf,967173+index*21000,5),
       mark(3,10,asOf,Math.round(3082837*f),5),mark(3,3,asOf,418250+index*9000,5),
       mark(4,10,asOf,Math.round(1122666*f),1),mark(4,12,asOf,248422+index*31000,1),
-      mark(5,10,asOf,Math.round(186400*f),4),
+      mark(5,10,asOf,Math.round(186400*f)+(dates.length>1&&index>=3?20000:0),4),
       mark(6,3,asOf,640000-index*12000,2),mark(6,13,asOf,Math.round(212000*(1+(index%2?.18:-.06))),33),
       mark(7,10,asOf,Math.round(41250*f),4),mark(7,3,asOf,18400+index*500,4),
       capital({holding:1,asOf,value:1100000+index*38000,contributed:800000+index*40000,distributed:250000+index*15000,commitment:1000000}),
@@ -65,6 +68,12 @@ function ledger(dates){
     holding(5,4,'Northwind Robotics, Inc. Series B Preferred',2,14),
     property(1,1,'118 Riverside Drive, Apt 7B, New York, NY 10024','https://www.zillow.com/homedetails/synthetic/1234_zpid/'),
     property(2,6,'41 Undermountain Road, Sheffield, MA 01257'));
+  // Cash that moved: a wire into UBS in the second quarter, a withdrawal from
+  // Chase, one deposit at Chase made before it was first read in full — so it
+  // is before the record starts — and one at UBS after its latest reading,
+  // which waits for the next one.
+  if(dates.length>1)records.push(flow(5,'2026-11-14',500000),flow(2,'2027-02-10',-250000),
+    flow(2,'2026-09-02',100000),flow(5,'2027-09-25',150000),flow(4,'2027-05-01',20000));
   return records;
 }
 const STATES={

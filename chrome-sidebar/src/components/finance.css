@@ -378,3 +378,57 @@
    date box a thousand pixels wide is the only thing anyone would notice. */
 .finance-ledger--page .tabs>[role=tabpanel]>.settings-group{max-width:640px}
 .finance-totals[hidden]{display:none}
+
+/* ── Institutions ────────────────────────────────────────────────────────
+   One card a firm, side by side, so UBS is read against Morgan Stanley across
+   and each is read down: what is there, what it has returned with the cash
+   taken out, the line that return has drawn, its quarters, and the cash. A
+   card is the one boundary that fits here — everything inside it is about one
+   place, and nothing inside it is about any other. */
+.firm-cards{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(min(440px,100%),1fr));align-items:start}
+.firm-card{--row-ground:var(--surface);display:flex;flex-direction:column;gap:12px;min-width:0;padding:16px 18px 14px;
+  border:1px solid var(--line);border-radius:12px;background:var(--surface);container-type:inline-size}
+.firm-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.firm-title{display:flex;flex-direction:column;gap:1px;min-width:0}
+.travel-wallet .firm-name{margin:0;font:500 17px/1.25 Georgia,serif;letter-spacing:-.1px;color:var(--ink)}
+.firm-figure{flex:none;display:flex;align-items:center;gap:4px}
+.firm-figure strong.amount{font-size:15px;font-weight:600}
+/* The card's own verb answers to the card, the way a group's answers to its
+   heading line, and a finger sees it all the time. */
+.travel-wallet .firm-card:is(:hover,:focus-within) .firm-head .row-action{opacity:1}
+/* On a pointer the verb floats just left of the balance, on the card's own
+   ground, so the balance ends on the card's edge with the figures under it;
+   a finger keeps it in the flow. UI-27. */
+@media(hover:hover){
+  .firm-figure{position:relative}
+  .firm-figure>.action-group{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin:0 4px 0 0;
+    padding:0 2px;border-radius:4px;background:var(--surface)}
+}
+.firm-performance{display:flex;flex-direction:column;gap:3px}
+.firm-return-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px}
+.firm-return{font:500 26px/1.1 Georgia,serif;letter-spacing:-.3px;color:var(--ink);white-space:nowrap}
+.firm-return--down,.firm-quarter .firm-return--down{color:var(--danger)}
+.firm-split{display:flex;flex-wrap:wrap;gap:0 12px;color:var(--muted);font-size:12px}
+.firm-card>.footnote{margin:0}
+.firm-card .line-chart{padding:8px 48px 0 8px}
+.firm-card .line-chart-grid{left:-8px;right:-48px}
+.firm-card .line-chart-label{font-size:10px}
+/* Each quarter a line, newest first: what the firm held, the cash that moved,
+   what it earned and the return — the last three the ones a balance on its
+   own cannot tell. */
+.firm-quarters{display:flex;flex-direction:column}
+.firm-quarter{display:grid;grid-template-columns:minmax(58px,.9fr) repeat(3,minmax(0,1.25fr)) minmax(46px,.7fr);column-gap:10px;
+  align-items:baseline;padding:5px 0;border-top:1px solid var(--line);font-size:12px;font-variant-numeric:tabular-nums}
+.firm-quarter>:not(:first-child){text-align:end;white-space:nowrap}
+.firm-quarter--head{border-top:0;padding:0 0 3px;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.firm-quarter-when{display:flex;flex-wrap:wrap;column-gap:4px}
+.firm-quarter strong.amount{font-weight:500}
+/* A narrow card drops what the firm held — the heading already says what it
+   holds now — before any figure is squeezed into two lines. */
+@container (max-width:380px){
+  .firm-quarter{grid-template-columns:minmax(52px,.9fr) repeat(2,minmax(0,1.2fr)) minmax(44px,.7fr)}
+  .firm-quarter>:nth-child(2){display:none}
+}
+.firm-cash{margin-top:2px}
+.firm-cash .record-row{padding-block:4px}
+.firm-cash .record-row>p{margin:0;color:var(--muted);font-size:12px}

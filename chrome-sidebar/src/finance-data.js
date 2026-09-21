@@ -601,7 +601,7 @@ export const dateText=value=>{const digits=String(value).padStart(8,'0');return 
 export const toCents=value=>Math.round(Number(value)*100);
 export const fromCents=value=>Math.round(Number(value))/100;
 
-// Six kinds of row share one record stream, so the offline queue, the conflict
+// Seven kinds of row share one record stream, so the offline queue, the conflict
 // rules and the Worker's routes stay exactly one of each. A portfolio is
 // addressed by `p3`; a figure by the three numbers that identify it; an
 // investment by `h3`; one of its capital accounts by the investment and the
@@ -624,17 +624,25 @@ export const HOLDING_ID=/^h([1-9]\d{0,3})$/;
 export const CAPITAL_ID=/^h([1-9]\d{0,3})-(\d{8})$/;
 export const PROPERTY_ID=/^r([1-9]\d{0,3})$/;
 export const VALUATION_ID=/^r([1-9]\d{0,3})-(\d{8})$/;
+// Money the owner put into an institution or took out of it, on a day. It is
+// the one row here that belongs to a firm rather than to a portfolio, because
+// that is where it is noticed — "I added $500K to UBS" — and the question it
+// answers is the firm's: how much of what UBS holds now did UBS earn, and how
+// much was simply handed to it. `f5-20260910` is UBS on 10 September.
+export const FLOW_ID=/^f([1-9]\d{0,1})-(\d{8})$/;
 export const portfolioRef=number=>`p${number}`;
 export const markRef=mark=>`${mark.portfolio}-${mark.class}-${dateNumber(mark.asOf)}${mark.firm?`-${mark.firm}`:''}`;
 export const holdingRef=number=>`h${number}`;
 export const capitalRef=entry=>`h${entry.holding}-${dateNumber(entry.asOf)}`;
 export const propertyRef=number=>`r${number}`;
 export const valuationRef=entry=>`r${entry.property}-${dateNumber(entry.asOf)}`;
+export const flowRef=entry=>`f${entry.firm}-${dateNumber(entry.asOf)}`;
 export const recordRef=record=>record.row==='portfolio'?portfolioRef(record.number)
   :record.row==='holding'?holdingRef(record.number)
   :record.row==='capital'?capitalRef(record)
   :record.row==='property'?propertyRef(record.number)
   :record.row==='valuation'?valuationRef(record)
+  :record.row==='flow'?flowRef(record)
   :markRef(record);
 export function parseRef(ref){
   const portfolio=PORTFOLIO_ID.exec(ref||'');
@@ -647,6 +655,8 @@ export function parseRef(ref){
   if(property)return {row:'property',number:Number(property[1])};
   const valuation=VALUATION_ID.exec(ref||'');
   if(valuation)return {row:'valuation',property:Number(valuation[1]),asOf:dateText(valuation[2])};
+  const flow=FLOW_ID.exec(ref||'');
+  if(flow)return {row:'flow',firm:Number(flow[1]),asOf:dateText(flow[2])};
   const mark=MARK_ID.exec(ref||'');
   if(!mark)return null;
   return {row:'mark',portfolio:Number(mark[1]),class:Number(mark[2]),asOf:dateText(mark[3]),firm:Number(mark[4]||0)};
@@ -734,6 +744,21 @@ export function normalizeFinance(input,previous={}){
       value:amount(get('value'),'the market value'),
       debt:amount(get('debt')??0,'the amount still owed'),source};
   }
+  // Cash put in or taken out: positive in, negative out, never nothing. One
+  // amount per firm and day — a deposit and a withdrawal on the same day are
+  // the one net movement the balance saw — so a change queued offline and
+  // replayed replaces its own row rather than adding itself a second time.
+  if(row==='flow'){
+    const firm=Number(get('firm'));
+    if(!firmId(firm))fail('Choose the institution the cash went into or came out of.');
+    const said=get('amount');
+    const value=Number(said);
+    if(!['number','string'].includes(typeof said)||(typeof said==='string'&&!said.trim())||!Number.isFinite(value)||Math.abs(value)>MAX_VALUE)
+      fail('Enter how much was added or taken out.');
+    const cents=Math.round(value*100)/100;
+    if(!cents)fail('Enter how much was added or taken out.');
+    return {row:'flow',firm,asOf:date(get('asOf'),'date',true),amount:cents};
+  }
   if(row!=='mark')fail('Unknown ledger row.');
   const cls=Number(get('class'));
   if(!assetClass(cls))fail('Choose an asset class.');
@@ -757,6 +782,7 @@ export const holdingsOf=records=>counted(records).filter(record=>record.row==='h
 export const capitalOf=records=>counted(records).filter(record=>record.row==='capital');
 export const propertiesOf=records=>counted(records).filter(record=>record.row==='property').sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
 export const valuationsOf=records=>counted(records).filter(record=>record.row==='valuation');
+export const flowsOf=records=>counted(records).filter(record=>record.row==='flow').sort((a,b)=>a.asOf.localeCompare(b.asOf)||a.firm-b.firm);
 const sum=values=>Math.round(values.reduce((total,value)=>total+value,0)*100)/100;
 const byTotal=(a,b)=>Math.abs(b.total)-Math.abs(a.total)||a.label.localeCompare(b.label);
 

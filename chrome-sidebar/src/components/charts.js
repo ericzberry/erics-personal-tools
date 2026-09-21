@@ -35,9 +35,15 @@ export function niceTicks(min,max,count=4){
 // quarter nobody read is a gap in time, not a point skipped over. `format`
 // writes a value in full for the tooltip and the points' names; `short` writes
 // it for a tick.
-export function LineChart({points=[],format=String,short=format,label='',height=180,describe=()=>''}={}){
+//
+// A small chart — one of several side by side — takes three options: `marks`
+// `last` draws only the newest point, since a line through fifty readings
+// studded with fifty dots is a string of beads rather than a line; `axis`
+// `ends` names only the first and last dates; and `zero` keeps 0 on the axis,
+// which is what a return is read against.
+export function LineChart({points=[],format=String,short=format,label='',height=180,describe=()=>'',marks='all',axis='spread',zero=false}={}){
   const values=points.map(point=>point.value);
-  const ticks=niceTicks(Math.min(...values),Math.max(...values));
+  const ticks=niceTicks(Math.min(...values,...(zero?[0]:[])),Math.max(...values,...(zero?[0]:[])),height<120?2:4);
   const low=ticks[0],high=ticks.at(-1),range=high-low||1;
   const xs=points.map((point,index)=>point.x??index);
   const first=xs[0],span=(xs.at(-1)-first)||1;
@@ -70,6 +76,7 @@ export function LineChart({points=[],format=String,short=format,label='',height=
   // Each point is a button: a keyboard reaches every reading the pointer can,
   // and hears the same words the tooltip shows.
   const dots=points.map((point,index)=>{
+    if(marks==='last'&&index!==points.length-1)return null;
     const words=[point.label,format(point.value),describe(point,index)].filter(Boolean).join(' · ');
     const dot=Button('',{className:`line-chart-point${index===points.length-1?' line-chart-point--last':''}`,
       'aria-label':words,style:`left:${left(point).toFixed(3)}%;top:${top(point.value).toFixed(3)}%`});
@@ -77,7 +84,7 @@ export function LineChart({points=[],format=String,short=format,label='',height=
     dot.addEventListener('blur',hide);
     return dot;
   });
-  plot.append(...dots,tip);
+  plot.append(...dots.filter(Boolean),tip);
   // The newest reading is the one worth naming on the chart itself; the rest
   // are on the axis, in the tooltip and in the table beside it.
   const last=points.at(-1);
@@ -93,9 +100,9 @@ export function LineChart({points=[],format=String,short=format,label='',height=
     // Held inside the plot: a tip at the right edge opens leftward.
     tip.style.left=`${x.toFixed(3)}%`;
     tip.dataset.side=x>60?'left':'right';
-    dots.forEach((dot,at)=>dot.classList.toggle('is-active',at===index));
+    dots.forEach((dot,at)=>dot?.classList.toggle('is-active',at===index));
   }
-  function hide(){rule.hidden=true;tip.hidden=true;dots.forEach(dot=>dot.classList.remove('is-active'));}
+  function hide(){rule.hidden=true;tip.hidden=true;dots.forEach(dot=>dot?.classList.remove('is-active'));}
   // The whole plot answers the pointer, not only the dots: the nearest reading
   // in time is the one shown, so a reader never has to land on an 8px mark.
   plot.addEventListener('pointermove',event=>{
@@ -112,14 +119,14 @@ export function LineChart({points=[],format=String,short=format,label='',height=
   // running into each other, the first, the last and an even spread between.
   // A narrow chart names every other one of those again; `data-step` says
   // which, and the first and the last are always named.
-  const every=Math.ceil(points.length/6);
+  const every=axis==='ends'?Math.max(1,points.length-1):Math.ceil(points.length/6);
   const shown=points.map((point,index)=>!(index%every)||index===points.length-1);
   let count=0;
-  const axis=Stack(points.map((point,index)=>Label(point.label,{className:'line-chart-label',
+  const labels=Stack(points.map((point,index)=>Label(point.label,{className:'line-chart-label',
     style:`left:${left(point).toFixed(3)}%`,
     'data-step':index===0||index===points.length-1?'edge':(shown[index]&&count++%2?'even':'odd'),
-    ...(shown[index]?{}:{hidden:true})})),{className:'line-chart-axis','aria-hidden':'true'});
-  return Stack([plot,axis],{className:'line-chart',role:'group','aria-label':label});
+    ...(shown[index]?{}:{hidden:true})})),{className:`line-chart-axis${axis==='ends'?' line-chart-axis--ends':''}`,'aria-hidden':'true'});
+  return Stack([plot,labels],{className:'line-chart',role:'group','aria-label':label});
 }
 
 // The parts of a whole, as one bar. Parts come in runs — what can be sold this

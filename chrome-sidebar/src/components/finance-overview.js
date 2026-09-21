@@ -1,4 +1,4 @@
-import {Stack,Section,Label,Strong,Note,Amount,Heading,money} from './ui.js';
+import {Stack,Section,Label,Strong,Note,Amount,Heading,GroupTitle,ActionGroup,RecordRow,money} from './ui.js';
 import {LineChart,ProportionBar,linkParts,share} from './charts.js';
 import {moneyShort} from '../money.js';
 import {classSide,classGroup} from '../finance-data.js';
@@ -232,3 +232,70 @@ export function PropertiesTable({rows=[],totals=null,currency='USD'}){
   ],{className:'overview-table overview-table--properties',role:'table','aria-label':'Real estate'});
 }
 
+
+// A return in words a reader already knows: a sign they can see, one decimal,
+// and a real minus rather than a hyphen. It is not money, so it takes no
+// parentheses — what is owed is written that way, and a fund that lost 2% owes
+// nobody anything.
+export const returnText=value=>value===null||value===undefined?'—'
+  :`${value<0?'\u2212':'+'}${Math.abs(value*100).toFixed(1)}%`;
+const DAY=86400000;
+
+// Each institution, as the owner judges one: what is there now, what it has
+// returned since it was first read in full with the cash that moved taken out
+// of it, how much of the change it earned and how much it was handed, the line
+// that return has drawn, each quarter's share of it, and the cash itself.
+//
+// `firm` is what firmPerformance returns, with the verbs added by the caller:
+// `actions` on the card (record cash in or out), and `actions`/`extra` on each
+// flow (edit, delete and the confirmation delete raises).
+export function InstitutionCard(firm,{currency='USD'}={}){
+  const total=firm.total;
+  const drawn=firm.points.filter(point=>point.index!==null);
+  const flows=firm.flows||[];
+  return Section([
+    Stack([
+      Stack([Heading(firm.label,3,{className:'firm-name'}),
+        Label(firm.asOf?`as of ${firm.asOf}`:'not read yet',{className:'overview-meta'})],{className:'firm-title'}),
+      Stack([firm.value===null?null:Amount(firm.value,currency),
+        ActionGroup(firm.actions||[],{compact:true,className:'action-group action-group--compact record-actions'})],{className:'firm-figure'})
+    ],{className:'firm-head'}),
+    total?Stack([
+      Stack([Strong(returnText(total.return),{className:`firm-return${total.return<0?' firm-return--down':''}`}),
+        Label(`since ${firm.from}`,{className:'overview-meta'})],{className:'firm-return-line'}),
+      Stack([
+        Label(`${money(Math.abs(total.gain),currency)} ${total.gain<0?'lost':'earned'}`),
+        total.flow?Label(`${money(Math.abs(total.flow),currency)} ${total.flow<0?'taken out':'added'}`):null
+      ],{className:'firm-split'})
+    ],{className:'firm-performance'})
+      // One reading is a balance, not a return; the second one starts the line.
+      :firm.asOf?Note('A return starts with the next reading.'):null,
+    drawn.length>1?LineChart({label:`${firm.label}, return since ${firm.from}`,height:84,marks:'last',axis:'ends',zero:true,
+      points:drawn.map(point=>({label:point.asOf,value:(point.index-1)*100,x:Date.parse(point.asOf)/DAY})),
+      format:value=>returnText(value/100),
+      short:value=>`${value>0?'+':value<0?'\u2212':''}${Number.isInteger(Math.round(value*1e6)/1e6)?Math.abs(Math.round(value)):Math.abs(value).toFixed(1)}%`}):null,
+    firm.quarters.length?Stack([
+      Stack(['Quarter','Value','Added','Earned','Return'].map(text=>Label(text)),{className:'firm-quarter firm-quarter--head','aria-hidden':'true'}),
+      ...[...firm.quarters].reverse().map(quarter=>Stack([
+        Stack([Label(quarter.label),quarter.struck?Label(quarter.struck,{className:'trend-struck'}):null],{className:'firm-quarter-when'}),
+        Amount(quarter.value,currency),
+        quarter.flow?Amount(quarter.flow,currency):Label('—',{className:'overview-none'}),
+        Amount(quarter.gain,currency),
+        Label(returnText(quarter.return),{className:quarter.return<0?'firm-return--down':''})
+      ],{className:'firm-quarter','aria-label':`${quarter.label}: value ${money(quarter.value,currency)}, `
+        +`${quarter.flow?`${money(quarter.flow,currency)} moved, `:''}${money(quarter.gain,currency)} earned, return ${returnText(quarter.return)}`}))
+    ],{className:'firm-quarters'}):null,
+    flows.length?Section([
+      GroupTitle('Cash in and out',{className:'record-group-title'}),
+      ...flows.map(entry=>RecordRow({title:entry.flow.asOf,figure:Amount(entry.flow.amount,currency),
+        // Money out reads as money out: in parentheses and red, the way the
+        // ledger writes anything leaving, and in words beside it.
+        // The caption stays short — it never wraps — so where the movement
+        // stands against the readings is a line of its own under it.
+        meta:[entry.flow.amount<0?'taken out':'added',entry.flow.pending?'waiting to sync':''].filter(Boolean).join(' · '),
+        notes:[entry.before?'Before the first full reading, so not counted.':entry.waiting?'Counts from the next reading.':''],
+        actions:entry.actions||[],extra:entry.extra||[]}))
+    ],{className:'record-group firm-cash'}):null
+  ],{className:'firm-card','aria-label':firm.label});
+}
+export const Institutions=(firms=[],options={})=>Stack(firms.map(firm=>InstitutionCard(firm,options)),{className:'firm-cards'});

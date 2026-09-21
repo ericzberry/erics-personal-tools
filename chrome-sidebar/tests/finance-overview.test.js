@@ -24,8 +24,10 @@ function unlockedVault(){
 }
 function selectValues(window){
   const descriptor=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value');
+  // Through the attribute: linkedom reads a selection from it, and an option
+  // made with createElement ignores the property.
   Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,get:descriptor.get,set(value){
-    for(const option of this.options)option.selected=option.value===value;
+    for(const option of this.options){if(option.value===String(value))option.setAttribute('selected','');else option.removeAttribute('selected');}
   }});
   return ()=>Object.defineProperty(window.HTMLSelectElement.prototype,'value',descriptor);
 }
@@ -195,3 +197,59 @@ test('a view can tell its own saved change from another view’s',()=>{
   assert.deepEqual(heard,[['panel',marker],['page',marker]],'every view hears it, the one that saved included');
   panel.close();details.close();
 });
+
+// Cash in or out, entered by hand. Which way it went is a switch, the amount is
+// typed the way a statement prints it, and a second movement on the same day
+// at the same firm joins the first rather than writing over it.
+function writable(document,saved,options={}){
+  const writes=[];let records=[...saved];
+  const tool=page(document,records,{...options,offline:{request:async(token,path,request)=>{
+    if(request?.method==='PUT'){writes.push(request.value);records=[...records.filter(record=>record.id!==request.value.id),{...request.value,revision:'r2'}];}
+    if(request?.method==='DELETE'){writes.push({deleted:path});records=records.filter(record=>`/v1/finance/${record.id}`!==path);}
+    return {records};
+  }}});
+  return {tool,writes};
+}
+test('cash is recorded against a firm, one way or the other, and a second movement that day joins the first',async()=>{
+  const document=setup();
+  const saved=[...HELD,{row:'flow',firm:5,asOf:'2026-09-10',amount:500000,id:'f5-20260910',revision:'50000000'}];
+  const {tool,writes}=writable(document,saved);
+  await settle(()=>document.getElementById('finance-flow-firm').options.length>2);
+  // Nothing is chosen for the owner: a default firm would file a wire to the
+  // wrong bank for anyone who skipped the field.
+  assert.equal(document.getElementById('finance-flow-firm').value||'','');
+  const submit=()=>document.getElementById('finance-flow-form').dispatchEvent(new document.defaultView.Event('submit',{cancelable:true}));
+  document.getElementById('finance-flow-amount').value='$250,000';
+  submit();
+  await settle(()=>document.getElementById('finance-flow-status').textContent);
+  assert.match(document.getElementById('finance-flow-status').textContent,/institution/);
+  assert.equal(writes.length,0,'nothing half-saved');
+
+  document.getElementById('finance-flow-firm').value='2';
+  document.getElementById('finance-flow-asOf').value='2026-09-12';
+  [...document.querySelectorAll('#finance-flow-direction button')].find(button=>button.textContent==='Taken out').click();
+  submit();
+  await settle(()=>writes.length===1);
+  assert.deepEqual({...writes[0],id:writes[0].id},{row:'flow',firm:2,asOf:'2026-09-12',amount:-250000,id:'f2-20260912',revision:null});
+  await settle(()=>/Recorded/.test(document.getElementById('finance-status').textContent));
+  assert.equal(document.getElementById('finance-status').textContent,'Recorded $250,000 taken out of Chase on 2026-09-12.');
+
+  // The + on a card opens the form for that firm, going the default way.
+  await settle(()=>document.querySelector('.firm-card[aria-label=UBS]')||document.querySelector('.firm-card'));
+  fillAt(document,5);
+  document.getElementById('finance-flow-amount').value='100000';
+  document.getElementById('finance-flow-asOf').value='2026-09-10';
+  submit();
+  await settle(()=>writes.length===2);
+  assert.equal(writes[1].amount,600000,'added to the $500,000 already recorded that day');
+  assert.equal(writes[1].revision,'50000000','and saved over it, knowingly');
+  await settle(()=>/now comes to/.test(document.getElementById('finance-status').textContent));
+  tool.stop();
+});
+// Opening the flow form for a firm the way its card does, without depending on
+// the card being on screen in this ledger.
+function fillAt(document,firm){
+  document.getElementById('finance-tabs-add-tab').click();
+  [...document.querySelectorAll('#finance-entry-switch button')].find(button=>button.textContent==='Cash in or out').click();
+  document.getElementById('finance-flow-firm').value=String(firm);
+}

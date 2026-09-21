@@ -124,6 +124,14 @@ untouched, and the re-read figures land back into the portfolios that survived.
 It is deliberately not part of `finance-schema.sql`, which is `CREATE TABLE IF
 NOT EXISTS` throughout and is applied routinely.
 
+`finance_flows` holds the cash the owner put into a firm or took out of it:
+firm, date and signed cents, one row per firm and day, at `/v1/finance/f<firm>-<date>`.
+It moves no balance — the figures do that — and exists so each firm's return
+can be stated net of it. It is additive: re-applying `finance-schema.sql` adds
+the empty table to a database made before it existed and touches nothing else,
+and it must be applied before a Worker that reads it is deployed, because the
+ledger's read joins it.
+
 ## Subscriptions and attention
 
 Apply the additive `subscriptions-schema.sql` upgrade to the existing D1 database

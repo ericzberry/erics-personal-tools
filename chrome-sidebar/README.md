@@ -4022,3 +4022,27 @@ lines there) and `components/finance-overview.js`. Recorded as UI-45. Checked
 in `tests/finance-overview.test.js` and `tests/finance-ledger.test.js`;
 previews at `tests/finance-page-preview.html` and
 `tests/finance-ledger-preview.html`. Archive: `release/erics-sidebar-0.6.260.zip`.
+
+## Each institution's return, net of the cash moved (0.6.261 / mobile 0.1.211)
+
+Institutions on the ledger's page is now one card per firm, side by side: what
+is there, the return since the firm was first read in full, how much of the
+change it earned and how much it was handed, a small line of that return over
+every reading, each quarter's value, cash, earnings and return, and the cash
+itself. The return is time-weighted: periods run between full readings, cash
+is weighted by how long it was there (Modified Dietz), and the periods are
+chained, so a firm handed $500,000 is not read as having earned it.
+
+Cash is recorded under **Enter by hand → Cash in or out** in either the panel
+or the page — an institution, Added or Taken out, an amount (typed as
+"$500,000" if you like) and a date — or from the **+** on a firm's card. It is
+a new ledger row, `f<firm>-<date>` in the new `finance_flows` table, one net
+amount per firm and day: a second movement on the same day joins the first.
+It moves no balance; the next reading does. Cash moved before a firm's first
+full reading is before the record starts, and cash moved since its latest
+reading counts from the next one — each card says which. `components/firms.js`
+and `firmQuarters` are gone; their rules — the step function, a quarter
+nobody read is not a row, a partial reading is not an observation, currencies
+are never mixed — carry over to `firmPerformance` in `firm-history.js`, checked
+in `tests/firm-history.test.js`. Apply `finance-schema.sql` before deploying.
+Archive: `release/erics-sidebar-0.6.261.zip`.

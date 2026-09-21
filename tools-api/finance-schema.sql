@@ -130,3 +130,23 @@ CREATE TABLE IF NOT EXISTS finance_valuations (
   source INTEGER NOT NULL,
   PRIMARY KEY (property, as_of)
 ) WITHOUT ROWID;
+
+-- Cash the owner put into an institution or took out of it, on a day: the firm
+-- (a code, never a name, for the reason the figures carry one), the date as
+-- YYYYMMDD and the amount in whole cents, positive in and negative out. It is
+-- not a figure — no balance moves when one is saved — but without it a firm
+-- that was handed $500,000 reads as a firm that earned it.
+--
+-- One row per firm and day is the idempotency rule: a change queued offline and
+-- replayed replaces its own row, and a deposit and a withdrawal on one day are
+-- the one net movement the balance saw.
+--
+-- Additive: CREATE TABLE IF NOT EXISTS on a database made before it existed
+-- adds it empty and touches nothing else, so applying this file again is the
+-- upgrade.
+CREATE TABLE IF NOT EXISTS finance_flows (
+  firm INTEGER NOT NULL,
+  as_of INTEGER NOT NULL,
+  cents INTEGER NOT NULL,
+  PRIMARY KEY (firm, as_of)
+) WITHOUT ROWID;

@@ -229,6 +229,17 @@ never reads as an area measured from a baseline. Every chart has its table:
 the quarterly table under Value over time, the class columns under the bar. A
 tooltip is a convenience and never the only way to read a value.
 
+Charts repeated side by side — one per institution — are small multiples: each
+draws its own single line in the forest, marks only its newest point in brass,
+names only its first and last dates, and keeps 0 on the axis, because a return
+is read against nothing having happened. Comparing firms is done across the
+cards, never by drawing several firms in several colours on one axis.
+
+A return is written with its sign — `+7.1%`, `−0.4%`, a real minus rather than a
+hyphen — and one decimal, in the danger ink when it is negative. It is not
+money, so it takes no parentheses. A return is always stated net of the cash
+the owner put in or took out; a change in a balance is never presented as one.
+
 Positions are set through the CSSOM, never as a `style` attribute: the phone's
 pages forbid inline style attributes, and a width written as one is silently
 dropped there.

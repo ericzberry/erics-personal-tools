@@ -51,20 +51,26 @@ const valuationRecord=row=>({id:`r${row.property}-${row.as_of}`,row:'valuation',
   property:row.property,asOf:dateText(row.as_of),value:fromCents(row.cents),
   debt:fromCents(row.debt),source:row.source});
 
+// Cash in or out at a firm: the same shape as a figure, and like a figure its
+// amount is its revision.
+const flowRecord=row=>({id:`f${row.firm}-${row.as_of}`,row:'flow',revision:String(row.cents),
+  firm:row.firm,asOf:dateText(row.as_of),amount:fromCents(row.cents)});
+
 export async function financeRecords(env){
-  const [portfolios,marks,holdings,capital,properties,valuations]=await Promise.all([
+  const [portfolios,marks,holdings,capital,properties,valuations,flows]=await Promise.all([
     env.DB.prepare('SELECT id, value, revision FROM finance_portfolios ORDER BY id').all(),
     env.DB.prepare('SELECT portfolio, class, firm, as_of, cents FROM finance_marks ORDER BY portfolio, class, firm, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_holdings ORDER BY id').all(),
     env.DB.prepare('SELECT holding, as_of, cents, contributed, distributed, commitment, unfunded FROM finance_capital ORDER BY holding, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_properties ORDER BY id').all(),
-    env.DB.prepare('SELECT property, as_of, cents, debt, source FROM finance_valuations ORDER BY property, as_of DESC').all()
+    env.DB.prepare('SELECT property, as_of, cents, debt, source FROM finance_valuations ORDER BY property, as_of DESC').all(),
+    env.DB.prepare('SELECT firm, as_of, cents FROM finance_flows ORDER BY firm, as_of DESC').all()
   ]);
   const named=await Promise.all(portfolios.results.map(async row=>portfolioRecord(row,await decryptSettings(row.value,AAD(row.id),env))));
   const invested=await Promise.all(holdings.results.map(async row=>holdingRecord(row,await decryptSettings(row.value,HOLDING_AAD(row.id),env))));
   const owned=await Promise.all(properties.results.map(async row=>propertyRecord(row,await decryptSettings(row.value,PROPERTY_AAD(row.id),env))));
   return [...named,...marks.results.map(markRecord),...invested,...capital.results.map(capitalRecord),
-    ...owned,...valuations.results.map(valuationRecord)];
+    ...owned,...valuations.results.map(valuationRecord),...flows.results.map(flowRecord)];
 }
 
 export async function finance(request,env,readValue,json){
@@ -87,6 +93,7 @@ export async function finance(request,env,readValue,json){
   if(ref.row==='capital')return json(await capitalRoute(request,env,readValue,ref));
   if(ref.row==='property')return json(await propertyRoute(request,env,readValue,ref));
   if(ref.row==='valuation')return json(await valuationRoute(request,env,readValue,ref));
+  if(ref.row==='flow')return json(await flowRoute(request,env,readValue,ref));
   return json(await markRoute(request,env,readValue,ref));
 }
 
@@ -289,6 +296,33 @@ async function valuationRoute(request,env,readValue,ref){
     env.DB.prepare('DELETE FROM finance_valuations WHERE property = ? AND as_of NOT IN (SELECT as_of FROM finance_valuations WHERE property = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.property,ref.property,MAX_DATES)
   ]);
   return {record:valuationRecord(row)};
+}
+
+// Cash in or out at a firm. Nothing owns it but the firm, which is a code in a
+// registry rather than a row here, so there is no parent to check and nothing
+// a portfolio's deletion has to reach.
+async function flowRoute(request,env,readValue,ref){
+  const as_of=dateNumber(ref.asOf);
+  const previous=await env.DB.prepare('SELECT firm, as_of, cents FROM finance_flows WHERE firm = ? AND as_of = ?').bind(ref.firm,as_of).first();
+  if(request.method==='GET'){
+    if(!previous)fail(404,'Cash movement not found. Refresh your records.');
+    return {record:flowRecord(previous)};
+  }
+  const input=JSON.parse(await readValue(request));
+  if((previous?String(previous.cents):null)!==(input.revision??null))fail(409,'This changed on another device. Cancel your edits and refresh before trying again.');
+  if(request.method==='DELETE'){
+    if(!previous)return {ok:true};
+    await env.DB.prepare('DELETE FROM finance_flows WHERE firm = ? AND as_of = ?').bind(ref.firm,as_of).run();
+    return {ok:true};
+  }
+  const value=normalizeFinance({...input,row:'flow',firm:ref.firm,asOf:ref.asOf});
+  const cents=toCents(value.amount);
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO finance_flows (firm, as_of, cents) VALUES (?, ?, ?) ON CONFLICT(firm, as_of) DO UPDATE SET cents = excluded.cents').bind(ref.firm,as_of,cents),
+    // The same bound every dated row here keeps, and today's is never dropped.
+    env.DB.prepare('DELETE FROM finance_flows WHERE firm = ? AND as_of NOT IN (SELECT as_of FROM finance_flows WHERE firm = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.firm,ref.firm,MAX_DATES)
+  ]);
+  return {record:flowRecord({firm:ref.firm,as_of,cents})};
 }
 
 // The upgrade path for data that already exists. It is re-runnable: every write

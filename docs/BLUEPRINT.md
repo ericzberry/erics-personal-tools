@@ -73,8 +73,7 @@ progress indicators, imported by `tokens.css` so every host has them) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns
 `{message, tone}` when what it got was not a success) · plus per-feature component
-modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `firms.js`
-(each institution's quarters, under the ledger's own tab), `personal.js`,
+modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
 `vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js`,
@@ -166,11 +165,16 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   valuations — with `propertiesOn` for what a property is worth, what is owed on
   it and what is left; plus `FIRMS`, the permanent code per institution that a
   figure carries to say where it was read, and the quarter helpers that go with
-  it),
-  `firm-history.js` (each institution's own quarters, computed off those codes:
-  a quarter is what the firm held at the end of it, a quarter nobody read is
-  not a row, and a figure carrying no firm belongs to none of them — drawn by
-  `components/firms.js` in the ledger's own tab),
+  it; plus the flow row — `f<firm>-<date>`, cash put into a firm or taken out,
+  signed — that moves no balance and exists so a firm handed money is not read
+  as a firm that earned it),
+  `firm-history.js` (`firmPerformance`: each institution's return, computed
+  off those codes and the cash recorded against them — periods run between
+  full readings, cash is weighted by how long it was there (Modified Dietz) and
+  the periods are chained, then added up by the quarter they end in; a figure
+  carrying no firm belongs to none of them — drawn as the cards under
+  Institutions on the ledger's page by `InstitutionCard` in
+  `components/finance-overview.js`),
   `personal-data.js`/`personal-offline.js`,
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored, plus `birthdaysAhead`
@@ -348,7 +352,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_portfolios`, `finance_marks`, `finance_holdings`, `finance_capital`,
-  `finance_properties`, `finance_valuations`), `personal-schema.sql` (`personal_records`),
+  `finance_properties`, `finance_valuations`, `finance_flows`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),

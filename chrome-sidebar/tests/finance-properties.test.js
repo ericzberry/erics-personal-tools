@@ -184,7 +184,7 @@ test('a mortgage on a property is shown against it and counted against net worth
 // for the property form finds it without reading four closed drawers to see
 // which one it is — and that each form keeps what was typed into it while they
 // look at another.
-test('one drawer offers the three records, and a row action opens it on the right one',async()=>{
+test('one drawer offers every kind of record, and a row action opens it on the right one',async()=>{
   const {document,restore}=setup();
   const {tool}=financeHost(document,{saved:[estate,
     house(1,'456 Second Ave, Town ST 00000'),reading(1,'2026-09-20',610000,320000)]});
@@ -197,7 +197,7 @@ test('one drawer offers the three records, and a row action opens it on the righ
   // One drawer, not three, and the ones that were three are gone.
   for(const gone of ['finance-editor','finance-investment','finance-property'])
     assert.equal(document.getElementById(gone),null,gone);
-  assert.deepEqual(chooser().map(node=>node.textContent),['Figure','Private investment','Property']);
+  assert.deepEqual(chooser().map(node=>node.textContent),['Figure','Private investment','Property','Cash in or out']);
   // `details.open` rather than the attribute throughout: linkedom's setter does
   // not reflect it, and its getter is undefined until something sets it.
   assert.ok(!drawer.open,'offered, not opened');
