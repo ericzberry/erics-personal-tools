@@ -254,11 +254,33 @@ test('an override out-specifies, and a harness loads what its host loads',()=>{
   assert.match(css,/\.travel-wallet \.group-name>\.record-group-title/,
     'the override ties with `.travel-wallet .record-group-title` and would be left to sheet order. '+
     'See UI-31 in docs/UI_RULES.md.');
+  // Co-occurring classes tie as surely as the same class does: the account type
+  // carries `pill` beside `portfolio-kind`, and `.pill` is in travel.css.
+  assert.match(css,/\.travel-wallet \.portfolio-kind\{/,
+    'a bare `.portfolio-kind` weighs what `.pill` weighs and loses to it. See UI-31.');
   const links=markup=>[...markup.matchAll(/<link rel="stylesheet" href="[^"]*components\/([^"]+)"/g)].map(m=>m[1]);
-  const host=links(readFileSync(new URL('../sidepanel.html',import.meta.url),'utf8'));
-  const harness=links(readFileSync(new URL('finance-ledger-preview.html',import.meta.url),'utf8'));
-  assert.ok(host.length>3,'the side panel stopped linking its sheets');
-  assert.deepEqual(harness,host,
-    'the ledger harness and the side panel load different sheets, so the harness shows a cascade '+
-    'the owner never sees. See UI-32 in docs/UI_RULES.md.');
+  const imports=css=>[...css.matchAll(/@import url\('\.\.\/src\/components\/([^']+)'\)/g)].map(m=>m[1]);
+  const read=name=>readFileSync(new URL(name,import.meta.url),'utf8');
+  const panel=links(readFileSync(new URL('../sidepanel.html',import.meta.url),'utf8'));
+  assert.ok(panel.length>3,'the side panel stopped linking its sheets');
+  // One list, shared by every harness that previews a panel screen.
+  assert.deepEqual(imports(read('panel-cascade.css')),panel,
+    'panel-cascade.css has drifted from the side panel. See UI-32 in docs/UI_RULES.md.');
+  // A harness previews one host and loads that host's sheets. The three that
+  // are not panel screens say which host they are, and why.
+  const elsewhere={'ai-models':'settings.html','storage-preview':'settings.html',
+    'restaurant':'restaurants.html','espn-page':null};
+  for(const file of readdirSync(new URL('.',import.meta.url)).filter(name=>name.endsWith('-preview.html'))){
+    const markup=read(file),own=links(markup),host=Object.entries(elsewhere).find(([key])=>file.startsWith(key));
+    if(host&&host[1]===null){assert.deepEqual(own,[],`${file} links sheets but claims to need none`);continue;}
+    if(host){
+      assert.deepEqual(own,links(readFileSync(new URL('../'+host[1],import.meta.url),'utf8')),
+        `${file} previews ${host[1]} and loads different sheets. See UI-32 in docs/UI_RULES.md.`);
+      continue;
+    }
+    assert.match(markup,/href="panel-cascade\.css"/,
+      `${file} previews a side-panel screen with its own short list of sheets, so it shows a cascade `+
+      'the owner never sees. Link panel-cascade.css. See UI-32 in docs/UI_RULES.md.');
+    assert.deepEqual(own,[],`${file} links a component sheet beside panel-cascade.css`);
+  }
 });

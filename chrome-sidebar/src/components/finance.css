@@ -20,6 +20,7 @@
 /* The three disclosures inside the ledger are peers of the run of portfolios
    under them, so their summaries carry a group's weight rather than the 12px
    of a footnote lost between two blocks of figures. */
+.finance-ledger .ledger-panel{padding:6px 0}
 .finance-ledger .ledger-panel>summary{font:600 13px/1.4 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
 /* A point that predates half the ledger is not a lower net worth; it is a
    smaller ledger. Its count says so in words, and the row is set back so the
@@ -55,7 +56,17 @@
    re-inserted last and wins. An override out-specifies. UI-31. */
 .group-name>.record-group-title,
 .travel-wallet .group-name>.record-group-title{display:inline;padding:0;border-bottom:0}
-.portfolio-kind{margin-inline-start:6px;vertical-align:2px}
+/* What kind of account it is qualifies the name, so it is set like a
+   qualifier: muted text following the name, not a bordered tag. A box around
+   two words on every row is a second thing to read on every row, and at
+   sidebar width it pushed half the trusts' names onto a line of their own
+   with the box stranded under them.
+   Scoped, because the element carries `pill` as well and a bare
+   `.portfolio-kind` weighs exactly what `.pill` weighs — and `.pill` lives in
+   travel.css, which three later sheets import again. Co-occurring classes tie
+   as surely as the same class does. UI-31. */
+.travel-wallet .portfolio-kind{margin-inline-start:6px;border:0;padding:0;background:transparent;
+  color:var(--wallet-muted);font-size:11px;letter-spacing:0;white-space:nowrap}
 /* A portfolio's heading is its name, its total, and its own two verbs, ruled
    off from the figures under it as one line. In a narrow sidebar the total
    drops under the name rather than squeezing it into a column six words deep,

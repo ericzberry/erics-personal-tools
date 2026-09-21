@@ -3616,3 +3616,38 @@ check, and is what the check's own words now say.
 
 Validation: 616 extension, 33 mobile and 135 API tests pass from an archive of
 HEAD. Archive: `release/erics-sidebar-0.6.235.zip`.
+
+## One cascade for every harness, and a quieter kind (0.6.236 / mobile 0.1.186)
+
+**The stray-rule bug could have hidden in nineteen more places.** 0.6.230 fixed
+the ledger harness to link the side panel's eleven stylesheets, because a
+preview that links three of them shows a cascade the owner never sees. Every
+other harness still linked one to four. So the fix went one level up: a single
+`tests/panel-cascade.css` holds the panel's sheets in the panel's order, and
+the seventeen harnesses that preview a panel screen link that one file. The
+check compares the file to `sidepanel.html` and then requires every harness to
+use it, so a sheet added to the panel and forgotten in a preview fails the
+suite. The three that preview another host — the settings site, the restaurant
+workspace — name that host in the check and are compared against it instead.
+One of them, the draft preview, turned out to be linking a path that does not
+resolve from `tests/` at all, so it had been previewing with no styles.
+
+**And the same tie bit once more, in the same hour.** Setting the account type
+as quiet text needed `.portfolio-kind`, which weighs exactly what `.pill`
+weighs — and the element carries both classes, with `.pill` living in
+`travel.css`, which three later sheets import again. Co-occurring classes tie
+as surely as the same class does. The rule is scoped now, and the check names
+this case too.
+
+**What the account type looks like.** It qualifies the name, so it is set like
+a qualifier: 11px muted text following the name rather than a bordered tag. A
+box around two words on every row is a second thing to read on every row, and
+at sidebar width it pushed half the trusts' names onto a line of their own with
+the box stranded underneath. The three panels above the list — Breakdown, Value
+over time, Institutions over time — sit closer together as well.
+
+Validation: 616 extension and 33 mobile tests pass from an archive of this
+release. The entity list was read at 374px, and the tones, gifts and reading
+harnesses were opened under the panel cascade to confirm they render as the
+panel renders them. Native iPhone and installed Chrome behavior were not
+directly tested. Archive: `release/erics-sidebar-0.6.236.zip`.

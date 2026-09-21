@@ -251,10 +251,12 @@ horizontal lines."* The known tie is checked in `tests/ui-rules.test.js`.
 
 **UI-32 — a harness loads what its host loads.** *Enforced.* A preview that
 links three of the side panel's eleven sheets is showing a cascade the owner
-never sees, which is exactly how UI-31's tie reached him. The ledger harness
-links the side panel's sheets in the side panel's order, and the check compares
-the two lists rather than trusting them. A harness that needs fewer sheets
-needs a reason written beside it.
+never sees, which is exactly how UI-31's tie reached him twice. Every harness
+for a side-panel screen links `tests/panel-cascade.css`, one file holding the
+panel's sheets in the panel's order; the check compares that file to
+`sidepanel.html` and then requires every harness to use it. The three that
+preview another host — the settings site, the restaurant workspace — name that
+host in the check and are compared against it instead.
 
 **UI-33 — verbs ride on the line of the thing they act on.** *Enforced.* A
 record's two glyphs sit at the end of its own line, and a group's at the end of
