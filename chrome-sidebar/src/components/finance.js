@@ -164,8 +164,13 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
   const part=figure=>Math.round(figure*share/100)/100;
   const commitment=part(num('commitment')),contributed=part(num('contributed'));
   const distributed=part(num('distributed')),value=part(num('value'));
+  // The statement's own figure for what is left to call where it stated one,
+  // and the subtraction where it did not — the same rule the saved position
+  // follows, so the review and the record cannot disagree.
+  const derived=Math.max(0,Math.round((commitment-contributed)*100)/100);
+  const stated=row.unfunded===null||row.unfunded===undefined||row.unfunded===''?null:part(Number(row.unfunded)||0);
   const flows=positionDetail({share,commitment,contributed,distributed,
-    unfunded:Math.max(0,Math.round((commitment-contributed)*100)/100),
+    unfunded:stated??derived,
     multiple:contributed>0?Math.round(((value+distributed)/contributed)*100)/100:null},row.currency);
   // Recorded as one kind, sold as another. Said plainly on the row, because
   // saving the statement does not change how the investment is filed.
@@ -181,6 +186,17 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
     const input=node.querySelector(kind==='select'?'select':'input');
     input.value=String(row[key]??'');
     input.addEventListener(kind==='select'?'change':'input',()=>onField(index,key,input.value));
+    return node;
+  };
+  // Left empty, what is left to call is the subtraction, so the box shows that
+  // answer rather than 0.00 — which is what the field does if nothing is typed
+  // into it, and is the whole of what a caption underneath would have said.
+  const unfundedField=()=>{
+    const node=FormField({id:`finance-capital-unfunded-${index}`,label:'Unfunded commitment',kind:'text',
+      placeholder:money(derived,row.currency)});
+    const input=node.querySelector('input');
+    input.value=String(row.unfunded??'');
+    input.addEventListener('input',()=>onField(index,'unfunded',input.value));
     return node;
   };
   // A share is typed as a percentage and stored in basis points, so it is the
@@ -202,6 +218,7 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
     field('commitment','Commitment'),
     field('contributed','Funded to date'),
     field('distributed','Returned to date'),
+    unfundedField(),
     field('asOf','As of','date'),
     claimed?Note(claimed):null
   ],{className:'snapshot-row'});
@@ -373,6 +390,7 @@ export function FinanceView(){
             FormField({id:'finance-inv-value',label:'Capital account value',kind:'text',placeholder:'0.00'}),
             FormField({id:'finance-inv-funded',label:'Funded to date',kind:'text',placeholder:'0.00'}),
             FormField({id:'finance-inv-returned',label:'Returned to date',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-inv-unfunded',label:'Unfunded commitment',kind:'text',placeholder:'0.00'}),
             FormField({id:'finance-inv-asOf',label:'As of',kind:'date'}),
             Notice('',{id:'finance-inv-status',role:'status'}),
             ActionGroup([Button('Save investment',{id:'finance-inv-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-inv-cancel',variant:'secondary'})])

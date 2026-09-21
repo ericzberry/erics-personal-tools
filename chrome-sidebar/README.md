@@ -3454,3 +3454,53 @@ saying both "aaa" and a trust's name filed by its number rather than by either;
 an unmapped number naming nobody; and the folded figure for the 2021 trust
 carrying the $558.94 the estate used to hold.
 Archive: `release/erics-sidebar-0.6.231.zip`.
+
+## What is left to call is the fund's figure, not our subtraction (0.6.232 / mobile 0.1.182)
+
+The Vista page states 500K committed, 341K contributed, 4K distributed, 392K of
+net asset value — and **167K left to call**. The ledger worked that last one out
+for itself, commitment less contributions, and got 159K.
+
+Both are honest arithmetic and only one is right. A fund can **recall** a
+distribution, which puts it straight back onto the unfunded commitment, and it
+can call money **outside** the commitment altogether — an equalisation payment
+from a late close, an organisational expense — which never came off it. Vista
+does both: 341K contributed but 337K of it against the commitment, and all 4K
+of the distributions recallable. Which dollar is which is knowledge only the
+fund has, and no subtraction here can recover it.
+
+So a capital account now carries what the statement says is left to call, and
+that figure wins. It is NULL when nothing states one, which is almost always,
+and the subtraction answers exactly as before — including for every row already
+filed. Zero is an answer rather than an absence: a fund saying nothing is left
+is not a fund that did not say. The intake asks for the figure only where the
+source prints one of its own and is told never to derive it, because a derived
+one would overwrite the one the device derives better. It is never carried
+forward from last quarter either — a commitment is the same number until it is
+not, and what is left to call is a different number by definition.
+
+The reading review and the investment form both show it, with the subtraction
+as the box's placeholder so leaving it empty says what it will be.
+
+**The other two derived figures were already right.** The multiple has always
+been (value + distributions) ÷ contributions — 1.16× here, exactly what the
+page prints as Net MOIC — and the position's worth is still the net asset
+value, because the distributions are cash that arrived in an account the ledger
+counts on its own.
+
+`finance_capital` gains a nullable `unfunded` column: additive, applied with
+`tools-api/finance-capital-unfunded.sql`, and every row written before it reads
+as "work it out". The revision string grows a fifth segment only for a row that
+states the figure, so an older extension's queued save is never refused for a
+field it has never heard of.
+
+Validation: 613 extension, 33 mobile and 135 API tests pass from an archive of
+this release, and both apps build. New coverage: the stated figure stored,
+returned, revisioned and cleared through the API; zero kept as an answer and a
+negative refused; the position taking the statement's 167K and falling back to
+159K without one; and the multiple unchanged at 1.16×. Not directly checked:
+the live page, which is behind a sign-on — the figures above are from the
+owner's own view of it, and the reading itself was run against the deployed
+intake, which returned the commitment, the contributions, the distributions and
+the NAV as one capital account.
+Archive: `release/erics-sidebar-0.6.232.zip`.

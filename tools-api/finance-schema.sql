@@ -67,10 +67,21 @@ CREATE TABLE IF NOT EXISTS finance_holdings (
   revision TEXT NOT NULL
 );
 
--- One capital account statement: four integers and the date they were struck.
--- Contributions and distributions are inception-to-date rather than per period,
--- so the newest row answers on its own and a quarter that never arrived cannot
--- corrupt a running total.
+-- One capital account statement: four integers, the date they were struck, and
+-- a fifth integer only some statements state. Contributions and distributions
+-- are inception-to-date rather than per period, so the newest row answers on
+-- its own and a quarter that never arrived cannot corrupt a running total.
+--
+-- `unfunded` is what is left to call, and it is NULL unless the statement said
+-- so, because the device derives it from the commitment and the contributions
+-- and is right about it almost always. Almost: a fund can recall a
+-- distribution, which puts it back on the unfunded commitment, and it can call
+-- money outside the commitment altogether — an equalisation payment, an
+-- organisational expense — which never came off it. A feeder into Vista Equity
+-- Partners Fund VIII states 500K committed, 341K contributed and 167K left to
+-- call, and commitment minus contributions is 159K: the 8K between them is
+-- knowledge only the fund has. So where a statement states the figure, it is
+-- kept and it wins.
 --
 -- The primary key is the idempotency rule, as it is for a figure: one statement
 -- per investment and date, so a change queued offline and replayed by the
@@ -82,6 +93,7 @@ CREATE TABLE IF NOT EXISTS finance_capital (
   contributed INTEGER NOT NULL,
   distributed INTEGER NOT NULL,
   commitment INTEGER NOT NULL,
+  unfunded INTEGER,
   PRIMARY KEY (holding, as_of)
 ) WITHOUT ROWID;
 

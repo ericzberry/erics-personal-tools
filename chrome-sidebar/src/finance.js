@@ -155,7 +155,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // Left empty rather than filled in with 100: almost every investment is the
     // whole of its vehicle, and a field nobody has to touch says so best by
     // being blank under a placeholder.
-    for(const key of ['inv-commitment','inv-value','inv-funded','inv-returned','inv-share'])$(key).value='';
+    for(const key of ['inv-commitment','inv-value','inv-funded','inv-returned','inv-unfunded','inv-share'])$(key).value='';
     $('inv-asOf').value=today();
     formTitle('inv-title');
     status('','inv-status');
@@ -170,6 +170,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // The statement, not the position: these boxes hold what the vehicle
     // reported, and the share above says how much of it is this portfolio's.
     $('inv-commitment').value=current?String(current.commitment):'';
+    // Empty is the ordinary answer and means the subtraction, so a statement
+    // that stated nothing about it leaves the box empty rather than filling in
+    // the figure the device worked out and turning it into a typed one.
+    $('inv-unfunded').value=current?.unfunded??'';
     $('inv-value').value=current?String(current.value):'';
     $('inv-funded').value=current?String(current.contributed):'';
     $('inv-returned').value=current?String(current.distributed):'';
@@ -579,7 +583,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
           &&!await saveHolding({...current,share:row.share},target))break;
       }
       if(!await saveCapital({holding,asOf:row.asOf,value:row.value,contributed:row.contributed,
-        distributed:row.distributed,commitment:row.commitment},target))break;
+        distributed:row.distributed,commitment:row.commitment,unfunded:row.unfunded??null},target))break;
       capital.rows.shift();saved++;
     }
     if(!capital.rows.length){
@@ -597,7 +601,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   }
   function saveCapital(entry,target='inv-status'){
     const value={row:'capital',holding:entry.holding,asOf:entry.asOf,value:entry.value,
-      contributed:entry.contributed,distributed:entry.distributed,commitment:entry.commitment};
+      contributed:entry.contributed,distributed:entry.distributed,commitment:entry.commitment,unfunded:entry.unfunded??null};
     const id=capitalRef(value),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
   }
@@ -878,7 +882,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     $('tabs').show('ledger',!quiet&&(!loaded||records.length>0));
     if(quiet)sealLedger();else renderLedger();
     for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
-    for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-asOf'])$(key).disabled=busy||!loaded;
+    for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-unfunded','inv-asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['prop-portfolio','prop-name','prop-link','prop-value','prop-source','prop-debt','prop-asOf'])$(key).disabled=busy||!loaded;
     renderEntrySwitch();
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
@@ -1027,7 +1031,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         class:Number($('inv-class').value),stated:holdingOf(number)?.stated??0,
         share:typed===''?WHOLE_SHARE:Math.round(Number(typed)*100)}))return;
       if(asOf&&!await saveCapital({holding:number,asOf,value:$('inv-value').value||0,
-        contributed:$('inv-funded').value||0,distributed:$('inv-returned').value||0,commitment:$('inv-commitment').value||0}))return;
+        contributed:$('inv-funded').value||0,distributed:$('inv-returned').value||0,commitment:$('inv-commitment').value||0,
+        unfunded:$('inv-unfunded').value.trim()||null}))return;
       // A statement moved to another date is a different row. The one it came
       // from is removed, so an edit cannot leave two.
       const moved=investing?.capitalId&&asOf&&investing.capitalId!==capitalRef({holding:number,asOf});

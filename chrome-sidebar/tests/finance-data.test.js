@@ -809,9 +809,18 @@ test('an investment and its capital account are their own rows, addressed apart 
   for(const bad of [0,-1,10001,'abc'])
     assert.throws(()=>normalizeFinance({row:'holding',number:1,portfolio:3,name:'A fund',vehicle:1,class:4,share:bad}),undefined,String(bad));
   const statement=normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:'1100000.004',contributed:800000,distributed:250000,commitment:1000000});
-  assert.deepEqual(statement,{row:'capital',holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000});
+  assert.deepEqual(statement,{row:'capital',holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000,unfunded:null});
   // A commitment signed with nothing called against it yet is a whole record.
   assert.equal(normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:0,commitment:1000000}).contributed,0);
+  // What is left to call is null unless the statement stated it, and zero is a
+  // statement rather than an absence: a fund saying nothing is left is not the
+  // same as a fund that did not say.
+  const said=fields=>normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:0,commitment:1000000,...fields}).unfunded;
+  assert.equal(said({}),null);
+  assert.equal(said({unfunded:''}),null);
+  assert.equal(said({unfunded:0}),0);
+  assert.equal(said({unfunded:'167000'}),167000);
+  assert.throws(()=>said({unfunded:-1}));
 
   assert.equal(holdingRef(7),'h7');
   assert.equal(capitalRef({holding:7,asOf:'2026-06-30'}),'h7-20260630');
@@ -1299,6 +1308,29 @@ test('a fund administrator states a capital account, and the investor named on i
   assert.equal(held.rows[0].commitment,500000);
   assert.equal(held.rows[0].contributed,341000);
   assert.equal(held.rows[0].distributed,4000);
+
+  // And what is left to call is the fund's own figure, not the subtraction.
+  // The page states 500K committed, 341K contributed and 167K unfunded: a fund
+  // can recall a distribution, putting it back on the commitment, and can call
+  // money outside the commitment altogether, so commitment less contributions
+  // is 159K and wrong. Where the statement states it, it stands.
+  const vista=foldCapital(parseFinanceUpdates({readings:[],unread:'',capital:[
+    {fund:'iCapital-Vista Equity Partners Fund VIII U.S. Access Fund, L.P.',holder:'Eric Berry',
+      vehicle:'fund',asOf:'2026-06-30',value:392000,commitment:500000,contributed:341000,
+      distributed:4000,unfunded:167000,confidence:'high',reason:'The tiles state it.'}]}).capital,
+    ledger(),{institution:'iCapital',today:'2026-09-20'});
+  assert.equal(vista.rows[0].unfunded,167000);
+  const position=fields=>positionsOn([
+    {row:'holding',number:1,portfolio:1,name:'A fund',vehicle:1,class:classById('funds').code},
+    {row:'capital',holding:1,asOf:'2026-06-30',value:392000,contributed:341000,distributed:4000,
+      commitment:500000,...fields}
+  ])[0];
+  assert.equal(position({unfunded:167000}).unfunded,167000);
+  assert.equal(position({unfunded:null}).unfunded,159000,'and the subtraction where nothing states it');
+  assert.equal(position({unfunded:0}).unfunded,0,'a fund saying nothing is left is not a fund saying nothing');
+  // The multiple has always counted what came back; it is the one derived
+  // figure that already took the distributions into account.
+  assert.equal(position({unfunded:167000}).multiple,1.16);
 });
 
 // A general partner is rarely one person's. The owner holds part of the GP of

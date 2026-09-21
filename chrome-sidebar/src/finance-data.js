@@ -625,7 +625,12 @@ export function normalizeFinance(input,previous={}){
       value:amount(get('value'),'capital account value'),
       contributed:amount(get('contributed')??0,'the amount funded to date'),
       distributed:amount(get('distributed')??0,'the amount returned to date'),
-      commitment:amount(get('commitment')??0,'the commitment')};
+      commitment:amount(get('commitment')??0,'the commitment'),
+      // What is left to call, when the statement said so rather than leaving it
+      // to be worked out. Null is the ordinary case and means "work it out";
+      // zero means the fund says there is nothing left, which is a different
+      // answer and has to survive being saved.
+      unfunded:optional(get('unfunded'),'what is left to call')};
   }
   // The property itself: which portfolio holds it, the address, and the page
   // its value is published on. No figure lives here — an address corrected
@@ -732,9 +737,21 @@ export function positionsOn(records,when){
     const commitment=part(current?.commitment||0),contributed=part(current?.contributed||0);
     const distributed=part(current?.distributed||0),value=part(current?.value||0);
     return {holding,current,history,share,commitment,contributed,distributed,value,
-      // What is still owed on the commitment. A fund that has called more than
-      // it committed is at zero rather than at a negative obligation.
-      unfunded:Math.max(0,Math.round((commitment-contributed)*100)/100),
+      // What is still owed on the commitment — the statement's own figure where
+      // it states one, and the subtraction everywhere else. A fund that has
+      // called more than it committed is at zero rather than at a negative
+      // obligation.
+      //
+      // The subtraction is right almost always and cannot be right always: a
+      // recallable distribution goes back onto the unfunded commitment, and a
+      // call made outside the commitment — equalisation interest, an
+      // organisational expense — never came off it. Vista Equity Partners Fund
+      // VIII states 500K committed, 341K contributed and 167K left to call, and
+      // the subtraction says 159K; which 8K is which is knowledge only the fund
+      // has. So where it states the figure, the figure stands.
+      unfunded:current?.unfunded!==null&&current?.unfunded!==undefined
+        ?part(current.unfunded)
+        :Math.max(0,Math.round((commitment-contributed)*100)/100),
       // What a dollar put in is worth now, counting what has already come back.
       // Undefined until something was actually put in — a multiple of nothing
       // is not infinity, it is a question nobody has asked yet.
@@ -978,6 +995,7 @@ export function parseFinanceUpdates(value){
         commitment:optional(draft.commitment,'the commitment'),
         contributed:optional(draft.contributed,'contributions to date'),
         distributed:optional(draft.distributed,'distributions to date'),
+        unfunded:optional(draft.unfunded,'what is left to call'),
         periodContributed:optional(draft.periodContributed,'contributions this period'),
         periodDistributed:optional(draft.periodDistributed,'distributions this period'),
         currency:/^[A-Za-z]{3}$/.test(draft.currency||'')?String(draft.currency).toUpperCase():'',
@@ -1620,6 +1638,11 @@ export function foldCapital(statements,records,{institution='',today=new Date().
       portfolio:portfolio.number,portfolioName:portfolio.name,portfolioKind:portfolio.kind,
       portfolioIsNew:!!portfolio.isNew,currency:portfolio.currency||'USD',
       asOf:statement.asOf,value:statement.value,contributed,distributed,commitment,
+      // Never carried forward from the statement before it. A commitment is the
+      // same figure every quarter until it is not; what is left to call is a
+      // different figure every quarter by definition, so an old one restated
+      // against new contributions would be worse than the subtraction.
+      unfunded:statement.unfunded??null,
       confidence:statement.confidence,from:statement.reason?[statement.reason]:[]});
   }
   if(runs.length)notes.unshift(`${[...new Set(runs)].join('; ')} — a vehicle you manage, so the statement states the whole of it and this is your share. Change the share on the row if that is wrong.`);

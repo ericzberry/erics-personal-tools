@@ -32,10 +32,15 @@ const holdingRecord=(row,value)=>({id:`h${row.id}`,row:'holding',revision:row.re
 const capitalRecord=row=>({id:`h${row.holding}-${row.as_of}`,row:'capital',
   // Same principle as a figure's revision: the row's own content identifies the
   // version of it, so no stored revision column is needed. A capital account is
-  // four numbers rather than one, so the revision is the four.
-  revision:`${row.cents}:${row.contributed}:${row.distributed}:${row.commitment}`,
+  // four numbers rather than one, so the revision is the four — and a fifth
+  // only when the statement stated what is left to call, so that every row
+  // written before that field existed keeps the revision it already had and an
+  // older client's queued save is not refused for a figure it never sent.
+  revision:`${row.cents}:${row.contributed}:${row.distributed}:${row.commitment}`
+    +(row.unfunded===null||row.unfunded===undefined?'':`:${row.unfunded}`),
   holding:row.holding,asOf:dateText(row.as_of),value:fromCents(row.cents),
-  contributed:fromCents(row.contributed),distributed:fromCents(row.distributed),commitment:fromCents(row.commitment)});
+  contributed:fromCents(row.contributed),distributed:fromCents(row.distributed),commitment:fromCents(row.commitment),
+  unfunded:row.unfunded===null||row.unfunded===undefined?null:fromCents(row.unfunded)});
 
 // A property and its dated valuations, exactly like an investment and its
 // capital accounts: an address that can be corrected and sealed, and dated rows
@@ -51,7 +56,7 @@ export async function financeRecords(env){
     env.DB.prepare('SELECT id, value, revision FROM finance_portfolios ORDER BY id').all(),
     env.DB.prepare('SELECT portfolio, class, firm, as_of, cents FROM finance_marks ORDER BY portfolio, class, firm, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_holdings ORDER BY id').all(),
-    env.DB.prepare('SELECT holding, as_of, cents, contributed, distributed, commitment FROM finance_capital ORDER BY holding, as_of DESC').all(),
+    env.DB.prepare('SELECT holding, as_of, cents, contributed, distributed, commitment, unfunded FROM finance_capital ORDER BY holding, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_properties ORDER BY id').all(),
     env.DB.prepare('SELECT property, as_of, cents, debt, source FROM finance_valuations ORDER BY property, as_of DESC').all()
   ]);
@@ -189,7 +194,7 @@ async function holdingRoute(request,env,readValue,ref){
 async function capitalRoute(request,env,readValue,ref){
   const as_of=dateNumber(ref.asOf);
   const where=[ref.holding,as_of];
-  const columns='holding, as_of, cents, contributed, distributed, commitment';
+  const columns='holding, as_of, cents, contributed, distributed, commitment, unfunded';
   const previous=await env.DB.prepare(`SELECT ${columns} FROM finance_capital WHERE holding = ? AND as_of = ?`).bind(...where).first();
   if(request.method==='GET'){
     if(!previous)fail(404,'Capital account not found. Refresh your records.');
@@ -206,12 +211,15 @@ async function capitalRoute(request,env,readValue,ref){
   const owner=await env.DB.prepare('SELECT id FROM finance_holdings WHERE id = ?').bind(ref.holding).first();
   if(!owner)fail(400,'Save the investment before saving a capital account for it.');
   const row={holding:ref.holding,as_of,cents:toCents(value.value),contributed:toCents(value.contributed),
-    distributed:toCents(value.distributed),commitment:toCents(value.commitment)};
+    distributed:toCents(value.distributed),commitment:toCents(value.commitment),
+    // Null rather than zero: a statement stating nothing about what is left to
+    // call is not a statement that nothing is.
+    unfunded:value.unfunded===null?null:toCents(value.unfunded)};
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO finance_capital (${columns}) VALUES (?, ?, ?, ?, ?, ?)
+    env.DB.prepare(`INSERT INTO finance_capital (${columns}) VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(holding, as_of) DO UPDATE SET cents = excluded.cents, contributed = excluded.contributed,
-        distributed = excluded.distributed, commitment = excluded.commitment`)
-      .bind(row.holding,row.as_of,row.cents,row.contributed,row.distributed,row.commitment),
+        distributed = excluded.distributed, commitment = excluded.commitment, unfunded = excluded.unfunded`)
+      .bind(row.holding,row.as_of,row.cents,row.contributed,row.distributed,row.commitment,row.unfunded),
     // The same bound the figures keep, for the same reason, and today's
     // statement is never the one dropped.
     env.DB.prepare('DELETE FROM finance_capital WHERE holding = ? AND as_of NOT IN (SELECT as_of FROM finance_capital WHERE holding = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.holding,ref.holding,MAX_DATES)
@@ -369,13 +377,14 @@ Return JSON {"readings":[...],"capital":[...],"unread":string}. Most sources fil
 
 Leave out of "readings" entirely, rather than reporting: a day's or period's change, a gain or loss, a performance or return figure, cost basis, contributions and distributions (a capital account statement reports these under "capital" below instead), a market or index quote, the credit a card has available and the limit it was given, an interest rate or a price the source advertises, and any figure in a news, education or promotional panel. Leave out as well every figure that belongs to a company or a fund rather than to the person reading the page: a company's valuation, what it has raised, its share price or the fair market value of its stock, and a fund's own assets, liabilities, net asset value or total commitments. A page can state those beside the reader's own position, and they are not a balance of his however large they are.
 
-A capital account statement is the periodic statement a fund, partnership, LLC or SPV sends the investor in it, and it is recognizable by naming a partner or member alongside a capital account balance. A cap-table or fund-administration site states the same thing as a table rather than as a letter: one row per investment, under columns headed Committed, Unfunded, Contributed, Called, Distributed and a value, with the investor named once at the top of the page or in the entity switcher above the table. Every such row is a capital account and belongs in "capital", never in "readings" — a committed, called, unfunded, prepaid or outstanding figure is not an account balance and must never be reported as one. A platform that reports one investment at a time states that same capital account as a row of tiles instead — Total Commitment, Contributions, Distributions, NAV, Total Value, each under the date it is struck at — with the investor and the account named in the selectors above them and again at the head of the title they share with the fund’s name. That is one capital account and belongs in "capital" exactly as a row does, and the chart beside those tiles restates parts of the same figures under its own legend: report the tiles. Each entry in "capital" is {"fund","vehicle","holder","asOf","value","commitment","contributed","distributed","periodContributed","periodDistributed","currency","confidence","reason"}.
+A capital account statement is the periodic statement a fund, partnership, LLC or SPV sends the investor in it, and it is recognizable by naming a partner or member alongside a capital account balance. A cap-table or fund-administration site states the same thing as a table rather than as a letter: one row per investment, under columns headed Committed, Unfunded, Contributed, Called, Distributed and a value, with the investor named once at the top of the page or in the entity switcher above the table. Every such row is a capital account and belongs in "capital", never in "readings" — a committed, called, unfunded, prepaid or outstanding figure is not an account balance and must never be reported as one. A platform that reports one investment at a time states that same capital account as a row of tiles instead — Total Commitment, Contributions, Distributions, NAV, Total Value, each under the date it is struck at — with the investor and the account named in the selectors above them and again at the head of the title they share with the fund’s name. That is one capital account and belongs in "capital" exactly as a row does, and the chart beside those tiles restates parts of the same figures under its own legend: report the tiles. Each entry in "capital" is {"fund","vehicle","holder","asOf","value","commitment","contributed","distributed","unfunded","periodContributed","periodDistributed","currency","confidence","reason"}.
 - fund: the name of the investment as the statement prints it — the partnership, the company, the series or the SPV; in a table of investments it is the row's own name. Required, and the one thing that ties this statement to the one before it, so copy it exactly rather than shortening or expanding it.
 - vehicle: what the document calls itself, exactly one of ${CAPITAL_KINDS}, or "" when it does not say. Use fund when it calls itself a fund, a partnership or an LP; spv when it calls itself an SPV, a series, a co-investment vehicle or a special purpose vehicle; equity when it is a direct holding of shares or units in an operating company with no vehicle in between. Report what the paperwork says, not what you think it really is — the owner decides that, and a disagreement between the two is worth keeping.
 - holder: the partner, member or shareholder the statement is addressed to, exactly as printed — a person, a trust, an LLC. On a page listing a portfolio of investments it is the account or entity the page is shown for, named once above the table, in the entity switcher, or in the investor and account selectors of a page showing one investment, and it is the same holder for every row. "" when nothing names one. Never abbreviate it, never infer it from the fund's own name, and never use the firm or manager a group of rows is listed under.
 - asOf: the period end date the statement is struck at, as YYYY-MM-DD. Required.
 - value: the ending capital account balance, net asset value or the investor's reported value at that date. This is the investor's own balance, not the fund's total. Where a table states it in a column of its own — fair value, market value, total value, net asset value — report that column; where no column states what the position is worth, omit the field rather than reporting a committed, called, contributed or outstanding figure as a value. Where the source states both a net asset value and a total value, report the net asset value: total value is that plus the distributions already taken, and those are reported under "distributed", so reporting it here counts them twice.
-- commitment: the investor's total capital commitment, when stated — the Committed column of a table. Omit the field when it is not. Unfunded, prepaid and outstanding balances are derived from figures already asked for here, so never report one of them in place of another field.
+- commitment: the investor's total capital commitment, when stated — the Committed column of a table. Omit the field when it is not. A prepaid or outstanding balance is derived from figures already asked for here, so never report one of them in place of another field.
+- unfunded: what is left to call, and only where the source states a figure of its own for it — an Unfunded column, "Unfunded Commitment", "Remaining commitment". Omit the field otherwise: the device works it out from the commitment and the contributions, and a figure derived here would overwrite the one it derives. Never subtract anything to fill it in.
 - contributed / distributed: contributions and distributions since inception — the cumulative, life-to-date or "to date" columns, or a table's Contributed and Distributed columns. Omit either when the statement does not state a cumulative figure for it.
 - periodContributed / periodDistributed: contributions and distributions for this period only — the quarter's or the year's column. Omit when not stated.
 - Report each figure exactly as the statement prints it under the heading it prints it under. Do not add a period figure to a cumulative one, do not subtract distributions from contributions, do not derive unfunded commitment, and do not compute a multiple, an IRR or a return. The device does all of that.

@@ -129,12 +129,34 @@ test('an investment keeps its own identity, its capital accounts are four intege
   const filed=(await (await request(env,'/v1/finance/h1-20260630','PUT',statement)).json()).record;
   assert.deepEqual([filed.asOf,filed.value,filed.contributed,filed.distributed,filed.commitment],
     ['2026-06-30',1100000,800000,250000,1000000]);
-  // Four integers in cents and nothing else — no name, no words, no history blob.
+  // Four integers in cents and nothing else — no name, no words, no history
+  // blob — and a fifth that is null because this statement said nothing about
+  // what is left to call.
   assert.deepEqual(sql.prepare('SELECT * FROM finance_capital').all().map(row=>({...row})),
-    [{holding:1,as_of:20260630,cents:110000000,contributed:80000000,distributed:25000000,commitment:100000000}]);
+    [{holding:1,as_of:20260630,cents:110000000,contributed:80000000,distributed:25000000,commitment:100000000,unfunded:null}]);
   // Its revision is its own content, so no revision column is stored and the
-  // one thing optimistic concurrency is for is still caught.
+  // one thing optimistic concurrency is for is still caught. A row that states
+  // nothing extra keeps exactly the revision it had before the column existed,
+  // so an older client's queued save is not refused for a figure it never sent.
   assert.equal(filed.revision,'110000000:80000000:25000000:100000000');
+  assert.equal(filed.unfunded,null);
+  // A fund can recall a distribution and can call money outside the
+  // commitment, so what is left to call is not always the commitment less the
+  // contributions. Where the statement states it, it is stored, it comes back,
+  // and it joins the revision — which only a client that sent it can hold.
+  const stated={...statement,value:392000,contributed:341000,distributed:4000,commitment:500000,unfunded:167000,revision:null};
+  const vista=(await (await request(env,'/v1/finance/h1-20261231','PUT',stated)).json()).record;
+  assert.equal(vista.unfunded,167000);
+  assert.equal(vista.revision,'39200000:34100000:400000:50000000:16700000');
+  assert.equal(sql.prepare('SELECT unfunded FROM finance_capital WHERE as_of = 20261231').get().unfunded,16700000);
+  // Zero is an answer and survives; clearing it back to nothing stored is not
+  // the same row and says so.
+  const none=(await (await request(env,'/v1/finance/h1-20261231','PUT',{...stated,unfunded:0,revision:vista.revision})).json()).record;
+  assert.equal(none.unfunded,0);
+  const cleared=(await (await request(env,'/v1/finance/h1-20261231','PUT',{...stated,unfunded:null,revision:none.revision})).json()).record;
+  assert.equal(cleared.unfunded,null);
+  assert.equal(cleared.revision,'39200000:34100000:400000:50000000');
+  await request(env,'/v1/finance/h1-20261231','DELETE',{revision:cleared.revision});
   assert.equal((await request(env,'/v1/finance/h1-20260630','PUT',{...statement,value:1})).status,409);
   const corrected=(await (await request(env,'/v1/finance/h1-20260630','PUT',{...statement,value:1150000,revision:filed.revision})).json()).record;
   assert.equal(corrected.value,1150000);
