@@ -1,1 +1,1 @@
-{"name":"erics-tools-mobile","private":true,"type":"module","version":"0.1.197","scripts":{"test":"node --test tests/*.test.js","build":"node build.js"}}
+{"name":"erics-tools-mobile","private":true,"type":"module","version":"0.1.198","scripts":{"test":"node --test tests/*.test.js","build":"node build.js"}}

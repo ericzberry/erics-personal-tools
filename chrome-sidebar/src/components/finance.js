@@ -539,12 +539,15 @@ export function TrendTable(series,currency){
   // A later reading in the same quarter replaces the earlier one in the map,
   // so each quarter keeps the last reading taken in it.
   const points=[...new Map(series.map(point=>[quarterOf(point.asOf),point])).values()];
-  const rows=points.slice(-12).map(point=>({...point,label:quarterOf(point.asOf),complete:point.figures>=whole}));
+  const marked=points.map(point=>({...point,label:quarterOf(point.asOf),complete:point.figures>=whole}));
+  // A quarter from before the ledger was first whole is not part of its
+  // history: a lone capital account dated a quarter back stood as "2026 Q2,
+  // $392,000" above an $82 million Q3, a row that said nothing about value
+  // over time. The table starts at the first full picture.
+  const rows=marked.slice(marked.findIndex(point=>point.complete)).slice(-12);
   const full=rows.filter(row=>row.complete);
   const change=full.length>1?full.at(-1).net-full[0].net:null;
-  const headline=change!==null
-    ?`${money(change,currency)} ${change<0?'lower':'higher'} than ${full[0].label}.`
-    :rows.length>1?`Earlier readings covered part of the ledger, so ${full.at(-1)?.label||rows.at(-1).label} is the first full picture.`:'';
+  const headline=change!==null?`${money(change,currency)} ${change<0?'lower':'higher'} than ${full[0].label}.`:'';
   let previous=null;
   return Stack([
     headline?Note(headline):null,

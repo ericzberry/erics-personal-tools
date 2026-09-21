@@ -3938,3 +3938,13 @@ partners — and falls back to 1¢ with a note when it finds none. Card terms
 stays shut after research, and the notes are facts rather than offers to do
 more. Recorded as UI-38 and checked in `tools-api/tests/cards.test.js`.
 Archive: `release/erics-sidebar-0.6.247.zip`.
+
+## Value over time starts at the first full picture (0.6.248 / mobile 0.1.198)
+
+A private fund's capital account arrives a quarter late, so the Vista fund's
+30 June statement stood alone as "2026 Q2, $392,000, 1 of 38 figures" above an
+$82 million Q3. That row was not a smaller net worth, only an emptier ledger.
+Value over time now begins at the first quarter that holds every figure, and a
+quarter before it is left out rather than explained. The capital account itself
+is untouched and still counts in every quarter after its date. Checked in
+`tests/finance-ledger.test.js`. Archive: `release/erics-sidebar-0.6.248.zip`.

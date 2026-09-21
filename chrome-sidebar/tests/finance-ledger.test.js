@@ -127,15 +127,18 @@ const SERIES=[
   {asOf:'2026-09-20',figures:6,net:2039492,assets:2039492,liabilities:0}
 ];
 
-test('value over time draws no change against a reading that covers part of the ledger',()=>{
+// A quarter from before the ledger was first whole is not history: a lone
+// capital account dated 30 June stood as "2026 Q2, $392,000, 1 of 38 figures"
+// above an $82 million Q3. The table starts at the first full picture.
+test('value over time starts at the first quarter that holds every figure',()=>{
   setup();
   const table=TrendTable(SERIES,'USD');
   const rows=[...table.querySelectorAll('.trend-row')].map(row=>row.textContent);
-  assert.equal(rows.length,2);
-  assert.match(rows[0],/2026 Q1\$500\.001 of 6 figures/);
-  assert.match(rows[1],/2026 Q3\$2,039,492$/,'the only full reading, and nothing to compare it with');
+  assert.equal(rows.length,1,'a quarter that covers part of the ledger is shown');
+  assert.match(rows[0],/2026 Q3\$2,039,492$/,'the only full reading, and nothing to compare it with');
+  assert.equal(table.querySelector('.trend-row--partial'),null);
   assert.equal(table.textContent.includes('higher than'),false);
-  assert.match(table.textContent,/first full picture/);
+  assert.equal(table.textContent.includes('first full picture'),false,'a row that is not shown is not explained');
 });
 
 // The table had a Quarterly/Daily switch above it. Daily answered nothing a
@@ -143,7 +146,7 @@ test('value over time draws no change against a reading that covers part of the 
 // fixed and the control is gone.
 test('value over time offers no grain to choose: the table is quarterly and says so once',()=>{
   setup();
-  assert.equal(TrendTable(SERIES,'USD',{period:'day'}).querySelectorAll('.trend-row').length,2,
+  assert.equal(TrendTable(SERIES,'USD',{period:'day'}).querySelectorAll('.trend-row').length,1,
     'a leftover period argument changes nothing');
   const view=FinanceView();
   assert.equal(view.querySelector('#finance-trend-switch'),null);
@@ -172,8 +175,8 @@ test('every section of the net worth tab is a section, and the entities are the 
 test('value over time is read quarterly by default, each quarter shown by its last reading',()=>{
   setup();
   const rows=[...TrendTable(SERIES,'USD').querySelectorAll('.trend-row')].map(row=>row.textContent);
-  assert.deepEqual(rows.map(row=>row.slice(0,7)),['2026 Q1','2026 Q3']);
-  assert.match(rows[1],/2026 Q3\$2,039,492/,'the 19th and the 20th are one quarter, closed on the 20th');
+  assert.deepEqual(rows.map(row=>row.slice(0,7)),['2026 Q3']);
+  assert.match(rows[0],/2026 Q3\$2,039,492/,'the 19th and the 20th are one quarter, closed on the 20th');
 });
 
 test('two full readings are compared with each other, and the partial ones between them are not',()=>{
