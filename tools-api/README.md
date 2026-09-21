@@ -98,6 +98,32 @@ account ever leaves the free plan. The hourly cron re-reads the figure and
 notifies every subscribed device once when usage crosses 75%, 90% or 100%. See
 [Cloudflare runtime](../docs/CLOUDFLARE.md#storage-against-the-limit).
 
+## Finance ledger
+
+Apply `npx wrangler d1 execute erics-personal-tools --remote --file
+finance-schema.sql` before deploying `/v1/finance`. A figure is five integers —
+portfolio, asset class, firm, date, cents — and the primary key is all four of
+the first: one amount per portfolio, class, firm and date. The firm is a code
+from the registry in `chrome-sidebar/src/finance-data.js`, never a name, for the
+same reason a portfolio's name is encrypted; 0 is a figure nobody read off a
+page.
+
+The firm joined that key after two firms holding the same trust's securities
+turned out to be one row: both fold into the trust's portfolio, both are
+marketable securities, both are read the same day, so saving the second reading
+overwrote the first and did it without a conflict, since the device had just
+written the first and held exactly the revision expected of it.
+
+Changing that key on a populated database needs a one-time
+`npx wrangler d1 execute erics-personal-tools --remote --file
+finance-marks-rebuild.sql`. It drops and recreates `finance_marks` and keeps
+nothing: a stored row cannot say which firm it came from, so every existing
+figure would land at firm 0, and each is already the survivor of an overwrite.
+Portfolios, investments, capital accounts, properties and valuations are
+untouched, and the re-read figures land back into the portfolios that survived.
+It is deliberately not part of `finance-schema.sql`, which is `CREATE TABLE IF
+NOT EXISTS` throughout and is applied routinely.
+
 ## Subscriptions and attention
 
 Apply the additive `subscriptions-schema.sql` upgrade to the existing D1 database

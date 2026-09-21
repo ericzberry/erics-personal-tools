@@ -3,7 +3,8 @@ import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
+import {firmLabel} from './account-sites.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {firmQuarters} from './firm-history.js';
 import {FirmQuarters} from './components/firms.js';
@@ -59,8 +60,6 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // Text out of a dropped file is carried on the attachment and described by
   // its card. An open page is not copied anywhere: it is already in front of
   // the owner.
-  // Which entities are open survives a redraw: the ledger refreshes while it
-  // is visible, and a list that shut itself every minute would be unusable.
   const openPortfolios=new Set();
   let attachment=null;
   const status=(text,target='status',tone='')=>setStatus($(target),text,tone);
@@ -119,10 +118,17 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     syncForm();status('','form-status');
   }
   function fillFigure(mark){
-    editing={row:'mark',id:mark.id,revision:mark.revision};
+    // The firm rides along unedited. Where a figure was read is a fact about
+    // the reading, not a field anybody should retype — and the form offering a
+    // firm would invite moving one firm's money to another by choosing from a
+    // menu. Correcting an amount keeps the figure it is correcting.
+    editing={row:'mark',id:mark.id,revision:mark.revision,firm:mark.firm||0};
     fillPortfolioChoices(portfolioRef(mark.portfolio));
     $('class').value=String(mark.class);$('amount').value=String(mark.amount);$('asOf').value=mark.asOf;
-    formTitle('editor-title',`Editing ${portfolioOf(mark.portfolio)?.name||''} · ${classLabel(mark.class)}`);
+    // Named where there is one, because a trust holding securities at two firms
+    // has two of these and the title is what says which is open.
+    formTitle('editor-title',[`Editing ${portfolioOf(mark.portfolio)?.name||''}`,classLabel(mark.class),
+      firmLabel(mark.firm)].filter(Boolean).join(' · '));
     syncForm();showEntry('figure');$('amount').focus();
   }
   function fillPortfolio(portfolio){
@@ -339,11 +345,15 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // the device's own arithmetic — AI labels a figure and never adds two
   // together — and it is what keeps a page's dozens of lines from becoming
   // dozens of stored rows.
-  async function readInto(token,input,{institution='',siteKind=''}={}){
+  // `firm` is the site this reading was taken at, and it stays on every figure
+  // the fold produces. A dropped file passes none: nothing in a statement says
+  // which firm's page it came off, and a guessed firm would be worse than no
+  // firm — it would file one place's money under another's name.
+  async function readInto(token,input,{institution='',firm=0,siteKind=''}={}){
     const id=await connectionId(token);
     const result=await remote(token,`/v1/ai-connections/${id}/finance-intake`,{method:'POST',value:{today:today(),...input},timeoutMs:130000});
     const parsed=parseFinanceUpdates(result);
-    const folded=foldReadings(parsed.readings,portfolios(),{institution,
+    const folded=foldReadings(parsed.readings,portfolios(),{institution,firm,
       defaultClass:classById(SITE_CLASSES[siteKind]||'')?.code??null});
     // A dropped file is one errand, whatever kind of document it turns out to
     // be. The owner should not have to say "this one is a capital account
@@ -475,8 +485,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // What the site itself settles is settled before folding: the institution
       // decides which portfolio a figure is titled to, and what an account
       // total is made of when the page never says.
+      // The institution travels to the reading as words, because the model is
+      // being told what page it is looking at; the firm travels to the fold as
+      // a code, because that is what a figure stores.
       const known=site?{institution:institutionName(site.institution)}:{};
-      const result=await readInto(token,{text:page.text,live:true,...known},{...known,siteKind:site?.kind||''});
+      const result=await readInto(token,{text:page.text,live:true,...known},
+        {...known,firm:firmCode(site?.id||''),siteKind:site?.kind||''});
       snapshot={rows:result.marks,notes:result.notes};snapshotEditing=false;renderSnapshot();
       showCapital(result,'page');
       const any=found(result);
@@ -638,7 +652,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       value:normalizeAndStamp({row:'portfolio',number:portfolio.number,name:portfolio.name,kind:portfolio.kind,currency:portfolio.currency},id,existing)}),target);
   }
   function saveMark(mark,target='form-status'){
-    const value={row:'mark',portfolio:mark.portfolio,class:mark.class,asOf:mark.asOf,amount:mark.amount};
+    // The firm is part of what is saved and part of what addresses it. Dropping
+    // it here would send every read figure to the id a hand-typed one occupies,
+    // which is the collision this whole change exists to end.
+    const value={row:'mark',portfolio:mark.portfolio,class:mark.class,firm:mark.firm||0,asOf:mark.asOf,amount:mark.amount};
     const id=markRef(value),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
   }
@@ -671,12 +688,19 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     const since=(asOf,against)=>dated(asOf,against)?`as of ${asOf}`:'';
     const figure=(portfolio,row)=>{
       const mark=row.current;
-      const confirm=Stack([Note(`Delete the ${row.label} figure for ${portfolio.name} as of ${mark.asOf}?`),ActionGroup([
+      // The firm is named only where this portfolio holds the same class at
+      // more than one of them, exactly as the date is printed only where a line
+      // disagrees with the heading above it. One firm's securities need no word
+      // saying they are the only securities; two need one, or the list shows
+      // the same heading twice over two different numbers.
+      const where=row.shared?firmLabel(row.firm):'';
+      const spoken=[row.label,where].filter(Boolean).join(' · ');
+      const confirm=Stack([Note(`Delete the ${spoken} figure for ${portfolio.name} as of ${mark.asOf}?`),ActionGroup([
         action('Delete from all devices',async()=>{if(await remove(mark))onChanged();},'danger'),
         action('Keep it',()=>{confirm.hidden=true;})
       ],{compact:true})],{hidden:true});
       const past=Stack(row.history.slice(0,8).map(entry=>Note(`${entry.asOf} · ${money(signed(entry),portfolio.currency)}`)),{hidden:true});
-      const named=`${row.label} in ${portfolio.name}`;
+      const named=`${spoken} in ${portfolio.name}`;
       const actions=[
         rowAction(EDIT_GLYPH,`Edit ${named}`,()=>fillFigure(mark)),
         ...(row.history.length>1?[rowAction(HISTORY_GLYPH,`Earlier figures for ${named}`,()=>{past.hidden=!past.hidden;})]:[]),
@@ -691,7 +715,13 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // mortgage reads like another asset, and only the portfolio's own figure
       // further down would say otherwise — so the word rides beside it as well,
       // because a minus sign is a shape and some readers will not see it.
-      const meta=[row.side==='liability'?'liability':'',
+      // The firm rides in the meta rather than in the name, so it is separated
+      // by the same rule every other record in the app follows — the middot
+      // belongs to the name it qualifies, and a narrow panel ends the line
+      // "Liquid securities ·" rather than opening the next one on a dot. It
+      // leads the meta because it is what tells two otherwise identical lines
+      // apart; liability and sync state qualify the class either way.
+      const meta=[where,row.side==='liability'?'liability':'',
         mark.pending?(mark.conflict?'Conflict':mark.deleting?'Pending deletion':'Waiting to sync'):''].filter(Boolean).join(' · ');
       return RecordRow({title:row.label,figure:Amount(signed(mark),portfolio.currency),meta,
         actions,extra:[past,...decide,confirm]});
@@ -960,7 +990,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       const fresh=$('portfolio').value==='new';
       const number=fresh?nextPortfolio():Number($('portfolio').value.slice(1));
       if(fresh&&!await savePortfolio({number,name:$('name').value,kind:Number($('kind').value),currency:$('currency').value}))return;
-      const mark={portfolio:number,class:Number($('class').value),asOf:$('asOf').value,amount:$('amount').value};
+      // A figure typed here belongs to no firm; one opened from the ledger
+      // keeps the firm it was read at.
+      const mark={portfolio:number,class:Number($('class').value),firm:editing?.row==='mark'?editing.firm||0:0,
+        asOf:$('asOf').value,amount:$('amount').value};
       if(!await saveMark(mark))return;
       // A figure moved to another portfolio, class or date is a different row.
       // The one it came from is removed, so an edit cannot leave two.

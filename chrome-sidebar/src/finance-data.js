@@ -523,13 +523,23 @@ export const fromCents=value=>Math.round(Number(value))/100;
 // by the property and the date it was read. The prefixes keep them apart with
 // no ambiguity to resolve: only a mark begins with a digit.
 export const PORTFOLIO_ID=/^p([1-9]\d{0,3})$/;
-export const MARK_ID=/^([1-9]\d{0,3})-(\d{1,2})-(\d{8})$/;
+// A figure is the portfolio, the class and the date — and the firm it was read
+// at, when a firm read it. The firm is last and optional, so every id written
+// before firms existed still parses and still means the same figure: a
+// three-part id is firm 0, which is what a figure typed into the form is.
+//
+// It is in the id because leaving it out lost money. Two firms holding the same
+// trust's securities fold into one portfolio and one class on one day, so under
+// the old id they were one figure, and saving the second reading overwrote the
+// first without a conflict — the device had just written the first and so held
+// exactly the revision expected of it.
+export const MARK_ID=/^([1-9]\d{0,3})-(\d{1,2})-(\d{8})(?:-([1-9]\d{0,1}))?$/;
 export const HOLDING_ID=/^h([1-9]\d{0,3})$/;
 export const CAPITAL_ID=/^h([1-9]\d{0,3})-(\d{8})$/;
 export const PROPERTY_ID=/^r([1-9]\d{0,3})$/;
 export const VALUATION_ID=/^r([1-9]\d{0,3})-(\d{8})$/;
 export const portfolioRef=number=>`p${number}`;
-export const markRef=mark=>`${mark.portfolio}-${mark.class}-${dateNumber(mark.asOf)}`;
+export const markRef=mark=>`${mark.portfolio}-${mark.class}-${dateNumber(mark.asOf)}${mark.firm?`-${mark.firm}`:''}`;
 export const holdingRef=number=>`h${number}`;
 export const capitalRef=entry=>`h${entry.holding}-${dateNumber(entry.asOf)}`;
 export const propertyRef=number=>`r${number}`;
@@ -553,7 +563,7 @@ export function parseRef(ref){
   if(valuation)return {row:'valuation',property:Number(valuation[1]),asOf:dateText(valuation[2])};
   const mark=MARK_ID.exec(ref||'');
   if(!mark)return null;
-  return {row:'mark',portfolio:Number(mark[1]),class:Number(mark[2]),asOf:dateText(mark[3])};
+  return {row:'mark',portfolio:Number(mark[1]),class:Number(mark[2]),asOf:dateText(mark[3]),firm:Number(mark[4]||0)};
 }
 
 export function normalizeFinance(input,previous={}){
@@ -626,8 +636,15 @@ export function normalizeFinance(input,previous={}){
   if(row!=='mark')fail('Unknown ledger row.');
   const cls=Number(get('class'));
   if(!assetClass(cls))fail('Choose an asset class.');
+  // Where this figure was read, and 0 for one nobody read off a page: typed
+  // into the form, or folded out of a dropped file that named no site. Not an
+  // error and not a gap to be filled in — a figure stated by hand genuinely
+  // belongs to no firm, and saying so is what keeps its id the one it has
+  // always had.
+  const said=get('firm'),firm=said===undefined||said===null||said===''?0:Number(said);
+  if(firm!==0&&!firmId(firm))fail('Choose which institution this figure was read at.');
   return {row:'mark',portfolio:counting(get('portfolio'),'a portfolio number',MAX_PORTFOLIOS),
-    class:cls,asOf:date(get('asOf'),'as-of date',true),amount:amount(get('amount'),'amount')};
+    class:cls,firm,asOf:date(get('asOf'),'as-of date',true),amount:amount(get('amount'),'amount')};
 }
 
 // Records still queued for deletion, or waiting on a conflict decision, are left
@@ -643,14 +660,27 @@ const sum=values=>Math.round(values.reduce((total,value)=>total+value,0)*100)/10
 const byTotal=(a,b)=>Math.abs(b.total)-Math.abs(a.total)||a.label.localeCompare(b.label);
 
 // A step function: on any date a portfolio holds whatever its most recent
-// figure on or before that date says it holds, per class, and nothing before
-// its first one. Interpolating between figures would report amounts that were
-// never observed.
+// figure on or before that date says it holds, per class and per firm, and
+// nothing before its first one. Interpolating between figures would report
+// amounts that were never observed.
+//
+// Per firm, because a firm is an observer and not a category. Two firms holding
+// the same trust's securities are two separate piles of money, each reported by
+// whoever can see it, and the newest reading of one says nothing whatever about
+// the other — so the newest of each counts, and they are added. Keying this by
+// portfolio and class alone is what made the second firm's reading replace the
+// first's instead of standing beside it.
+//
+// It also fixes what dates meant here. A firm read on Monday and a firm read on
+// Tuesday both count at their own dates; before this, the later reading simply
+// won, so Monday's money vanished for having been observed first.
 export function heldOn(marks,when){
   const newest=new Map();
   for(const mark of marks){
     if(when&&mark.asOf>when)continue;
-    const key=`${mark.portfolio}-${mark.class}`;
+    // A figure queued offline before firms existed carries none, and is the
+    // same firm 0 as one typed into the form.
+    const key=`${mark.portfolio}-${mark.class}-${mark.firm||0}`;
     const current=newest.get(key);
     if(!current||mark.asOf>current.asOf)newest.set(key,mark);
   }
@@ -841,12 +871,25 @@ export function groupFinanceRecords(records){
   const marks=marksOf(records),positions=positionsOn(records),estates=propertiesOn(records);
   return portfoliosOf(records).map(portfolio=>{
     const mine=marks.filter(mark=>mark.portfolio===portfolio.number);
-    const rows=[...new Set(mine.map(mark=>mark.class))]
-      .map(cls=>{
-        const history=mine.filter(mark=>mark.class===cls).sort((a,b)=>b.asOf.localeCompare(a.asOf));
-        return {class:cls,label:classLabel(cls),side:classSide(cls),current:history[0],history};
+    // A line per class and firm, because that is what one figure is. A trust
+    // holding securities at two firms has two of them, and showing the class
+    // alone would print one number where the ledger holds two — the reading
+    // that made this necessary is the same one that made it visible.
+    const lines=[...new Set(mine.map(mark=>`${mark.class}:${mark.firm||0}`))]
+      .map(key=>{
+        const [cls,firm]=key.split(':').map(Number);
+        const history=mine.filter(mark=>mark.class===cls&&(mark.firm||0)===firm).sort((a,b)=>b.asOf.localeCompare(a.asOf));
+        return {class:cls,firm,label:classLabel(cls),side:classSide(cls),current:history[0],history};
       })
-      .sort((a,b)=>ASSET_CLASSES.findIndex(entry=>entry.code===a.class)-ASSET_CLASSES.findIndex(entry=>entry.code===b.class));
+      .sort((a,b)=>ASSET_CLASSES.findIndex(entry=>entry.code===a.class)-ASSET_CLASSES.findIndex(entry=>entry.code===b.class)
+        ||a.firm-b.firm);
+    // How many firms state this class here. The view names a firm only where
+    // that is more than one, the way it already prints a date only where a line
+    // disagrees with the heading above it: one firm's securities need no word
+    // saying they are the only securities.
+    const firms=new Map();
+    for(const line of lines)firms.set(line.class,(firms.get(line.class)||0)+1);
+    const rows=lines.map(line=>({...line,shared:firms.get(line.class)>1}));
     const held=positions.filter(position=>position.holding.portfolio===portfolio.number);
     const owned=estates.filter(entry=>entry.property.portfolio===portfolio.number);
     return {portfolio,rows,positions:held,properties:owned,
@@ -1175,7 +1218,15 @@ const PLAN_VALUE=/\b(unvested|potential|projected|unexercis\w*)\b[^\n]*\b(value|
 // describe — and it is the reason this map holds accounts rather than a rule
 // about the word "brokerage".
 const FUND_ACCOUNTS={ubs:/\bbrokerage\b|\b63541\b/i};
-export function foldReadings(readings,portfolios,{institution='',defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
+// `firm` is the code from FIRMS for the place this reading was taken, and it
+// rides onto every figure the fold produces. It is passed in rather than looked
+// up from `institution` because the caller already knows which site the page
+// belongs to, and a name is a worse answer than an id: "Chase" is also what a
+// dropped Chase statement says, and a file reading has no site to vouch for it.
+// A reading with no firm produces figures at firm 0, which is honest — nothing
+// about a dropped file says where it came from — and is the same 0 a figure
+// typed into the form carries.
+export function foldReadings(readings,portfolios,{institution='',firm=0,defaultClass=null,today=new Date().toISOString().slice(0,10)}={}){
   const CASH=classById('cash').code,LIQUID=classById('liquid').code;
   // What a figure is in, when the reading did not say. A site answers for its
   // own totals — a bank's balance is cash, a broker's is marketable securities
@@ -1328,10 +1379,14 @@ export function foldReadings(readings,portfolios,{institution='',defaultClass=nu
   };
   const figures=new Map();
   const add=(portfolio,cls,asOf,value,from)=>{
+    // One firm per fold, so the firm is not part of this key: two accounts at
+    // the same firm, in one portfolio and one class, are one figure and are
+    // added together exactly as they always were. It is the key in the ledger
+    // that needed the firm, because that is where two firms meet.
     const key=`${portfolio.number}-${cls}-${asOf}`;
     // A figure carries enough of its portfolio to make it: a proposal that
     // lost the registration would be filed as an ordinary taxable account.
-    const current=figures.get(key)||{portfolio:portfolio.number,class:cls,asOf,amount:0,from:[],
+    const current=figures.get(key)||{portfolio:portfolio.number,class:cls,firm,asOf,amount:0,from:[],
       name:portfolio.name,kind:portfolio.kind,currency:portfolio.currency||'USD',isNew:!!portfolio.isNew};
     figures.set(key,{...current,amount:Math.round((current.amount+value)*100)/100,from:[...current.from,...from]});
   };

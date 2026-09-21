@@ -10,22 +10,43 @@ CREATE TABLE IF NOT EXISTS finance_portfolios (
   revision TEXT NOT NULL
 );
 
--- A figure is four numbers and nothing else: which portfolio, which asset class
--- (the codes in chrome-sidebar/src/finance-data.js), the date as YYYYMMDD, and
--- the amount in whole cents. No names, no account types spelled out, no JSON
--- history blob. WITHOUT ROWID stores the row inside its own key, so a year of
--- weekly figures across six classes and three portfolios is a few tens of
--- kilobytes rather than megabytes of repeated English.
+-- A figure is five numbers and nothing else: which portfolio, which asset class
+-- (the codes in chrome-sidebar/src/finance-data.js), which firm it was read at,
+-- the date as YYYYMMDD, and the amount in whole cents. No names, no account
+-- types spelled out, no JSON history blob. WITHOUT ROWID stores the row inside
+-- its own key, so a year of weekly figures across six classes and three
+-- portfolios is a few tens of kilobytes rather than megabytes of repeated
+-- English.
 --
--- The primary key is the idempotency rule: one amount per portfolio, class and
--- date, so a change queued offline and replayed by the Worker replaces its own
--- figure instead of duplicating it.
+-- The primary key is the idempotency rule: one amount per portfolio, class,
+-- firm and date, so a change queued offline and replayed by the Worker replaces
+-- its own figure instead of duplicating it.
+--
+-- The firm is in that key because leaving it out lost money. A figure is filed
+-- under whose money it is, and one family holds accounts for the same trust at
+-- two firms: both fold into that trust's portfolio, both are marketable
+-- securities, both are read the same day. Under the old key those were one row,
+-- so saving the second reading overwrote the first — silently, since the device
+-- had just written the first and so held exactly the revision expected of it.
+-- $9M of a $43M ledger disappeared that way. Two firms are two observations of
+-- two different piles of money, and the key now says so; a figure nobody read
+-- off a page — typed into the form, or folded out of a dropped file that named
+-- no site — is firm 0.
+--
+-- A code rather than a name, for the reason a portfolio's name is encrypted:
+-- this database is not allowed to say who banks where.
+--
+-- Changing this key on a populated database needs finance-marks-rebuild.sql,
+-- which is deliberately not part of this file: a primary key cannot be altered
+-- in place, and a DROP living here would empty the ledger on some later,
+-- unrelated deployment.
 CREATE TABLE IF NOT EXISTS finance_marks (
   portfolio INTEGER NOT NULL REFERENCES finance_portfolios(id),
   class INTEGER NOT NULL,
+  firm INTEGER NOT NULL DEFAULT 0,
   as_of INTEGER NOT NULL,
   cents INTEGER NOT NULL,
-  PRIMARY KEY (portfolio, class, as_of)
+  PRIMARY KEY (portfolio, class, firm, as_of)
 ) WITHOUT ROWID;
 
 -- A direct investment in a fund, a company or an SPV. This is the one holding

@@ -81,9 +81,32 @@ const AWAITING=[
   property(1,1,'220 Riverside Blvd, Apartment 11J, New York, NY 10069','https://www.zillow.com/homedetails/synthetic/1234_zpid/')
 ];
 
+// One family structure held at two firms, which is the state the firm on a
+// figure exists for. Every trust here banks at both, so each holds the same
+// asset class twice, and the two lines are told apart by the firm rather than
+// silently becoming one. The estate's cash is at one firm only and says
+// nothing about firms at all; the card is stated by hand and belongs to none.
+const TWO_FIRMS=[
+  portfolio(1,'Eric and Ariana Berry Estate',1),
+  portfolio(2,'Berry 2020 Irrevocable Family Trust',5),
+  portfolio(3,'Berry 2020 Descendants’ Irrevocable Trust',5),
+  mark(1,10,'2026-09-20',4102885.12,2),
+  mark(1,10,'2026-09-20',9318774.43,5),
+  mark(1,3,'2026-09-20',2101804.48,2),
+  mark(1,23,'2026-09-20',15834.8),
+  mark(2,10,'2026-09-20',967173.15,2),
+  // Read a week earlier and still counted: a firm read on Monday and a firm
+  // read on Friday are two observations, not a race the later one wins.
+  mark(2,10,'2026-09-14',3090776.06,5),
+  mark(2,4,'2026-09-14',967173.4,5),
+  mark(3,10,'2026-09-20',3082837.29,5),
+  mark(3,4,'2026-09-20',965857.11,5)
+];
+
 const states=[
   ['Still being filled in — one full reading, one partial',FILLING],
   ['Years of figures, liabilities, a position and a stale portfolio',SETTLED],
+  ['The same trusts held at two firms, each counted',TWO_FIRMS],
   ['A house with its page saved and no figure yet',AWAITING],
   ['Nothing recorded yet',[portfolio(1,'Eric and Ariana Berry Estate',1)]]
 ];

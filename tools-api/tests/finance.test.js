@@ -41,9 +41,11 @@ test('the ledger authenticates, keeps only numbers in its figures, and rejects s
 
   const first=(await (await request(env,'/v1/finance/1-3-20260101','PUT',figure)).json()).record;
   assert.deepEqual([first.portfolio,first.class,first.asOf,first.amount],[1,3,'2026-01-01',1000.5]);
-  // Four integers and nothing else: no name, no type spelled out, no history
-  // blob, and the date is the date.
-  assert.deepEqual(sql.prepare('SELECT * FROM finance_marks').all().map(row=>({...row})),[{portfolio:1,class:3,as_of:20260101,cents:100050}]);
+  // Five integers and nothing else: no name, no institution spelled out, no
+  // type, no history blob, and the date is the date. The firm is a code, so the
+  // database still cannot say who banks where; 0 is a figure nobody read off a
+  // page.
+  assert.deepEqual(sql.prepare('SELECT * FROM finance_marks').all().map(row=>({...row})),[{portfolio:1,class:3,firm:0,as_of:20260101,cents:100050}]);
   // A figure's revision is the figure itself, which costs no stored bytes and
   // still catches the only thing that can change underneath a write.
   assert.equal(first.revision,'100050');
@@ -69,6 +71,38 @@ test('the ledger authenticates, keeps only numbers in its figures, and rejects s
   assert.equal((await request(env,'/v1/finance/p1','DELETE',{revision:saved.revision})).status,200);
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_marks').get().n,0);
   assert.equal((await (await request(env,'/v1/finance')).json()).records.length,0);
+});
+
+test('two firms holding one trust’s securities are two rows, not one overwriting the other',async()=>{
+  const {sql,env}=environment('finance-schema.sql');
+  await request(env,'/v1/finance/p1','PUT',{row:'portfolio',name:'Berry 2020 Irrevocable Family Trust',kind:5,currency:'USD',revision:null});
+
+  // The same portfolio, the same asset class, the same day — read at two
+  // firms. Under the old key these were one row and the second write silently
+  // replaced the first, which is how $9M left a $43M ledger.
+  const chase=(await (await request(env,'/v1/finance/1-10-20260920-2','PUT',{row:'mark',amount:1_000_000,revision:null})).json()).record;
+  const ubs=(await (await request(env,'/v1/finance/1-10-20260920-5','PUT',{row:'mark',amount:3_090_776,revision:null})).json()).record;
+  assert.deepEqual([chase.firm,ubs.firm],[2,5]);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_marks').get().n,2,'two firms are two rows');
+  assert.equal(sql.prepare('SELECT SUM(cents) AS c FROM finance_marks').get().c,409_077_600);
+
+  // A figure stated by hand is a third: it belongs to no firm and keeps the
+  // three-part id it has always had.
+  const typed=(await (await request(env,'/v1/finance/1-10-20260920','PUT',{row:'mark',amount:25,revision:null})).json()).record;
+  assert.equal(typed.firm,0);
+  assert.equal(typed.id,'1-10-20260920');
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_marks').get().n,3);
+
+  // Re-reading one firm still replaces that firm's own figure rather than
+  // adding beside it, which is the idempotency the key exists for — and it
+  // leaves the firm next to it untouched.
+  assert.equal((await request(env,'/v1/finance/1-10-20260920-5','PUT',{row:'mark',amount:3_100_000,revision:String(309_077_600)})).status,200);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_marks').get().n,3,'a re-read firm replaces its own row');
+  assert.equal(sql.prepare('SELECT cents AS c FROM finance_marks WHERE firm = 2').get().c,100_000_000,'and does not touch the firm beside it');
+
+  // Deleting one firm's figure leaves the others standing.
+  assert.equal((await request(env,'/v1/finance/1-10-20260920-2','DELETE',{revision:String(100_000_000)})).status,200);
+  assert.deepEqual(sql.prepare('SELECT firm FROM finance_marks ORDER BY firm').all().map(row=>row.firm),[0,5]);
 });
 
 test('an investment keeps its own identity, its capital accounts are four integers, and deleting takes both',async()=>{

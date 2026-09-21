@@ -14,13 +14,19 @@ const ira={row:'portfolio',number:2,name:'Eric Berry',kind:2,currency:'USD'};
 const mark=(portfolio,cls,asOf,amount)=>({...normalizeFinance({row:'mark',portfolio,class:cls,asOf,amount}),id:markRef({portfolio,class:cls,asOf})});
 const ledger=(...rows)=>[{...estate,id:'p1'},{...ira,id:'p2'},...rows];
 
-test('a stored row is a portfolio or four numbers, and nothing else gets in',()=>{
+test('a stored row is a portfolio or five numbers, and nothing else gets in',()=>{
   const figure=normalizeFinance({row:'mark',portfolio:1,class:3,asOf:'2026-01-01',amount:'1000.005'});
-  assert.deepEqual(figure,{row:'mark',portfolio:1,class:3,asOf:'2026-01-01',amount:1000.01});
+  // Five, not four: the firm this was read at is part of a figure, and 0 says
+  // nobody read it off a page. A figure that could not say which firm it came
+  // from was one two firms wrote over each other.
+  assert.deepEqual(figure,{row:'mark',portfolio:1,class:3,firm:0,asOf:'2026-01-01',amount:1000.01});
+  assert.equal(normalizeFinance({row:'mark',portfolio:1,class:3,firm:5,asOf:'2026-01-01',amount:1}).firm,5);
   // Nothing that was carried on every record before survives: no name, no
-  // institution, no type spelled out, no liquidity, no tags, no history blob.
+  // institution spelled out, no type, no liquidity, no tags, no history blob.
+  // The firm is a code, which is the opposite of spelling one out — D1 holds
+  // the number and only the device knows the word for it.
   assert.deepEqual(Object.keys(normalizeFinance(estate)),['row','number','name','kind','currency']);
-  for(const change of [{class:99},{class:'stocks'},{portfolio:0},{portfolio:MAX_PORTFOLIOS+1},{amount:-1},{amount:'abc'},{asOf:'2026-02-30'},{asOf:''},{row:'something'}])
+  for(const change of [{class:99},{class:'stocks'},{portfolio:0},{portfolio:MAX_PORTFOLIOS+1},{amount:-1},{amount:'abc'},{asOf:'2026-02-30'},{asOf:''},{row:'something'},{firm:99},{firm:'chase'}])
     assert.throws(()=>normalizeFinance({row:'mark',portfolio:1,class:3,asOf:'2026-01-01',amount:1,...change}),undefined,JSON.stringify(change));
   for(const change of [{kind:99},{name:'  '},{currency:'DOLLAR'},{number:0}])
     assert.throws(()=>normalizeFinance({...estate,...change}),undefined,JSON.stringify(change));
@@ -29,10 +35,19 @@ test('a stored row is a portfolio or four numbers, and nothing else gets in',()=
 test('a date is stored as one number and read back as the date it was',()=>{
   assert.equal(dateNumber('2026-09-19'),20260919);
   assert.equal(dateText(20260919),'2026-09-19');
+  // A figure nobody read off a page is addressed exactly as it always was, so
+  // no id already written, queued or typed means something different now.
   assert.equal(markRef({portfolio:2,class:3,asOf:'2026-09-19'}),'2-3-20260919');
-  assert.deepEqual(parseRef('2-3-20260919'),{row:'mark',portfolio:2,class:3,asOf:'2026-09-19'});
+  assert.deepEqual(parseRef('2-3-20260919'),{row:'mark',portfolio:2,class:3,asOf:'2026-09-19',firm:0});
+  // One read at a firm says so, and is a different figure from the one above.
+  assert.equal(markRef({portfolio:2,class:3,asOf:'2026-09-19',firm:5}),'2-3-20260919-5');
+  assert.deepEqual(parseRef('2-3-20260919-5'),{row:'mark',portfolio:2,class:3,asOf:'2026-09-19',firm:5});
   assert.deepEqual(parseRef(portfolioRef(4)),{row:'portfolio',number:4});
-  for(const bad of ['','p0','1-3-2026','nonsense','1-3-20260919-x'])assert.equal(parseRef(bad),null,bad);
+  // Firm 0 is said by leaving it out, so spelling it is not another way to
+  // write the same id — two spellings of one row is how a ledger grows a
+  // duplicate nobody can see.
+  for(const bad of ['','p0','1-3-2026','nonsense','1-3-20260919-x','1-3-20260919-0','1-3-20260919-'])
+    assert.equal(parseRef(bad),null,bad);
 });
 
 test('one figure per portfolio, class and date, so a replayed queued change cannot duplicate one',()=>{
@@ -803,7 +818,7 @@ test('an investment and its capital account are their own rows, addressed apart 
   assert.deepEqual(parseRef('h7'),{row:'holding',number:7});
   assert.deepEqual(parseRef('h7-20260630'),{row:'capital',holding:7,asOf:'2026-06-30'});
   // Only a figure begins with a digit, so no prefix can be mistaken for another.
-  assert.deepEqual(parseRef('3-4-20260630'),{row:'mark',portfolio:3,class:4,asOf:'2026-06-30'});
+  assert.deepEqual(parseRef('3-4-20260630'),{row:'mark',portfolio:3,class:4,asOf:'2026-06-30',firm:0});
   for(const bad of ['h0','h7-2026','h7-20260630-x','hh7'])assert.equal(parseRef(bad),null,bad);
 
   for(const change of [{vehicle:99},{vehicle:'fund'},{class:23},{name:'  '},{portfolio:0}])

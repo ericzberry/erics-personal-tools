@@ -169,7 +169,12 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   assert.deepEqual(writes.map(write=>write.row),['mark','portfolio','mark']);
   assert.deepEqual(writes.filter(write=>write.row==='mark').map(write=>[write.portfolio,write.class,write.amount,write.asOf]),
     [[1,10,124500.5,'2026-09-11'],[2,10,88000,'2026-09-11']]);
-  assert.equal(writes[0].id,'1-10-20260911','a figure is identified by where, what and when — nothing else');
+  // Where, what, when — and which firm, because a page reading knows which firm
+  // it is reading. Without that last part a second firm's reading of the same
+  // trust on the same day wrote over this one instead of standing beside it.
+  assert.equal(writes[0].id,'1-10-20260911-1','a figure is identified by where, what, when and the firm it was read at');
+  assert.deepEqual(writes.filter(write=>write.row==='mark').map(write=>write.firm),[1,1],
+    'every figure in one reading carries the site it was read at');
   assert.equal(writes[0].revision,null,'a date with no figure yet is an append');
   // E*TRADE settles no titling of its own, so the IRA is named after the
   // account rather than guessed at — but it is registered as an IRA, which is

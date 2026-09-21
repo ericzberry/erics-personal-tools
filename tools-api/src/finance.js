@@ -16,12 +16,17 @@ const AAD=number=>`finance:p${number}`;
 const HOLDING_AAD=number=>`finance:h${number}`;
 const PROPERTY_AAD=number=>`finance:r${number}`;
 const portfolioRecord=(row,value)=>({id:`p${row.id}`,row:'portfolio',revision:row.revision,number:row.id,...value});
-const markRecord=row=>({id:`${row.portfolio}-${row.class}-${row.as_of}`,row:'mark',
+// The id is built here rather than through `markRef` because the Worker reads
+// rows, not records — but it is the same rule and must stay the same rule: the
+// firm is named only when there is one, so a figure nobody read off a page
+// keeps the three-part id it has always had.
+const markRecord=row=>({id:`${row.portfolio}-${row.class}-${row.as_of}${row.firm?`-${row.firm}`:''}`,row:'mark',
   // A figure's revision is the figure itself. Nothing else identifies a version
   // of a row whose whole content is one number, and a stored revision would
   // cost more space than the data it guards — while still catching exactly what
   // optimistic concurrency is for: the amount changed under me.
-  revision:String(row.cents),portfolio:row.portfolio,class:row.class,asOf:dateText(row.as_of),amount:fromCents(row.cents)});
+  revision:String(row.cents),portfolio:row.portfolio,class:row.class,firm:row.firm||0,
+  asOf:dateText(row.as_of),amount:fromCents(row.cents)});
 
 const holdingRecord=(row,value)=>({id:`h${row.id}`,row:'holding',revision:row.revision,number:row.id,portfolio:row.portfolio,...value});
 const capitalRecord=row=>({id:`h${row.holding}-${row.as_of}`,row:'capital',
@@ -44,7 +49,7 @@ const valuationRecord=row=>({id:`r${row.property}-${row.as_of}`,row:'valuation',
 export async function financeRecords(env){
   const [portfolios,marks,holdings,capital,properties,valuations]=await Promise.all([
     env.DB.prepare('SELECT id, value, revision FROM finance_portfolios ORDER BY id').all(),
-    env.DB.prepare('SELECT portfolio, class, as_of, cents FROM finance_marks ORDER BY portfolio, class, as_of DESC').all(),
+    env.DB.prepare('SELECT portfolio, class, firm, as_of, cents FROM finance_marks ORDER BY portfolio, class, firm, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_holdings ORDER BY id').all(),
     env.DB.prepare('SELECT holding, as_of, cents, contributed, distributed, commitment FROM finance_capital ORDER BY holding, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_properties ORDER BY id').all(),
@@ -115,8 +120,12 @@ async function portfolioRoute(request,env,readValue,ref){
 
 async function markRoute(request,env,readValue,ref){
   const as_of=dateNumber(ref.asOf);
-  const where=[ref.portfolio,ref.class,as_of];
-  const previous=await env.DB.prepare('SELECT portfolio, class, as_of, cents FROM finance_marks WHERE portfolio = ? AND class = ? AND as_of = ?').bind(...where).first();
+  // Four columns identify a figure, not three. The firm belongs in every one of
+  // these — the lookup, the delete, the insert and the pruning — because two
+  // firms' figures for one portfolio and class on one day are two rows, and a
+  // statement that left the firm out would reach the wrong one of them.
+  const where=[ref.portfolio,ref.class,ref.firm,as_of];
+  const previous=await env.DB.prepare('SELECT portfolio, class, firm, as_of, cents FROM finance_marks WHERE portfolio = ? AND class = ? AND firm = ? AND as_of = ?').bind(...where).first();
   if(request.method==='GET'){
     if(!previous)fail(404,'Figure not found. Refresh your records.');
     return {record:markRecord(previous)};
@@ -125,21 +134,23 @@ async function markRoute(request,env,readValue,ref){
   if((previous?String(previous.cents):null)!==(input.revision??null))fail(409,'This figure changed on another device. Cancel your edits and refresh before trying again.');
   if(request.method==='DELETE'){
     if(!previous)return {ok:true};
-    await env.DB.prepare('DELETE FROM finance_marks WHERE portfolio = ? AND class = ? AND as_of = ?').bind(...where).run();
+    await env.DB.prepare('DELETE FROM finance_marks WHERE portfolio = ? AND class = ? AND firm = ? AND as_of = ?').bind(...where).run();
     return {ok:true};
   }
-  const value=normalizeFinance({...input,row:'mark',portfolio:ref.portfolio,class:ref.class,asOf:ref.asOf});
+  const value=normalizeFinance({...input,row:'mark',portfolio:ref.portfolio,class:ref.class,firm:ref.firm,asOf:ref.asOf});
   const owner=await env.DB.prepare('SELECT id FROM finance_portfolios WHERE id = ?').bind(ref.portfolio).first();
   if(!owner)fail(400,'Save the portfolio before saving a figure for it.');
   const cents=toCents(value.amount);
   await env.DB.batch([
-    env.DB.prepare('INSERT INTO finance_marks (portfolio, class, as_of, cents) VALUES (?, ?, ?, ?) ON CONFLICT(portfolio, class, as_of) DO UPDATE SET cents = excluded.cents').bind(ref.portfolio,ref.class,as_of,cents),
+    env.DB.prepare('INSERT INTO finance_marks (portfolio, class, firm, as_of, cents) VALUES (?, ?, ?, ?, ?) ON CONFLICT(portfolio, class, firm, as_of) DO UPDATE SET cents = excluded.cents').bind(ref.portfolio,ref.class,ref.firm,as_of,cents),
     // A ledger kept forever is still a ledger with a bound. The oldest dates
-    // for this one class fall off past the limit; every other class keeps its
-    // own, and today's figure is never the one dropped.
-    env.DB.prepare('DELETE FROM finance_marks WHERE portfolio = ? AND class = ? AND as_of NOT IN (SELECT as_of FROM finance_marks WHERE portfolio = ? AND class = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.portfolio,ref.class,ref.portfolio,ref.class,MAX_DATES)
+    // for this one class at this one firm fall off past the limit; every other
+    // class and every other firm keeps its own, and today's figure is never the
+    // one dropped. Per firm rather than per class, because a firm read weekly
+    // would otherwise age out the yearly figures of the firm beside it.
+    env.DB.prepare('DELETE FROM finance_marks WHERE portfolio = ? AND class = ? AND firm = ? AND as_of NOT IN (SELECT as_of FROM finance_marks WHERE portfolio = ? AND class = ? AND firm = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.portfolio,ref.class,ref.firm,ref.portfolio,ref.class,ref.firm,MAX_DATES)
   ]);
-  return {record:markRecord({portfolio:ref.portfolio,class:ref.class,as_of,cents})};
+  return {record:markRecord({portfolio:ref.portfolio,class:ref.class,firm:ref.firm,as_of,cents})};
 }
 
 // An investment is a portfolio's, and its capital accounts are its own, so both
@@ -304,8 +315,11 @@ export async function backfillFinance(env,{confirm=false}={}){
     await env.DB.prepare('INSERT INTO finance_portfolios (id, value, revision) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING')
       .bind(portfolio.number,await encryptSettings({name:portfolio.name,kind:portfolio.kind,currency:portfolio.currency},AAD(portfolio.number),env),crypto.randomUUID()).run();
   }
+  // Firm 0, stated rather than left to the column default, because the conflict
+  // target has to name the whole key. A legacy record-per-account row never
+  // recorded where it was read, so 0 is the truth about it and not a placeholder.
   if(marks.length)await env.DB.batch(marks.map(mark=>env.DB
-    .prepare('INSERT INTO finance_marks (portfolio, class, as_of, cents) VALUES (?, ?, ?, ?) ON CONFLICT(portfolio, class, as_of) DO UPDATE SET cents = excluded.cents')
+    .prepare('INSERT INTO finance_marks (portfolio, class, firm, as_of, cents) VALUES (?, ?, 0, ?, ?) ON CONFLICT(portfolio, class, firm, as_of) DO UPDATE SET cents = excluded.cents')
     .bind(mark.portfolio,mark.class,dateNumber(mark.asOf),toCents(mark.amount))));
   return {...report,done:true};
 }
