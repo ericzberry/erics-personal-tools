@@ -141,6 +141,21 @@ test('a reading is labelled, never totalled, and a malformed one is dropped rath
   assert.throws(()=>parseFinanceUpdates({readings:[]}),/did not find any figures/);
 });
 
+// The same double reading, for a capital account. The Worker renames "fund"
+// to "name" and "vehicle" to "stated" on its way through, and the device used
+// to read only the model's words, so every capital account came back with no
+// fund name and was refused — an iCapital page stating all six figures became
+// "no account figures were found".
+test('a capital account read twice is the same capital account',()=>{
+  const once=parseFinanceUpdates({capital:[{fund:'iCapital-Vista Equity Partners Fund VIII U.S. Access Fund, L.P.',vehicle:'fund',
+    holder:'Eric Berry',asOf:'2026-06-30',value:391877,commitment:500000,contributed:341370,distributed:3500,unfunded:167000,
+    currency:'USD',confidence:'high',reason:'Investment Summary, 2026 row.'}]});
+  const twice=parseFinanceUpdates(once);
+  assert.equal(twice.capital.length,1,'the second reading keeps it');
+  assert.deepEqual(twice.capital,once.capital,'and changes nothing about it');
+  assert.equal(twice.capital[0].stated,'fund');
+});
+
 // The fold is the whole point of the new shape: a page names dozens of things
 // and the ledger keeps a handful of numbers.
 test('holdings split an account only when they add up to it',()=>{

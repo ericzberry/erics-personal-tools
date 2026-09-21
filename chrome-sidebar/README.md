@@ -3972,3 +3972,15 @@ a quarter of its own, and its June date is not printed against Q3. The figure
 itself keeps the date its statement states. Checked in
 `tests/firm-history.test.js` and `tests/finance-data.test.js`. Archive:
 `release/erics-sidebar-0.6.250.zip`.
+
+## A capital account survives being read twice (0.6.254 / mobile 0.1.204)
+
+The Worker parses the model's answer and the device parses the Worker's again.
+The first pass renames a capital account's `fund` to `name` and `vehicle` to
+`stated`, and the second read only the model's words, so every capital account
+came back with no fund name and was dropped. That is why the iCapital page,
+with all six figures in front of it, still said "No account figures were
+found". The device now accepts either spelling, and grid cells whose text wraps
+("Remaining / Commitment") are read as one value. Checked in
+`tests/finance-data.test.js` and `tests/statement-intake.test.js`.
+Archive: `release/erics-sidebar-0.6.254.zip`.

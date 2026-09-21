@@ -207,6 +207,10 @@ export function readAccountPage(options) {
   // honest about it: every part of one row carries the same aria-rowindex, and
   // every cell its aria-colindex, so the parts are put back together by those
   // before anything is read out of them.
+  // A cell is one value however its text wraps. A narrow column header breaks
+  // "Remaining Commitment" over two lines, and innerText keeps the break, so the
+  // header row arrived split in the middle of every name.
+  const one = value => (value || '').replace(/\s+/g, ' ').trim();
   const attribute = (node, name) => (node.getAttribute ? node.getAttribute(name) : null);
   const number = (node, name) => Number(attribute(node, name)) || 0;
   const isHeader = cell => !!(cell.matches && cell.matches('th,[role="columnheader"]'));
@@ -219,7 +223,7 @@ export function readAccountPage(options) {
       const key = index ? `a${index}` : named !== null ? `r${named}` : `o${order}`;
       if (!parts.has(key)) parts.set(key, {order, index, cells: []});
       parts.get(key).cells.push(...inside(row, CELL, ROW).map(cell => ({
-        text: clean(cell.innerText), column: number(cell, 'aria-colindex'),
+        text: one(cell.innerText), column: number(cell, 'aria-colindex'),
         span: number(cell, 'aria-colspan') || 1, header: isHeader(cell)
       })));
     });
@@ -245,7 +249,7 @@ export function readAccountPage(options) {
     return rows.slice(0, 200).map(row => row.cells.map(cell => cell.text).filter(Boolean));
   };
   const gridRows = grid => grid.rows
-    ? [...grid.rows].slice(0, 200).map(row => [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean))
+    ? [...grid.rows].slice(0, 200).map(row => [...row.cells].map(cell => one(cell.innerText)).filter(Boolean))
     : joined(grid);
   // Every root the page draws through, not just the document. A custom element
   // renders its content in a shadow root, and both of the ways this reader

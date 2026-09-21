@@ -483,7 +483,7 @@ test('a grid drawn in pinned and scrolling parts is read as the rows on the scre
     rowAt(4, [cellAt('2025', 1), cellAt('USD', 2)]),
     rowAt(3, [cellAt('2026', 1), cellAt('USD', 2)]),
     rowAt(1, [head('Commitment', 3, 2), head('Contributions', 5, 2)]),
-    rowAt(2, [head('Unfunded', 3), head('Total', 4), head('Period', 5), head('Cumulative', 6)]),
+    rowAt(2, [head('Unfunded', 3), head('Total\nAmount', 4), head('Period', 5), head('Cumulative', 6)]),
     rowAt(3, [cellAt('167,000', 3), cellAt('500,000', 4), cellAt('47,500', 5), cellAt('341,370', 6)]),
     rowAt(4, [cellAt('214,500', 3), cellAt('500,000', 4), cellAt('122,000', 5), cellAt('293,870', 6)])
   ];
@@ -492,8 +492,8 @@ test('a grid drawn in pinned and scrolling parts is read as the rows on the scre
   const page = inPage(pageOf({tables: [grid], text: 'Investment Summary'}), HERE);
   assert.equal(page.tables.length, 1);
   const [header, first, second] = page.tables[0].split('\n');
-  assert.equal(header, 'Year  |  CCY  |  Commitment Unfunded  |  Commitment Total  |  Contributions Period  |  Contributions Cumulative',
-    'each column is named by its group and its own header, in one row');
+  assert.equal(header, 'Year  |  CCY  |  Commitment Unfunded  |  Commitment Total Amount  |  Contributions Period  |  Contributions Cumulative',
+    'each column is named by its group and its own header, in one row, however the header wraps');
   assert.equal(first, '2026  |  USD  |  167,000  |  500,000  |  47,500  |  341,370', 'the pinned year rejoins its figures');
   assert.equal(second, '2025  |  USD  |  214,500  |  500,000  |  122,000  |  293,870', 'in the order the rows are numbered');
 });

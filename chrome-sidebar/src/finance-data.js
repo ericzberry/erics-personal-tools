@@ -1074,10 +1074,16 @@ export function parseFinanceUpdates(value){
       if(!draft||typeof draft!=='object')return [];
       const asOf=isDate(draft.asOf)?draft.asOf:'';
       if(!asOf)return [];
+      // Read twice, like a reading: once by the Worker from the model, which
+      // says "fund" and "vehicle", and again on the device from the Worker,
+      // which has already said "name" and "stated". Taking only the model's
+      // words dropped every capital account on the second pass — the fund's
+      // name came back empty and the statement was refused — so an iCapital
+      // page stating all six figures arrived as "no account figures".
       return [{
-        name:text(draft.fund??'',120,'an investment name',true),
+        name:text(draft.fund??draft.name??'',120,'an investment name',true),
         // What the paperwork calls itself, which is not the same as what it is.
-        stated:vehicleById(draft.vehicle)?.id||'',
+        stated:vehicleById(draft.vehicle??draft.stated)?.id||'',
         holder:text(draft.holder??'',120,'a holder'),
         asOf,value:optional(draft.value,'capital account value')??0,
         commitment:optional(draft.commitment,'the commitment'),
