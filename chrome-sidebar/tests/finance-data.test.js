@@ -1188,16 +1188,23 @@ test('Morgan Stanley abbreviates its titles, and its accounts join the trusts al
   ],portfolios,{institution:'Morgan Stanley',today:'2026-09-20'});
 
   assert.deepEqual(folded.portfolios,[],'nine accounts, and not one portfolio the ledger did not already hold');
-  const filed=Object.fromEntries(folded.marks.map(mark=>[mark.portfolio,mark.amount]));
-  assert.equal(filed[descendants.number],4117247.70);
-  assert.equal(filed[family.number],4098903.92);
-  // Its three accounts on the list, and the Active Assets Account the list
-  // names only by product: the number is what puts that $558.94 here rather
-  // than in the estate, where the product name had it.
-  assert.equal(filed[ae.number],5264243.13);
+  const filed=Object.fromEntries(folded.marks.map(mark=>[`${mark.portfolio} ${classLabel(mark.class)}`,mark.amount]));
+  // One account per trust holds that trust's private funds, and the list says
+  // so nowhere: it gives all three of a trust's accounts the same name and a
+  // Total Assets figure each. They are named by number, and what is left is
+  // the marketable securities beside them.
+  assert.equal(filed[`${descendants.number} Fund investments`],1054631.22);
+  assert.equal(filed[`${descendants.number} Liquid securities`],3062616.48);
+  assert.equal(filed[`${family.number} Fund investments`],1055712.66);
+  assert.equal(filed[`${family.number} Liquid securities`],3043191.26);
+  // Its fund account, its two managed accounts, and the Active Assets Account
+  // the list names only by product: the number is what puts that $558.94 here
+  // rather than in the estate, where the product name had it.
+  assert.equal(filed[`${ae.number} Fund investments`],2293693.55);
+  assert.equal(filed[`${ae.number} Liquid securities`],2970549.58);
   // The estate's own account, and the CashPlus, which is the estate's.
-  assert.equal(filed[estate.number],18251626.29);
-  assert.notEqual(filed[family.number],filed[descendants.number]);
+  assert.equal(filed[`${estate.number} Liquid securities`],18251626.29);
+  assert.equal(filed[`${estate.number} Fund investments`],undefined,'nothing forced a class on the estate');
   // Available Cash is a part of Total Assets, not a second balance: counted as
   // its own figure it put the estate's spare cash on top of the estate's own
   // total, and at a broker that column is not even cash — it is cash plus what

@@ -3758,3 +3758,24 @@ every label, figure, date and the fund's name surviving beside it; a named
 table still read as one; two funds filed as two positions under the estate
 with nothing added together; and the bucket heading left as a class figure.
 Archive: `release/erics-sidebar-0.6.239.zip`.
+
+## One account in three holds the funds (0.6.240 / mobile 0.1.190)
+
+Morgan Stanley gives each trust's accounts the same name and a Total Assets
+figure each, and says nowhere that one of the three holds that trust's private
+funds. Read faithfully off the page, **$4,404,037** of fund commitments counted
+as marketable securities — money that cannot be sold this week sitting in the
+half of the ledger that can.
+
+The owner is the only source for what is inside an account a page declines to
+describe, so the three are named by number — one per trust, beside the UBS
+accounts already named that way — and what is left under each title is the
+managed money beside them. Each trust now reads as two lines, Fund investments
+and Liquid securities, which is the question the classes exist to answer.
+Nothing else moved: the same accounts are titled to the same trusts, and the
+page's own headline still equals the sum of its parts.
+
+Validation: 619 extension, 33 mobile and 135 API tests pass from an extraction
+of this commit's index, and both apps build. New coverage: the fund account and
+the managed accounts of all three trusts folded apart, and no class forced on
+the estate, whose accounts nobody has described that way.

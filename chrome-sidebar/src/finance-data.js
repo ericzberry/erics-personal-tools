@@ -378,11 +378,11 @@ export const ACCOUNT_TITLES=[
       // every other title here is a trust, and a trust is never held jointly.
       match:['ericandariana','ericberryariana','joint','jtten']},
     {owner:'Berry 2020 Irrevocable Family Trust',registration:'trust',
-      accounts:['4123'],match:['berry2020irr']},
+      accounts:['4123','0612'],match:['berry2020irr']},
     {owner:'Berry 2020 Descendants’ Irrevocable Trust',registration:'trust',
-      accounts:['4125'],match:['berry2020des']},
+      accounts:['4125','0607'],match:['berry2020des']},
     {owner:'Berry AE 21 Irrevocable Trust',registration:'trust',
-      accounts:['1785','6393','4122'],match:['berryae2021']}
+      accounts:['1785','6393','4122','0618'],match:['berryae2021']}
   ]},
   // Carta signs one person in to everything he has anything to do with: the
   // funds he put money into, the general partner of the fund he runs, and the
@@ -1294,7 +1294,14 @@ const PLAN_VALUE=/\b(unvested|potential|projected|unexercis\w*)\b[^\n]*\b(value|
 // is the only source for what is inside an account the page declines to
 // describe — and it is the reason this map holds accounts rather than a rule
 // about the word "brokerage".
-const FUND_ACCOUNTS={ubs:/\bbrokerage\b|\b63541\b/i};
+//
+// Morgan Stanley says even less. Its list gives each of these the trust's own
+// name and a Total Assets figure, and nothing anywhere on it distinguishes the
+// account holding a trust's private funds from the two managed accounts listed
+// directly above it under the same title. Three accounts, one per trust, named
+// here by number because the number is the only thing on the row that does not
+// also describe its neighbours.
+const FUND_ACCOUNTS={ubs:/\bbrokerage\b|\b63541\b/i,morganstanley:/\b0(?:607|612|618)\b/};
 // A private fund, named on the line the figure sits on. Everything else in
 // this list is about what could be sold this week, and a partnership interest
 // could not be sold at all — which is the whole of what separates Fund
