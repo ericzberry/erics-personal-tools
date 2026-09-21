@@ -447,19 +447,25 @@ export function FinanceView(){
 // still waiting to reach the cloud, are facts about the entity and would be
 // hidden by the very row that should be reporting them.
 export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[],open=false,onToggle}){
-  // The heading is a name and a number. The portfolio's own verbs live in the
-  // block it opens, the way any record that opens into a block keeps them: on
-  // the heading they either held 96px of nothing open beside every total, or
-  // floated over the end of a long name and cut it off under the pointer.
+  // The heading is a name, a number and the portfolio's own two verbs, which
+  // ride at its end exactly as a class figure's ride at the end of its line —
+  // the same component, the same slot, the same behaviour under a pointer and
+  // under a finger. They sat at the foot of the opened block for one release,
+  // which put a rule and twelve pixels of nothing between the last figure and
+  // a pair of glyphs belonging to the name three lines above them. A row of
+  // verbs on a line of its own belongs to nothing the eye can find. UI-33.
+  const verbs=ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'});
+  // The heading is a summary, so a press anywhere in it opens the group. A
+  // verb is the exception: it acts on the portfolio rather than opening it,
+  // and the button's own handler has already run by the time this fires.
+  verbs.addEventListener('click',event=>{event.preventDefault();});
   const heading=Stack([
     Stack([GroupTitle(name,{className:'record-group-title group-title--name'}),
       kind?Badge(kind,{className:'pill portfolio-kind'}):null,
       meta?Note(meta):null],{className:'group-name'}),
-    Stack([Amount(total,currency)],{className:'group-figure'})
+    Stack([Amount(total,currency),verbs],{className:'group-figure'})
   ],{className:'breakdown-row group-line'});
-  const verbs=actions.length?Stack([ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})],
-    {className:'portfolio-actions'}):null;
-  const group=Disclosure(heading,[...rows,verbs],{className:'record-group portfolio-group'});
+  const group=Disclosure(heading,[...rows],{className:'record-group portfolio-group'});
   group.open=open;
   group.addEventListener('toggle',()=>onToggle?.(group.open));
   return group;

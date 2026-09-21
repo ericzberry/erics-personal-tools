@@ -53,6 +53,7 @@ here.
 | **UI-31** | An override of a shared rule out-specifies it and never relies on sheet order. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-32** | A harness loads what its host loads, in the same order. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-27** | One column of money: every figure in a list ends on the same right edge, a group's own total included, and the lines that hold them reserve their row actions' slot in one shared declaration. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
+| **UI-33** | A record's verbs ride on its own line and a group's on its heading line — never in a row of their own at the foot of the block it opens. Stated in full under [From a complaint](#from-a-complaint). | `tests/finance-ledger.test.js` |
 
 ## Ratcheting
 
@@ -254,6 +255,21 @@ never sees, which is exactly how UI-31's tie reached him. The ledger harness
 links the side panel's sheets in the side panel's order, and the check compares
 the two lists rather than trusting them. A harness that needs fewer sheets
 needs a reason written beside it.
+
+**UI-33 — verbs ride on the line of the thing they act on.** *Enforced.* A
+record's two glyphs sit at the end of its own line, and a group's at the end of
+its heading line, because that line is what says which record they would act
+on. They never form a row of their own at the foot of the block a group opens:
+there they are separated from the name they belong to by every figure in
+between, and the rule drawn over them reads as one more boundary in a list that
+already has one per row. A portfolio wore them that way for a release —
+*"Looks weird when I expand an entity"* — with a hairline and twelve pixels of
+nothing between the last figure and a pair of glyphs belonging to the heading
+three lines above. Where a heading is also the press that opens the group, the
+verbs on it prevent that press rather than moving off it; and where a finger
+does the aiming, the verbs take room in the flow, so the heading's name takes
+its own line and the total follows underneath in the column the figures land in
+(UI-27). Checked on the rendered ledger in `tests/finance-ledger.test.js`.
 
 ## Open
 

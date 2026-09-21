@@ -91,8 +91,6 @@
 /* A portfolio's own verbs close its block, ruled off from the figures they
    act on, and they are shown rather than waiting for a pointer: the block is
    open because it was asked for, so what can be done to it is the point. */
-.finance-ledger .portfolio-actions{display:flex;justify-content:flex-end;margin-top:4px;padding-top:4px;border-top:1px solid var(--wallet-line)}
-.finance-ledger .portfolio-actions .row-action{opacity:1}
 .group-figure{flex:0 0 auto;display:flex;align-items:center;gap:8px;margin-inline-start:auto}
 .breakdown-row strong,.trend-row strong{font-weight:600}
 /* An amount never breaks across lines. "$1,720,000" split after the "0" reads
@@ -158,6 +156,14 @@
 @media(hover:none){
   .finance-ledger .record-line>.record-figure>.action-group,
   .finance-ledger .group-line>.group-figure>.action-group{flex:none;min-width:calc(var(--verbs)*var(--verb));justify-content:flex-end}
+  /* A finger sees the verbs all the time, so on touch they take room on the
+     heading line — and a name, a total and three verb widths do not fit one
+     line of a sidebar. The name takes the line and the total follows
+     underneath, in the column the class figures land in: at 280px the amount
+     and the slot leave 43px for a name, which is one word per line. On a
+     pointer the verbs cost nothing, so the heading stays one line. UI-27. */
+  .finance-ledger .portfolio-group>summary>.group-line{flex-wrap:wrap}
+  .finance-ledger .portfolio-group .group-name{flex:1 1 100%}
 }
 /* A row with no verbs at all — what is owed on the houses — still keeps the
    slot, or its figure would run out to the edge past every figure above it. */

@@ -199,18 +199,28 @@ test('a portfolio is closed to its own total, and opens on its own',async()=>{
   tool.stop();
 });
 
-// The heading is a name and a number. A portfolio's own verbs are in the block
-// it opens, the way any record that opens into a block keeps them: on the
-// heading they either held 96px of nothing open beside every total, or floated
-// over the end of a long name and cut it off under the pointer.
-test('a portfolio heading is a name and a total, and its verbs are in the block',async()=>{
+// A portfolio's verbs ride at the end of its heading line, where a class
+// figure's ride at the end of its own. They sat at the foot of the opened
+// block for one release, which put a rule and twelve pixels of nothing between
+// the last figure and a pair of glyphs belonging to the name three lines
+// above: *"Looks weird when I expand an entity."* UI-33.
+test('a portfolio\u2019s verbs ride on its heading, and pressing one does not open it',async()=>{
   const document=setup();
   const tool=ledger(document,AMENDED);
   await settle(()=>document.getElementById('finance-list').textContent.includes('Liquid securities'));
   const group=document.querySelector('#finance-list .portfolio-group');
-  assert.equal(group.querySelector('summary button'),null,'nothing on the heading to press but the heading');
-  const verbs=[...group.querySelectorAll(':scope > .portfolio-actions button')];
+  const verbs=[...group.querySelectorAll('summary .group-figure .action-group button')];
   assert.deepEqual(verbs.map(button=>button.getAttribute('aria-label')),
-    ['Rename Eric and Ariana Berry Estate','Delete Eric and Ariana Berry Estate']);
+    ['Rename Eric and Ariana Berry Estate','Delete Eric and Ariana Berry Estate'],
+    'the portfolio\u2019s verbs are at the end of its heading line');
+  assert.equal(group.querySelector(':scope > .portfolio-actions'),null,
+    'a row of verbs on a line of its own belongs to nothing the eye can find');
+  // The heading is the press, but the verbs on it are not: a verb acts on the
+  // portfolio rather than opening it.
+  group.open=true;
+  const Press=document.defaultView.Event||Event;
+  const press=new Press('click',{bubbles:true,cancelable:true});
+  verbs[0].dispatchEvent(press);
+  assert.equal(press.defaultPrevented,true,'pressing a verb would toggle the group');
   tool.stop();
 });
