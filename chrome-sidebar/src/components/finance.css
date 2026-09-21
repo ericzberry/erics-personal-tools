@@ -47,7 +47,14 @@
    stop, and a tag that wraps lands under the rule that was meant to close it —
    "Berry 2020 Descendants' Irrevocable Trust" with "Trust" hanging beneath its
    own heading. The rule belongs to whatever holds the whole heading. UI-29. */
-.group-name>.record-group-title{display:inline;padding:0;border-bottom:0}
+/* Scoped to the wallet so it out-specifies `.travel-wallet
+   .record-group-title`, which sets the rule. Equal specificity would leave
+   this to source order, and source order is not a thing a sheet can rely on
+   here: `gifts.css`, `sizes.css` and `reminders.css` each import `travel.css`,
+   and the sidebar loads all three after this file, so the shared rule is
+   re-inserted last and wins. An override out-specifies. UI-31. */
+.group-name>.record-group-title,
+.travel-wallet .group-name>.record-group-title{display:inline;padding:0;border-bottom:0}
 .portfolio-kind{margin-inline-start:6px;vertical-align:2px}
 /* A portfolio's heading is its name, its total, and its own two verbs, ruled
    off from the figures under it as one line. In a narrow sidebar the total

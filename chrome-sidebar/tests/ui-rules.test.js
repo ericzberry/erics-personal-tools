@@ -240,3 +240,25 @@ test('a rule closes the whole heading, never the words in it',()=>{
   assert.ok(heading&&/border-bottom:1px/.test(heading[1]),'the reading’s holder heading carries no rule at all');
   assert.match(heading[1],/margin:0 0 4px/,'the figures start on the rule — see UI-30');
 });
+
+// UI-31 and UI-32. The stray rule under every trust's name in 0.6.228 was a
+// tie: `.group-name>.record-group-title` and `.travel-wallet
+// .record-group-title` weigh the same, so the winner was whichever sheet came
+// last — and `gifts.css`, `sizes.css` and `reminders.css` each import
+// `travel.css`, all three after `finance.css`, which put the shared rule last.
+// The preview loaded three sheets and saw a cascade the sidebar does not have.
+test('an override out-specifies, and a harness loads what its host loads',()=>{
+  const css=readFileSync(new URL('../src/components/finance.css',import.meta.url),'utf8');
+  const override=/([^{}]*)\.group-name>\.record-group-title\{[^}]*border-bottom:0/.exec(css);
+  assert.ok(override,'nothing takes the rule off an inline heading title');
+  assert.match(css,/\.travel-wallet \.group-name>\.record-group-title/,
+    'the override ties with `.travel-wallet .record-group-title` and would be left to sheet order. '+
+    'See UI-31 in docs/UI_RULES.md.');
+  const links=markup=>[...markup.matchAll(/<link rel="stylesheet" href="[^"]*components\/([^"]+)"/g)].map(m=>m[1]);
+  const host=links(readFileSync(new URL('../sidepanel.html',import.meta.url),'utf8'));
+  const harness=links(readFileSync(new URL('finance-ledger-preview.html',import.meta.url),'utf8'));
+  assert.ok(host.length>3,'the side panel stopped linking its sheets');
+  assert.deepEqual(harness,host,
+    'the ledger harness and the side panel load different sheets, so the harness shows a cascade '+
+    'the owner never sees. See UI-32 in docs/UI_RULES.md.');
+});

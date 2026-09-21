@@ -3385,3 +3385,38 @@ New coverage: a card whose lookup fails named at the end while the card after it
 is still looked up and still proposed, and nothing saved by the review that
 holds it. Validation: 613 extension, 33 mobile and 135 API tests pass from an
 archive of HEAD. Archive: `release/erics-sidebar-0.6.229.zip`.
+
+## An override out-specifies, and a harness loads what its host loads (0.6.230 / mobile 0.1.180)
+
+**The stray rule under every trust's name was a tie.** 0.6.228 took the border
+off an inline heading title with `.group-name>.record-group-title`. That weighs
+exactly what `.travel-wallet .record-group-title` weighs, so the winner was
+whichever sheet came last — and a sheet cannot know where it comes. `gifts.css`,
+`sizes.css` and `reminders.css` each import `travel.css`, and the side panel
+loads all three *after* `finance.css`, so the shared rule is re-inserted last
+and the border came back: a short line under each name, stopping wherever the
+words stopped.
+
+The override now carries the host class and wins on weight rather than on luck.
+Proved both ways in the running panel: with the scoped rule in place every
+heading title measures `border-bottom: 0px`, and with it removed they all
+measure 1px, which is the defect exactly.
+
+**The preview never had a chance of catching it.** It linked three of the side
+panel's eleven stylesheets, so it showed a cascade the owner never sees, and an
+override that was only winning on source order looked correct in it. The ledger
+harness now links the side panel's sheets in the side panel's order, and a
+check compares the two lists rather than trusting them — if the panel gains a
+sheet and the harness does not, the suite says so.
+
+Two rules out of one screenshot. UI-31: an override of a shared rule
+out-specifies it and never relies on sheet order. UI-32: a harness loads what
+its host loads, and a harness that needs fewer sheets needs a reason written
+beside it.
+
+Validation: 614 extension and 33 mobile tests pass from an archive of this
+release, including the two new checks. The ledger was read at 374px with all
+eleven sheets loaded — no rule under any name, one hairline between entities,
+and the totals still ending on the row's right edge. Native iPhone and
+installed Chrome behavior were not directly tested. Archive:
+`release/erics-sidebar-0.6.230.zip`.

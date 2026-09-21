@@ -50,6 +50,8 @@ here.
 | **UI-22** | Everything that expands opens the same way: one inset block with a banded head, and no sheet carries a list of disclosures exempt from it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-26** | One currency formatter, in `ui.js`, and it writes a negative in parentheses. No other module builds a currency format. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-29** | A rule closes the whole heading: the name, the tag and the date are above it and it runs the width of the list. A title never carries the border itself. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
+| **UI-31** | An override of a shared rule out-specifies it and never relies on sheet order. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
+| **UI-32** | A harness loads what its host loads, in the same order. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-27** | One column of money: every figure in a list ends on the same right edge, a group's own total included, and the lines that hold them reserve their row actions' slot in one shared declaration. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 
 ## Ratcheting
@@ -235,6 +237,23 @@ line above it reads as though it belongs to the line rather than to the list.
 *"The way the elements under each line are almost touching the lines isn't
 good."* Look at every group heading in a reading and in the ledger, at the
 narrow width where the padding is tightest.
+
+**UI-31 — an override out-specifies; it never relies on sheet order.** *Enforced
+in part.* Two rules of equal weight are decided by which sheet comes last, and
+a sheet's position is not something it can know: `gifts.css`, `sizes.css` and
+`reminders.css` each import `travel.css`, and the side panel loads all three
+after `finance.css`, so the shared rules are re-inserted after every sheet that
+means to override them. An override of a shared rule therefore carries the host
+class — `.travel-wallet .group-name>.record-group-title`, not
+`.group-name>.record-group-title`. *"Now it looks really bad with all the extra
+horizontal lines."* The known tie is checked in `tests/ui-rules.test.js`.
+
+**UI-32 — a harness loads what its host loads.** *Enforced.* A preview that
+links three of the side panel's eleven sheets is showing a cascade the owner
+never sees, which is exactly how UI-31's tie reached him. The ledger harness
+links the side panel's sheets in the side panel's order, and the check compares
+the two lists rather than trusting them. A harness that needs fewer sheets
+needs a reason written beside it.
 
 ## Open
 
