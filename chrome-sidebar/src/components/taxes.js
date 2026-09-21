@@ -1,7 +1,7 @@
 import * as UI from './ui.js';
 import {TAX_DOCUMENT_TYPES,TAX_TAXPAYERS,TAX_CATEGORIES,TAX_JURISDICTIONS,TAX_QUARTERS,taxYears,defaultTaxYear,TAX_ROOT_FOLDER_URL,MAX_DOCUMENT_BYTES} from '../tax-data.js';
 import {ACCEPTED} from '../statement-text.js';
-const {Stack,Section,Note,Notice,Button,ActionGroup,SettingsGroup,FormField,Strong,Label,Text,Link,ToolTitle,GroupTitle}=UI;
+const {Stack,Section,Note,Notice,Button,ActionGroup,Disclosure,FormField,Strong,Label,Text,Link,ToolTitle,GroupTitle}=UI;
 
 export const fileSize=bytes=>bytes>=1000000?`${(bytes/1000000).toFixed(1)} MB`:`${Math.max(1,Math.round(bytes/1000))} KB`;
 const filedOn=stamp=>{
@@ -9,15 +9,20 @@ const filedOn=stamp=>{
   return Number.isNaN(date.getTime())?'':date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 };
 
+// The tool's sections open the same way (UI-35). Filing is what the screen is
+// opened for, so it starts open; what is already filed is a reference you go
+// looking in, a year of it runs to dozens of lines, and it starts shut.
+const Part=(title,children,props)=>Disclosure(title,children,{titleHeading:true,className:'tax-section',...props});
+
 export function TaxesView({today=new Date()}={}){
   return Stack([
     ToolTitle('Taxes',{actionsId:'taxes-actions',statusId:'taxes-status'}),
     // Only when it is not connected: a working connection is plumbing, and the
     // tool is about the document in front of you, not the account behind it.
-    Stack([SettingsGroup({title:'Google Drive',level:2,children:[
+    Stack([Part('Google Drive',[
       Stack([],{id:'taxes-connection'})
-    ]})],{id:'taxes-connection-section',hidden:true}),
-    SettingsGroup({title:'File a document',level:2,children:[
+    ],{open:true})],{id:'taxes-connection-section',hidden:true}),
+    Part('File a document',[
       UI.UploadField({id:'taxes-drop',inputId:'taxes-file',statusId:'taxes-file-status',
         label:'Drop a tax document',formats:`PDF, image, CSV or XLSX · up to ${MAX_DOCUMENT_BYTES/1000000} MB`,
         accept:ACCEPTED.join(','),status:'',resetId:'taxes-file-clear',resetLabel:'Remove file'}),
@@ -48,11 +53,11 @@ export function TaxesView({today=new Date()}={}){
       Stack([],{id:'taxes-conflict',hidden:true}),
       Notice('',{id:'taxes-file-form-status',role:'status'}),
       Stack([],{id:'taxes-file-actions',className:'action-group action-group--compact'})
-    ]}),
-    Stack([SettingsGroup({title:'Already filed',level:2,children:[
+    ],{open:true}),
+    Stack([Part('Already filed',[
       Stack([],{id:'taxes-filed'}),
       Link('Open the tax folder',TAX_ROOT_FOLDER_URL,{className:'footnote tax-folder-link'})
-    ]})],{id:'taxes-drive-contents',hidden:true})
+    ],{id:'taxes-filed-panel'})],{id:'taxes-drive-contents',hidden:true})
     // The shared wallet surface every tool's root carries: record rows, action
     // roles and the danger colouring all hang off it. Finance and Personal
     // information inherit it from the lock screen they mount inside; this

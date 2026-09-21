@@ -217,6 +217,10 @@ row is the name and nothing else. Reading a year is finding its folder and one
 Drive request per level below it, because each level is asked for all of its
 parents at once rather than one folder at a time.
 
+The tool's sections are disclosures (UI-35). **File a document** starts open,
+since filing is what the tool is opened for; **Already filed** starts shut, so
+a year of dozens of names is there when asked for rather than under every drop.
+
 ## Where the code is
 
 | Piece | File |

@@ -67,6 +67,13 @@ test('a connected Drive says nothing about itself, and the reading picks its own
   // The filed list is still there, under its own heading.
   assert.match(visibleText(root),/Already filed/);
   assert.match(document.getElementById('taxes-filed').textContent,/2025 · 1 document/);
+  // UI-35: the sections open the same way. Filing is what the tool is opened
+  // for, so it starts open; a year of filed names is dozens of lines, so that
+  // list starts shut until it is asked for.
+  const filedPanel=document.getElementById('taxes-filed-panel');
+  assert.equal(filedPanel.tagName,'DETAILS');
+  assert.equal(filedPanel.hasAttribute('open'),false);
+  assert.equal(document.getElementById('taxes-drop').closest('details').hasAttribute('open'),true);
 
   // A dropped document is read through the connection changed most recently,
   // which is the first the Worker lists.
