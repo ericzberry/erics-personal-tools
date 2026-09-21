@@ -3693,3 +3693,24 @@ as fund investments against a reading that called them stocks, three public
 funds left as liquid securities, and an account named after a partnership
 keeping its own total liquid.
 Archive: `release/erics-sidebar-0.6.237.zip`.
+
+## Joint is a couple, and a credit line is theirs (0.6.238 / mobile 0.1.188)
+
+Morgan Stanley's list names the couple's own accounts *Joint -0615*, *-0616*,
+*-0617* and nothing else, so three of them proposed three new portfolios holding
+**$15,389,853** between them, standing beside the estate that already holds the
+rest of the couple's money. A fourth proposed one to hold nothing at all: *LAL
+-3340*, a Liquidity Access Line, which names a lending product rather than a
+borrower and reads $0.00 while it is undrawn.
+
+Joint is the couple, here: every other title behind this sign-on is a trust, and
+a trust is never held jointly. So the estate answers to "joint" as well as to
+"ericberryariana", which is how each account's own page writes them, and the four
+numbers join its list — the line included, because it is secured against those
+accounts and the debt is theirs. It files under the estate as a liability rather
+than as a portfolio named after a lending product.
+
+Validation: 617 extension, 33 mobile and 135 API tests pass from an extraction of
+this commit's index, and both apps build. New coverage: the three Joint accounts
+and the credit line titled to the estate with nothing proposed, and their three
+balances folded into one figure.

@@ -364,12 +364,19 @@ export const ACCOUNT_TITLES=[
   // would otherwise take all three Active Assets Accounts into whichever title
   // happened to name it.
   {institution:'Morgan Stanley',match:['morganstanley'],holders:[
+    // The last of these is a Liquidity Access Line, which names a lending
+    // product rather than a borrower and states nothing at all while it is
+    // undrawn: a row proposing a portfolio called LAL -3340 to hold a $0 loan.
+    // The line is secured against the accounts above it and the debt is the
+    // couple's, so it is titled with them.
     {owner:'Eric and Ariana Berry Estate',registration:'taxable',
-      accounts:['6392','4120','6792'],
+      accounts:['6392','4120','6792','0615','0616','0617','3340'],
       // "ERIC BERRY & ARIANA BERRY JT TEN" is how an account's own page writes
       // the couple, and it contains neither "ericandariana" nor "ericariana":
-      // the surname sits between the two names.
-      match:['ericandariana','ericberryariana','jtten']},
+      // the surname sits between the two names. "Joint" is what the list calls
+      // those same accounts, and behind this sign-on there is only one couple —
+      // every other title here is a trust, and a trust is never held jointly.
+      match:['ericandariana','ericberryariana','joint','jtten']},
     {owner:'Berry 2020 Irrevocable Family Trust',registration:'trust',
       accounts:['4123'],match:['berry2020irr']},
     {owner:'Berry 2020 Descendants’ Irrevocable Trust',registration:'trust',

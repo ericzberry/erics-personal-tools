@@ -1133,6 +1133,13 @@ test('Morgan Stanley abbreviates its titles, and its accounts join the trusts al
     ['Select UMA -4123',family.name],
     ['Select UMA -4125',descendants.name],
     ['Platinum CashPlus -6792',ESTATE],
+    // What the list calls the couple's own accounts, and the credit line
+    // secured against them. Behind this sign-on there is one couple and every
+    // other title is a trust, which is never held jointly.
+    ['Joint -0615',ESTATE],
+    ['Joint -0616',ESTATE],
+    ['Joint -0617',ESTATE],
+    ['LAL -3340',ESTATE],
     // The account's own page, where the title sits two lines under the number.
     // "ERIC BERRY & ARIANA BERRY JT TEN" puts the surname between the two
     // names, so neither of the fragments the other sites are known by appears
@@ -1207,6 +1214,22 @@ test('Morgan Stanley abbreviates its titles, and its accounts join the trusts al
   const alone=foldReadings([reading('BERRY 2020 DES IRR TR -0607','Available Cash','cash',12000)],
     portfolios,{institution:'Morgan Stanley',today:'2026-09-20'});
   assert.deepEqual(alone.marks.map(mark=>[mark.name,mark.amount]),[[descendants.name,12000]]);
+
+  // The couple's own accounts, listed as "Joint" with a number and nothing
+  // else, and the Liquidity Access Line secured against them — three portfolios
+  // proposed under a heading that is the estate, and a fourth to hold a loan of
+  // nothing.
+  const joint=foldReadings([
+    reading('Joint -0615','Total Assets','liquid',5093706),
+    reading('Joint -0616','Total Assets','liquid',9369695),
+    reading('Joint -0617','Total Assets','liquid',926452),
+    reading('LAL -3340','Outstanding balance','loan',0)
+  ],portfolios,{institution:'Morgan Stanley',today:'2026-09-21'});
+  assert.deepEqual(joint.portfolios,[],'the couple already have a portfolio, and the line is theirs');
+  assert.deepEqual(joint.marks.map(mark=>[mark.name,classLabel(mark.class),mark.amount]),[
+    [ESTATE,'Liquid securities',5093706+9369695+926452],
+    [ESTATE,'Loan',0]
+  ]);
 });
 
 // Carta is the one site in the registry that states no account balance at all.
