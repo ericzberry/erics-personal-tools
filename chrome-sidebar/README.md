@@ -3864,6 +3864,6 @@ New coverage: a rebate at a named merchant compared where that merchant is and
 nowhere else, a category rule still matched on its category, a merchant
 surviving a card's save, one name inside another read as the same shop, and the
 wallet's perks at a merchant found by a word of its name while a used one,
-another card's and an unmentioned merchant's are not. Validation: 623 extension,
+another card's and an unmentioned merchant's are not. Validation: 621 extension,
 33 mobile and 135 API tests pass from an archive of HEAD. Archive:
 `release/erics-sidebar-0.6.243.zip`.
