@@ -3,7 +3,7 @@ import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,zillowHome,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
 import {firmLabel} from './account-sites.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {firmQuarters} from './firm-history.js';
@@ -170,6 +170,21 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // whole mapping exists to avoid.
   function syncInvestmentForm(){
     $('inv-figures').hidden=$('inv-follows').value!=='0';
+    // The boxes are the statement a kind of investment has: shares bought in
+    // a company have no commitment, and what was put in and what it is worth
+    // are called what the owner calls them rather than a fund's words.
+    const figures=vehicleFigures($('inv-vehicle').value);
+    for(const key of ['inv-commitment','inv-unfunded'])$(key).closest('.form-field').hidden=!figures.committed;
+    for(const [key,figure] of [['inv-value','value'],['inv-funded','contributed'],['inv-returned','distributed']])
+      gate.content.querySelector(`label[for="finance-${key}"]`).textContent=figures[figure];
+  }
+  // A new investment is filed under the class its kind usually is. One the
+  // owner already chose, or one being edited, is left where it is.
+  function syncInvestmentClass(previous){
+    if(investing)return;
+    const before=classById(vehicleOf(previous)?.holds||'funds')?.code;
+    const after=classById(vehicleOf($('inv-vehicle').value)?.holds||'funds')?.code;
+    if(before&&after&&$('inv-class').value===String(before))$('inv-class').value=String(after);
   }
   function clearInvestmentForm(){
     investing=null;
@@ -181,6 +196,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // being blank under a placeholder.
     for(const key of ['inv-commitment','inv-value','inv-funded','inv-returned','inv-unfunded','inv-share'])$(key).value='';
     $('inv-asOf').value=today();
+    syncInvestmentForm();
     formTitle('inv-title');
     status('','inv-status');
   }
@@ -207,6 +223,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     $('inv-funded').value=current?String(current.contributed):'';
     $('inv-returned').value=current?String(current.distributed):'';
     $('inv-asOf').value=current?current.asOf:'';
+    syncInvestmentForm();
     formTitle('inv-title',`Editing ${holding.name}`);
     showEntry('investment');$('inv-name').focus();
   }
@@ -450,6 +467,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
           return;
         }
         row[key]=['vehicle','class'].includes(key)?Number(value):value;
+        // The kind decides which figures the row asks for.
+        if(key==='vehicle')renderCapital();
       }
     })]:[]));
   }
@@ -785,8 +804,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         action('Delete investment',async()=>{if(await remove(holding))onChanged();},'danger'),
         action('Keep it',()=>{confirm.hidden=true;})
       ],{compact:true})],{hidden:true});
+      const flows=vehicleFigures(holding.vehicle).committed?['funded','returned']:['invested','proceeds'];
       const past=Stack(position.history.slice(0,8).map(entry=>Note(
-        `${entry.asOf} · ${money(entry.value,portfolio.currency)} · funded ${money(entry.contributed,portfolio.currency)} · returned ${money(entry.distributed,portfolio.currency)}`
+        `${entry.asOf} · ${money(entry.value,portfolio.currency)} · ${flows[0]} ${money(entry.contributed,portfolio.currency)} · ${flows[1]} ${money(entry.distributed,portfolio.currency)}`
       )),{hidden:true});
       const actions=[
         rowAction(EDIT_GLYPH,`Edit ${holding.name}`,()=>fillInvestment(position)),
@@ -1032,6 +1052,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   $('cancel').addEventListener('click',()=>{clearForm();$('entry').open=false;});
   $('portfolio').addEventListener('change',syncForm);
   $('inv-follows').addEventListener('change',syncInvestmentForm);
+  let vehicleBefore=$('inv-vehicle').value;
+  $('inv-vehicle').addEventListener('change',()=>{syncInvestmentClass(vehicleBefore);vehicleBefore=$('inv-vehicle').value;syncInvestmentForm();});
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();
     if(busy||!loaded)return;
@@ -1080,12 +1102,15 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // kept as basis points so twelve and a half per cent is a whole number.
       const typed=$('inv-share').value.trim();
       const follows=Number($('inv-follows').value||0);
+      // A box hidden by the kind still holds whatever was typed before the
+      // kind changed, and a kind with no commitment saves none.
+      const committed=vehicleFigures($('inv-vehicle').value).committed;
       if(!await saveHolding({number,portfolio,name:$('inv-name').value,vehicle:Number($('inv-vehicle').value),
         class:Number($('inv-class').value),stated:holdingOf(number)?.stated??0,
         share:typed===''?WHOLE_SHARE:Math.round(Number(typed)*100),follows}))return;
       if(asOf&&!await saveCapital({holding:number,asOf,value:$('inv-value').value||0,
-        contributed:$('inv-funded').value||0,distributed:$('inv-returned').value||0,commitment:$('inv-commitment').value||0,
-        unfunded:$('inv-unfunded').value.trim()||null}))return;
+        contributed:$('inv-funded').value||0,distributed:$('inv-returned').value||0,commitment:committed?$('inv-commitment').value||0:0,
+        unfunded:committed?$('inv-unfunded').value.trim()||null:null}))return;
       // A statement moved to another date is a different row. The one it came
       // from is removed, so an edit cannot leave two.
       const moved=investing?.capitalId&&asOf&&investing.capitalId!==capitalRef({holding:number,asOf});

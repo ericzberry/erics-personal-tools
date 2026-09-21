@@ -353,6 +353,19 @@ read" disclosure by hand: "what was read should just have a copy button."*
 Checked in `chrome-sidebar/tests/finance-snapshot.test.js`; the only other
 dump of this kind is the Settings playground output, which already has Copy.
 
+**UI-40 — a form asks only what the chosen kind has.** *Enforced for Finance's
+investment forms.* Where a choice on a form changes what the record is, the
+fields that follow are the ones that kind of record has, named the way the
+owner names them for that kind. A field with no answer for the chosen kind is
+hidden, not left for him to fill with zero, and a default that belongs to
+another kind — the class a new record starts in — moves with the choice.
+*From Finance → Enter by hand, where a Direct Equity Investment still asked
+for a commitment, a capital account and unfunded capital under Fund
+investments: "this isn't really a fund investment. It's just an investment I
+made in a company one time."* Checked in
+`chrome-sidebar/tests/finance-investments.test.js`; the statement review uses
+the same field list, and the Figure and Property forms have no such choice.
+
 ## Open
 
 **UI-Q1 — what is the spacing scale?** DESIGN.md says 4px increments. The

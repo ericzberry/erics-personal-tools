@@ -1,5 +1,5 @@
 import * as UI from './ui.js';
-import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,classLabel,registrationLabel,vehicleLabel,vehicleShort,valueSourceLabel,classSide,signed,shareText} from '../finance-data.js';
+import {ASSET_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,classLabel,registrationLabel,vehicleLabel,vehicleShort,vehicleFigures,valueSourceLabel,classSide,signed,shareText} from '../finance-data.js';
 import {ACCEPTED} from '../statement-text.js';
 import {FINANCE_SITES} from '../account-sites.js';
 const {Stack,Section,GroupTitle,Note,Notice,Badge,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,Strong,Label,Text,ToolTitle,Link,Tabs,Amount}=UI;
@@ -46,14 +46,14 @@ export const investedClassOptions=()=>ASSET_CLASSES.filter(entry=>entry.side==='
 // fund that has distributed nothing has returned nothing, and an investment
 // signed last week has none of it — three zeros in a row would say only that
 // this is a shape with four slots in it.
-export const positionDetail=(position,currency)=>[
+export const positionDetail=(position,currency,figures=vehicleFigures(position.holding?.vehicle??position.vehicle))=>[
   // Said first, because it changes what every figure after it means: these are
   // this portfolio's share of the vehicle, not the vehicle. A position that is
   // the whole of one says nothing, which is almost all of them.
   (position.share??WHOLE_SHARE)===WHOLE_SHARE?'':`${shareText(position.share)} of the vehicle`,
   position.commitment?`Commitment ${money(position.commitment,currency)}`:'',
-  position.contributed?`Funded ${money(position.contributed,currency)}`:'',
-  position.distributed?`Returned ${money(position.distributed,currency)}`:'',
+  position.contributed?`${figures.committed?'Funded':'Invested'} ${money(position.contributed,currency)}`:'',
+  position.distributed?`${figures.committed?'Returned':'Proceeds'} ${money(position.distributed,currency)}`:'',
   position.unfunded?`Unfunded ${money(position.unfunded,currency)}`:'',
   position.multiple===null?'':`${position.multiple.toFixed(2)}×`
 ].filter(Boolean).join(' · ');
@@ -175,7 +175,7 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
   // follows, so the review and the record cannot disagree.
   const derived=Math.max(0,Math.round((commitment-contributed)*100)/100);
   const stated=row.unfunded===null||row.unfunded===undefined||row.unfunded===''?null:part(Number(row.unfunded)||0);
-  const flows=positionDetail({share,commitment,contributed,distributed,
+  const flows=positionDetail({vehicle:row.vehicle,share,commitment,contributed,distributed,
     unfunded:stated??derived,
     multiple:contributed>0?Math.round(((value+distributed)/contributed)*100)/100:null},row.currency);
   // Recorded as one kind, sold as another. Said plainly on the row, because
@@ -214,17 +214,21 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
     input.addEventListener('input',()=>onField(index,'share',input.value));
     return node;
   };
+  // Named for the kind of investment, and without a commitment where the kind
+  // has none — unless the statement stated one anyway, which is not hidden.
+  const figures=vehicleFigures(row.vehicle);
+  const committed=figures.committed||!!num('commitment')||!!Number(row.unfunded);
   return Stack([
     field('name','Investment'),
     field('vehicle','Kind','select',vehicleOptions()),
     field('class','Asset class','select',investedClassOptions()),
     field('portfolio','Portfolio','select',portfolios),
     shareField(),
-    field('value','Capital account value'),
-    field('commitment','Commitment'),
-    field('contributed','Funded to date'),
-    field('distributed','Returned to date'),
-    unfundedField(),
+    field('value',figures.value),
+    committed?field('commitment','Commitment'):null,
+    field('contributed',figures.contributed),
+    field('distributed',figures.distributed),
+    committed?unfundedField():null,
     field('asOf','As of','date'),
     claimed?Note(claimed):null
   ],{className:'snapshot-row'});

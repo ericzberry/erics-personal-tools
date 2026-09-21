@@ -162,6 +162,41 @@ test('an investment can be recorded by hand, with or without a statement behind 
   tool.stop();restore();
 });
 
+// Shares bought in a company once are not a fund. The owner picked Direct
+// Equity and was still asked for a commitment and a capital account, filed
+// under Fund investments: the kind decides which figures are asked for, what
+// they are called, and the class a new one starts in.
+test('a direct equity investment asks for what was invested and what it is worth, and no commitment',async()=>{
+  const {document,restore}=setup();
+  const {tool,writes}=financeHost(document,{saved:[trust]});
+  await ready(document);
+  const set=(id,value)=>{document.getElementById(id).value=value;};
+  const shown=id=>!document.getElementById(id).closest('.form-field').hidden;
+  const label=id=>document.querySelector(`label[for="${id}"]`).textContent;
+  assert.ok(shown('finance-inv-commitment')&&shown('finance-inv-unfunded'));
+  set('finance-inv-commitment','500000');
+  set('finance-inv-vehicle','2');
+  document.getElementById('finance-inv-vehicle').dispatchEvent(new document.defaultView.Event('change'));
+  assert.ok(!shown('finance-inv-commitment')&&!shown('finance-inv-unfunded'));
+  assert.deepEqual(['finance-inv-value','finance-inv-funded','finance-inv-returned'].map(label),
+    ['Current value','Amount invested','Proceeds received']);
+  assert.equal(document.getElementById('finance-inv-class').value,'8','a company stake is not filed as a fund');
+
+  set('finance-inv-name','Rhythmic Technologies Inc');
+  set('finance-inv-value','40000');
+  set('finance-inv-funded','25000');
+  set('finance-inv-asOf','2026-09-21');
+  document.getElementById('finance-inv-form').dispatchEvent(new document.defaultView.Event('submit'));
+  await settle(()=>writes.length>=2);
+  assert.deepEqual([writes[0].vehicle,writes[0].class],[2,8]);
+  assert.deepEqual([writes[1].value,writes[1].contributed,writes[1].commitment],[40000,25000,0],
+    'a commitment typed before the kind changed is not saved');
+  await settle(()=>document.getElementById('finance-list').textContent.includes('Rhythmic'));
+  assert.match(document.getElementById('finance-list').textContent,/Invested \$25,000/);
+  assert.ok(shown('finance-inv-commitment'),'the next new investment starts as a fund again');
+  tool.stop();restore();
+});
+
 // The second holder of a general partner. Eric holds part of Averin's GP and a
 // trust holds the rest, and Carta states one capital account for the vehicle —
 // so the trust's position is mapped onto the one already held and asks for no
