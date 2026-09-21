@@ -129,34 +129,57 @@ test('a wallet that cannot be read leaves the birthdays alone',async()=>{
 
 // The weather is the device's own once-a-day reading, handed in the way the
 // hosts hand in `dailyWeather`: what is already worked out, and a way to work it out.
-const sunny={day:'2026-09-20',date:'2026-09-20',place:'Synthetic Heights',low:59,high:70,coldest:60,layer:'light',dress:'Bring a light jacket',rain:'',snow:''};
+const cool={day:'2026-09-20',date:'2026-09-20',place:'Synthetic Heights',low:59,high:70,coldest:60,sky:'partly',layer:'light',dress:'Bring a light jacket',rain:'',snow:''};
 const weatherOf=(result,{kept=null}={})=>({saved:async()=>kept,today:async()=>{if(result instanceof Error)throw result;return result;}});
+const reading=run=>({
+  range:run.querySelector('.home-weather-range')?.textContent,
+  meta:run.querySelector('.home-weather-meta')?.textContent,
+  sky:[...run.querySelector('.home-weather-sky').classList].find(name=>name.startsWith('home-weather-sky--')),
+  advice:[...run.querySelectorAll('.home-weather-advice')].map(node=>node.textContent)
+});
 
-test('the day’s weather leads the home screen: what to wear, and when rain is likely',async()=>{
+test('the day’s weather leads the home screen as one reading: the sky, the range, what to wear',async()=>{
   const document=setup();
   mountHome(document.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},
     reminders:store([normalizeReminder({kind:'Birthday',title:'Maisie’s birthday',date:'2016-09-20',every:12})]),rewards:store([]),today,
-    weather:weatherOf({...sunny,rain:'2–5 PM'})});
-  await settle(()=>document.querySelectorAll('#home-weather .home-row').length===2);
+    weather:weatherOf(cool)});
+  await settle(()=>!!document.querySelector('.home-weather'));
   const run=group(document,'home-weather');
   assert.equal(run.hidden,false);
-  assert.equal(run.querySelector('h2').textContent,'Today in Synthetic Heights');
-  assert.deepEqual([...run.querySelectorAll('.home-row strong')].map(node=>node.textContent),['Bring a light jacket','Bring an umbrella']);
-  assert.deepEqual([...run.querySelectorAll('.home-row .footnote')].map(node=>node.textContent),['59–70°','Rain likely 2–5 PM']);
+  assert.deepEqual(reading(run),{range:'59–70°',meta:'Partly cloudy · Synthetic Heights',sky:'home-weather-sky--partly',advice:['Bring a light jacket']});
+  assert.ok(run.querySelector('.home-weather-sky svg'),'the sky is drawn');
+  // One reading, not a run: no heading over it and no rows ruled apart in it.
+  assert.equal(run.querySelector('h2'),null);
+  assert.equal(run.querySelector('.home-row'),null);
+  assert.equal(run.getAttribute('aria-label'),'Today’s weather');
   assert.equal(run.compareDocumentPosition(group(document,'home-today'))&4,4,'the weather is set above today’s birthdays');
 });
 
-test('a dry day is one line, snow rides under the jacket, and a day already worked out is read back',async()=>{
+test('a wet day says when to take the umbrella, and does not name the rain twice',async()=>{
+  const document=setup();
+  mountHome(document.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},reminders:store([]),rewards:store([]),today,
+    weather:weatherOf({...cool,sky:'rain',rain:'2–5 PM'})});
+  await settle(()=>document.querySelectorAll('.home-weather-advice').length===2);
+  const run=group(document,'home-weather');
+  assert.deepEqual(reading(run),{range:'59–70°',meta:'Synthetic Heights',sky:'home-weather-sky--rain',
+    advice:['Bring a light jacket','Bring an umbrella · rain likely 2–5 PM']});
+  const storm=setup();
+  mountHome(storm.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},reminders:store([]),rewards:store([]),today,
+    weather:weatherOf({...cool,sky:'storm',rain:'8–10 AM and 4–6 PM'})});
+  await settle(()=>storm.querySelectorAll('.home-weather-advice').length===2);
+  assert.equal(reading(group(storm,'home-weather')).advice[1],'Bring an umbrella · storms likely 8–10 AM and 4–6 PM');
+});
+
+test('snow rides with the jacket, the feel is said when it decided it, and a day already worked out is read back',async()=>{
   const document=setup();
   let asked=0;
-  const kept={...sunny,layer:'heavy',dress:'Bring a heavy jacket',low:22,high:30,coldest:20,snow:'2–5 PM'};
+  const kept={...cool,sky:'snow',layer:'heavy',dress:'Bring a heavy jacket',low:22,high:30,coldest:15,snow:'2–5 PM'};
   mountHome(document.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},reminders:store([]),rewards:store([]),today,
     weather:{saved:async()=>kept,today:async()=>{asked++;return kept;}}});
-  await settle(()=>document.querySelectorAll('#home-weather .home-row').length===1);
-  const run=group(document,'home-weather');
-  assert.equal(run.querySelector('.home-row strong').textContent,'Bring a heavy jacket');
-  assert.equal(run.querySelector('.home-row .footnote').textContent,'22–30° · snow likely 2–5 PM');
-  assert.doesNotMatch(run.textContent,/umbrella/);
+  await settle(()=>!!document.querySelector('.home-weather'));
+  assert.deepEqual(reading(group(document,'home-weather')),{range:'22–30°',meta:'feels like 15° · Synthetic Heights',sky:'home-weather-sky--snow',
+    advice:['Bring a heavy jacket · snow likely 2–5 PM']});
+  assert.doesNotMatch(group(document,'home-weather').textContent,/umbrella/);
   assert.equal(asked,0,'a saved day asks for nothing');
 });
 
@@ -169,10 +192,11 @@ test('a forecast that cannot be had leaves out the weather and nothing else',asy
   await new Promise(resolve=>setTimeout(resolve,20));
   assert.equal(group(document,'home-weather').hidden,true);
   assert.equal(group(document,'home-today').hidden,false);
-  // With no place named, the heading is just the day.
+  // With no place and no sky, what is left is still the reading.
   const other=setup();
   mountHome(other.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},reminders:store([]),rewards:store([]),today,
-    weather:weatherOf({...sunny,place:''})});
-  await settle(()=>other.querySelectorAll('#home-weather .home-row').length===1);
-  assert.equal(group(other,'home-weather').querySelector('h2').textContent,'Today');
+    weather:weatherOf({...cool,place:'',sky:null})});
+  await settle(()=>!!other.querySelector('.home-weather'));
+  assert.deepEqual(reading(group(other,'home-weather')),{range:'59–70°',meta:undefined,sky:'home-weather-sky--unknown',advice:['Bring a light jacket']});
+  assert.equal(group(other,'home-weather').querySelector('.home-weather-sky svg'),null);
 });

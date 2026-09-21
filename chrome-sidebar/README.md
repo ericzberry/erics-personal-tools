@@ -4106,3 +4106,17 @@ back from the encrypted store for the rest of the day. The Worker's new
 nothing; deploy `tools-api` with this release. See
 [WEATHER.md](../docs/WEATHER.md).
 Archive: `release/erics-sidebar-0.6.266.zip`.
+
+## The weather reads as the day, not as a list (0.6.267 / mobile 0.1.216)
+
+The home screen's weather was set like the birthday runs under it — a heading
+in capitals, the range as grey fine print, the umbrella ruled off as a second
+record. It is now one reading: a glyph of the sky (the sun in brass, every
+other sky in forest), the range in Georgia at the panel's lead-figure size,
+*Partly cloudy · Manhattan* small beside it, and what to wear underneath, with
+the umbrella's hours on its own line. No heading and no rules (UI-49). The sky
+is the commonest over the waking hours from each hour's weather code, or rain,
+storms or snow when one is likely; the Worker now asks Open-Meteo for those
+codes, so deploy `tools-api` with this release. A day already worked out in
+0.6.266 is worked out once more, to pick up its sky.
+Archive: `release/erics-sidebar-0.6.267.zip`.

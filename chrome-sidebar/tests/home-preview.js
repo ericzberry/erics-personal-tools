@@ -26,9 +26,9 @@ const many=Array.from({length:9},(unused,index)=>
   credit(`Statement credit ${index+1}`,'Synthetic Platinum',`$${120+index*15} credit`,{cadence:'quarterly'}));
 // Days as `weatherDay` works them out, handed in already worked out, the way
 // every look after the first of the day reads them back.
-const weatherDay=(extra={})=>({day:'2026-09-20',date:'2026-09-20',place:'Synthetic Heights',low:59,high:70,coldest:60,layer:'light',dress:'Bring a light jacket',rain:'',snow:'',...extra});
+const weatherDay=(extra={})=>({day:'2026-09-20',date:'2026-09-20',place:'Synthetic Heights',low:59,high:70,coldest:60,sky:'cloudy',layer:'light',dress:'Bring a light jacket',rain:'',snow:'',...extra});
 const weatherOf=day=>({saved:async()=>day,today:async()=>{if(!day)throw Error('The forecast is unavailable.');return day;}});
-const rainy=weatherDay({rain:'2–5 PM'});
+const rainy=weatherDay({sky:'rain',rain:'2–5 PM'});
 const states=[
   ['One today, three inside the fortnight, three before the quarter closes; a light jacket and an umbrella',rainy,of([
     maisie,
@@ -40,9 +40,11 @@ const states=[
     {kind:'Birthday',title:'Rune',date:'1979-10-05',every:12},
     {kind:'Service',title:'Furnace filter',date:'2026-06-25',every:3}
   ]),wallet,connected],
-  ['Two today and nothing after; a sweater, and no place named',weatherDay({place:'',low:63,high:77,coldest:64,layer:'sweater',dress:'Wear a sweater, no jacket'}),of([maisie,{kind:'Birthday',title:'Tobias',date:'2001-09-20',every:12}]),[],connected],
-  ['Nobody today, and money about to reset; a windy cold day with snow in the afternoon',weatherDay({place:'Bartholomew-on-the-Marsh Heights',low:24,high:33,coldest:12,layer:'heavy',dress:'Bring a heavy jacket',snow:'1–4 PM'}),of([{kind:'Birthday',title:'Derek’s birthday',date:'1985-10-02',every:12,since:'1985'}]),wallet,connected],
-  ['More credits than a glance holds; a warm day, rain twice',weatherDay({low:74,high:88,coldest:75,layer:'none',dress:'No jacket or sweater',rain:'8–10 AM and 4–6 PM'}),[],many,connected],
+  ['Two today and nothing after; a sweater, and no place named',weatherDay({place:'',low:63,high:77,coldest:64,sky:'partly',layer:'sweater',dress:'Wear a sweater, no jacket'}),of([maisie,{kind:'Birthday',title:'Tobias',date:'2001-09-20',every:12}]),[],connected],
+  ['Nobody today, and money about to reset; a windy cold day with snow in the afternoon',weatherDay({place:'Bartholomew-on-the-Marsh Heights',low:24,high:33,coldest:12,sky:'snow',layer:'heavy',dress:'Bring a heavy jacket',snow:'1–4 PM'}),of([{kind:'Birthday',title:'Derek’s birthday',date:'1985-10-02',every:12,since:'1985'}]),wallet,connected],
+  ['More credits than a glance holds; a warm, clear day',weatherDay({low:74,high:88,coldest:75,sky:'clear',layer:'none',dress:'No jacket or sweater'}),[],many,connected],
+  ['Nothing but the weather: a grey, foggy morning',weatherDay({low:55,high:63,coldest:54,sky:'fog'}),[],[],connected],
+  ['Nothing but the weather: storms twice',weatherDay({low:71,high:84,coldest:72,sky:'storm',layer:'none',dress:'No jacket or sweater',rain:'8–10 AM and 4–6 PM'}),[],[],connected],
   ['Nothing in the fortnight, nothing in the wallet; no forecast to be had',null,of([{kind:'Birthday',title:'Rune',date:'1979-12-05',every:12}]),[],connected],
   ['Not connected',rainy,[],[],{get:async()=>''}]
 ];

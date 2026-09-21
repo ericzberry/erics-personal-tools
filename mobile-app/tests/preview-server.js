@@ -133,7 +133,7 @@ createServer(async (req, res) => {
     // A synthetic day in the Worker's own forecast shape: a cool morning, and
     // rain likely through the middle of the afternoon.
     if (url.pathname === '/v1/weather') {res.end(JSON.stringify({date:new Date().toISOString().slice(0,10),place:'Synthetic Heights',hour:8,low:52,high:64,
-      hours:Array.from({length:24},(unused,hour)=>({hour,temperature:52+Math.round(12*Math.sin(Math.PI*Math.max(0,hour-6)/18)),feelsLike:50+Math.round(12*Math.sin(Math.PI*Math.max(0,hour-6)/18)),chance:hour>=14&&hour<17?70:10,snow:false}))}));return;}
+      hours:Array.from({length:24},(unused,hour)=>({hour,temperature:52+Math.round(12*Math.sin(Math.PI*Math.max(0,hour-6)/18)),feelsLike:50+Math.round(12*Math.sin(Math.PI*Math.max(0,hour-6)/18)),chance:hour>=14&&hour<17?70:10,snow:false,code:hour>=14&&hour<17?61:hour<12?3:2}))}));return;}
     if (url.pathname === '/v1/ai-connections') {res.end(JSON.stringify({connections:[{id,name:'Synthetic research connection',provider:'openai',hasApiKey:true}]}));return;}
     if (url.pathname === `/v1/ai-connections/${id}/restaurants`) {
       let text='';for await(const data of req)text+=data;const {search}=JSON.parse(text);

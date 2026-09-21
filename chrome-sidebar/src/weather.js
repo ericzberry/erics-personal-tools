@@ -29,17 +29,20 @@ export async function locateDevice({geolocation=globalThis.navigator?.geolocatio
 //
 // A failed attempt keeps nothing, so the next look tries again.
 export const WEATHER_RESOURCE='weather-day';
+// A copy kept in an older shape is worked out again rather than drawn short:
+// 2 added the sky.
+export const WEATHER_SHAPE=2;
 export function dailyWeather({store,remote,locate=locateDevice}={}){
   let pending=null;
   async function saved(token,day){
-    try{const value=await store.read(WEATHER_RESOURCE,token);return value?.day===day?value:null;}catch{return null;}
+    try{const value=await store.read(WEATHER_RESOURCE,token);return value?.day===day&&value.shape===WEATHER_SHAPE?value:null;}catch{return null;}
   }
   async function work(token,day){
     const kept=await saved(token,day);
     if(kept)return kept;
     const here=await locate();
     const forecast=await remote(token,`/v1/weather${here?`?lat=${here.lat}&lon=${here.lon}`:''}`,{timeoutMs:15000});
-    const result={...weatherDay(forecast),day};
+    const result={...weatherDay(forecast),day,shape:WEATHER_SHAPE};
     try{await store.write(WEATHER_RESOURCE,token,result);}catch{}
     return result;
   }

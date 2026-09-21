@@ -36,7 +36,7 @@ export function forecastFrom(data,{place='',now=Date.now()}={}){
   hourly.time.forEach((time,index)=>{
     if(!String(time).startsWith(date))return;
     const value=at(index),hour=Number(String(time).slice(11,13));
-    byHour.set(hour,{...byHour.get(hour),hour,temperature:value('temperature_2m'),feelsLike:value('apparent_temperature')});
+    byHour.set(hour,{...byHour.get(hour),hour,temperature:value('temperature_2m'),feelsLike:value('apparent_temperature'),code:value('weather_code')});
     // The precipitation fields describe the hour before the timestamp.
     if(hour>0){
       const rain=(value('rain')??0)+(value('showers')??0),snow=value('snowfall')??0;
@@ -69,6 +69,20 @@ export function spanLabel([from,to]){
   return a.slice(-2)===b.slice(-2)?`${a.slice(0,-3)}–${b}`:`${a}–${b}`;
 }
 
+// What the sky does, from the WMO codes Open-Meteo gives each hour. Rain and
+// snow are not read off the codes: they come from the chance of them, the same
+// reading the umbrella does, so the picture never promises rain the advice
+// does not. A drizzle code in an hour that is probably dry is a grey sky.
+const SKY_OF=code=>code===null||code===undefined?null:code<=1?'clear':code===2?'partly':code===45||code===48?'fog':'cloudy';
+const SKY_ORDER=['clear','partly','cloudy','fog'];
+function skyOf(waking,{wet,snow}){
+  if(wet.length)return snow?'snow':wet.some(entry=>entry.code>=95)?'storm':'rain';
+  const counts=new Map();
+  for(const entry of waking){const sky=SKY_OF(entry.code);if(sky)counts.set(sky,(counts.get(sky)||0)+1);}
+  // The commonest sky over the waking hours; a tie goes to the greyer one.
+  return [...counts].sort((a,b)=>b[1]-a[1]||SKY_ORDER.indexOf(b[0])-SKY_ORDER.indexOf(a[0]))[0]?.[0]||null;
+}
+
 // The day as the home screen says it, worked out once from a forecast. The
 // window is the waking hours still ahead when it is worked out, so a first
 // look at three in the afternoon dresses for the afternoon and evening.
@@ -86,14 +100,17 @@ export function weatherDay(forecast){
   const when=!runs.length?'':runs.length===1&&runs[0][0]<=from&&runs[0][1]>=to?'all day'
     :runs.length<=2?runs.map(spanLabel).join(' and '):spanLabel([runs[0][0],runs.at(-1)[1]]);
   return {date:forecast?.date||'',place:forecast?.place||'',low:forecast?.low??null,high:forecast?.high??null,coldest,
+    sky:skyOf(waking,{wet,snow}),
     layer:coldest===null?null:step?.layer||'none',dress:coldest===null?'':step?.say||NO_LAYER,
     rain:runs.length&&!snow?when:'',snow:runs.length&&snow?when:''};
 }
 
-// The range, and the feel only where it is what the advice was decided on: a
-// windy 52–70° day that feels like 45 otherwise reads as a heavy jacket for no reason.
 export function rangeLabel(day){
   if(day?.low===null||day?.low===undefined||day?.high===null||day?.high===undefined)return '';
-  const range=day.low===day.high?`${day.high}°`:`${day.low}–${day.high}°`;
-  return day.coldest!==null&&day.coldest!==undefined&&day.coldest<=day.low-3?`${range} · feels like ${day.coldest}°`:range;
+  return day.low===day.high?`${day.high}°`:`${day.low}–${day.high}°`;
+}
+// The feel is said only where it is what the advice was decided on: a windy
+// 52–70° day that feels like 45 otherwise reads as a heavy jacket for no reason.
+export function feelsLabel(day){
+  return day?.coldest!==null&&day?.coldest!==undefined&&day?.low!==null&&day?.low!==undefined&&day.coldest<=day.low-3?`feels like ${day.coldest}°`:'';
 }

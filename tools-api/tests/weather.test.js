@@ -36,6 +36,8 @@ test('the device’s position is rounded before it leaves, and the place is name
     assert.match(call.agent,/erics-personal-tools/);
   }
   assert.match(calls.find(call=>call.url.includes('open-meteo')).url,/temperature_unit=fahrenheit/);
+  // The sky the home screen draws comes from each hour's WMO code.
+  assert.match(decodeURIComponent(calls.find(call=>call.url.includes('open-meteo')).url),/hourly=[^&]*weather_code/);
 });
 
 test('with no position from the device, the connection’s city stands in',async()=>{

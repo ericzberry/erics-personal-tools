@@ -26,11 +26,19 @@ test('the day is worked out once, from where the device is, and read back after 
   assert.deepEqual(await weather.saved('token','2026-09-21'),first);
   assert.equal(located,1);
   assert.equal(asked.length,1);
+  // A copy saved in an older shape is worked out again, once.
+  const older={...first};delete older.shape;
+  await store.write(WEATHER_RESOURCE,'token',older);
+  assert.equal(await weather.saved('token','2026-09-21'),null);
+  assert.deepEqual(await weather.today('token','2026-09-21'),first);
+  assert.deepEqual(await weather.today('token','2026-09-21'),first);
+  assert.equal(located,2);
+  assert.equal(asked.length,2);
   // Tomorrow is worked out again.
   assert.equal(await weather.saved('token','2026-09-22'),null);
   await weather.today('token','2026-09-22');
-  assert.equal(located,2);
-  assert.equal(asked.length,2);
+  assert.equal(located,3);
+  assert.equal(asked.length,3);
 });
 
 test('with no location the Worker is asked without one',async()=>{

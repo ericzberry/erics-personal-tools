@@ -111,6 +111,7 @@ fails the suite for everyone at HEAD.
 | **UI-14** | Every visual boundary explains a relationship. No card inside a card, no shadow that separates nothing, no rule with nothing under it. | Wherever a boundary was added |
 | **UI-30** | Nothing sits on a rule: at least 4px under a hairline before what it introduces, and no less above it than below. Stated in full under [From a complaint](#from-a-complaint). | Every group heading, at the narrow width |
 | **UI-28** | A list of groups opens one group at a time, and a closed group's heading carries its own number — its name, its kind, its total, and anything a reader needs before deciding to open it. Stated in full under [From a complaint](#from-a-complaint). | The list closed, one group open, and after a refresh |
+| **UI-49** | A reading is drawn as a reading, not as a run of records: its figure in the serif at lead size, what it means beside it, what follows from it underneath, and no heading or rule between them. Stated in full under [From a complaint](#from-a-complaint). | The home screen's weather at 380px and 280px, and any new single figure a screen opens on |
 | **UI-15** | Reviewed at the real sizes with no horizontal overflow: 380px and the 280px sidebar minimum, 390px and 320px on the phone, and a desktop viewport for full-tab pages. | [VISUAL_QA.md](VISUAL_QA.md) harnesses |
 
 ## From a complaint
@@ -508,6 +509,22 @@ something ("Possible subscription") leads the line. A choice list may still
 name the unknown ("Not known yet"), because there it is an option to pick.
 Checked in `chrome-sidebar/tests/subscriptions-tool.test.js`; look at any list
 that joins its fields with a dot for a placeholder standing in for a value.
+
+**UI-49 — a reading is drawn as a reading.** *By eye.* The home screen's
+weather was set exactly like the runs under it: an uppercase heading carrying
+a place name in capitals, the advice as a bold row, the day's range as grey
+fine print beneath it, and the umbrella ruled off as a second record. *"Make
+it look nicer."* What it lacked was the look of the thing it was — one reading
+of one day. So a screen's single figure (the weather, the net worth a panel
+opens on) is its figure: set in Georgia at the panel's 24px lead size, with
+what it describes and where set small beside it, and what follows from it —
+the jacket, the umbrella and when — hung underneath in the rows' own ink. It
+takes no group heading, because the figure says what it is, and no rules,
+because nothing in it is a list. A picture belongs only where it is
+information: the weather's sky glyph is what the day looks like before a word
+is read. A long name in it stays in sentence case (DESIGN.md, record layout).
+`chrome-sidebar/tests/home.test.js` holds that the weather has no heading and
+no rows; look at the next single figure a screen opens on for the same drift.
 
 ## Open
 

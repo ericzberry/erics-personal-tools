@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {forecastFrom,weatherDay,rangeLabel,spanLabel,LAYERS} from '../src/weather-data.js';
+import {forecastFrom,weatherDay,rangeLabel,feelsLabel,spanLabel,LAYERS} from '../src/weather-data.js';
 
 // A synthetic day, hour by hour: every hour feels like `felt` unless `feel`
 // says otherwise, and rain is likely only in the hours `wet` names.
@@ -58,6 +58,27 @@ test('rain is given the hours it is likely in',()=>{
   assert.equal(weatherDay(day({wet:wetHours(14)})).snow,'');
 });
 
+// The sky is the commonest over the waking hours, except that a day with
+// rain or snow likely is that day, whatever the codes between the showers say.
+test('the sky is what the waking hours mostly look like, or what is likely to fall',()=>{
+  const coded=(codes,extra={})=>{const d=day(extra);d.hours.forEach(entry=>{entry.code=codes(entry.hour);});return weatherDay(d).sky;};
+  assert.equal(coded(()=>0),'clear');
+  // Seven to four is clear, the evening partly cloudy: the day was clear.
+  assert.equal(coded(hour=>hour<16?1:2),'clear');
+  assert.equal(coded(hour=>hour<17?3:2),'cloudy');
+  // A tie goes to the greyer sky.
+  assert.equal(coded(hour=>hour%2?0:3,{hour:7}),'cloudy');
+  // Night is not the day: a clear night and a grey day is a grey day.
+  assert.equal(coded(hour=>hour<7||hour>22?0:45),'fog');
+  // A drizzle code in hours that are probably dry is only a grey sky.
+  assert.equal(coded(()=>53),'cloudy');
+  assert.equal(coded(()=>61,{wet:wetHours(14,15)}),'rain');
+  assert.equal(coded(()=>95,{wet:wetHours(14,15)}),'storm');
+  assert.equal(coded(()=>73,{felt:28,wet:wetHours(14),snow:[14]}),'snow');
+  // A forecast with no codes has no sky to draw.
+  assert.equal(weatherDay(day()).sky,null);
+});
+
 test('snow is said as snow and takes no umbrella',()=>{
   const snowy=weatherDay(day({felt:28,wet:wetHours(14,15,16),snow:[14,15,16]}));
   assert.equal(snowy.snow,'2–5 PM');
@@ -67,8 +88,11 @@ test('snow is said as snow and takes no umbrella',()=>{
 
 test('the range is the day’s, with the feel only where it decided the advice',()=>{
   assert.equal(rangeLabel(weatherDay(day({felt:65,low:59,high:70}))),'59–70°');
+  assert.equal(feelsLabel(weatherDay(day({felt:65,low:59,high:70}))),'');
   // A windy day feels colder than any temperature it reaches.
-  assert.equal(rangeLabel(weatherDay(day({felt:60,feel:{9:45},low:52,high:70}))),'52–70° · feels like 45°');
+  const windy=weatherDay(day({felt:60,feel:{9:45},low:52,high:70}));
+  assert.equal(rangeLabel(windy),'52–70°');
+  assert.equal(feelsLabel(windy),'feels like 45°');
   assert.equal(rangeLabel({low:null,high:null}),'');
   assert.equal(spanLabel([23,24]),'11 PM–12 AM');
 });
@@ -78,7 +102,7 @@ test('the range is the day’s, with the feel only where it decided the advice',
 test('a forecast is cut down to the day it is for, each hour where it starts',()=>{
   const times=Array.from({length:24},(unused,h)=>`2026-09-21T${String(h).padStart(2,'0')}:00`);
   const data={utc_offset_seconds:-4*3600,
-    hourly:{time:times,temperature_2m:times.map((unused,h)=>50+h),apparent_temperature:times.map((unused,h)=>48+h),
+    hourly:{time:times,temperature_2m:times.map((unused,h)=>50+h),apparent_temperature:times.map((unused,h)=>48+h),weather_code:times.map((unused,h)=>h<12?3:1),
       precipitation_probability:times.map((unused,h)=>h===15?80:0),rain:times.map((unused,h)=>h===15?1.2:0),
       showers:times.map(()=>0),snowfall:times.map(()=>0)},
     daily:{time:['2026-09-21'],temperature_2m_min:[49.6],temperature_2m_max:[73.4]}};
@@ -92,5 +116,7 @@ test('a forecast is cut down to the day it is for, each hour where it starts',()
   assert.equal(forecast.hours.find(entry=>entry.hour===14).chance,80,'the 3 PM reading is the rain from 2 to 3');
   assert.equal(forecast.hours.find(entry=>entry.hour===15).chance,0);
   assert.equal(weatherDay(forecast).rain,'2–3 PM');
+  assert.equal(forecast.hours.find(entry=>entry.hour===9).code,3);
+  assert.equal(weatherDay({...forecast,hours:forecast.hours.map(entry=>({...entry,chance:0}))}).sky,'clear');
   assert.throws(()=>forecastFrom({hourly:{time:[]},daily:{time:[]}}),/without today/);
 });

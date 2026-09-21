@@ -15,7 +15,7 @@ import {forecastFrom} from '../../chrome-sidebar/src/weather-data.js';
 const FORECAST = 'https://api.open-meteo.com/v1/forecast';
 const REVERSE = 'https://nominatim.openstreetmap.org/reverse';
 const AGENT = 'erics-personal-tools/1.0 (+https://tools.ezberry.net)';
-const HOURLY = 'temperature_2m,apparent_temperature,precipitation_probability,rain,showers,snowfall';
+const HOURLY = 'temperature_2m,apparent_temperature,precipitation_probability,rain,showers,snowfall,weather_code';
 
 const coordinate = (value, limit) => {
   if (value === null || value === undefined || value === '') return null;

@@ -19,6 +19,27 @@
 /* What a cut-off run leaves out, counted under it. It is not a row: nothing is
    named, so it takes neither the rule above a row nor a row's ink. */
 .home-more{margin:4px 0 0;font-size:12px;color:var(--muted);}
+/* The day's weather is one reading, not a run: the sky beside the range, the
+   range in the serif the product keeps for its figures and at the panel's lead
+   figure size, what the sky does and where set small beside it, and what to
+   wear hung underneath in the rows' own ink. No heading and no rules — nothing
+   in it is a list. The sun is the one glyph in brass, the product's accent for
+   what is warm; every other sky is forest. */
+.home-weather{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;align-items:start;}
+.home-weather-sky{color:var(--forest);}
+.home-weather-sky--clear{color:var(--accent);}
+.home-weather-sky .glyph{display:block;}
+.home-weather-body{display:grid;gap:2px;min-width:0;}
+.home-weather-reading{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;margin-bottom:2px;}
+.home-weather-range{font:500 24px/1.15 Georgia,serif;letter-spacing:-.3px;color:var(--ink);white-space:nowrap;}
+.home-weather-meta{font-size:12px;color:var(--muted);}
+/* Advice runs as a sentence, so a long "rain likely …" wraps inside its words
+   rather than dropping to a line that opens on the dot. */
+.home-weather-advice{font-size:13px;line-height:1.4;}
+.home-weather-advice > strong{font-weight:500;}
+.home-weather-when{font-size:12px;color:var(--muted);}
+/* The runs under it are lists; a step more room says the day is not one. */
+.home-group--weather{margin-bottom:4px;}
 /* Today is the one thing here that is about today, so it is the one thing that
    carries a surface — the sage this app uses for what is current, and a forest
    edge. It is not a status: nothing has happened and nothing is wrong, so it
