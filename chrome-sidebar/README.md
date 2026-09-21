@@ -3505,7 +3505,7 @@ intake, which returned the commitment, the contributions, the distributions and
 the NAV as one capital account.
 Archive: `release/erics-sidebar-0.6.232.zip`.
 
-## One vehicle, one capital account, several holders (0.6.232 / mobile 0.1.183)
+## One vehicle, one capital account, several holders (0.6.233 / mobile 0.1.183)
 
 The share that arrived with 0.6.223 could say a general partner was 35% his. It
 could not say who held the other 65%, and entering the trust that does meant a
@@ -3554,4 +3554,4 @@ figure boxes gone, the list showing 65% of a statement nobody typed. Reviewed
 in the ledger harness at 380px and 280px, which gained a trust holding the rest
 of that general partner: no page overflow at 280px, and both delete
 confirmations read as they should.
-Archive: `release/erics-sidebar-0.6.232.zip`.
+Archive: `release/erics-sidebar-0.6.233.zip`.
