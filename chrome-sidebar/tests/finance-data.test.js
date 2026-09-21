@@ -1233,8 +1233,11 @@ test('Morgan Stanley abbreviates its titles, and its accounts join the trusts al
     reading('LAL -3340','Outstanding balance','loan',0)
   ],portfolios,{institution:'Morgan Stanley',today:'2026-09-21'});
   assert.deepEqual(joint.portfolios,[],'the couple already have a portfolio, and the line is theirs');
+  // One of the three holds the couple's private funds, exactly as one of each
+  // trust's does, and the list gives all three the same name.
   assert.deepEqual(joint.marks.map(mark=>[mark.name,classLabel(mark.class),mark.amount]),[
-    [ESTATE,'Liquid securities',5093706+9369695+926452],
+    [ESTATE,'Fund investments',5093706],
+    [ESTATE,'Liquid securities',9369695+926452],
     [ESTATE,'Loan',0]
   ]);
 });

@@ -1322,13 +1322,14 @@ const PLAN_VALUE=/\b(unvested|potential|projected|unexercis\w*)\b[^\n]*\b(value|
 // describe — and it is the reason this map holds accounts rather than a rule
 // about the word "brokerage".
 //
-// Morgan Stanley says even less. Its list gives each of these the trust's own
-// name and a Total Assets figure, and nothing anywhere on it distinguishes the
-// account holding a trust's private funds from the two managed accounts listed
-// directly above it under the same title. Three accounts, one per trust, named
-// here by number because the number is the only thing on the row that does not
-// also describe its neighbours.
-const FUND_ACCOUNTS={ubs:/\bbrokerage\b|\b63541\b/i,morganstanley:/\b0(?:607|612|618)\b/};
+// Morgan Stanley says even less. Its list gives each of these the same name as
+// the accounts around it — the trust's own title, or "Joint" — and a Total
+// Assets figure, and nothing anywhere on it distinguishes the account holding
+// private funds from the managed accounts listed directly above it under that
+// same name. Four accounts: one for each trust, and one of the couple's three.
+// Named here by number, because the number is the only thing on the row that
+// does not also describe its neighbours.
+const FUND_ACCOUNTS={ubs:/\bbrokerage\b|\b63541\b/i,morganstanley:/\b0(?:607|612|615|618)\b/};
 // A private fund, named on the line the figure sits on. Everything else in
 // this list is about what could be sold this week, and a partnership interest
 // could not be sold at all — which is the whole of what separates Fund

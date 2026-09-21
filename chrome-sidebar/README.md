@@ -3812,3 +3812,19 @@ the estate with no institution, at one whose roster does not name him, and at
 one that has no roster at all; a trust still matching its own portfolio; and
 the longest-fragment rule.
 Archive: `release/erics-sidebar-0.6.241.zip`.
+
+## The couple hold funds too (0.6.242 / mobile 0.1.192)
+
+Joint -0615 is the couple's fund account, and the list says so no more than it
+did for the trusts: all three Joint accounts carry the same name and a Total
+Assets figure each. It joins the three named last release, so **$5,093,706**
+moves out of the estate's liquid line and into Fund investments beside it.
+
+The estate now reads the way the trusts do — what is in funds, what is managed
+beside it, the cash, and the credit line — which is the whole question the two
+class groups exist to answer.
+
+Validation: 619 extension, 33 mobile and 135 API tests pass from an extraction
+of this commit's index, and both apps build. New coverage: the couple's three
+Joint accounts folded into a fund line and a liquid one, with the undrawn line
+still filed as their liability.
