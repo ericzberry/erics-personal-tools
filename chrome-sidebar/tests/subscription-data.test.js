@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeSubscription,parseSubscriptionReading,mergeSubscriptionReading,subscriptionKey,annualCost,estimatedRenewal,subscriptionAttention,suggestedCycle,subscriptionAlerts,chargeKey} from '../src/subscription-data.js';
+import {normalizeSubscription,parseSubscriptionReading,mergeSubscriptionReading,subscriptionKey,statementAccount,matchingSubscriptions,annualCost,estimatedRenewal,subscriptionAttention,suggestedCycle,subscriptionAlerts,chargeKey} from '../src/subscription-data.js';
 import {attentionItems} from '../src/attention-data.js';
 import {subscriptionsOffline} from '../src/subscriptions-offline.js';
 const charge=(on,amount=15)=>({on,amount,description:'SYNTHETIC STREAM',source:'Statement'});
@@ -72,4 +72,23 @@ test('post-cancellation evidence is explicit, individually reviewed and compatib
   assert.equal(normalizeSubscription(oldClient,reviewed).canceledOn,r.canceledOn);
   assert.deepEqual(normalizeSubscription(oldClient,reviewed).reviewedCharges,reviewed.reviewedCharges);
   assert.throws(()=>normalizeSubscription({...r,canceledOn:'2026-02-30'}));
+});
+
+// UI-38. The card comes off the statement, so nobody types a nickname — and
+// nothing that could be part of an account number survives the trip.
+test('a statement names its card, never its number, and a service is one record across cards',()=>{
+  for(const [printed,kept] of [['Amex Platinum','Amex Platinum'],['Platinum Card® ending 1-2345','Platinum Card®'],
+    ['Chase Sapphire Reserve (xxxx-1234)','Chase Sapphire Reserve'],['Blue Cash Everyday Card - Acct ending in 31005','Blue Cash Everyday Card'],
+    ['Citi Double Cash, account number: 4000-1234-5678-9010','Citi Double Cash'],['Amex Gold ****1004','Amex Gold'],
+    ['Max Rewards','Max Rewards'],['Account # 1234 5678 9012',''],[null,''],[42,'']])assert.equal(statementAccount(printed),kept);
+  const [read]=parseSubscriptionReading({account:'Amex Platinum ending 31004',subscriptions:[base()]});
+  assert.equal(read.account,'Amex Platinum');
+  const one={...normalizeSubscription({...base(),account:'Everyday card',state:'Active'}),id:'one'};
+  assert.deepEqual(matchingSubscriptions([one],read).map(r=>r.id),['one'],'a new card joins the service already saved');
+  assert.deepEqual(matchingSubscriptions([one],{...read,account:''}).map(r=>r.id),['one'],'so does a statement that names none');
+  const two={...one,id:'two',account:'Amex Platinum'};
+  assert.deepEqual(matchingSubscriptions([one,two],read).map(r=>r.id),['two'],'two saved on two cards: the card decides');
+  assert.deepEqual(matchingSubscriptions([one,{...two,account:'Other'}],read),[],'and a third card is a third record');
+  assert.equal(mergeSubscriptionReading(one,read).account,'Everyday card','a reading never replaces the card already saved');
+  assert.equal(mergeSubscriptionReading({...one,account:''},read).account,'Amex Platinum','it fills one that is missing');
 });

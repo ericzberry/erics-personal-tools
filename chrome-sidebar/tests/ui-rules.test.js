@@ -352,3 +352,26 @@ test('a glyph alone carries a verb on its own record, and adding is said in word
       `${file} draws a + of its own. See UI-46 in docs/UI_RULES.md.`);
   }
 });
+
+// UI-47. A dropped file is shown as itself. Subscriptions took a statement and
+// poured the text pulled out of it into a box on the screen — "why is it giving
+// me the text like that?" — while Finance and Taxes each drew a card of their
+// own for the same file. The text is the reading's input and the reading's
+// results are what the owner reviews, so every tool that opens a dropped file
+// shows it with the one card in ui.js and writes no extracted text into a field.
+test('a dropped file is shown as one shared card, never as the text pulled out of it',()=>{
+  const src=new URL('../src/',import.meta.url);
+  const read=file=>readFileSync(new URL(file,src),'utf8');
+  const components=readdirSync(new URL('components/',src)).filter(name=>name.endsWith('.js'));
+  for(const file of components.filter(name=>name!=='ui.js'))
+    assert.doesNotMatch(read(`components/${file}`),/export function \w*Card\(\{label,detail,note,tone,onRemove\}\)/,
+      `components/${file} draws a card of its own for a dropped file. Use AttachmentCard from ui.js. See UI-47 in docs/UI_RULES.md.`);
+  const readers=readdirSync(src).filter(name=>name.endsWith('.js')&&/import \{[^}]*\breadStatement\b[^}]*\} from '\.\/statement-text\.js'/.test(read(name)));
+  assert.ok(readers.length>=3,'Finance, Taxes and Subscriptions each open a dropped file');
+  for(const file of readers){
+    const code=read(file);
+    assert.match(code,/\bAttachmentCard\(/,`${file} opens a dropped file without showing it as the shared card. See UI-47.`);
+    assert.doesNotMatch(code,/\.value\s*=\s*(?:text|result\.text)\b/,
+      `${file} writes the text pulled out of a file into a field. See UI-47 in docs/UI_RULES.md.`);
+  }
+});

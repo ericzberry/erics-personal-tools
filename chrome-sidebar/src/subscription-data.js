@@ -2,13 +2,31 @@ import {isDate,addMonths,daysBetween,localDate} from './reminder-data.js';
 import {safePublicURL} from './public-url.js';
 import {money as formatMoney} from './money.js';
 const fail=message=>{throw Object.assign(Error(message),{status:400});};
-export const BILLING_CYCLES={unknown:'Not established',monthly:'Monthly',quarterly:'Quarterly',semiannual:'Every six months',annual:'Yearly',weekly:'Weekly'};
+export const BILLING_CYCLES={unknown:'Not known yet',monthly:'Monthly',quarterly:'Quarterly',semiannual:'Every six months',annual:'Yearly',weekly:'Weekly'};
 export const SUBSCRIPTION_STATES=['Review','Active','Canceled','Not recurring'];
 const text=(v,max,label,required=false)=>{if(typeof v!=='string'||v.length>max||(required&&!v.trim()))fail(`Check ${label} (up to ${max} characters).`);return v.trim();};
 const day=v=>{if(v&&!isDate(v))fail('Enter a valid date.');return v||'';};
 const amount=v=>{if(v===null||v===''||v===undefined)return null;if(typeof v==='boolean'||!Number.isFinite(Number(v))||Number(v)<0||Number(v)>1e8)fail('Enter a nonnegative amount.');return Math.round(Number(v)*100)/100;};
 export const chargeKey=c=>JSON.stringify([c.on,c.amount,c.description]);
 export const subscriptionKey=r=>[r.name,r.account,r.currency].map(v=>String(v||'').trim().toLowerCase().replace(/\s+/g,' ')).join('|');
+// The card a statement is for, as the statement prints it — "Amex Platinum" —
+// and never its number. The reading supplies it, so nobody is asked to type a
+// nickname before a statement can be read (UI-38); a figure long enough to be
+// part of an account number goes, with whatever was introducing it.
+export function statementAccount(value){
+  if(typeof value!=='string')return '';
+  let name=value.replace(/(?<![A-Za-z])[Xx*•#]{2,}[\s-]*\d*/g,'').replace(/\d[\d\s-]{2,}\d|\d{3,}/g,'').replace(/\(\s*\)|\[\s*\]/g,'');
+  for(let before;before!==name;){before=name;name=name.replace(/[\s,(·–-]*(?:ending(?:\s+in)?|account|acct\.?|no\.|number|#)[\s:)]*$/i,'').trim();}
+  return name.replace(/\s+/g,' ').slice(0,80);
+}
+// A service is one record however many statements it turns up on. The card is
+// only a tiebreak: the same name on two cards stays two records, and a reading
+// that names no card, or a new one, joins the record that is already there.
+export function matchingSubscriptions(records,incoming){
+  const service=r=>subscriptionKey({...r,account:''});
+  const same=records.filter(r=>service(r)===service(incoming));
+  return same.length>1?same.filter(r=>subscriptionKey(r)===subscriptionKey(incoming)):same;
+}
 export function mergeCharges(a=[],b=[]){
   const rows=new Map();
   for(const charge of [...a,...b])rows.set([charge.on,charge.amount,charge.description].join('|'),charge);
@@ -87,7 +105,7 @@ export function subscriptionAttention(records,today=localDate()){
     return [];
   });
 }
-export function parseSubscriptionReading(value,{account='',source=''}={}){
+export function parseSubscriptionReading(value,{account=statementAccount(value?.account),source=''}={}){
   if(!Array.isArray(value?.subscriptions)||value.subscriptions.length>40)fail('The reading must contain up to 40 possible subscriptions.');
   return value.subscriptions.map(r=>{
     if(!Array.isArray(r.charges)||!r.charges.length)fail('A possible subscription needs a dated charge as evidence.');
@@ -99,7 +117,8 @@ export function parseSubscriptionReading(value,{account='',source=''}={}){
 }
 export function mergeSubscriptionReading(previous,incoming){
   const charges=mergeCharges(previous.charges,incoming.charges);
-  // Importing never reactivates a cancellation or overwrites an owner's terms.
-  return normalizeSubscription({...previous,charges,...(previous.state==='Review'?{cycle:suggestedCycle(charges),amount:charges.at(-1)?.amount??previous.amount}:{})});
+  // Importing never reactivates a cancellation or overwrites an owner's terms,
+  // and the card already saved stays; a reading only names one that is missing.
+  return normalizeSubscription({...previous,charges,account:previous.account||incoming.account||'',...(previous.state==='Review'?{cycle:suggestedCycle(charges),amount:charges.at(-1)?.amount??previous.amount}:{})});
 }
 export const money=(amount,currency)=>amount===null?'Amount unknown':formatMoney(amount,currency);

@@ -58,15 +58,17 @@ here.
 | **UI-35** | Sections at one level of a screen all open the same way. A bare list standing beside three disclosures is the odd one out; it becomes a disclosure too, and the one the screen is opened for is the one that starts open. Stated in full under [From a complaint](#from-a-complaint). | `tests/finance-ledger.test.js` |
 | **UI-36** | A band reaches both edges of its block. Whatever bleeds sideways with a negative margin widens by the same amount in the same rule, because a negative margin moves a box and does not stretch it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-37** | A way out of a problem appears only while there is one. Connection settings stands in place of Refresh when a tool has no token or reached nothing, and not beside it when everything worked. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/attention-tools.test.js` |
-| **UI-38** | Never ask for what the app can find out. Research fills in a point's value; the owner is asked only for what only the owner knows. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/cards.test.js` |
+| **UI-38** | Never ask for what the app can find out. Research fills in a point's value; the owner is asked only for what only the owner knows. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/cards.test.js`, `chrome-sidebar/tests/subscriptions-tool.test.js` |
 | **UI-39** | Fine print is set below what it qualifies: name, amount in ink, conditions smaller and muted, and no box around a review inside an editor. Stated in full under [From a complaint](#from-a-complaint). | By eye |
 | **UI-39** | Evidence for someone else is a Copy button, not a transcript. Diagnostic text meant to be pasted elsewhere is one Copy button, shown only while there is a problem to diagnose. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-snapshot.test.js` |
 | **UI-41** | A list of classes holds only classes. A single holding among the lines that name whole classes is grouped under its class's line and opens from it, a name keeps no kind-word run onto it, and its figures read one to a line. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js` |
-| **UI-42** | What has happened is not offered again. A dropped statement is read when it arrives; a Read button exists only for a file that could not be read, and no line says a thing is ready once it has been done. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js` |
+| **UI-42** | What has happened is not offered again. A dropped statement is read when it arrives; a Read button exists only for a file that could not be read, and no line says a thing is ready once it has been done. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js`, `subscriptions-tool.test.js` |
 | **UI-43** | A review's actions are the bare verbs — Save, Edit, Discard. The review above them is what they act on, so the label never restates or counts it. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-snapshot.test.js`, `finance-investments.test.js`, `rewards-tool.test.js` |
 | **UI-44** | A reading reports only what went wrong. A figure it left out on purpose, or one that is part of a figure it did report, is not a warning; what was refused is said only when nothing was found. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/finance.test.js`, `chrome-sidebar/tests/finance-snapshot.test.js` |
 | **UI-45** | A side panel answers; a page holds the detail. A panel tool says what it all comes to and takes new records in; the record-by-record detail — every entity, every holding, every quarter — is read on the tool's own page, one press away, and the panel does not carry it again. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-ledger.test.js` |
 | **UI-46** | A glyph alone carries a verb on the record whose line it rides. An action that makes something new — cash for an institution — says what it makes in words; there is no glyph for adding. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js`, `finance-overview.test.js` |
+| **UI-47** | A dropped file is shown as itself. Every tool that opens one shows it as the one shared card — its name, a few words on what came out of it, Remove — and never puts the text pulled out of it on the screen. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js`, `subscriptions-tool.test.js` |
+| **UI-48** | What is not known is left off the line. A record's line prints what is known; an unknown billing cycle or price is omitted, not spelled out as "Not established" or "Amount unknown", and the ordinary state is not said at all. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/subscriptions-tool.test.js` |
 
 ## Ratcheting
 
@@ -342,16 +344,20 @@ remedy. Checked in `chrome-sidebar/tests/attention-tools.test.js`; the other
 tools' `loaded ? Refresh : Connection settings` is read in their controllers.
 
 **UI-38 — never ask for what the app can find out.** *Enforced for Best card
-research.* A value the app can look up — what a point is worth, a card's
+research and Subscriptions.* A value the app can look up — what a point is worth, a card's
 rates, a date it already knows — is looked up and filled in, and the owner is
 asked only for what nobody but the owner knows: a remaining cap, whether a
 bonus was activated. A form never opens itself to demand a field research
 could have answered, and saving never refuses for want of one. *From Best card,
 where researching J.P. Morgan Reserve opened every field of Card terms and
 refused to save until he typed a cents-per-point figure: "'Enter your
-redemption value in cents per point' is a thing you can figure out."* Checked
-in `tools-api/tests/cards.test.js`; look at every other create surface for a
-field it could fill itself.
+redemption value in cents per point' is a thing you can figure out."* And from
+Subscriptions, which would not read a statement until an account nickname had
+been typed — the statement names its own card — and asked for a country before
+it would look for cheaper plans, which the browser already says: *"why do I
+need to give the statement a nickname to upload it?"* Checked in
+`tools-api/tests/cards.test.js` and `chrome-sidebar/tests/subscriptions-tool.test.js`;
+look at every other create surface for a field it could fill itself.
 
 **UI-39 — evidence for someone else is a Copy button, not a transcript.**
 *Enforced for Finance's page reading.* Diagnostic text — what a reading took
@@ -403,7 +409,7 @@ formatting is a bit off."* Look at every research review — Rewards' card
 intake and Best card's summary — at sidebar width.
 
 **UI-42 — what has happened is not offered again.** *Enforced for Finance's
-statement intake.* A button offers what has not been done yet, and a status
+and Subscriptions' statement intake.* A button offers what has not been done yet, and a status
 line says what is true now. Finance took a dropped statement, said "Ready to
 read." and waited for a press on "Read this"; after the press both stayed on
 the screen, above the figures they had produced. Dropping a statement is
@@ -412,8 +418,10 @@ document on arrival. Read appears only for a file that could not be read —
 offline, or a reading that failed — and a file whose figures are saved or
 discarded leaves with them. *"I've already read the document - so 'Read this'
 is strange."* Checked in `chrome-sidebar/tests/finance-investments.test.js`.
-Subscriptions keeps its Read button, because a nickname and the editable text
-have to be settled before that reading can start.
+Subscriptions kept "Ready to read." and a Find recurring charges button, on the
+grounds that a nickname and the editable text had to be settled first; UI-38
+and UI-47 took both away, so it reads on arrival too, and its file leaves once
+what it found is in the list. Checked in `subscriptions-tool.test.js`.
 
 **UI-43 — a review's actions are the bare verbs.** *Enforced for Finance's
 reviews and Rewards' card research.* Under a list of what is about to be
@@ -474,6 +482,32 @@ out** — revealed with the card's verbs on a pointer and always shown to a
 finger. `ui.js` exports no glyph for adding, the glyphs it does export are a
 closed list in `tests/ui-rules.test.js`, and `finance-overview.test.js` holds
 the card's verb to its words.
+
+**UI-47 — a dropped file is shown as itself.** *Enforced.* Subscriptions took
+a statement and poured the text the device pulled out of it into a box on the
+screen, a year of card lines run together, as though the owner were meant to
+proofread it before the reading could start. *"Why is it giving me the text
+like that?"* That text is the reading's input; what the reading found is what
+the owner reviews. So a dropped file appears as one card — its name, a few
+words on what came out of it, and Remove at the end of the name's line — and
+the only thing said beyond that is what went wrong with it. Finance and Taxes
+each drew that card for themselves, under two names; there is now one,
+`AttachmentCard` in `ui.js`. `tests/ui-rules.test.js` holds that no component
+draws a card of its own for a file, that every tool opening one shows the
+shared card, and that none writes the extracted text into a field.
+
+**UI-48 — what is not known is left off the line.** *Enforced for
+Subscriptions.* A record's line under its name is read for what it says, so
+every word on it is a fact: the cycle, the card, the next date. Subscriptions
+printed "Review · $895.00 · Not established · Amex Platinum" — the state
+nobody needed told, the price in the middle of the words, and a placeholder
+for a billing cycle it did not know. *"This looks junky."* An unknown is
+omitted, the price stands in the column where a list's amounts are read down
+(UI-27), Active — the ordinary state — is not said, and a state that asks for
+something ("Possible subscription") leads the line. A choice list may still
+name the unknown ("Not known yet"), because there it is an option to pick.
+Checked in `chrome-sidebar/tests/subscriptions-tool.test.js`; look at any list
+that joins its fields with a dot for a placeholder standing in for a value.
 
 ## Open
 

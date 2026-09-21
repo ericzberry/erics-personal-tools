@@ -22,8 +22,10 @@ test('subscriptions preserve rejected edits, accept decimal prices, and exclude 
   // Reading a statement never asks which saved connection should do it.
   assert.equal(root.querySelector('#subscriptions-connection'),null);
   assert.equal(root.querySelector('#subscriptions-total').textContent,'');assert.equal(root.querySelector('#subscriptions-amount').getAttribute('step'),'0.01');
-  [...root.querySelectorAll('button')].find(b=>b.textContent==='Review terms').click();
-  assert.equal(root.querySelector('#subscriptions-cycle').value,'monthly');root.querySelector('#subscriptions-name').value='Edited name';root.querySelector('#subscriptions-state').value='Active';fail=true;
+  // Confirming a possible subscription opens it with its status already Active.
+  [...root.querySelectorAll('button')].find(b=>b.textContent==='Confirm').click();
+  assert.equal(root.querySelector('#subscriptions-cycle').value,'monthly');assert.equal(root.querySelector('#subscriptions-state').value,'Active');
+  root.querySelector('#subscriptions-name').value='Edited name';fail=true;
   root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await settle(()=>root.textContent.includes('Could not save'));
   assert.equal(root.querySelector('#subscriptions-name').value,'Edited name');
   fail=false;root.querySelector('form').dispatchEvent(new window.Event('submit',{cancelable:true}));await settle(()=>writes===2&&!root.querySelector('#subscriptions-save').disabled);

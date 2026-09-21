@@ -4068,3 +4068,24 @@ view's roster block now pins under the Tools row rather than behind it. The
 offsets are the `--app-bar-*` properties in `styles.css`; the extension alone
 is affected, since the phone draws its own menu.
 Archive: `release/erics-sidebar-0.6.264.zip`.
+
+## Subscriptions reads a statement without asking anything first (0.6.265 / mobile 0.1.214)
+
+Reading a statement no longer asks for an account nickname or shows the text
+pulled out of the file. The dropped file appears as the shared file card and is
+read as soon as it arrives; the card it was charged to comes off the statement
+itself ("Amex Platinum"), with anything that could be part of an account number
+removed, and a service found on another card's statement joins the record
+already saved (UI-38, UI-42). **Read** appears only for a file that could not be
+read then. Finance, Taxes and Subscriptions now share one `AttachmentCard` in
+`ui.js`, with Remove on the file's name line (UI-47).
+
+Each subscription is one line with its price in the column, then its cycle,
+card and next date — an unknown cycle or price is left off rather than spelled
+out, and Active is not said (UI-48). A possible subscription offers **Confirm**
+and **Not recurring**. Charges and cheaper alternatives share one drawer per
+record, and **Find cheaper alternatives** is offered only for an active service,
+searching the market the browser's locale names instead of a country field.
+The Worker's reading returns the statement's card and writes notes only for a
+real ambiguity; deploy `tools-api` with this release.
+Archive: `release/erics-sidebar-0.6.265.zip`.

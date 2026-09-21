@@ -22,32 +22,42 @@ shows coverage and failures. Unavailable data never means "nothing needs attenti
 `subscriptions.js` and `components/subscriptions.js` are used by both hosts.
 `tools-api/src/subscriptions.js` owns storage, statement reading and live research.
 
-Each record contains a service name, user-supplied account nickname, currency,
+Each record contains a service name, the card or account it bills to, currency,
 price per billing period, cycle, status, confirmed renewal / decision date,
 notice window, account link, notes, up to 120 dated charges, and saved research.
 Statuses are Review, Active, Canceled and Not recurring. Only Active records with
 known price and cycle contribute to annualized totals. Currencies stay separate.
 These are annualized contract prices, not measured annual spending.
 
-Statement intake uses the existing PDF / XLSX / text / image reader. The owner
-reviews extracted text and explicitly starts AI reading; images are downscaled
-on device. Text is limited to 24,000 characters; longer documents must be split,
-never silently truncated. Raw files and raw statement text stay in memory and
-are discarded on clearing or locking. The selected AI provider receives statement
+Statement intake uses the existing PDF / XLSX / text / image reader, and asks
+nothing first. A dropped file shows as the shared file card (UI-47) and is read
+the moment it arrives (UI-42); the extracted text is never shown. Read appears
+only for a file that could not be read then — offline, no connection, a failed
+reading — and the file leaves once what it found is saved. Images are downscaled
+on device. Text is limited to 24,000 characters; the part past the limit is
+named on the card and again after the reading, never silently dropped. Raw files
+and raw statement text stay in memory and are discarded on removal or locking. The selected AI provider receives statement
 text or an image, not all saved accounts. Scanned PDFs without a text layer need
 a readable image or pasted text. No bank connection or background inbox scan exists.
 
-The reading returns up to 40 possible services with real dated debit evidence.
+The reading returns up to 40 possible services with real dated debit evidence,
+and the card the statement is for as the statement names it ("Amex Platinum"),
+with anything that could be part of an account number removed on both the
+Worker and the device (`statementAccount`). Nobody types a nickname (UI-38).
+The reading's notes are only for an ambiguity the owner must resolve.
 Missing year / currency, incomplete output or absent charge evidence fails rather
 than inventing values. One recognizable subscription charge can be a candidate;
 repeat purchases alone are not proof. Ambiguous payment aggregators need manual
 identification. Detection is not guaranteed exhaustive; compare multiple months
 and annual statements, and add missed services manually.
 
-Reading saves candidates as Review through the durable queue. Edit confirms status
-and terms; Canceled / Not recurring preserve evidence without contributing to totals.
-A case/whitespace-normalized name, account nickname and currency match subsequent
-imports conservatively. Different descriptors may need manual reconciliation.
+Reading saves candidates as Review ("Possible subscription") through the durable
+queue. Confirm opens the editor with the status set to Active to fill in terms; Canceled / Not recurring preserve evidence without contributing to totals.
+A case/whitespace-normalized name and currency match subsequent imports
+(`matchingSubscriptions`): the same service on another card's statement joins
+the saved record, and the card decides only when one service is saved twice on
+two cards. A reading never replaces a saved card; it fills a missing one.
+Different descriptors may need manual reconciliation.
 Date, amount and exact descriptor deduplicate overlapping imports. Evidence with
 identical descriptors on the same day and amount is treated as one observation;
 this is not a transaction ledger. Imports never change manually confirmed terms
@@ -62,8 +72,9 @@ there is no assumption that a bill was paid or a service renewed.
 
 ## Cheaper alternatives
 
-An explicit Find alternatives action uses a saved OpenAI connection, a country /
-market entered by the owner, the service name, currency and required features.
+An explicit Find cheaper alternatives action, inside an Active record's drawer,
+uses a saved OpenAI connection, the service name, currency, and the market the
+browser's locale names (`researchMarket`) — no country field (UI-38).
 Statement contents and charge history are not sent to web research. The central
 `subscriptions.research` policy requires live web search. Every result must have
 a full billing-period ongoing price in the same currency and an HTTPS source URL
@@ -106,7 +117,7 @@ without changing price, status or renewal terms. Reimporting identical evidence 
 reviewed; newly discovered charges, including older dates, can alert again. The
 optional `canceledOn` and `reviewedCharges` fields live in the existing encrypted
 JSON record, so no table migration is needed. Older API writes preserve these
-fields when omitted. Review candidates also offer Review terms and Not recurring.
+fields when omitted. Review candidates also offer Confirm and Not recurring.
 
 The existing morning push digest now uses the same six-source attention projection.
 Financial, subscription and document items appear as category counts without private

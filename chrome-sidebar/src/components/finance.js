@@ -635,16 +635,3 @@ export function TrendTable(series,currency){
     })
   ],{className:'trend-table'});
 }
-
-// What the device pulled out of a file or a page, stated plainly before it is
-// read. A poor extraction has to be visible here — the owner deciding "that is
-// garbage, I will paste it instead" is the whole point of showing it.
-export function AttachmentCard({label,detail,note,tone,onRemove}){
-  const remove=Button('Remove',{variant:'subtle',size:'compact'});
-  remove.addEventListener('click',onRemove);
-  return Section([
-    Stack([Strong(label),Text(detail,{className:'footnote'})]),
-    note?Notice(note,{tone}):null,
-    ActionGroup([remove],{compact:true})
-  ],{className:'record-row'});
-}

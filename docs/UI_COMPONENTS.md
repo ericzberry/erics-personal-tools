@@ -44,6 +44,7 @@ The catalogue below describes existing exports, not a promise that each componen
 | Research results | `ResultBlock`, `EvidenceList`, `OutputText` | Separate evidence, generated conclusions, and operation status |
 | One generated thing, end to end | `ResultSection` | One section per function — its name, its action, its status and its editable result; keep editing and copying available and preserve edits across async work |
 | Upload | `UploadField` with `attachFileDrop` | Shared browse/drop handling, validation, and inline feedback |
+| A dropped file | `AttachmentCard` | One card for a file a tool has opened — its name, a few words on what came out of it, Remove on the name's line. The text pulled out of it is never shown (UI-47) |
 | Values sealed on the device | `ProtectedField`, `MaskedValue` | Masked by default; the editor's empty input means keep, never erase |
 | Specialized domain presentation | Existing modules such as `travel.js`, `restaurant-views.js`, and draft components | Reuse the relevant view rather than duplicating its rows in another host |
 

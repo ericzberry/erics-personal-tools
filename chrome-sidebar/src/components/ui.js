@@ -516,6 +516,18 @@ export function RecordRow({title,detail,meta='',figure='',notes='',actions=[],ex
   ],{className:'record-row'});
 }
 
+// A dropped file, shown as the file: its name, what came out of it in a few
+// words, and Remove at the end of the name's line. What the device pulled out
+// of it is the reading's input and never goes on the screen to be proofread —
+// the reading's results are what the owner reviews. Every tool that takes a
+// file shows it with this card and builds no card of its own. UI-47.
+export function AttachmentCard({label,detail,note,tone,onRemove}){
+  const remove=Button('Remove',{variant:'subtle',size:'compact'});
+  remove.setAttribute('aria-label',`Remove ${label}`);
+  remove.addEventListener('click',onRemove);
+  return RecordRow({title:label,detail,actions:[remove],extra:[note?Notice(note,{tone}):null]});
+}
+
 export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true});
 
 // A compact list row that opens into the value it is holding. The whole line is

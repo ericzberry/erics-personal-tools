@@ -45,6 +45,19 @@
 .travel-wallet summary{cursor:pointer;font-size:12px;padding:4px 0}
 .travel-wallet summary h2{display:inline}
 .travel-wallet details[open]>:not(summary){margin-top:12px}
+/* A drawer inside a record is part of the record. Closed, the rule above it
+   cut the record in two and its label read as the next row; it sits on the
+   record's own ground under the lines it belongs to, and the record's rule
+   below closes both. Opened, it is a block like any other. UI-22. */
+.travel-wallet .record-row>details:not([open]){border-top:0;padding:0 0 8px}
+.travel-wallet .record-row>details[open]{margin-bottom:8px}
+/* A subscription whose last line is words — its cycle and card, a note — sat
+   on the rule below it; the rows take the breathing room the gift and reminder
+   lists give theirs. Here because both hosts load this sheet and Subscriptions
+   has none of its own; it out-specifies the wallet's row rule rather than
+   trusting sheet order (UI-31). */
+.travel-wallet .subscription-list .record-row{padding:4px 0 8px}
+.travel-wallet .subscription-list .record-row>p{margin:0}
 /* Opened, a panel is a region rather than one more line in a run of them: its
    summary takes a tinted band at the head of a bounded block, so the label
    that was clicked and everything that came out from under it read as one

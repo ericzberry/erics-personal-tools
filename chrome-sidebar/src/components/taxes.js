@@ -67,19 +67,6 @@ export function TaxesView({today=new Date()}={}){
 
 export const defaultYearFor=today=>defaultTaxYear(today);
 
-// What the device pulled out of the dropped file, before anything is sent or
-// filed. A reading that went badly has to be visible here: the owner deciding
-// "that is wrong, I will name it myself" is the point of showing it.
-export function DocumentCard({label,detail,note,tone,onRemove}){
-  const remove=Button('Remove',{variant:'subtle',size:'compact'});
-  remove.addEventListener('click',onRemove);
-  return Section([
-    Stack([Strong(label),Text(detail,{className:'footnote'})]),
-    note?Notice(note,{tone}):null,
-    ActionGroup([remove],{compact:true})
-  ],{className:'record-row'});
-}
-
 // The name and folder this document would take, shown before it moves so the
 // owner is approving a destination rather than trusting one. `path` is the
 // folders under the tax folder, outermost first, so a year that is divided by

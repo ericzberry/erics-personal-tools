@@ -1,5 +1,5 @@
-import {TaxesView,DocumentCard,Destination,ConflictPanel,PasswordPanel,FiledList,ConnectionPanel,fileSize} from './components/taxes.js';
-import {Button,setStatus} from './components/ui.js';
+import {TaxesView,Destination,ConflictPanel,PasswordPanel,FiledList,ConnectionPanel,fileSize} from './components/taxes.js';
+import {AttachmentCard,Button,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED} from './statement-text.js';
 import {taxFileName,taxFolderPath,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,filesIntoSubfolder,
@@ -240,7 +240,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
   // --- Rendering
   function renderDocument(){
     $('document').hidden=!reading;
-    $('document').replaceChildren(...(reading?[DocumentCard({
+    $('document').replaceChildren(...(reading?[AttachmentCard({
       label:dropped?.name||'',detail:reading.detail,note:reading.note,tone:reading.tone,
       onRemove:()=>{clearFiling({keepFields:false});status('','file-form-status');render();}
     })]:[]));

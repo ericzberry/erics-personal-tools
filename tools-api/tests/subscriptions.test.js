@@ -9,6 +9,9 @@ const reading={subscriptions:[{name:'Synthetic Stream',currency:'USD',charges:[{
 const fetcher=(value,{search=false,source='https://example.com/pricing'}={})=>async url=>url.endsWith('/models')?Response.json({data:[{id:'gpt-4.1-mini'},{id:'gpt-5-mini'}]}):Response.json({status:'completed',output:[...(search?[{type:'web_search_call',action:{sources:[{url:source}]}}]:[]),{type:'message',content:[{type:'output_text',text:JSON.stringify(value)}]}]});
 test('statement extraction rejects missing evidence, oversize text and unsupported claims',async()=>{
   const result=await readSubscriptions(connection,{text:'Synthetic statement'},fetcher(reading));assert.equal(result.subscriptions[0].state,'Review');assert.equal(result.subscriptions[0].cycle,'unknown');
+  // The card is read off the statement, with nothing of its number kept.
+  assert.equal(result.account,'');
+  assert.equal((await readSubscriptions(connection,{text:'Synthetic statement'},fetcher({...reading,account:'Amex Platinum ending 31004'}))).account,'Amex Platinum');
   await assert.rejects(readSubscriptions(connection,{text:'x'.repeat(24001)},fetcher(reading)),e=>e.status===400);
   await assert.rejects(readSubscriptions(connection,{text:'Example'},fetcher({subscriptions:[{name:'Guess',currency:'USD',charges:[]}]})),e=>e.status===502);
 });
