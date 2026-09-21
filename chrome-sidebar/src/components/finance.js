@@ -261,39 +261,41 @@ function FoldRow(row,{index,editing,dated,onAmount}){
 // itself and reads under its own name; any other page the host can read is
 // offered the same errand. The heading above this says which, so nothing in
 // here repeats it.
-// What the last reading actually took off the page, kept closed.
+// What the last reading actually took off the page, as one button that copies it.
 //
 // The owner and this reader look at the same screen and do not always see the
 // same page: a bank drew twenty accounts in front of him out of components, and
-// what arrived here was the summary panel and nothing else. From the panel the
-// two are indistinguishable, and every guess about which it was cost a round
-// trip through his browser. So the reading brings its own evidence — what the
-// page was built out of, and the text that was sent — and it sits behind a
-// disclosure, because it is for the times something is wrong and for nobody's
-// ordinary reading.
-export function PageSource({text='',shape=null,trimmed=0}){
+// what arrived here was the summary panel and nothing else. So the reading
+// keeps its own evidence — what the page was built out of, and the text that
+// was sent. It used to open under a disclosure as a transcript nobody reads in
+// a sidebar; what it is for is being pasted into a conversation about why the
+// reading failed, so it is a Copy button and nothing else.
+export function PageSource({text='',shape=null,trimmed=0},clipboard=globalThis.navigator?.clipboard){
   if(!text&&!shape)return null;
   const built=shape?`${shape.elements} elements · ${shape.roots} root${shape.roots===1?'':'s'} · ${shape.grids} grid${shape.grids===1?'':'s'} · ${shape.frames} frame${shape.frames===1?'':'s'}`:'';
   const sent=`${text.split('\n').filter(Boolean).length} lines · ${text.length.toLocaleString('en-US')} characters${trimmed?` · ${trimmed.toLocaleString('en-US')} left out`:''}`;
-  const source=document.createElement('pre');
-  source.className='page-source-text';
-  source.textContent=text;
-  return Disclosure('What was read',[Stack([
-    Label(built,{className:'page-source-shape'}),
-    Label(sent,{className:'page-source-shape'}),
-    source
-  ],{className:'page-source'})],{id:'finance-page-source'});
+  const label='Copy what was read';
+  const copy=Button(label,{id:'finance-page-source',variant:'secondary',size:'compact'});
+  copy.addEventListener('click',async()=>{
+    try{
+      await clipboard.writeText(`${[built,sent].filter(Boolean).join('\n')}\n\n${text}`);
+      copy.textContent='Copied';
+    }catch{copy.textContent='Copy is unavailable here';}
+    setTimeout(()=>{copy.textContent=label;},2000);
+  });
+  return copy;
 }
 export function PagePanel({site,rows=[],editing=false,disabled=false,source=null,onRead,onSave,onEdit,onDiscard,onAmount}){
   const read=Button(site?`Read my ${site.label} accounts`:'Read the accounts on this page',{id:'finance-page-read',variant:'primary',size:'compact',disabled});
   read.addEventListener('click',onRead);
+  // The evidence is for a reading that came back empty. One that worked has
+  // its figures on the screen, and a copy button beside Save is noise.
+  const copy=source&&!rows.length?PageSource(source):null;
   return Stack([
-    ...(rows.length?[FoldReview({rows,editing,disabled,onSave,onEdit,onDiscard,onAmount})]:[
+    rows.length?FoldReview({rows,editing,disabled,onSave,onEdit,onDiscard,onAmount}):
       // The button says what it does and the heading says which page. A
       // sentence underneath repeating both is a paragraph nobody reads twice.
-      ActionGroup([read],{compact:true})
-    ]),
-    ...(source?[PageSource(source)].filter(Boolean):[])
+      ActionGroup([read,copy].filter(Boolean),{compact:true})
   ],{className:'snapshot-reading'});
 }
 

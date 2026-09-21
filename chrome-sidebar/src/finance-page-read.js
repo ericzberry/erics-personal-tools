@@ -196,10 +196,57 @@ export function readAccountPage(options) {
   // so a grid nested inside another does not hand its rows to both.
   const inside = (node, selector, owner) => [...node.querySelectorAll(selector)]
     .filter(found => !found.closest || found.closest(owner) === node);
+  //
+  // And one row on the screen is not always one row in the markup. A data grid
+  // that pins a column to the left draws it in a container of its own, so every
+  // row is two elements side by side: the pinned part and the part that
+  // scrolls. iCapital's Investment Summary is built that way, and read element
+  // by element it came apart — "Year | CCY" as the table's whole header, the
+  // fifteen column headers left behind as rows with no figure in them, and four
+  // rows of figures with no year against any of them. The page is still
+  // honest about it: every part of one row carries the same aria-rowindex, and
+  // every cell its aria-colindex, so the parts are put back together by those
+  // before anything is read out of them.
+  const attribute = (node, name) => (node.getAttribute ? node.getAttribute(name) : null);
+  const number = (node, name) => Number(attribute(node, name)) || 0;
+  const isHeader = cell => !!(cell.matches && cell.matches('th,[role="columnheader"]'));
+  const joined = grid => {
+    const parts = new Map();
+    inside(grid, ROW, GRID).slice(0, 400).forEach((row, order) => {
+      const index = number(row, 'aria-rowindex');
+      // A grid that numbers its rows only for itself still names each one.
+      const named = attribute(row, 'row-index');
+      const key = index ? `a${index}` : named !== null ? `r${named}` : `o${order}`;
+      if (!parts.has(key)) parts.set(key, {order, index, cells: []});
+      parts.get(key).cells.push(...inside(row, CELL, ROW).map(cell => ({
+        text: clean(cell.innerText), column: number(cell, 'aria-colindex'),
+        span: number(cell, 'aria-colspan') || 1, header: isHeader(cell)
+      })));
+    });
+    const rows = [...parts.values()];
+    if (rows.every(row => row.index)) rows.sort((a, b) => a.index - b.index);
+    rows.forEach(row => {if (row.cells.every(cell => cell.column)) row.cells.sort((a, b) => a.column - b.column);});
+    // A grid that groups its columns states its header on two rows — the group
+    // over the columns it spans, then the columns — and a column is only named
+    // by both: "Cumulative" is contributions in one place and distributions in
+    // the next. Where the columns are numbered the two are said as one row, so
+    // each header names its own column outright.
+    let top = 0;
+    while (top < rows.length && rows[top].cells.length && rows[top].cells.every(cell => cell.header)) top++;
+    const heads = rows.slice(0, top);
+    if (heads.length > 1 && heads.every(row => row.cells.every(cell => cell.column))) {
+      const last = heads[heads.length - 1];
+      const named = last.cells.map(cell => ({...cell, text: [...heads.slice(0, -1).map(row => {
+        const over = row.cells.find(group => group.column <= cell.column && cell.column < group.column + group.span);
+        return over && over.text !== cell.text ? over.text : '';
+      }), cell.text].filter(Boolean).join(' ')}));
+      rows.splice(0, top, {...last, cells: named});
+    }
+    return rows.slice(0, 200).map(row => row.cells.map(cell => cell.text).filter(Boolean));
+  };
   const gridRows = grid => grid.rows
     ? [...grid.rows].slice(0, 200).map(row => [...row.cells].map(cell => clean(cell.innerText)).filter(Boolean))
-    : inside(grid, ROW, GRID).slice(0, 200)
-      .map(row => inside(row, CELL, ROW).map(cell => clean(cell.innerText)).filter(Boolean));
+    : joined(grid);
   // Every root the page draws through, not just the document. A custom element
   // renders its content in a shadow root, and both of the ways this reader
   // looks at a page stop dead at that boundary: querySelectorAll never crosses
@@ -242,8 +289,12 @@ export function readAccountPage(options) {
     // said travels with it; what it has not said must be left where it was
     // said properly.
     cells.forEach(row => {if (kept.has(row.join('  |  ')) && labelled(row)) row.forEach(cell => celled.add(cell.toLowerCase()));});
-    // The header row states what the columns mean, so it travels with them.
-    const shown = [...new Set([rows[0], ...figures])].filter(Boolean);
+    // The header states what the columns mean, so it travels with them — all
+    // of it, not only the first row. A header can run to more than one row,
+    // and what stands first may be only its pinned corner.
+    const first = rows.findIndex(row => kept.has(row));
+    const header = rows.slice(0, Math.min(first < 0 ? 1 : Math.max(first, 1), 3));
+    const shown = [...new Set([...header, ...figures])].filter(Boolean);
     if (figures.length && shown.some(row => labelled(row.split('  |  ')))) tables.push(shown.join('\n'));
   }
 

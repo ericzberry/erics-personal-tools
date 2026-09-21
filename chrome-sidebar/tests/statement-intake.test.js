@@ -456,6 +456,48 @@ test('a grid of divs that says it is a table is read as one', () => {
     'and the header says which column the figure fell out of');
 });
 
+// iCapital's Investment Summary, the way its data grid draws it. The year and
+// currency are pinned to the left in a container of their own, so every row on
+// the screen is two row elements — the pinned part and the part that scrolls —
+// and the columns are grouped under a second header row. Read element by
+// element, "Year | CCY" stood as the whole header, the column names were
+// dropped as rows with no figure, and four rows of figures reached the reading
+// with no year and no column against any of them, which it rightly refused.
+test('a grid drawn in pinned and scrolling parts is read as the rows on the screen', () => {
+  const cellAt = (text, column, {span = 1, header = false} = {}) => ({
+    innerText: text, closest: () => null,
+    getAttribute: name => ({'aria-colindex': String(column), 'aria-colspan': String(span)})[name] ?? null,
+    matches: selector => header && /columnheader/.test(selector)
+  });
+  const rowAt = (index, list) => {
+    const row = {querySelectorAll: selector => /cell|columnheader/.test(selector) ? list : [],
+      getAttribute: name => name === 'aria-rowindex' ? String(index) : null};
+    list.forEach(cell => {cell.closest = selector => /row/.test(selector) ? row : null;});
+    return row;
+  };
+  const head = (text, column, span) => cellAt(text, column, {span, header: true});
+  // In the order the markup holds them: the pinned container, then the rest.
+  const made = [
+    rowAt(1, [head('', 1, 2)]),
+    rowAt(2, [head('Year', 1), head('CCY', 2)]),
+    rowAt(4, [cellAt('2025', 1), cellAt('USD', 2)]),
+    rowAt(3, [cellAt('2026', 1), cellAt('USD', 2)]),
+    rowAt(1, [head('Commitment', 3, 2), head('Contributions', 5, 2)]),
+    rowAt(2, [head('Unfunded', 3), head('Total', 4), head('Period', 5), head('Cumulative', 6)]),
+    rowAt(3, [cellAt('167,000', 3), cellAt('500,000', 4), cellAt('47,500', 5), cellAt('341,370', 6)]),
+    rowAt(4, [cellAt('214,500', 3), cellAt('500,000', 4), cellAt('122,000', 5), cellAt('293,870', 6)])
+  ];
+  const grid = {querySelectorAll: selector => /row/.test(selector) ? made : []};
+  made.forEach(row => {row.closest = selector => /table|grid/.test(selector) ? grid : null;});
+  const page = inPage(pageOf({tables: [grid], text: 'Investment Summary'}), HERE);
+  assert.equal(page.tables.length, 1);
+  const [header, first, second] = page.tables[0].split('\n');
+  assert.equal(header, 'Year  |  CCY  |  Commitment Unfunded  |  Commitment Total  |  Contributions Period  |  Contributions Cumulative',
+    'each column is named by its group and its own header, in one row');
+  assert.equal(first, '2026  |  USD  |  167,000  |  500,000  |  47,500  |  341,370', 'the pinned year rejoins its figures');
+  assert.equal(second, '2025  |  USD  |  214,500  |  500,000  |  122,000  |  293,870', 'in the order the rows are numbered');
+});
+
 // E*TRADE's own IRA card, in the order the page reads it. The account is named
 // in one column and its balance sits in another, with a contribution banner,
 // three rows of links and a table of holdings between the two — so the name is

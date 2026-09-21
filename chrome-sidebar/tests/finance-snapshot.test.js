@@ -417,6 +417,8 @@ test('a reading that finds nothing says what the page gave it',async()=>{
 // its own evidence.
 test('a reading keeps what it took off the page, and what the page was made of',async()=>{
   const {document,restore}=setup();
+  const copied=[];
+  Object.defineProperty(globalThis.navigator,'clipboard',{configurable:true,value:{writeText:async text=>{copied.push(text);}}});
   const {tool}=financeHost(document,{
     saved:[estate],
     reading:{readings:[],unread:''},
@@ -429,13 +431,17 @@ test('a reading keeps what it took off the page, and what the page was made of',
   panel().querySelector('button').click();
   await settle(()=>!!document.getElementById('finance-page-source'));
   const source=document.getElementById('finance-page-source');
-  assert.match(source.textContent,/4120 elements/,'what the page was built out of');
-  assert.match(source.textContent,/31 roots/,'including the roots a component draws through');
-  assert.match(source.textContent,/0 grids/);
-  assert.match(source.textContent,/2 frames/);
-  assert.match(source.textContent,/3 lines/,'and how much was sent');
-  assert.match(source.textContent,/\$16,369,841\.07/,'with the text itself, so the two can be compared');
-  assert.equal(source.hasAttribute('open'),false,'closed: it is for when something is wrong');
+  assert.equal(source.tagName,'BUTTON','one button, not a transcript in the sidebar');
+  assert.equal(source.textContent,'Copy what was read');
+  source.click();
+  await settle(()=>copied.length===1);
+  assert.match(copied[0],/4120 elements/,'what the page was built out of');
+  assert.match(copied[0],/31 roots/,'including the roots a component draws through');
+  assert.match(copied[0],/0 grids/);
+  assert.match(copied[0],/2 frames/);
+  assert.match(copied[0],/3 lines/,'and how much was sent');
+  assert.match(copied[0],/\$16,369,841\.07/,'with the text itself, so the two can be compared');
+  delete globalThis.navigator.clipboard;
   tool.stop();restore();
 });
 

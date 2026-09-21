@@ -3948,3 +3948,16 @@ Value over time now begins at the first quarter that holds every figure, and a
 quarter before it is left out rather than explained. The capital account itself
 is untouched and still counts in every quarter after its date. Checked in
 `tests/finance-ledger.test.js`. Archive: `release/erics-sidebar-0.6.248.zip`.
+
+## A pinned grid column rejoins its row, and What was read is a Copy button (0.6.249 / mobile 0.1.199)
+
+iCapital's Investment Summary pins Year and CCY to the left in a container of
+its own, so each row on the screen is two row elements. Read element by
+element, "Year | CCY" stood as the whole header, the grouped column headers
+were dropped, and four rows of figures arrived with no year or column, which
+the reading rightly refused. Grid rows are now joined by `aria-rowindex`,
+cells ordered by `aria-colindex`, and a two-row grouped header is said as one
+row ("Contributions Cumulative"). What was read is now a single "Copy what was
+read" button beside the Read button, shown only when a reading found nothing.
+Checked in `tests/statement-intake.test.js` and `tests/finance-snapshot.test.js`.
+Archive: `release/erics-sidebar-0.6.249.zip`.
