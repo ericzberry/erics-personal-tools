@@ -3593,3 +3593,26 @@ open at 1024px with a pointer and at 304px emulating touch: every figure in the
 block ends on one edge, the heading is one line on a pointer and two on touch,
 and no row of verbs is left at the foot. Archive:
 `release/erics-sidebar-0.6.234.zip`.
+
+## Look for the card where it is actually written down (0.6.235 / mobile 0.1.185)
+
+**Research only ever read the issuer's own pages.** That is the right first
+answer and the wrong last one: a card offered by invitation, to a private bank's
+clients, or only as an upgrade has no page of the issuer's to read, and the
+release before this one had research fall back to the published product the card
+is a version of. Which is a good answer, and not the first one — because a card
+like that is usually written down somewhere, just not by the bank that issues
+it.
+
+**So research searches for the card itself first.** A page about that card which
+is not the issuer's — a card review, a reference site, a press piece — is
+preferred to the sibling product's official terms, and the sibling is the second
+answer rather than the only one. Either way the name stays the card the owner
+holds, the citation is the page the terms were actually read on, and the notes
+say that the issuer publishes none of its own and where these came from. Terms
+from anywhere but the issuer are never presented as the card's confirmed ones,
+and only a page the model actually opened may be cited — which was always the
+check, and is what the check's own words now say.
+
+Validation: 616 extension, 33 mobile and 135 API tests pass from an archive of
+HEAD. Archive: `release/erics-sidebar-0.6.235.zip`.

@@ -77,11 +77,13 @@ rest.
 A card the issuer publishes nothing about — invitation-only, private bank, or
 offered only as an upgrade — is the case research is weakest on, and the
 J.P. Morgan Reserve is the example: Chase keeps no public page of its terms.
-Where such a card is a version of a product the issuer does publish, research
-answers from that product's pages, keeps the name of the card you hold, and says
-in its notes which product the terms came from and that the issuer publishes
-none of its own. Borrowed terms are never presented as the card's confirmed
-ones. The better source for a card like that is the card's own page: open it
+Research looks for it where it is actually written down: first a page about
+that card which is not the issuer's — a card review, a reference site — and
+failing that the published product the card is a version of. Either way it keeps
+the name of the card you hold, cites the page the terms were read on, and says
+in its notes that the issuer publishes none of its own and where these came
+from. Terms from anywhere but the issuer are never presented as the card's
+confirmed ones. The better source for a card like that is the card's own page: open it
 with the sidebar beside you and read it, which is where its credits, its
 benefits and what it earns are all stated for your account.
 
