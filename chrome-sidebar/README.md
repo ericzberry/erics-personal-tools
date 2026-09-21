@@ -3316,3 +3316,45 @@ release. The reading was measured across eight synthetic holder headings — rul
 on the heading, full width, every tag above it, 4px under it — and the ledger
 at 374px with a pointer. Native iPhone and installed Chrome behavior were not
 directly tested. Archive: `release/erics-sidebar-0.6.228.zip`.
+
+## Two firms, two observations (0.6.227 / mobile 0.1.177)
+
+$16,369,841 at Chase plus $26,925,389 at UBS was reported as $34,326,097, and
+nothing on the screen said which nine million had gone. A figure was keyed by
+portfolio, asset class and date; the roster deliberately folds Chase and UBS
+into the same four family entities; both places state marketable securities;
+and both were read the same afternoon. Three identical keys, so the second
+reading wrote over the first — silently, because the device had just written
+the first and therefore held exactly the revision the Worker expected of it.
+
+**The firm is part of the key now.** `markRef` appends it only when there is
+one, so a figure typed by hand keeps the address it has always had and a
+reading off a page carries the site it came from. `heldOn` takes the newest
+figure per portfolio, class **and** firm, so a trust holding securities at two
+places is two live figures that add up rather than one that survives. The fold
+stamps the firm the page was read at, and the ledger prints it beside a class
+only where a portfolio holds that class at more than one place — a firm named
+on every line would be a word repeated down a column that is read for its
+money. Institutions over time, which shipped inert in 0.6.226, has figures to
+read at last.
+
+**The stored figures could not be migrated, so they were not.** A row cannot
+say which firm it came from — that is the defect — so every one of them would
+have had to land at firm 0, and each was already the survivor of an overwrite.
+The owner asked to empty the ledger and re-read it. Every finance table was
+exported to `~/erics-tools-backups/finance-before-reset-2026-09-20.sql` first,
+then `finance_marks` was rebuilt on the new key and the portfolios, the
+property, its valuation and the three rows left in the pre-ledger table were
+deleted: 32 rows in total, none of them recoverable except from that file.
+`finance-marks-rebuild.sql` is deliberately not part of `finance-schema.sql`,
+which is applied routinely and is `CREATE TABLE IF NOT EXISTS` throughout — a
+`DROP` inside it would empty the ledger on some later, unrelated deployment.
+
+Validation: 611 extension, 33 mobile and 135 API tests pass from an archive of
+this release, and both apps build. New coverage in `finance-sources.test.js`:
+two firms in one portfolio and one class on one day kept apart, a figure with
+no firm keeping its three-part address, the fold stamping the site it read, and
+the ledger naming a firm only where a portfolio holds that class at two. The
+deployed service was confirmed up and routing; an authenticated round trip
+against it was not possible from here, so the first real proof is a page read
+in the extension. Archive: `release/erics-sidebar-0.6.227.zip`.
