@@ -1638,9 +1638,12 @@ export function foldReadings(readings,portfolios,{institution='',firm=0,defaultC
     if(holdings.length)notes.push(about(account.name,`the ${holdings.length} holding${holdings.length===1?'':'s'} shown ${holdings.length===1?'does':'do'} not add up to the total, so it was kept whole.`));
     for(const total of totals)add(portfolio,classify(total,said),total.asOf,total.value,[total.label]);
   }
-  // Said once, at the front, in the order a reader would ask it: what did you
-  // not count, and why is a figure not split.
-  if(dropped.length)notes.unshift(`Left out: ${[...new Set(dropped)].join(', ')}.`);
+  // What the fold declined to count, said once and kept apart from the notes:
+  // it explains a reading that came back empty, and under one that found
+  // figures it is a warning about nothing. A headline total, a gain, a credit
+  // limit are left out because they should be, and every live page states at
+  // least one of them. UI-44.
+  const left=dropped.length?`Left out: ${[...new Set(dropped)].join(', ')}.`:'';
   // The page is the reason, and the evidence is that nothing on it named an
   // account — not that nothing came of it. One stray figure getting through
   // used to take this sentence away with it, which left the owner holding a
@@ -1662,7 +1665,7 @@ export function foldReadings(readings,portfolios,{institution='',firm=0,defaultC
   const marks=[...figures.values()].sort((a,b)=>
     a.name.localeCompare(b.name,undefined,{sensitivity:'base'})||a.portfolio-b.portfolio
     ||ASSET_CLASSES.findIndex(entry=>entry.code===a.class)-ASSET_CLASSES.findIndex(entry=>entry.code===b.class));
-  return {marks,positions,portfolios:proposed,notes,today};
+  return {marks,positions,portfolios:proposed,notes,left,today};
 }
 
 // Turning a capital account statement into what is kept. This is the device's

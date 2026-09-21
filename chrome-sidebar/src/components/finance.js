@@ -81,8 +81,9 @@ export const propertyDetail=(entry,currency)=>[
 ].filter(Boolean).join(' · ');
 
 // One action group, two kinds of review — extracted rather than written twice
-// so the two cannot drift apart.
-function ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard}){
+// so the two cannot drift apart. The verbs stand alone: the review above them
+// is what they act on, and "Save these capital accounts" only said it again.
+function ReviewActions({editing,disabled,onSave,onEdit,onDiscard}){
   const action=(label,variant,handler)=>{
     const node=Button(label,{variant,size:'compact',disabled});
     node.addEventListener('click',handler);
@@ -91,7 +92,7 @@ function ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard}){
   // Ruled off from the figures by a gap. Flush against the last amount, Save
   // read as one more row of the reading rather than what to do about it.
   return ActionGroup([
-    action(saveLabel,'primary',onSave),
+    action('Save','primary',onSave),
     ...(editing?[]:[action('Edit','secondary',onEdit)]),
     action('Discard','subtle',onDiscard)
   ],{compact:true,className:'action-group action-group--compact review-actions'});
@@ -111,7 +112,7 @@ function ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard}){
 //
 // Nothing explains itself here. The figures are the review, and the status line
 // under them already says how many were read and how many were kept.
-export function FoldReview({rows=[],editing=false,disabled=false,saveLabel='Save these figures',onSave,onEdit,onDiscard,onAmount}){
+export function FoldReview({rows=[],editing=false,disabled=false,onSave,onEdit,onDiscard,onAmount}){
   const shared=rows.length&&rows.every(row=>row.asOf===rows[0].asOf)?rows[0].asOf:'';
   // "new" is worth a word when it separates these figures from the ones landing
   // in a portfolio that already exists. The first reading of an institution
@@ -140,7 +141,7 @@ export function FoldReview({rows=[],editing=false,disabled=false,saveLabel='Save
         group.kind?Badge(registrationLabel(group.kind),{className:'pill portfolio-kind'}):null],{className:'group-name'}),
       ...group.rows.map(({row,index})=>FoldRow(row,{index,editing,dated:!shared,onAmount}))
     ],{className:'record-group snapshot-group'})),
-    ReviewActions({editing,disabled,saveLabel,onSave,onEdit,onDiscard})
+    ReviewActions({editing,disabled,onSave,onEdit,onDiscard})
   ]);
 }
 
@@ -155,7 +156,7 @@ export function CapitalReview({rows=[],notes=[],portfolios=[],editing=false,disa
     rows.length?Label(`${rows.length} capital account${rows.length===1?'':'s'}`,{className:'snapshot-meta'}):null,
     ...rows.map((row,index)=>CapitalRow(row,{index,editing,portfolios,onField})),
     ...notes.map(note=>Note(note)),
-    ReviewActions({editing,disabled,saveLabel:'Save these capital accounts',onSave,onEdit,onDiscard})
+    ReviewActions({editing,disabled,onSave,onEdit,onDiscard})
   ]);
 }
 function CapitalRow(row,{index,editing,portfolios,onField}){
@@ -371,7 +372,12 @@ export function FinanceView(){
             status:'',resetId:'finance-file-clear',resetLabel:'Remove file'}),
           Stack([],{id:'finance-attachment',hidden:true}),
           Note('',{id:'finance-ai-status',role:'status'}),
-          ActionGroup([Button('Read this',{id:'finance-read',variant:'primary',size:'compact'}),Button('Clear',{id:'finance-intake-clear',variant:'secondary',size:'compact'})],{compact:true}),
+          // A dropped statement is read the moment it arrives, so there is
+          // nothing to press. This is for a file that could not be read then —
+          // offline, or a reading that failed — and it is gone once the file
+          // has been read: offering to read what was already read is what the
+          // old "Read this" did, under the figures it had read.
+          ActionGroup([Button('Read',{id:'finance-read',variant:'primary',size:'compact'})],{compact:true,id:'finance-read-actions',hidden:true}),
           Notice('',{id:'finance-intake-status',role:'status'}),
           Stack([],{id:'finance-drafts'}),
           Stack([],{id:'finance-capital-drafts'}),

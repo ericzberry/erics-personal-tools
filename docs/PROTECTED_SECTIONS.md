@@ -584,12 +584,14 @@ its job. Everything after that is `foldReadings` on the device:
 
 - **Drop a file.** PDF, CSV, XLSX, or an image. A PDF's text layer is extracted
   on the device by `pdf-text.js`, a spreadsheet by the vendored reader, and the
-  result is put in the intake box **verbatim** so the owner sees exactly what
-  was pulled out. This matters: PDF extraction is best-effort, and a statement
-  that comes out garbled has to be visible as garbled rather than read
-  silently. `pdf-text.js` reports its own confidence — `good`, `partial`,
-  `low`, or `none` — and a scan with no text layer says so and suggests the
-  image path instead.
+  file's card says how much came out. Dropping it is asking for it to be read,
+  so it is read at once, with no second press; **Read** appears only for a file
+  that could not be read then — offline, or a reading that failed — and a file
+  whose figures are saved or discarded leaves with them (UI-42). PDF extraction
+  is best-effort: `pdf-text.js` reports its own confidence — `good`,
+  `partial`, `low`, or `none` — text that came out unevenly says so in the
+  alert tone, and a scan with no text layer says so and suggests the image
+  path instead.
 - **Read the open page.** One press, one errand: a text snapshot of the tab the
   owner is already looking at, read and folded into figures in the same press. It never
   navigates, never signs in, never opens a tab, and only reads when asked. The
@@ -653,7 +655,7 @@ its job. Everything after that is `foldReadings` on the device:
   promotional panels are left out, and a balance the page shows without a date
   of its own is current rather than dropped. What comes back is the
   confirmation: one row per portfolio and asset class, folded on the device,
-  with **Edit** to correct any amount before **Save these figures** writes them.
+  with **Edit** to correct any amount before **Save** writes them.
   A portfolio the reading had to propose says **new portfolio** before it is
   made, and is made first, because a figure cannot be filed into one that does
   not exist. While

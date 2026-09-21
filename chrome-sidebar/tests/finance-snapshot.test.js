@@ -156,7 +156,7 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   assert.match(panel.textContent,/\$124,501|\$124,500\.50/,'each figure shows what was read for it');
   assert.match(panel.textContent,new RegExp(ESTATE),'a taxable account joins the portfolio it is titled to');
   assert.match(panel.textContent,/Eric Berry · new/,'the IRA is titled to its owner, heads its own group and says it would be made');
-  assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save these figures','Edit','Discard']);
+  assert.deepEqual([...panel.querySelectorAll('button')].map(node=>node.textContent),['Save','Edit','Discard']);
   assert.match(panel.textContent,/^as of 2026-09-11/m,'one shared date is stated once, not on every row');
   assert.equal(/figures? read|folded into/.test(panel.textContent),false,'and the figures are not counted back at you');
   assert.equal(writes.length,0,'reading saves nothing');
@@ -215,7 +215,7 @@ test('Edit puts the folded amounts in fields, and Save writes what the owner lef
   const first=document.getElementById('finance-fold-value-0');
   assert.equal(first.value,'124500.5','an amount is offered as read, not as a blank field');
   assert.equal(document.querySelector('label[for=finance-fold-value-0]').textContent,'Liquid securities');
-  assert.deepEqual(buttons().map(node=>node.textContent),['Save these figures','Discard']);
+  assert.deepEqual(buttons().map(node=>node.textContent),['Save','Discard']);
   first.value='124600';
   first.dispatchEvent(new document.defaultView.Event('input'));
   buttons()[0].click();
@@ -326,7 +326,7 @@ test('what the fold left out is said, and a page that only totals its kinds says
   panel().querySelector('button').click();
   await settle(()=>said().includes('Show the accounts themselves'));
   assert.match(said(),/total across accounts/,'the figures were refused, and the line says so');
-  assert.equal(panel().textContent.includes('Save these figures'),false,'nothing was filed to review');
+  assert.equal(panel().querySelector('.review-actions'),null,'nothing was filed to review');
   assert.equal(writes.length,0);
   tool.stop();restore();
 });
@@ -358,7 +358,7 @@ test('a debt is reviewed as what it does to the total, and is still typed as wha
   buttons().find(node=>node.textContent==='Edit').click();
   await settle(()=>!!panel().querySelector('input'));
   assert.equal(panel().querySelector('input').value,'15835');
-  buttons().find(node=>node.textContent==='Save these figures').click();
+  buttons().find(node=>node.textContent==='Save').click();
   await settle(()=>writes.some(write=>write.row==='mark'));
   const filed=writes.find(write=>write.row==='mark');
   assert.equal(filed.amount,15835,'stored positive, under the class that carries the sign');
@@ -383,8 +383,10 @@ test('an account the roster keeps out of the ledger is left out by name',async()
   await settle(()=>panel().textContent.includes('Cash'));
   assert.match(panel().textContent,/Eric and Ariana Berry Estate/);
   assert.equal(panel().textContent.includes('BEDFORD'),false,'it is not offered to be filed');
-  assert.match(document.getElementById('finance-snapshot-status').textContent,/Bedford Bridge Capital, LLC/,
-    'and the one line about it names it, because a figure that is simply absent says nothing');
+  // Kept out on purpose, by the roster the owner keeps, so the reading that
+  // found his own figures says nothing about it. UI-44.
+  assert.equal(document.getElementById('finance-snapshot-status').textContent,'',
+    'what was left out on purpose is not a warning');
   tool.stop();restore();
 });
 

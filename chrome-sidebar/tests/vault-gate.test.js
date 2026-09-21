@@ -118,7 +118,7 @@ test('finance totals and readings stay behind the gate, and a saved figure goes 
 
   // Saving writes through the same validator and queue as a typed edit, and
   // the figure is addressed by where, what and when — nothing else.
-  [...h.document.querySelectorAll('#finance-snapshot-body button')].find(button=>button.textContent==='Save these figures').click();
+  [...h.document.querySelectorAll('#finance-snapshot-body button')].find(button=>button.textContent==='Save').click();
   await settle(()=>saved.length===1);
   assert.equal(saved[0].id,'1-10-20260401','portfolio 1, Liquid securities, that date');
   assert.equal(saved[0].revision,null,'a date this class has no figure for yet is an append');

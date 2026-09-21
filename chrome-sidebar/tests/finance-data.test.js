@@ -195,7 +195,7 @@ test('a total across accounts is left out, and one account stating two totals st
   // The two account-level figures state the same balance under two names, and
   // the number is what says so. A zero beside a balance is not a second one.
   assert.deepEqual(folded.marks.map(row=>row.amount),[1668403]);
-  assert.match(folded.notes.join(' '),/Left out: a total across accounts/);
+  assert.match(folded.left,/Left out: a total across accounts/);
 });
 
 // The E*TRADE complete view, read for real on 2026-09-20: the reading called
@@ -213,7 +213,7 @@ test('several accounts read under one name are counted separately, not folded in
   // Whose money it is, alphabetically — the estate before Eric Berry's IRA.
   assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[1,1668402.54],[2,122666.62]],
     'both balances are kept, and the IRA is registered as one');
-  assert.match(folded.notes.join(' '),/Left out: a total across accounts/);
+  assert.match(folded.left,/Left out: a total across accounts/);
   assert.match(folded.notes.join(' '),/2 accounts were read under one name and counted separately/);
   assert.match(folded.notes.join(' '),/holdings could not be placed in one of them/);
 
@@ -245,14 +245,14 @@ test('a figure naming a gain, a loss or a return is refused however it is scoped
     {...dated,account:'Traditional IRA -4144',label:"Day's Gain",registration:'ira',scope:'account',value:4.68}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
   assert.deepEqual(folded.marks.map(row=>[row.kind,row.amount]),[[1,1668402.54],[2,122666.62]]);
-  assert.match(folded.notes.join(' '),/Left out: 3 gains or returns/);
+  assert.match(folded.left,/Left out: 3 gains or returns/);
 
   // An account whose only figure is a gain states no balance at all, rather
   // than a $7,036 balance for a $1.6M account.
   const only=foldReadings([{...dated,account:'Individual Brokerage -4049',label:"Day's Gain",scope:'account',value:7036.71}],
     [{...estate,id:'p1'}],{institution:'E*TRADE'});
   assert.deepEqual(only.marks,[]);
-  assert.match(only.notes.join(' '),/Left out: 1 gain or return\./);
+  assert.match(only.left,/Left out: 1 gain or return\./);
 });
 
 // The E*TRADE complete view as it actually read on 2026-09-20, with the reading
@@ -279,7 +279,8 @@ test('a page that names no account still states every balance on it, each as wha
     [['Liquid securities',1791069.16],['Unvested stock',248422.68]]);
   // One line, not four. A last price is no more a holding's value than a day's
   // gain is, so the top-movers table leaves nothing behind to explain.
-  assert.deepEqual(folded.notes,['Left out: 3 gains or returns, a total across accounts.']);
+  assert.deepEqual(folded.notes,[]);
+  assert.equal(folded.left,'Left out: 3 gains or returns, a total across accounts.');
 });
 
 // A statement of holdings and nothing else is a list of positions, and they are
@@ -301,7 +302,7 @@ test('positions no account claimed are counted alone and refused beside a balanc
     {...dated,label:'Top Movers - DIS',class:classById('stocks').code,scope:'holding',value:102.67}
   ],[{...estate,id:'p1'}],{institution:'E*TRADE'});
   assert.deepEqual(beside.marks.map(row=>row.amount),[1668402.54]);
-  assert.match(beside.notes.join(' '),/Left out: 1 position no account claimed\./);
+  assert.match(beside.left,/Left out: 1 position no account claimed\./);
 });
 
 // E*TRADE calls a stock plan's vested half "Current Account Value", which says
@@ -526,8 +527,8 @@ test('one sign-on over a family structure files every account under the title th
   // title claims would otherwise start a portfolio of its own.
   assert.equal(folded.marks.some(row=>/bedford/i.test(row.name)),false);
   assert.equal(folded.portfolios.some(entry=>/bedford/i.test(entry.name)),false);
-  assert.match(folded.notes[0],/Bedford Bridge Capital, LLC/);
-  assert.match(folded.notes[0],/available balance/);
+  assert.match(folded.left,/Bedford Bridge Capital, LLC/);
+  assert.match(folded.left,/available balance/);
   // And no portfolio is named after the page's own furniture.
   assert.equal(folded.marks.some(row=>/accounts$|^Taxable$/i.test(row.name)),false);
 });
@@ -546,7 +547,7 @@ test('a figure printed against a kind of account is a total over accounts, not a
   ],[],{institution:'Chase',defaultClass:classById('cash').code});
   assert.deepEqual(folded.marks,[]);
   assert.deepEqual(folded.portfolios,[]);
-  assert.match(folded.notes.join(' '),/total across accounts/);
+  assert.match(folded.left,/total across accounts/);
   // Nothing was filed and the page is why, so the note says where the figures
   // are instead of only what was refused.
   assert.match(folded.notes.join(' '),/Show the accounts themselves/);
@@ -615,7 +616,7 @@ test('a credit score is not a balance, wherever the page files it',()=>{
     {...base,account:'Joint Savings (...8917)',label:'Present balance',value:880033.77}
   ],[],{institution:'Chase',defaultClass:classById('cash').code});
   assert.deepEqual(folded.marks.map(row=>row.amount),[880033.77],'the balance beside it is untouched');
-  assert.match(folded.notes[0],/credit score/);
+  assert.match(folded.left,/credit score/);
   // Named on the figure rather than the account, it goes the same way.
   const named=foldReadings([{...base,account:'',label:'FICO Score',value:737}],[],{institution:'Chase',defaultClass:classById('cash').code});
   assert.deepEqual(named.marks,[]);
@@ -727,7 +728,7 @@ test('a credit card balance is a debt, and the credit left on it is not a figure
     {...base,account:'Credit cards · CHASE SAPPHIRE RESERVE (...1739)',label:'Available credit',value:34165}
   ],[],{institution:'Chase',defaultClass:classById('cash').code});
   assert.deepEqual(folded.marks.map(row=>[classLabel(row.class),row.amount]),[['Credit',15835]]);
-  assert.match(folded.notes[0],/credit limit/);
+  assert.match(folded.left,/credit limit/);
 });
 
 test('an institution that settles its own titling answers however the name is spelled, and by registration',()=>{
@@ -1237,11 +1238,11 @@ test('Morgan Stanley abbreviates its titles, and its accounts join the trusts al
   // total, and at a broker that column is not even cash — it is cash plus what
   // could be borrowed against the securities.
   assert.equal(folded.marks.some(mark=>classLabel(mark.class)==='Cash'),false);
-  assert.match(folded.notes[0],/available balance/);
+  assert.match(folded.left,/available balance/);
   // The headline is refused and its parts reach it exactly, which is the whole
   // arithmetic this ledger does.
   assert.equal(folded.marks.reduce((total,mark)=>total+mark.amount,0),31732021.04);
-  assert.match(folded.notes[0],/a total across accounts/);
+  assert.match(folded.left,/a total across accounts/);
 
   // An available figure standing alone is all the account said, so it is the
   // account's figure rather than nothing.
@@ -1294,7 +1295,7 @@ test('a cap-table page states positions, never balances, and the fund he runs is
   ],[estate,ira],{institution:'Carta',today:'2026-09-20'});
   assert.deepEqual(carta.marks,[]);
   assert.deepEqual(carta.portfolios,[]);
-  assert.match(carta.notes.join(' '),/Left out: 2 figures this page states about a company or a fund rather than about you\./);
+  assert.match(carta.left,/Left out: 2 figures this page states about a company or a fund rather than about you\./);
   // The same figure at a broker is a balance, because there it is one.
   assert.equal(foldReadings([reading('CELSIE LLC','Total assets','unclassified',191519164)],
     [estate,ira],{institution:'Schwab',today:'2026-09-20'}).marks[0].amount,191519164);
@@ -1348,7 +1349,7 @@ test('a cap-table page states positions, never balances, and the fund he runs is
     reading('Individual Brokerage -4049','Net Account Value','liquid',1000)],
     [estate,ira],{institution:'Schwab',today:'2026-09-20'});
   assert.deepEqual(beside.marks.map(entry=>entry.amount),[1000]);
-  assert.match(beside.notes.join(' '),/Averin Capital, which you manage/);
+  assert.match(beside.left,/Averin Capital, which you manage/);
   assert.equal(managedVehicle('Averin Health Opportunities GP I LLC')?.name,'Averin Capital');
   assert.equal(managedVehicle('C2V Tributary Fund II, LP'),null);
 });
@@ -1428,7 +1429,7 @@ test('a fund administrator states a capital account, and the investor named on i
   const page=foldReadings([reading('Eric Berry','NAV','unclassified',392000)],[estate,ira],
     {institution:'iCapital',today:'2026-09-20'});
   assert.deepEqual(page.marks,[]);
-  assert.match(page.notes.join(' '),/Left out: 1 figure this page states about a company or a fund rather than about you\./);
+  assert.match(page.left,/Left out: 1 figure this page states about a company or a fund rather than about you\./);
 
   // The position itself, titled to the estate: the investor and the account
   // both say "Eric Berry" and the portfolio of that name is his IRA, which a

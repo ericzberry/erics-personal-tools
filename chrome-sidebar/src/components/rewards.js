@@ -102,13 +102,10 @@ const benefitLine=benefit=>[benefit.value,CADENCE_LABELS[benefit.cadence]||'',
 export function CardBenefits(input,{onSave,onDiscard}){
   const results=(Array.isArray(input)?input:[input]).filter(Boolean);
   if(!results.length)return [];
-  const total=results.reduce((sum,result)=>sum+result.benefits.length,0);
-  const count=`${total} benefit${total===1?'':'s'}`;
-  // After a save that stopped part way the card is already in the wallet, so the
-  // action says what is actually left to do.
-  const [only]=results.length===1?results:[];
-  const save=Button(only?(only.cardSaved?`Save the remaining ${count}`:`Save this card and ${count}`)
-    :`Save ${count} across ${results.length} cards`,{variant:'primary',size:'compact'});
+  // The verb stands alone. The cards and their benefits are listed above it,
+  // so "Save this card and 12 benefits" only counted what the reader was
+  // looking at, and grew a clause for every way a save could have gone.
+  const save=Button('Save',{variant:'primary',size:'compact'});
   const discard=Button('Discard',{variant:'subtle',size:'compact'});
   save.addEventListener('click',onSave);discard.addEventListener('click',onDiscard);
   // Each line has one job and one weight: the name, then what it is worth in

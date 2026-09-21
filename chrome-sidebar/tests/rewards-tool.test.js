@@ -184,7 +184,7 @@ test('naming a card brings back its benefits to review, and saving files them un
  for(const text of ['Synthetic Platinum Card (United States)','$15 per month','Monthly','needs enrollment','Enroll before using','Priority Pass Select'])assert.match(review,new RegExp(text.replace(/[$()]/g,'\\$&')));
  assert.equal(records.length,0,'reviewing saves nothing');
  const save=[...$('reward-card-review').querySelectorAll('button')].find(b=>b.textContent.startsWith('Save'));
- assert.equal(save.textContent,'Save this card and 2 benefits');
+ assert.equal(save.textContent,'Save','the review above says what is saved');
  save.click();
  await settle(()=>records.length===3);
  const card=records.find(record=>record.kind==='card');
@@ -239,7 +239,7 @@ test('a loose card name asks which card before researching one, and a failed sav
  // is left is still on screen to save again.
  failFrom='Lounge access';
  [...$('reward-card-review').querySelectorAll('button')].find(b=>b.textContent.startsWith('Save')).click();
- await settle(()=>$('reward-card-review').textContent.includes('Save the remaining'));
+ await settle(()=>/Storage unavailable/.test($('reward-card-status').textContent));
  assert.deepEqual(records.map(record=>record.name),[RESEARCHED.card.name,'Ride credit']);
  assert.match($('reward-card-status').textContent,/Storage unavailable/);
  failFrom=null;
@@ -542,7 +542,7 @@ test('one press looks up every saved card, proposes only what is missing, and sa
  assert.equal(records.length,0,'reviewing saves nothing');
  const save=[...h.document.querySelectorAll('#reward-card-review button'),...h.document.querySelectorAll('#reward-card-form button')]
    .find(button=>button.textContent.startsWith('Save'));
- assert.equal(save.textContent,'Save 2 benefits across 2 cards');
+ assert.equal(save.textContent,'Save');
  save.click();
  await settle(()=>$('reward-card-status').textContent.startsWith('Saved'));
  // Each benefit is filed under the card it came from, and the card that never

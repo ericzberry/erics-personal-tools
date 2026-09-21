@@ -278,6 +278,13 @@ test('the intake model labels what it reads and is never asked to total, match o
   assert.match(prompt,/a fund's own assets, liabilities, net asset value or total commitments/);
   assert.match(prompt,/Every such row is a capital account and belongs in/);
   assert.match(prompt,/a committed, called, unfunded, prepaid or outstanding figure is not an account balance/);
+  // UI-44. The unread line reaches the owner as a problem to act on. Asked for
+  // "anything with a figure in it", a capital account statement came back with
+  // a warning naming its fees, income and opening balance — figures this very
+  // prompt says to leave out — under figures that had read perfectly.
+  assert.match(prompt,/The owner reads it as a problem to act on, so it is \\"\\" whenever nothing is missing/);
+  assert.match(prompt,/Never name a figure these instructions tell you to leave out/);
+  assert.equal(prompt.includes('naming anything with a figure in it'),false);
   for(const bad of ['',' ','x'.repeat(MAX_INTAKE_TEXT+1)])await assert.rejects(readFinanceUpdates(connection,{text:bad},fetcher),error=>error.status===400);
   assert.equal(prompt.includes('image'),false,'a text-only reading never mentions images');
   reply='not json at all';

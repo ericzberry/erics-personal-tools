@@ -62,6 +62,9 @@ here.
 | **UI-39** | Fine print is set below what it qualifies: name, amount in ink, conditions smaller and muted, and no box around a review inside an editor. Stated in full under [From a complaint](#from-a-complaint). | By eye |
 | **UI-39** | Evidence for someone else is a Copy button, not a transcript. Diagnostic text meant to be pasted elsewhere is one Copy button, shown only while there is a problem to diagnose. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-snapshot.test.js` |
 | **UI-41** | A list of classes holds only classes. A single holding among the lines that name whole classes is grouped under its class's line and opens from it, a name keeps no kind-word run onto it, and its figures read one to a line. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js` |
+| **UI-42** | What has happened is not offered again. A dropped statement is read when it arrives; a Read button exists only for a file that could not be read, and no line says a thing is ready once it has been done. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-investments.test.js` |
+| **UI-43** | A review's actions are the bare verbs — Save, Edit, Discard. The review above them is what they act on, so the label never restates or counts it. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-snapshot.test.js`, `finance-investments.test.js`, `rewards-tool.test.js` |
+| **UI-44** | A reading reports only what went wrong. A figure it left out on purpose, or one that is part of a figure it did report, is not a warning; what was refused is said only when nothing was found. Stated in full under [From a complaint](#from-a-complaint). | `tools-api/tests/finance.test.js`, `chrome-sidebar/tests/finance-snapshot.test.js` |
 
 ## Ratcheting
 
@@ -392,6 +395,46 @@ after the last item. *From Rewards' card research, where two benefits of the
 J.P. Morgan Reserve came back as a boxed wall of same-weight paragraphs: "the
 formatting is a bit off."* Look at every research review — Rewards' card
 intake and Best card's summary — at sidebar width.
+
+**UI-42 — what has happened is not offered again.** *Enforced for Finance's
+statement intake.* A button offers what has not been done yet, and a status
+line says what is true now. Finance took a dropped statement, said "Ready to
+read." and waited for a press on "Read this"; after the press both stayed on
+the screen, above the figures they had produced. Dropping a statement is
+asking for it to be read, so it is read on arrival, the way Taxes names a
+document on arrival. Read appears only for a file that could not be read —
+offline, or a reading that failed — and a file whose figures are saved or
+discarded leaves with them. *"I've already read the document - so 'Read this'
+is strange."* Checked in `chrome-sidebar/tests/finance-investments.test.js`.
+Subscriptions keeps its Read button, because a nickname and the editable text
+have to be settled before that reading can start.
+
+**UI-43 — a review's actions are the bare verbs.** *Enforced for Finance's
+reviews and Rewards' card research.* Under a list of what is about to be
+saved, the button is Save, beside Edit and Discard. The list is what it
+saves; "Save these capital accounts", "Save these figures" and "Save this
+card and 12 benefits" said it again, counted it, and grew a clause for every
+way a save could go. *"'Save these capital accounts' is also weird - it's
+just, like, 'Save'."* Checked in `chrome-sidebar/tests/finance-snapshot.test.js`,
+`finance-investments.test.js` and `rewards-tool.test.js`. A form whose
+button names its record — Save figure, Save reminder — is not a review and
+is not covered.
+
+**UI-44 — a reading reports only what went wrong.** *Enforced for Finance's
+intake prompt.* What a model could not read is worth a line when the owner
+would otherwise expect a figure that is not there; it is shown as something
+to act on, so it says nothing when nothing is missing. A capital account
+statement that read cleanly came back with a warning naming its fees, income,
+opening balance and amount over or under paid — every one of them a figure
+the prompt tells the model to leave out, or a part of the capital account it
+did report. *"The warning message is strange. Unless it's an issue don't
+show it."* The prompt now says so, and `tools-api/tests/finance.test.js`
+holds it. The device's own "Left out: a total across accounts" was the same
+line from the other side — a headline total, a gain, a credit limit, a company
+the roster keeps out, refused because they should be and printed in the alert
+tone under nearly every page reading. It is now said only when a reading found
+nothing, where it is the explanation; `finance-snapshot.test.js` holds that.
+Rewards already showed its unread line only when a page gave nothing.
 
 ## Open
 

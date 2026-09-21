@@ -982,7 +982,7 @@ group of its own — the site's name, one sentence saying the accounts on the pa
 will be read and that nothing is saved until the figures have been checked, and
 one action named for the site: **Read my Schwab accounts**. What it gives back
 is the confirmation it always should have been tied to, one row per account,
-with **Edit** before **Save these values**. While a recognized site is beside
+with **Edit** before **Save**. While a recognized site is beside
 the panel it is the one place the page is read from; the general action steps
 aside, because two buttons for one errand is the confusion. The row under the
 header offers it by the same name.

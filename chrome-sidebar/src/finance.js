@@ -371,17 +371,32 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     $('attachment').hidden=!attachment;
     $('attachment').replaceChildren(...(attachment?[AttachmentCard({
       label:attachment.label,detail:attachment.detail,note:attachment.note,
-      tone:attachment.tone,onRemove:()=>{attachment=null;renderAttachment();render();}
+      tone:attachment.tone,onRemove:()=>{attachment=null;renderAttachment();render();status('','file-status');}
     })]:[]));
   }
+  // A file and the review read out of it are one errand. Once nothing read
+  // from it is left to save or discard, the file goes as well, rather than
+  // staying above an empty panel as though it were still waiting to be read.
+  function settleAttachment(){
+    if(attachment?.state!=='read'||fold?.rows.length||(capital?.rows.length&&capitalSource==='file'))return;
+    attachment=null;renderAttachment();render();status('','file-status');
+  }
+  // Only a file that is waiting to be read offers to be read.
+  function syncRead(){$('read-actions').hidden=attachment?.state!=='waiting';}
+  // Dropping a statement is asking for it to be read, the way dropping a tax
+  // document is asking for it to be named. A file that cannot be read yet —
+  // offline, not connected, another errand running — waits for Read instead.
+  function readOnArrival(){if(loaded&&!busy&&globalThis.navigator?.onLine!==false)read();}
+  // Nothing is said about a file that read cleanly: its card names it and the
+  // reading starts at once. Only uneven text earns a line.
   async function receive(file){
     const result=await readStatement(file);
     if(result.kind==='image'){
       attachment={kind:'image',image:result.image,label:file.name,
         detail:`Image · ${result.image.width}×${result.image.height} · ${Math.round(result.image.bytes/1000)} KB after downscaling on this device`,
-        note:'',tone:''};
-      renderAttachment();render();
-      return 'Ready to read.';
+        note:'',tone:'',state:'waiting'};
+      renderAttachment();render();readOnArrival();
+      return '';
     }
     if(!result.text.trim()){
       attachment=null;renderAttachment();render();
@@ -391,9 +406,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     attachment={kind:'text',text,label:file.name,
       detail:`Text pulled out on this device · ${text.length.toLocaleString('en-US')} characters${result.pages?` · ${result.pages} section${result.pages===1?'':'s'}`:''}`,
       note:[result.note,trimmed?`${trimmed.toLocaleString('en-US')} characters past the ${MAX_SEND.toLocaleString('en-US')}-character limit were left out.`:''].filter(Boolean).join(' '),
-      tone:result.confidence==='good'?'':'warning'};
-    renderAttachment();render();
-    return result.confidence==='good'?'Ready to read.':'The text came out unevenly — check the figures carefully before saving them.';
+      tone:result.confidence==='good'?'':'warning',state:'waiting'};
+    renderAttachment();render();readOnArrival();
+    return result.confidence==='good'?'':{message:'The text came out unevenly — check the figures carefully before saving them.',tone:'alert'};
   }
 
   // Reading is one errand wherever it starts: send what was read, fold what
@@ -430,7 +445,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       rows:fold.rows,editing:foldEditing,disabled:busy||!loaded,
       onSave:()=>saveReview('fold'),
       onEdit:()=>{foldEditing=true;renderFold();},
-      onDiscard:()=>{fold=null;foldEditing=false;renderFold();status('','intake-status');},
+      onDiscard:()=>{fold=null;foldEditing=false;renderFold();status('','intake-status');settleAttachment();},
       onAmount:(index,value)=>{fold.rows[index].amount=value;}
     })]:[]));
   }
@@ -445,7 +460,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       editing:capitalEditing,disabled:busy||!loaded,
       onSave:saveCapitalReview,
       onEdit:()=>{capitalEditing=true;renderCapital();},
-      onDiscard:()=>{const from=capitalSource;capital=null;capitalEditing=false;renderCapital();status('',from==='page'?'snapshot-status':'intake-status');},
+      onDiscard:()=>{const from=capitalSource;capital=null;capitalEditing=false;renderCapital();status('',from==='page'?'snapshot-status':'intake-status');settleAttachment();},
       onField:(index,key,value)=>{
         const row=capital.rows[index];
         // Moving a statement to a portfolio that already exists drops the
@@ -487,24 +502,30 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
     showCapital(result,'file');
     const any=found(result);
-    // Anything the reading could not turn into a figure is still worth saying:
-    // it is a fact about this page, not an explanation of the panel. So is
-    // anything the fold refused — a total over accounts, a second balance for
-    // one account, money behind this password that is not the owner's —
-    // because the only other evidence of it is a figure that is not there.
-    const say=[any?'':none,extra,...result.notes,result.unread].filter(Boolean).join(' ');
+    // Only what went wrong is said. What the reading could not read is a gap
+    // the owner would otherwise not see; what the fold refused on purpose — a
+    // total over accounts, a gain, money behind this password that is not the
+    // owner's — is the reading working, and is said only when nothing was
+    // found, where it is the explanation. UI-44.
+    const say=[any?'':none,any?'':result.left,extra,...result.notes,result.unread].filter(Boolean).join(' ');
     status(say,target,say?'alert':'');
     return any;
   }
   async function read(){
-    const text=attachment?.kind==='text'?attachment.text.trim():'';
-    const images=attachment?.kind==='image'?[attachment.image.dataUrl]:[];
+    const reading=attachment;
+    const text=reading?.kind==='text'?reading.text.trim():'';
+    const images=reading?.kind==='image'?[reading.image.dataUrl]:[];
     if(!text&&!images.length){status('Drop a statement or read the open page first.','intake-status','alert');return;}
-    await run(async token=>{
+    reading.state='reading';syncRead();
+    const done=await run(async token=>{
       status(images.length?'Reading the image…':'Reading…','intake-status','progress');
       const result=await readInto(token,{text,...(images.length?{images}:{})});
       showRead(result,'intake-status',{none:'No figures were found.'});
     },'intake-status');
+    // Read once is read: a file whose figures are on the screen does not offer
+    // to be read again. One that failed offers it, because trying again is
+    // the remedy.
+    reading.state=done?'read':'waiting';syncRead();
   }
   // Rebuilt only when the reading itself changes, so editing an amount is not
   // interrupted by an unrelated render. `syncReadings` keeps the controls in
@@ -567,7 +588,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       const gave=any?'':`The page gave ${page.tables} account table${page.tables===1?'':'s'} and ${page.text.split('\n').filter(Boolean).length} lines.`;
       const say=[any?'':`No account figures were found on ${page.host}.`,gave,
         page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
-        ...result.notes,result.unread].filter(Boolean).join(' ');
+        any?'':result.left,...result.notes,result.unread].filter(Boolean).join(' ');
       status(say,'snapshot-status',say?'alert':'');
     },'snapshot-status');
   }
@@ -594,7 +615,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       review.rows.shift();saved++;
     }
     if(which==='snapshot'){snapshot=review.rows.length?review:null;renderSnapshot();}
-    else{fold=review.rows.length?review:null;renderFold();}
+    else{fold=review.rows.length?review:null;renderFold();settleAttachment();}
     if(!review.rows.length){
       onChanged();
       status(`Saved ${saved} figure${saved===1?'':'s'}.`,target,'success');
@@ -652,7 +673,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       capital=null;capitalEditing=false;onChanged();
       status(`Saved ${saved} capital account${saved===1?'':'s'}.`,target,'success');
     }
-    renderCapital();
+    renderCapital();settleAttachment();
   }
   function saveHolding(holding,target='inv-status'){
     const id=holdingRef(holding.number),existing=records.find(record=>record.id===id);
@@ -978,7 +999,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
     $('inv-save').disabled=busy||!loaded;$('inv-cancel').disabled=busy;
     $('prop-save').disabled=busy||!loaded;$('prop-cancel').disabled=busy;
-    $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
+    $('read').disabled=busy||!loaded||globalThis.navigator?.onLine===false;syncRead();
     $('drop').disabled=busy||!loaded;
     // Beside the title, only what applies: a quiet arrival can be asked for the
     // ledger, a loaded one can be refreshed, and one that never loaded needs
@@ -1072,7 +1093,6 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   }
 
   $('read').addEventListener('click',read);
-  $('intake-clear').addEventListener('click',()=>{fold=null;foldEditing=false;capital=null;capitalEditing=false;capitalSource='file';attachment=null;renderAttachment();renderFold();renderCapital();render();status('','intake-status');status('','file-status');});
   attachFileDrop({zone:$('drop'),input:$('file'),status:$('file-status'),onFile:receive,accept:ACCEPTED,maxBytes:MAX_BYTES});
   $('cancel').addEventListener('click',()=>{clearForm();$('entry').open=false;});
   $('portfolio').addEventListener('change',syncForm);

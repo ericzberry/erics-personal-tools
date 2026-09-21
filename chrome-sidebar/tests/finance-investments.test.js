@@ -83,7 +83,7 @@ test('a capital account statement is read into an investment, reviewed, and save
   assert.match(review.textContent,/Commitment\$1,000,000Funded\$800,000Returned\$250,000Unfunded\$200,000Multiple1\.69×/);
   assert.equal(writes.length,0,'nothing is written by reading');
 
-  buttonNamed(review,'Save these capital accounts').dispatchEvent(new document.defaultView.Event('click'));
+  buttonNamed(review,'Save').dispatchEvent(new document.defaultView.Event('click'));
   await settle(()=>writes.length>=2);
   // The investment is saved before the statement, because a capital account
   // cannot be filed into something that does not exist yet.
@@ -128,6 +128,61 @@ test('a capital account statement is read into an investment, reviewed, and save
   tool.stop();restore();
 });
 
+// UI-42. Dropping a statement is asking for it to be read, so it is read the
+// moment it arrives. "Read this" used to sit under the figures it had already
+// read, beside a "Ready to read." line that was no longer true; now the button
+// exists only for a file that could not be read, and the file leaves with its
+// review. UI-43: the review's own verbs stand alone.
+test('a dropped statement is read on arrival, and never offers to be read again',async()=>{
+  const {document,restore}=setup();
+  const writes=[];
+  let records=[trust],asked=0,fail=true;
+  const tool=mountFinance(document.querySelector('main'),{
+    vault:unlockedVault(),credentials:{get:async()=>'token'},
+    remote:async(token,path)=>{
+      if(path==='/v1/ai-connections')return {connections:[{id:'connection-1',name:'Synthetic',provider:'openai',hasApiKey:true}]};
+      asked++;
+      if(fail)throw Error('The reading timed out.');
+      return STATEMENT;
+    },
+    offline:{request:async(token,path,options)=>{
+      if(options?.method==='PUT'){
+        writes.push(options.value);
+        records=[...records.filter(record=>record.id!==options.value.id),{...options.value,revision:'r2'}];
+      }
+      return {records};
+    }}
+  });
+  await ready(document);
+  const $=id=>document.getElementById(`finance-${id}`);
+  const drop=new document.defaultView.Event('drop');
+  drop.dataTransfer={files:[new File(['Acme Ventures Fund III, L.P. capital account, Q2 2026'],'Acme Q2.txt')]};
+  $('drop').dispatchEvent(drop);
+  await settle(()=>$('intake-status').classList.contains('notice--error'));
+  assert.equal(asked,1,'read without a press');
+  assert.equal($('file-status').textContent,'','no line saying it is ready to read');
+  // A reading that failed is the one case with something to press, because
+  // trying again is the remedy.
+  assert.equal($('read-actions').hidden,false);
+  assert.deepEqual([...$('read-actions').querySelectorAll('button')].map(node=>node.textContent),['Read']);
+
+  fail=false;
+  press(document,'finance-read');
+  await settle(()=>$('capital-drafts').textContent.includes('Acme'));
+  assert.equal(asked,2);
+  assert.equal($('read-actions').hidden,true,'a file that has been read does not offer to be read again');
+  assert.match($('attachment').textContent,/Acme Q2\.txt/,'the file stays beside what was read from it');
+  const review=$('capital-drafts');
+  assert.deepEqual([...review.querySelectorAll('button')].map(node=>node.textContent),['Save','Edit','Discard']);
+
+  buttonNamed(review,'Save').dispatchEvent(new document.defaultView.Event('click'));
+  await settle(()=>writes.length>=2&&$('attachment').hidden);
+  assert.equal($('attachment').textContent,'','a saved statement takes its file with it');
+  assert.equal($('read-actions').hidden,true);
+  assert.match($('intake-status').textContent,/Saved 1 capital account\./);
+  tool.stop();restore();
+});
+
 // A statement addressed to a trust the ledger has never heard of proposes the
 // trust rather than dropping the statement into whatever is nearest.
 test('a statement for an unknown holder proposes the portfolio, and saves it first',async()=>{
@@ -139,7 +194,7 @@ test('a statement for an unknown holder proposes the portfolio, and saves it fir
   await settle(()=>document.getElementById('finance-capital-page').textContent.includes('Acme'));
   assert.match(document.getElementById('finance-capital-page').textContent,/Maisie Ava Berry 2021 Irrevocable Trust · new portfolio/);
 
-  buttonNamed(document.getElementById('finance-capital-page'),'Save these capital accounts').dispatchEvent(new document.defaultView.Event('click'));
+  buttonNamed(document.getElementById('finance-capital-page'),'Save').dispatchEvent(new document.defaultView.Event('click'));
   await settle(()=>writes.length>=3);
   assert.deepEqual(writes.map(write=>write.row),['portfolio','holding','capital']);
   // Its name said it was a trust, so it was proposed as one.

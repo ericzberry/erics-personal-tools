@@ -26,13 +26,19 @@ test('drop and picker share parsing, type/size checks and error feedback',async(
 test('a reader that got something imperfect keeps its own tone',async()=>{
   const {document}=parseHTML('<button id="zone"></button><input id="file"><p id="status"></p>');
   const zone=document.getElementById('zone'),input=document.getElementById('file'),status=document.getElementById('status');
-  let result='Ready to read.';
+  let result='Read 2 pages.';
   const uploader=attachFileDrop({zone,input,status,accept:['.pdf'],onFile:async()=>result});
   await uploader.receive([{name:'statement.pdf',size:100}]);
   assert.ok(status.classList.contains('notice--success'));
   result={message:'2 pages had no readable text on them.',tone:'alert'};
   await uploader.receive([{name:'statement.pdf',size:100}]);
   assert.ok(status.classList.contains('notice--alert'));
+  assert.ok(!status.classList.contains('notice--success'));
+  // A reader with nothing to say leaves the line empty rather than claiming an
+  // import: what happens to the file next is shown where it happens.
+  result='';
+  await uploader.receive([{name:'statement.pdf',size:100}]);
+  assert.equal(status.textContent,'');
   assert.ok(!status.classList.contains('notice--success'));
   result=Promise.reject(Error('Nothing readable came out of that file.'));
   await uploader.receive([{name:'statement.pdf',size:100}]);

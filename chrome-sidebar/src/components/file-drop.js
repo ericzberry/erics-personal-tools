@@ -45,8 +45,10 @@ export function attachFileDrop({zone,input,status,onFile,accept=['.xlsx','.json'
       // A reader that got something imperfect says so in its own tone: a file
       // that half read is not a success, and green is not how that is said.
       const result=await onFile(file);
+      // An empty message is a reader saying the file needs no line of its
+      // own: what happens to it next is shown where it happens.
       const {message,tone}=typeof result==='object'&&result?result:{message:result,tone:'success'};
-      setStatus(status,message||'Imported.',tone||'success');
+      setStatus(status,message??'Imported.',tone||'success');
     } catch(error) {setStatus(status,error.message,'error');}
     finally {busy=false;zone.removeAttribute('aria-busy');input.value='';}
   }
