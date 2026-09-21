@@ -95,11 +95,15 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   the owner — one entry per source, and no page is read to answer it) and
   `page-strip.js` (the controller for the row under the header that offers
   them; `context-panel.js` hands it the tab it already watches).
-- **Home screen** — `home.js` with `components/home.{js,css}`: the three runs
-  both hosts open on — today's birthdays, the fortnight behind them, and the
-  credits worth using before the quarter closes — read from the reminders and
-  rewards stores and written to nothing. The sidebar mounts it through
-  `home-page.js`; mobile mounts it in its own `capabilities.js`.
+- **Home screen** — `home.js` with `components/home.{js,css}`: what both hosts
+  open on — today's weather where the owner is, today's birthdays, the
+  fortnight behind them, and the credits worth using before the quarter
+  closes — read from the reminders and rewards stores and written to nothing.
+  The weather is `weather-data.js` (the forecast's shape and the rule: range,
+  what to wear, when rain is likely; imported by the Worker too) and
+  `weather.js` (the device's location, and the once-a-day copy in the encrypted
+  store). The sidebar mounts it through `home-page.js`; mobile mounts it in its
+  own `capabilities.js`. See [WEATHER.md](WEATHER.md).
 - **Links** — `public-url.js`: the one reading of "a link safe to show and
   open", used by gift links and restaurant booking links alike.
 - **Money** — `money.js`: the one currency formatter (and `moneyShort`, the
@@ -302,7 +306,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`,
-  `/v1/storage`, `/v1/backup[/files|/run|/restore]`. `/v1/push/key` is public like the release route,
+  `/v1/storage`, `/v1/backup[/files|/run|/restore]`, `/v1/weather`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
   also serves `finance-intake` and `tax-intake`, the routes allowed a request
   body over 64 KB because a statement or document image travels inline;
@@ -337,6 +341,10 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   already settled so nothing is written twice and a deleted one stays deleted.
   It runs on the same hourly `scheduled` trigger, once a month, and on demand
   through its own routes. See [REMINDERS.md](REMINDERS.md).
+- `src/weather.js` — today's forecast for where the device is: Open-Meteo for
+  the forecast, Nominatim for the place's name, Cloudflare's reading of the
+  connection when the device sends no position. Stores nothing; shaped by
+  `chrome-sidebar/src/weather-data.js`. See [WEATHER.md](WEATHER.md).
 - `src/quota.js` — how much of Cloudflare's storage the account has used,
   against the limit its plan allows. D1 refuses a Worker's `PRAGMA page_count`,
   so the figure comes from Cloudflare's own API and needs
@@ -488,5 +496,5 @@ checks, held by `chrome-sidebar/tests/ui-rules.test.js` and the
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/REWARDS.md`,
 `docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/BACKUPS.md`, `docs/REWARD_PROGRAMS.md`,
-`docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/QUICK_ADD.md`, `docs/NOTIFICATIONS.md`,
+`docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/QUICK_ADD.md`, `docs/NOTIFICATIONS.md`, `docs/WEATHER.md`,
 `chrome-sidebar/RESTAURANTS.md`.

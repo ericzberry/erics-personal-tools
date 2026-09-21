@@ -141,8 +141,9 @@ rule as everywhere else here.
 the money on a card that the close of the quarter takes back: the high-value
 credits from the rewards wallet whose period ends inside the quarter the owner
 is in now, largest first. It is the same screen's third question, and the wallet
-owns the rule — see [rewards](REWARDS.md). Today's birthdays stay at the top of
-the screen whatever follows them.
+owns the rule — see [rewards](REWARDS.md). Today's birthdays stay above
+whatever follows them; only the day's weather sits over them — see
+[WEATHER.md](WEATHER.md).
 
 **It reads and writes nothing**, so it has no action, no status line and no
 error to report: a device that cannot reach one of the two stores shows the home

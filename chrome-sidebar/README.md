@@ -4089,3 +4089,20 @@ searching the market the browser's locale names instead of a country field.
 The Worker's reading returns the statement's card and writes notes only for a
 real ambiguity; deploy `tools-api` with this release.
 Archive: `release/erics-sidebar-0.6.265.zip`.
+
+## Today's weather on the home screen (0.6.266 / mobile 0.1.215)
+
+Both home screens now open on the day where the owner is: **Today in
+Manhattan**, what to wear (*Bring a heavy jacket*, *Bring a light jacket*,
+*Wear a sweater, no jacket*, or *No jacket or sweater*) over the day's range,
+and — when rain is more likely than not — **Bring an umbrella** with the hours
+it is likely in. The layer is set by the coldest the waking hours will feel,
+about five degrees warmer than a general chart, because the owner runs a
+little cold. It is worked out once a day per device, on the first look, from
+the device's own location (the extension now holds the `geolocation`
+permission) or, failing that, the city the connection comes from, and read
+back from the encrypted store for the rest of the day. The Worker's new
+`/v1/weather` route answers it from Open-Meteo and Nominatim and stores
+nothing; deploy `tools-api` with this release. See
+[WEATHER.md](../docs/WEATHER.md).
+Archive: `release/erics-sidebar-0.6.266.zip`.

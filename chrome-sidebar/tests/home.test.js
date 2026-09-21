@@ -126,3 +126,53 @@ test('a wallet that cannot be read leaves the birthdays alone',async()=>{
   assert.match(group(document,'home-today').textContent,/Maisie’s birthday/);
   assert.equal(group(document,'home-quarter').hidden,true);
 });
+
+// The weather is the device's own once-a-day reading, handed in the way the
+// hosts hand in `dailyWeather`: what is already worked out, and a way to work it out.
+const sunny={day:'2026-09-20',date:'2026-09-20',place:'Synthetic Heights',low:59,high:70,coldest:60,layer:'light',dress:'Bring a light jacket',rain:'',snow:''};
+const weatherOf=(result,{kept=null}={})=>({saved:async()=>kept,today:async()=>{if(result instanceof Error)throw result;return result;}});
+
+test('the day’s weather leads the home screen: what to wear, and when rain is likely',async()=>{
+  const document=setup();
+  mountHome(document.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},
+    reminders:store([normalizeReminder({kind:'Birthday',title:'Maisie’s birthday',date:'2016-09-20',every:12})]),rewards:store([]),today,
+    weather:weatherOf({...sunny,rain:'2–5 PM'})});
+  await settle(()=>document.querySelectorAll('#home-weather .home-row').length===2);
+  const run=group(document,'home-weather');
+  assert.equal(run.hidden,false);
+  assert.equal(run.querySelector('h2').textContent,'Today in Synthetic Heights');
+  assert.deepEqual([...run.querySelectorAll('.home-row strong')].map(node=>node.textContent),['Bring a light jacket','Bring an umbrella']);
+  assert.deepEqual([...run.querySelectorAll('.home-row .footnote')].map(node=>node.textContent),['59–70°','Rain likely 2–5 PM']);
+  assert.equal(run.compareDocumentPosition(group(document,'home-today'))&4,4,'the weather is set above today’s birthdays');
+});
+
+test('a dry day is one line, snow rides under the jacket, and a day already worked out is read back',async()=>{
+  const document=setup();
+  let asked=0;
+  const kept={...sunny,layer:'heavy',dress:'Bring a heavy jacket',low:22,high:30,coldest:20,snow:'2–5 PM'};
+  mountHome(document.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},reminders:store([]),rewards:store([]),today,
+    weather:{saved:async()=>kept,today:async()=>{asked++;return kept;}}});
+  await settle(()=>document.querySelectorAll('#home-weather .home-row').length===1);
+  const run=group(document,'home-weather');
+  assert.equal(run.querySelector('.home-row strong').textContent,'Bring a heavy jacket');
+  assert.equal(run.querySelector('.home-row .footnote').textContent,'22–30° · snow likely 2–5 PM');
+  assert.doesNotMatch(run.textContent,/umbrella/);
+  assert.equal(asked,0,'a saved day asks for nothing');
+});
+
+test('a forecast that cannot be had leaves out the weather and nothing else',async()=>{
+  const document=setup();
+  mountHome(document.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},
+    reminders:store([normalizeReminder({kind:'Birthday',title:'Maisie’s birthday',date:'2016-09-20',every:12})]),rewards:store([]),today,
+    weather:weatherOf(Error('The forecast is unavailable.'))});
+  await settle(()=>document.querySelectorAll('.home-row').length===1);
+  await new Promise(resolve=>setTimeout(resolve,20));
+  assert.equal(group(document,'home-weather').hidden,true);
+  assert.equal(group(document,'home-today').hidden,false);
+  // With no place named, the heading is just the day.
+  const other=setup();
+  mountHome(other.getElementById('home-birthdays'),{credentials:{get:async()=>'token'},reminders:store([]),rewards:store([]),today,
+    weather:weatherOf({...sunny,place:''})});
+  await settle(()=>other.querySelectorAll('#home-weather .home-row').length===1);
+  assert.equal(group(other,'home-weather').querySelector('h2').textContent,'Today');
+});

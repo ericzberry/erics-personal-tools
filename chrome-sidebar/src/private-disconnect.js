@@ -8,6 +8,8 @@ import {financeOffline} from './finance-offline.js';
 import {personalOffline} from './personal-offline.js';
 import {programsOffline} from './program-offline.js';
 import {forgetProgramReads} from './reward-programs.js';
+import {dailyWeather} from './weather.js';
+import {encryptedDeviceStore} from './offline-storage.js';
 export async function disconnectPrivateData(token){
   if(!token||!globalThis.indexedDB)return;
   // A program catalogue queues nothing — only a visit to the program's site
@@ -15,5 +17,7 @@ export async function disconnectPrivateData(token){
   const resources=[subscriptionsOffline(),remindersOffline(),giftsOffline(),travelOffline(),cardsOffline(),rewardsOffline(),financeOffline(),personalOffline(),programsOffline()];
   for(const resource of resources)if(await resource.hasPending(token))throw Error('Sync or resolve your pending private changes before disconnecting.');
   for(const resource of resources)await resource.disconnect(token);
+  // Today's weather names where the device was this morning.
+  await dailyWeather({store:encryptedDeviceStore()}).forget(token);
   await forgetProgramReads();
 }

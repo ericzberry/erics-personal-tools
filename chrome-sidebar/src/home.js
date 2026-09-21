@@ -1,9 +1,9 @@
-import {HomeGlance,setHomeGlance} from './components/home.js';
+import {HomeGlance,setHomeGlance,setHomeWeather} from './components/home.js';
 import {birthdaysAhead,localDate} from './reminder-data.js';
 import {creditsThisQuarter} from './rewards-data.js';
 
-// The screen both hosts open on: whose birthday it is, and the money on a card
-// that stops being spendable when the quarter closes.
+// The screen both hosts open on: what to wear today, whose birthday it is, and
+// the money on a card that stops being spendable when the quarter closes.
 //
 // It reads the stores the tools read and writes nothing, so there is no action
 // here, no status line and no error to report: a home screen that cannot reach
@@ -11,15 +11,18 @@ import {creditsThisQuarter} from './rewards-data.js';
 // Rewards are where a connection problem is said out loud. That is also why
 // this never asks for a connection — nothing is missing to anyone who has not
 // made one. Each store is read on its own, so a wallet that will not open
-// still leaves the birthdays where they were.
+// still leaves the birthdays where they were, and a forecast that cannot be
+// had leaves out the weather and nothing else.
 //
 // The records are the device's own copies, so a phone with no signal still
-// knows whose birthday it is and what is about to reset.
-export function mountHome(root,{credentials,reminders,rewards,today=localDate}={}){
+// knows whose birthday it is and what is about to reset. The weather is
+// worked out once a day (`weather.js`); that copy is read with the records, so
+// only the first look of the day waits on a location and a forecast.
+export function mountHome(root,{credentials,reminders,rewards,weather,today=localDate}={}){
   if(!root)return null;
   root.replaceChildren(HomeGlance());
   let generation=0;
-  const clear=()=>{generation++;setHomeGlance(root,{});};
+  const clear=()=>{generation++;setHomeGlance(root,{});setHomeWeather(root,null);};
   const read=async(store,token,path,of)=>{
     try{const {records=[]}=await store.request(token,path);return of(records);}catch{return null;}
   };
@@ -27,14 +30,18 @@ export function mountHome(root,{credentials,reminders,rewards,today=localDate}={
     const current=++generation;
     let token='';
     try{token=await credentials.get();}catch{token='';}
-    if(!token){if(current===generation)setHomeGlance(root,{});return;}
+    if(!token){if(current===generation){setHomeGlance(root,{});setHomeWeather(root,null);}return;}
     const day=today();
-    const [birthdays,credits]=await Promise.all([
+    const [birthdays,credits,kept]=await Promise.all([
       reminders?read(reminders,token,'/v1/reminders',records=>birthdaysAhead(records,{today:day})):null,
-      rewards?read(rewards,token,'/v1/rewards',records=>creditsThisQuarter(records,{now:new Date(`${day}T12:00:00`)})):null
+      rewards?read(rewards,token,'/v1/rewards',records=>creditsThisQuarter(records,{now:new Date(`${day}T12:00:00`)})):null,
+      weather?.saved(token,day)
     ]);
     if(current!==generation)return;
     setHomeGlance(root,{...(birthdays||{}),credits:credits||[]});
+    setHomeWeather(root,kept||null);
+    if(kept||!weather)return;
+    weather.today(token,day).then(result=>result,()=>null).then(result=>{if(current===generation)setHomeWeather(root,result);});
   }
   refresh();
   // Coming back to the app is when the day may have turned over, which is the

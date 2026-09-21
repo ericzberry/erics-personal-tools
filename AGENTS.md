@@ -21,6 +21,7 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | Cloudflare runtime, D1 lifecycle, or Worker release | [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md) |
 | AI calls or provider integrations | [model routing](tools-api/MODEL_ROUTING.md), [providers](tools-api/PROVIDERS.md) |
 | Reminders and dates | [docs/REMINDERS.md](docs/REMINDERS.md) |
+| The home screen's weather and what to wear | [docs/WEATHER.md](docs/WEATHER.md) |
 | Push notifications, the cron, or VAPID keys | [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) |
 | Gift ideas | [docs/GIFTS.md](docs/GIFTS.md) |
 | Clothing sizes | [docs/SIZES.md](docs/SIZES.md) |

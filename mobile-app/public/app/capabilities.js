@@ -14,6 +14,7 @@ import {financeOffline} from './shared/finance-offline.js';
 import {mountPersonal} from './shared/personal.js';
 import {mountReminders} from './shared/reminders.js';
 import {mountHome} from './shared/home.js';
+import {dailyWeather} from './shared/weather.js';
 import {remindersOffline} from './shared/reminders-offline.js';
 import {mountCapture} from './shared/capture.js';
 import {mountPushBridge} from './push-bridge.js';
@@ -52,11 +53,12 @@ const reminderStore=remindersOffline({remote:cloudRequest,store:protectedStore(e
 const giftStore=giftsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const sizeStore=sizesOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const subscriptionStore=subscriptionsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
+const weather=dailyWeather({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
 const credentials={
   async beforeDisconnect(){const token=await this.get();if(token&&(await subscriptionStore.hasPending(token)||await cardStore.hasPending(token)||await rewardStore.hasPending(token)||await financeStore.hasPending(token)||await personalStore.hasPending(token)||await reminderStore.hasPending(token)||await giftStore.hasPending(token)||await sizeStore.hasPending(token)))throw Error('Sync or resolve pending changes before disconnecting.');},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token){await subscriptionStore.disconnect(token);await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await reminderStore.disconnect(token);await giftStore.disconnect(token);await sizeStore.disconnect(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token){await subscriptionStore.disconnect(token);await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await reminderStore.disconnect(token);await giftStore.disconnect(token);await sizeStore.disconnect(token);await weather.forget(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 // Best card reads the same wallet Rewards keeps, for the cards it already
 // knows the owner holds but has no rates for.
@@ -68,12 +70,12 @@ const personalTool=mountPersonal(document.getElementById('capability-personal'),
 const reminderTool=mountReminders(document.getElementById('capability-reminders'),{credentials,offline:reminderStore,onSettings:openSettings});
 const giftTool=mountGifts(document.getElementById('capability-gifts'),{credentials,offline:giftStore,onSettings:openSettings});
 const sizeTool=mountSizes(document.getElementById('capability-sizes'),{credentials,offline:sizeStore,onSettings:openSettings});
-// The fortnight's birthdays lead the home screen, and the money about to reset
-// on a card follows them, both read from the same offline copies the tools
-// keep, so a phone with no signal still knows whose day it is and what is
-// about to be taken back.
+// Today's weather leads the home screen, worked out once a day from where the
+// phone is. The fortnight's birthdays and the money about to reset on a card
+// follow it, read from the same offline copies the tools keep, so a phone with
+// no signal still knows whose day it is and what is about to be taken back.
 const homeRoot=document.getElementById('capability-birthdays');
-const home=mountHome(homeRoot,{credentials,reminders:reminderStore,rewards:rewardStore});
+const home=mountHome(homeRoot,{credentials,reminders:reminderStore,rewards:rewardStore,weather});
 // Quick add sits on the home screen and writes through the same offline store
 // the tool uses, so a note typed with no signal queues like any other change.
 const captureRoot=document.getElementById('capability-capture');

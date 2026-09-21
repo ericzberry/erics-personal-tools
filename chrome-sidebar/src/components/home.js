@@ -1,19 +1,22 @@
 import {Stack,Section,Strong,Note,GroupTitle} from './ui.js';
 import {duePhrase,reminderAge,dueDay} from '../reminder-data.js';
 import {formatAmount} from '../credit-data.js';
+import {rangeLabel} from '../weather-data.js';
 
-// The home screen's glance. Three runs, because they answer three different
-// questions: whose birthday it is today, which is the only day anything can be
-// done about it; whose is coming inside the fortnight, which is how long there
-// is to do something about that one; and what money is sitting on a card that
-// stops being spendable when the quarter closes.
+// The home screen's glance. It opens on the day itself — what to wear, and
+// whether to take an umbrella — and then three runs, because they answer three
+// different questions: whose birthday it is today, which is the only day
+// anything can be done about it; whose is coming inside the fortnight, which
+// is how long there is to do something about that one; and what money is
+// sitting on a card that stops being spendable when the quarter closes.
 //
-// Today's run is the one thing on the screen that is about today, so it is the
-// one thing given a surface, and it stays at the top whatever follows it. All
-// three are empty markup until a controller fills them, and a run with nothing
-// in it is hidden rather than headed — an empty "Birthdays today" would be a
-// heading over the fact that it is nobody's.
+// Today's birthdays are the one record on the screen that is about today, so
+// they are the one thing given a surface. Every group is empty markup until a
+// controller fills it, and a group with nothing in it is hidden rather than
+// headed — an empty "Birthdays today" would be a heading over the fact that it
+// is nobody's.
 export const HomeGlance=()=>Stack([
+  Section([GroupTitle('Today',{id:'home-weather-title'}),Stack([],{id:'home-weather'})],{className:'home-group home-group--weather',hidden:true}),
   Section([GroupTitle('Birthdays today'),Stack([],{id:'home-today'})],{className:'home-group home-group--today',hidden:true}),
   Section([GroupTitle('Next two weeks'),Stack([],{id:'home-upcoming'})],{className:'home-group home-group--upcoming',hidden:true}),
   Section([GroupTitle('Use this quarter'),Stack([],{id:'home-quarter'})],{className:'home-group home-group--quarter',hidden:true})
@@ -50,6 +53,16 @@ const fill=(root,id,rows,any=rows.length)=>{
   list.replaceChildren(...rows);
   list.closest('.home-group').hidden=!any;
 };
+// The day's advice leads its row and the numbers it was decided on sit under
+// it. An umbrella is a row of its own, with the hours it is for; snow needs no
+// umbrella, so its hours ride under the jacket instead.
+export function setHomeWeather(root,day){
+  const rows=day?.dress?[GlanceRow(day.dress,[rangeLabel(day),day.snow?`snow likely ${day.snow}`:''].filter(Boolean).join(' · '))]:[];
+  if(day?.rain)rows.push(GlanceRow('Bring an umbrella',`Rain likely ${day.rain}`));
+  const title=root.querySelector('#home-weather-title');
+  if(title)title.textContent=day?.place?`Today in ${day.place}`:'Today';
+  fill(root,'home-weather',rows);
+}
 export function setHomeGlance(root,{today=[],upcoming=[],credits=[]}={}){
   fill(root,'home-today',today.map(record=>GlanceRow(record.title,birthdayDetail(record))));
   fill(root,'home-upcoming',upcoming.map(record=>GlanceRow(record.title,birthdayDetail(record))));

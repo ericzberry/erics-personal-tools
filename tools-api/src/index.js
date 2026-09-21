@@ -20,6 +20,7 @@ import {rewardsSettings,researchCardBenefits,readLoyaltyBalances} from './reward
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
 import {discoverRestaurants} from './restaurants.js';
+import {weather} from './weather.js';
 const MAX_BYTES = 64 * 1024;
 // A record write stays at 64 KB. Only the AI-connection family may be larger,
 // because a downscaled statement image travels inline in its request body.
@@ -159,6 +160,7 @@ export default {
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
       if(path==='/v1/storage')return await storageUsage(request,env,json);
+      if(path==='/v1/weather')return await weather(request,env,json);
       if(path.startsWith('/v1/drive/'))return await drive(request,env,readValue,json);
       if(path==='/v1/backup'||path.startsWith('/v1/backup/'))return await backupRoutes(request,env,readValue,json);
       if(path.startsWith('/v1/calendar/'))return await calendarRoutes(request,env,readValue,json);
