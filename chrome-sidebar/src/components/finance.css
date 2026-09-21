@@ -222,3 +222,9 @@
 .snapshot-figure span{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
 .snapshot-figure strong{font-weight:600;white-space:nowrap}
 .snapshot-row .footnote{margin:0}
+/* A position's figures, one to a line: the name in the ink of a meta, the
+   value in body ink, both columns as wide as their longest entry so the values
+   start on one edge and are read straight down. */
+.figure-list{display:grid;grid-template-columns:max-content minmax(0,max-content);column-gap:12px;row-gap:2px;margin-top:2px;font-variant-numeric:tabular-nums}
+.figure-list>.figure-list-name{color:var(--muted)}
+.figure-list>.figure-list-value{color:var(--ink);white-space:nowrap}

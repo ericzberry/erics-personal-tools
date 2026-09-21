@@ -46,17 +46,24 @@ export const investedClassOptions=()=>ASSET_CLASSES.filter(entry=>entry.side==='
 // fund that has distributed nothing has returned nothing, and an investment
 // signed last week has none of it — three zeros in a row would say only that
 // this is a shape with four slots in it.
-export const positionDetail=(position,currency,figures=vehicleFigures(position.holding?.vehicle??position.vehicle))=>[
+export const positionFigures=(position,currency,figures=vehicleFigures(position.holding?.vehicle??position.vehicle))=>[
   // Said first, because it changes what every figure after it means: these are
   // this portfolio's share of the vehicle, not the vehicle. A position that is
   // the whole of one says nothing, which is almost all of them.
-  (position.share??WHOLE_SHARE)===WHOLE_SHARE?'':`${shareText(position.share)} of the vehicle`,
-  position.commitment?`Commitment ${money(position.commitment,currency)}`:'',
-  position.contributed?`${figures.committed?'Funded':'Invested'} ${money(position.contributed,currency)}`:'',
-  position.distributed?`${figures.committed?'Returned':'Proceeds'} ${money(position.distributed,currency)}`:'',
-  position.unfunded?`Unfunded ${money(position.unfunded,currency)}`:'',
-  position.multiple===null?'':`${position.multiple.toFixed(2)}×`
-].filter(Boolean).join(' · ');
+  (position.share??WHOLE_SHARE)===WHOLE_SHARE?null:['Share of vehicle',shareText(position.share)],
+  position.commitment?['Commitment',money(position.commitment,currency)]:null,
+  position.contributed?[figures.committed?'Funded':'Invested',money(position.contributed,currency)]:null,
+  position.distributed?[figures.committed?'Returned':'Proceeds',money(position.distributed,currency)]:null,
+  position.unfunded?['Unfunded',money(position.unfunded,currency)]:null,
+  position.multiple===null||position.multiple===undefined?null:['Multiple',`${position.multiple.toFixed(2)}×`]
+].filter(Boolean);
+// A figure a line, its name beside it. Run together with middots the five of
+// them wrapped wherever the width fell — "Funded $341,370 · Returned" on one
+// line and "$3,500" on the next — and a reader hunting for what is unfunded
+// had to parse a sentence to find it. Read down, they are a small statement.
+export const FigureList=(pairs,props={})=>pairs.length?Stack(pairs.flatMap(([name,value])=>[
+  Label(name,{className:'figure-list-name'}),Label(value,{className:'figure-list-value'})
+]),{className:'figure-list',...props}):null;
 
 // What a property is worth to its owner, beside what it is worth. A house and
 // its mortgage reach the totals as two figures in two classes, one of them
@@ -175,7 +182,7 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
   // follows, so the review and the record cannot disagree.
   const derived=Math.max(0,Math.round((commitment-contributed)*100)/100);
   const stated=row.unfunded===null||row.unfunded===undefined||row.unfunded===''?null:part(Number(row.unfunded)||0);
-  const flows=positionDetail({vehicle:row.vehicle,share,commitment,contributed,distributed,
+  const flows=positionFigures({vehicle:row.vehicle,share,commitment,contributed,distributed,
     unfunded:stated??derived,
     multiple:contributed>0?Math.round(((value+distributed)/contributed)*100)/100:null},row.currency);
   // Recorded as one kind, sold as another. Said plainly on the row, because
@@ -184,7 +191,7 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
   if(!editing)return Stack([
     Stack([Label(row.name),Amount(value,row.currency)],{className:'snapshot-figure'}),
     Note(where),
-    Note(flows),
+    FigureList(flows),
     claimed?Note(claimed):null
   ],{className:'snapshot-row'});
   const field=(key,label,kind='text',options)=>{

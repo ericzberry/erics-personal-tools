@@ -1,4 +1,4 @@
-import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionDetail,propertyDetail} from './components/finance.js';
+import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,AttachmentCard,positionFigures,FigureList,propertyDetail} from './components/finance.js';
 import {RecordRow,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
@@ -813,21 +813,23 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         ...(position.history.length>1?[rowAction(HISTORY_GLYPH,`Earlier figures for ${holding.name}`,()=>{past.hidden=!past.hidden;})]:[]),
         rowAction(DELETE_GLYPH,`Delete ${holding.name}`,()=>{confirm.hidden=false;},true)
       ];
-      // The date leads the figures it dates rather than trailing the name: set
-      // after a legal name that wraps, it hung as "L.P. ·" with the date alone
-      // on the line under it.
       const meta=holding.pending?'Waiting to sync':'';
-      // What the paperwork calls it gets a line of its own. Run into the
-      // figures it reads as one of them.
-      const notes=[[current?dated(current.asOf,against):'no statement yet',
-        positionDetail(position,portfolio.currency)].filter(Boolean).join(' · '),
+      // Its figures read down, one to a line, with the date they are as of at
+      // the head of them — never run onto the name, where after a legal name
+      // that wraps it hung as "L.P. ·" with the date alone under it. What the
+      // paperwork calls it gets a line of its own after them; run into the
+      // figures it read as one of them.
+      const asOf=current?dated(current.asOf,against):'';
+      const figures=FigureList([...(asOf?[['As of',asOf]]:[]),...positionFigures(position,portfolio.currency)]);
+      const notes=[current?'':'No statement yet',
         position.disputed?`The statement calls this a ${vehicleLabel(holding.stated)}.`:''];
       // The name alone. What kind of vehicle it is was run onto the name, and
       // a fund's long legal name then wrapped into "… L.P. · Fund ·" with the
       // date stranded under it; the line it opens from already says what these
       // are, and Funded against Invested says which kind.
       return RecordRow({title:holding.name,
-        figure:Amount(position.value,portfolio.currency),meta,notes,actions,extra:[past,confirm]});
+        figure:Amount(position.value,portfolio.currency),meta,actions,
+        extra:[figures,...notes.filter(Boolean).map(line=>Note(line)),past,confirm]});
     };
     // Every private position in one portfolio, as one line of the ledger — the
     // same shape as Real estate, for the same reason. A portfolio is read down

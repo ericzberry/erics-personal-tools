@@ -80,7 +80,7 @@ test('a capital account statement is read into an investment, reviewed, and save
   assert.match(review.textContent,/Acme Ventures Fund III, L\.P\./);
   assert.match(review.textContent,/\$1,100,000/);
   assert.match(review.textContent,new RegExp(`${TRUST} · Fund · new investment · as of 2026-06-30`));
-  assert.match(review.textContent,/Commitment \$1,000,000 · Funded \$800,000 · Returned \$250,000 · Unfunded \$200,000 · 1\.69×/);
+  assert.match(review.textContent,/Commitment\$1,000,000Funded\$800,000Returned\$250,000Unfunded\$200,000Multiple1\.69×/);
   assert.equal(writes.length,0,'nothing is written by reading');
 
   buttonNamed(review,'Save these capital accounts').dispatchEvent(new document.defaultView.Event('click'));
@@ -109,7 +109,11 @@ test('a capital account statement is read into an investment, reviewed, and save
   [...document.querySelectorAll('#finance-list button')]
     .find(node=>node.getAttribute('aria-label')?.startsWith('Show the private investments')).click();
   assert.equal(inside.hidden,false);
-  assert.match(list,/Commitment \$1,000,000 · Funded \$800,000 · Returned \$250,000 · Unfunded \$200,000 · 1\.69×/);
+  // A figure to a line, named beside it, rather than one run-on sentence. UI-41.
+  const names=[...document.querySelectorAll('#finance-list .figure-list-name')].map(node=>node.textContent);
+  assert.deepEqual(names,['Commitment','Funded','Returned','Unfunded','Multiple']);
+  assert.equal(list.includes('Funded $800,000 ·'),false,'the figures are not run together');
+  assert.match(list,/Commitment\$1,000,000Funded\$800,000Returned\$250,000Unfunded\$200,000Multiple1\.69×/);
   // It counts like any other figure. What is still owed on the commitment is
   // not a total of the ledger — it is neither held nor owed today — so it is
   // read against the commitment in the breakdown and never up in the totals.
@@ -200,7 +204,7 @@ test('a direct equity investment asks for what was invested and what it is worth
   assert.deepEqual([writes[1].value,writes[1].contributed,writes[1].commitment],[40000,25000,0],
     'a commitment typed before the kind changed is not saved');
   await settle(()=>document.getElementById('finance-list').textContent.includes('Rhythmic'));
-  assert.match(document.getElementById('finance-list').textContent,/Invested \$25,000/);
+  assert.match(document.getElementById('finance-list').textContent,/Invested\$25,000/);
   assert.ok(shown('finance-inv-commitment'),'the next new investment starts as a fund again');
   tool.stop();restore();
 });
@@ -248,7 +252,7 @@ test('a second holder maps onto the vehicle already held and takes its figures f
   // having been typed against it.
   await settle(()=>document.getElementById('finance-list').textContent.includes('65%'));
   const list=document.getElementById('finance-list').textContent;
-  assert.match(list,/65% of the vehicle/);
+  assert.match(list,/Share of vehicle65%/);
   assert.match(list,/\$552,500/);
   assert.match(list,/\$297,500/,'and the position it was mapped onto is unchanged');
   tool.stop();restore();
