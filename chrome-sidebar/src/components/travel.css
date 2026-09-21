@@ -59,7 +59,11 @@
    contents, and a panel whose summary is hidden has no label to head a block
    with. */
 .travel-wallet details[open],.travel-wallet .record-row:has(.record-row-toggle[aria-expanded=true]){background:var(--wallet-surface);border:1px solid var(--wallet-line);border-radius:8px;margin:4px 0;padding:0 8px 8px}
-.travel-wallet details[open]>summary,.travel-wallet .record-row-toggle[aria-expanded=true]{margin-inline:-8px;padding:6px 8px;background:var(--wallet-open);border-bottom:1px solid var(--wallet-line);border-radius:7px 7px 0 0}
+/* The band bleeds 8px past the block's padding on each side, and a negative
+   margin only moves a box: the toggle is a width:100% button, so without the
+   width it slid 8px left and stopped 16px short of the right edge. A band
+   that bleeds widens by what it bleeds. UI-36. */
+.travel-wallet details[open]>summary,.travel-wallet .record-row-toggle[aria-expanded=true]{margin-inline:-8px;width:calc(100% + 16px);padding:6px 8px;background:var(--wallet-open);border-bottom:1px solid var(--wallet-line);border-radius:7px 7px 0 0}
 .travel-wallet .record-row-toggle[aria-expanded=true]{padding-right:26px}
 @media(hover:hover){.travel-wallet details[open]>summary:hover,.travel-wallet .record-row-toggle[aria-expanded=true]:hover{background:var(--wallet-open-hover)}}
 /* An amount is one word: "$7,496,850" broken after a comma reads as a

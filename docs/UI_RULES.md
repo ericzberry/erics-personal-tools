@@ -56,6 +56,7 @@ here.
 | **UI-33** | A record's verbs ride on its own line and a group's on its heading line — never in a row of their own at the foot of the block it opens. Stated in full under [From a complaint](#from-a-complaint). | `tests/finance-ledger.test.js` |
 | **UI-34** | An amount is one word. Every class that renders money declares `white-space:nowrap`, in a sheet both hosts load; the column gives way before the figure does. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-35** | Sections at one level of a screen all open the same way. A bare list standing beside three disclosures is the odd one out; it becomes a disclosure too, and the one the screen is opened for is the one that starts open. Stated in full under [From a complaint](#from-a-complaint). | `tests/finance-ledger.test.js` |
+| **UI-36** | A band reaches both edges of its block. Whatever bleeds sideways with a negative margin widens by the same amount in the same rule, because a negative margin moves a box and does not stretch it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 
 ## Ratcheting
 
@@ -303,6 +304,17 @@ This is the reason UI-22 is not only about how a disclosure looks: a screen
 whose sections do not agree on whether they are sections is uneven before any
 of them is drawn. Checked on the rendered ledger in
 `tests/finance-ledger.test.js`.
+
+**UI-36 — a band reaches both edges of its block.** *Enforced.* An open
+record's banded head is pulled out over its block's 8px padding with
+`margin-inline:-8px`. The travel wallet's record toggle is a button with
+`width:100%`, and a negative margin moves a fixed-width box rather than
+widening it: the band slid 8px left and stopped 16px short of the right edge,
+leaving a sliver of block beside it. *"When I click Alamo the dropdown bar
+doesn't go all the way to the right, it looks goofy."* Every rule that bleeds
+sideways declares `width:calc(100% + <left + right>)` alongside the margin; a
+fixed-width box such as `.sr-only` is not a band and is exempt. Look at an
+open record in Travel and an open panel in Rewards, at sidebar width.
 
 ## Open
 

@@ -301,3 +301,32 @@ test('an amount is one word, wherever either host draws it',()=>{
       'See UI-34 in docs/UI_RULES.md.');
   }
 });
+
+// UI-36. A negative margin moves a box; it does not widen one. A band pulled
+// out to its block's edges on both sides with a width of 100% (a button, an
+// input, anything given one) slides left and stops short on the right by twice
+// the bleed — the open rental-car row's band ended 16px inside its block. So
+// every rule that bleeds sideways says how wide the result is, in the same
+// declaration: `calc(100% + <left + right>)`. Vertical bleeds are not this bug.
+test('a band that bleeds to its block edge widens by what it bleeds',()=>{
+  const px=value=>{const n=/^(-?\d+(?:\.\d+)?)px$/.exec(value.trim());return n?Number(n[1]):0;};
+  const every=[...sheets().map(name=>[name,sheet(name)]),
+    ['mobile styles.css',readFileSync(new URL('../../mobile-app/public/app/styles.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'')]];
+  for(const [name,css] of every){
+    for(const [,selector,body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
+      const decl=prop=>[...body.matchAll(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`,'g'))].map(m=>m[1]).pop();
+      let left=0,right=0;
+      const inline=decl('margin-inline');
+      if(inline){const [a,b=a]=inline.trim().split(/\s+/);left=px(a);right=px(b);}
+      const margin=decl('margin');
+      if(margin){const v=margin.trim().split(/\s+/);const r=v[1]??v[0],l=v[3]??r;left=left||px(l);right=right||px(r);}
+      left=px(decl('margin-left')??'')||left;right=px(decl('margin-right')??'')||right;
+      if(left>=0||right>=0)continue; // bleeds on one side or none
+      const width=decl('width')?.replace(/\s+/g,'');
+      if(/^\d+(?:\.\d+)?px$/.test(width??''))continue; // a fixed box, like .sr-only, is not a band
+      assert.equal(width,`calc(100%+${-(left+right)}px)`,
+        `${name}: ${selector.trim()} bleeds ${-left}px and ${-right}px past its block and does not widen by it, `+
+        'so its band stops short of the right edge. See UI-36 in docs/UI_RULES.md.');
+    }
+  }
+});
