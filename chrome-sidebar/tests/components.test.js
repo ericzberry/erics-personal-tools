@@ -69,6 +69,17 @@ test('feature code cannot introduce raw markup or element construction',()=>{
   for(const rule of css.split('{').slice(0,-1))assert.doesNotMatch(rule.split('}').at(-1),/#[a-zA-Z][\w-]*/, 'Use component classes, not feature IDs');
 });
 
+test('the Tools row stays in view as the panel scrolls, and its open menu fits the panel',()=>{
+  const css=readFileSync(new URL('../src/components/styles.css',import.meta.url),'utf8');
+  const rule=selector=>css.match(new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\s*\\{([^}]*)\\}`))?.[1]??'';
+  const header=rule('.app-header--navigation');
+  assert.match(header,/position:\s*sticky/);
+  assert.match(header,/top:\s*calc\(-1 \* \(var\(--app-bar-inset\) \+ var\(--app-brand-row\)\)\)/,'only the brand row scrolls away');
+  assert.match(rule('.app-brand'),/height:\s*var\(--app-brand-row\)/);
+  assert.match(rule('.app-header--navigation .capability-list'),/max-height:\s*calc\(100dvh - var\(--app-bar-pinned\)\);.*overflow-y:\s*auto/);
+  assert.match(rule('.app-header--navigation ~ * .sticky-group'),/top:\s*var\(--app-bar-pinned\)/,'a tool’s own pinned block sits under the Tools row');
+});
+
 test('pick history uses one compact metadata line',()=>{
   setup();const row=PickRow({player:'Drake London',overall:15,round:2,pickInRound:5,nflTeam:'ATL',position:'WR',team:'East Dillon Lions',teamId:1},2);
   assert.ok(row.classList.contains('pick--compact'));assert.equal(row.querySelectorAll('.pick-meta').length,1);assert.ok(row.textContent.includes('East Dillon Lions'));

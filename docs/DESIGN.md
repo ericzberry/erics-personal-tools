@@ -23,7 +23,7 @@ Use 4px spacing increments and 14px sidebar gutters. Controls use 6px corners; a
 
 ## Shared shell
 
-A 42px header pairs the Eric’s tools signature with the current function. The active browser tab selects the function automatically; do not add function tabs. Each tool has a compact heading. Put secondary information such as league rules behind a disclosure. Use the action hierarchy below, and one dominant recommendation at a time. Keep supporting explanations behind disclosure controls. Empty states explain one next step; they never pretend to show live data.
+A 42px header pairs the Eric’s tools signature with the current function. In the side panel the header is pinned: the signature scrolls away and the Tools toggle stays at the top of the panel, so another tool is always one press away. The active browser tab selects the function automatically; do not add function tabs. Each tool has a compact heading. Put secondary information such as league rules behind a disclosure. Use the action hierarchy below, and one dominant recommendation at a time. Keep supporting explanations behind disclosure controls. Empty states explain one next step; they never pretend to show live data.
 
 The implementation tokens live in chrome-sidebar/src/components/tokens.css; styles.css and each standalone shared stylesheet import them. Reuse these names and values in future subprojects. No external fonts, tracking, or third-party UI assets are needed.
 

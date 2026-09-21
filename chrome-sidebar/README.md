@@ -4057,3 +4057,14 @@ shows it before the balance. There is no longer a glyph for adding in
 `ui.js`: a glyph with no words carries only a verb on the record it sits on
 (UI-46).
 Archive: `release/erics-sidebar-0.6.262.zip`.
+
+## The Tools menu stays in view (0.6.264)
+
+The header is pinned to the top of the panel. As a tool scrolls, the Eric's
+tools brand row scrolls away and the band holding the **Tools** toggle stays,
+so switching tools never needs a scroll back up. Opened while pinned, the menu
+scrolls within the panel instead of running past its foot, and the draft
+view's roster block now pins under the Tools row rather than behind it. The
+offsets are the `--app-bar-*` properties in `styles.css`; the extension alone
+is affected, since the phone draws its own menu.
+Archive: `release/erics-sidebar-0.6.264.zip`.

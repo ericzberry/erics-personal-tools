@@ -433,9 +433,17 @@ a.row-action { text-decoration: none; color: inherit; }
 /* Generated text stays fully visible, including after edits and sidebar resizing. */
 .editable-output--fit { field-sizing: content; min-height: 96px; resize: none; overflow: hidden; line-height: 1.65; padding: 12px; }
 
-/* Capability navigation is a single expandable list, independent of page actions. */
-.app-header--navigation { display: block; padding: 8px 14px; }
-.app-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+/* Capability navigation is a single expandable list, independent of page actions.
+   The header is pinned by an offset as tall as the brand row above the Tools
+   toggle, so the brand scrolls away and the toggle stays in view with the band
+   around it. Anything else pinned in the panel sits beneath that band. */
+:root { --app-bar-inset: 8px; --app-brand-row: 24px; --tools-row: 28px; --app-bar-pinned: calc(var(--tools-row) + 2 * var(--app-bar-inset)); }
+@media (pointer: coarse) { :root { --tools-row: 44px; } }
+.app-header--navigation { position: sticky; top: calc(-1 * (var(--app-bar-inset) + var(--app-brand-row))); z-index: 30; display: block; padding: var(--app-bar-inset) 14px; }
+.app-brand { display: flex; align-items: center; gap: 8px; height: var(--app-brand-row); margin-bottom: var(--app-bar-inset); }
+/* Pinned, the open menu scrolls within the panel rather than running past its foot. */
+.app-header--navigation .capability-list { box-sizing: border-box; max-height: calc(100dvh - var(--app-bar-pinned)); overflow-y: auto; overscroll-behavior: contain; }
+.app-header--navigation ~ * .sticky-group { top: var(--app-bar-pinned); }
 .app-header--navigation .capability-navigation { margin: 0; padding: 0; border: 0; border-radius: 6px; background: var(--paper); color: var(--ink); }
 .capability-toggle { display: grid; grid-template-columns: auto minmax(0, 1fr) 8px; align-items: center; gap: 8px; min-height: 28px; padding: 4px 8px; list-style: none; cursor: pointer; font-size: 12px; line-height: 1.5; }
 @media (pointer: coarse) { .capability-toggle { min-height: 44px; } }
