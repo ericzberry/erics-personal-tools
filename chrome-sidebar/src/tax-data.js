@@ -83,6 +83,42 @@ export const categoryLabel=id=>categoryFor(id)?.label||'';
 const CATEGORY_BY_TYPE={'return':'filings','estimated-payment':'payments','payment-proof':'payments'};
 export const defaultCategoryFor=type=>CATEGORY_BY_TYPE[type]||'supporting';
 
+// What a filed document is, read back from its name. The years before the tool
+// named things hold names typed by hand — "1099-INT - Popular.pdf", "Eric Berry
+// & Ariana Q2 Vouchers.pdf" — so the name is all there is to go on. The first
+// pattern that matches wins, which is why a K-1 is asked about before an
+// estimate: "Estimated K1 - Vista" is a K-1, not an instalment. A name nothing
+// here recognises is an other document, and still listed.
+const NAME_TYPES=[
+  ['k1',/\bK-?1\b/i],
+  ['return',/\breturn\b|\bForm (1040|1041|1065|1120S?)\b(?!-ES)|\bIT-20[1345]\b/i],
+  ['estimated-payment',/voucher|estimated (tax )?payment|\b1040-?ES\b|\bIT-2105\b/i],
+  ['payment-proof',/proof of payment|payment confirmation/i],
+  ['1099',/\b1099/i],['w2',/\bW-?2\b/i],['1098',/\b1098/i],['5498',/\b5498/i],['1095',/\b1095/i],
+  ['charitable',/charit|donation/i],
+  ['property-tax',/property tax/i],
+  ['year-end-statement',/year[- ]end/i]
+];
+export const taxTypeFromName=(name='')=>NAME_TYPES.find(([,pattern])=>pattern.test(name))?.[0]||'other';
+const TYPE_ORDER=new Map(TAX_DOCUMENT_TYPES.map((type,index)=>[type.id,index]));
+const byName=(a,b)=>a.name.localeCompare(b.name,'en',{numeric:true,sensitivity:'base'});
+// Filed documents in the order the document types are listed, and by name
+// within a type.
+export const sortFiled=files=>files.map(file=>({file,type:taxTypeFromName(file.name)}))
+  .sort((a,b)=>TYPE_ORDER.get(a.type)-TYPE_ORDER.get(b.type)||byName(a.file,b.file)).map(entry=>entry.file);
+// A year's loose documents under what they are for — the same three categories
+// a divided year keeps as folders — and inside each, by type. Empty categories
+// and types are left out.
+export function groupFiled(files=[]){
+  return TAX_CATEGORIES.map(category=>{
+    const types=TAX_DOCUMENT_TYPES.filter(type=>defaultCategoryFor(type.id)===category.id)
+      .map(type=>({id:type.id,label:type.id==='other'?'Other':type.label,
+        files:files.filter(file=>taxTypeFromName(file.name)===type.id).sort(byName)}))
+      .filter(type=>type.files.length);
+    return {id:category.id,label:category.label,types};
+  }).filter(category=>category.types.length);
+}
+
 // Three kinds of document the household produces rather than receives: the
 // return itself, the voucher that goes with an instalment, and the receipt
 // proving the instalment was paid. They are named from who filed them and

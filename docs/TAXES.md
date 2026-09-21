@@ -213,7 +213,12 @@ rather than guessed at.
 **Already filed** lists a year's own documents, then each taxpayer's, then each
 of theirs by what it is for — one line per document, wherever in the year it
 sits. It is read to answer one question — is this one already in there? — so a
-row is the name and nothing else. Reading a year is finding its folder and one
+row is the name and nothing else. A year before 2026 has no folders to say what a
+document is for, so the list says it: Supporting Documents, Payments and
+Filings, each divided by type where it holds more than one (Schedule K-1, Form
+1099 …). The type is read back from the name by `taxTypeFromName` in
+`tax-data.js`, since those years' names were typed by hand; anything it does
+not recognise is listed under Other. Reading a year is finding its folder and one
 Drive request per level below it, because each level is asked for all of its
 parents at once rather than one folder at a time.
 

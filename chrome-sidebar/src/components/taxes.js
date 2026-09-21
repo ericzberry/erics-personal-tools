@@ -1,5 +1,5 @@
 import * as UI from './ui.js';
-import {TAX_DOCUMENT_TYPES,TAX_TAXPAYERS,TAX_CATEGORIES,TAX_JURISDICTIONS,TAX_QUARTERS,taxYears,defaultTaxYear,TAX_ROOT_FOLDER_URL,MAX_DOCUMENT_BYTES} from '../tax-data.js';
+import {TAX_DOCUMENT_TYPES,TAX_TAXPAYERS,TAX_CATEGORIES,TAX_JURISDICTIONS,TAX_QUARTERS,taxYears,defaultTaxYear,TAX_ROOT_FOLDER_URL,MAX_DOCUMENT_BYTES,groupFiled,sortFiled} from '../tax-data.js';
 import {ACCEPTED} from '../statement-text.js';
 const {Stack,Section,Note,Notice,Button,ActionGroup,Disclosure,FormField,Strong,Label,Text,Link,ToolTitle,GroupTitle}=UI;
 
@@ -147,14 +147,24 @@ export function FiledList(year,files,groups=[]){
     const props={className:`tax-filed-row tax-filed-row--${depth}`};
     return file.webViewLink?Link(file.name,file.webViewLink,props):Strong(file.name,props);
   };
+  const heading=(name,depth)=>Strong(name,{className:`tax-filed-group tax-filed-group--${depth}`});
   const under=(group,depth)=>[
-    Strong(group.name,{className:`tax-filed-group tax-filed-group--${depth}`}),
-    ...group.files.map(row(depth)),
+    heading(group.name,depth),
+    ...sortFiled(group.files).map(row(depth)),
     ...(group.groups||[]).flatMap(inner=>under(inner,depth+1))
+  ];
+  // A year that is not divided into folders is divided here instead: under
+  // what each document is for, and inside that by what it is, where a
+  // category holds more than one kind. A divided year's folders already say
+  // what a document is for, so its loose documents are only put in type order.
+  const byCategory=category=>[
+    heading(category.label,1),
+    ...category.types.flatMap(type=>category.types.length>1
+      ?[heading(type.label,2),...type.files.map(row(2))]:type.files.map(row(0)))
   ];
   return Section([
     GroupTitle(`${year} · ${total} document${total===1?'':'s'}`,{className:'record-group-title'}),
-    ...files.map(row(0)),
+    ...(groups.length?sortFiled(files).map(row(0)):groupFiled(files).flatMap(byCategory)),
     ...groups.flatMap(group=>under(group,1))
   ],{className:'record-group tax-filed-list'});
 }

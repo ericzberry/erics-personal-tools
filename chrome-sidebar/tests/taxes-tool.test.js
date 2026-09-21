@@ -132,6 +132,21 @@ test('what is already filed is one line per document, under the taxpayer it belo
   restore();
 });
 
+// A year before 2026 has no folders to say what a document is for, so the list
+// says it: under Supporting Documents, Payments and Filings, and by type within.
+test('an undivided year is listed under what each document is for',async()=>{
+  const {document,restore}=setup();
+  const root=document.querySelector('main');
+  const {FiledList}=await import('../src/components/taxes.js');
+  root.replaceChildren(FiledList('2025',[{name:'Return - Federal.pdf'},{name:'K-1 - Averin.pdf'},
+    {name:'Q2 Vouchers.pdf'},{name:'1099-INT - Popular.pdf'}]));
+  assert.deepEqual([...root.querySelectorAll('.tax-filed-group')].map(node=>node.textContent),
+    ['Supporting Documents','Schedule K-1','Form 1099','Payments','Filings']);
+  assert.deepEqual([...root.querySelectorAll('.tax-filed-row')].map(node=>node.textContent),
+    ['K-1 - Averin.pdf','1099-INT - Popular.pdf','Q2 Vouchers.pdf','Return - Federal.pdf']);
+  restore();
+});
+
 test('a return is asked who filed it and where, not who issued it',async()=>{
   const {document,window,restore}=setup();
   const api=worker();
