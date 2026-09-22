@@ -1,6 +1,6 @@
 import {FormattedSelect,FormattedSuggestions} from './select.js';
 import {money,typedAmount,plainAmount} from '../money.js';
-import {capabilities,capabilitiesByName,capabilitySections} from '../capabilities.js';
+import {HOME_CAPABILITY,capabilities,capabilitiesByName,capabilitySections} from '../capabilities.js';
 // All DOM construction lives here. Features compose components and supply data.
 function element(tag, props={}, children=[]) {
   const node=document.createElement(tag);
@@ -197,7 +197,6 @@ function MoneyInput(input){
 // where the whole tool list should be visible at a glance: the mobile home
 // screen, and the mobile Tools menu once a tool is open.
 const SETTINGS_GLYPH='M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M12 2.8l1.6 2.3 2.8-.4 1 2.6 2.6 1-.4 2.8 2.3 1.6-2.3 1.6.4 2.8-2.6 1-1 2.6-2.8-.4-1.6 2.3-1.6-2.3-2.8.4-1-2.6-2.6-1 .4-2.8L2.8 12l2.3-1.6-.4-2.8 2.6-1 1-2.6 2.8.4L12 2.8Z';
-const HOME_GLYPH='M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z M9.5 21v-6h5v6';
 const MENU_GLYPH='M4 7h16 M4 12h16 M4 17h16';
 const LauncherTile=(id,icon,label,className='launcher-tile',props={})=>element('button',{id,type:'button',className,...props},[Glyph(icon),Label(label,{className:'launcher-label'})]);
 export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',label='Tools',settings=false,home=false}={}) {
@@ -206,7 +205,7 @@ export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',
     if(!title)return grid;
     return element('section',{className:'launcher-group'},[Title(title,2,{className:'launcher-group-title'}),grid]);
   });
-  if(home&&groups[0])groups[0].prepend(LauncherTile('navigate-home',HOME_GLYPH,'Home'));
+  if(home&&groups[0])groups[0].prepend(LauncherTile('navigate-home',HOME_CAPABILITY.icon,HOME_CAPABILITY.label));
   if(settings)groups.push(element('div',{className:'launcher-grid launcher-grid--utility'},[LauncherTile('open-settings',SETTINGS_GLYPH,'Settings','launcher-tile launcher-tile--settings')]));
   return element('nav',{id,'aria-label':label,className:'capability-launcher'},groups);
 }
@@ -224,8 +223,8 @@ function capabilityBranch(title,icon,entries){
 }
 export function CapabilityNavigation(items){
   const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong('Current tab',{id:'current-function'})]);
-  const rows=capabilitySections(items).flatMap(({title,icon,items:entries})=>
-    title?[capabilityBranch(title,icon,entries)]:entries.map(capabilityRow));
+  const rows=[capabilityRow(HOME_CAPABILITY),...capabilitySections(items).flatMap(({title,icon,items:entries})=>
+    title?[capabilityBranch(title,icon,entries)]:entries.map(capabilityRow))];
   const settings=element('button',{id:'open-settings',type:'button',className:'capability-settings','aria-controls':'settings-tool','aria-expanded':'false'},[Glyph(SETTINGS_GLYPH,{size:16}),Stack([Strong('Settings')],{className:'capability-text'})]);
   const nav=element('nav',{'aria-label':'Tools',className:'capability-list'},[...rows,settings]);
   const disclosure=element('details',{id:'app-navigation',className:'capability-navigation'},[summary,nav]);

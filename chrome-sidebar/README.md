@@ -4170,3 +4170,12 @@ cards, the wallet and the catalogues as this device keeps them, and a refresh
 that finds them changed works the answer out again. See
 [PURCHASE_ADVISOR.md](../docs/PURCHASE_ADVISOR.md). Archive:
 `release/erics-sidebar-0.6.275.zip`.
+
+## Home in the Tools menu (0.6.276 / mobile 0.1.225)
+
+The home screen was reachable only in Current tab mode on a page no tool
+claims, so on Gmail, a finance site or a draft room there was no way back to
+it. **Home** now leads the sidebar's Tools menu, above the tools, and choosing
+it keeps the home screen open as tabs change, like any selected tool. It is
+`HOME_CAPABILITY` in `capabilities.js`, the same entry the mobile launcher's
+Home tile draws from. Archive: `release/erics-sidebar-0.6.276.zip`.

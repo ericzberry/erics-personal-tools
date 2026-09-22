@@ -44,6 +44,9 @@ export const PANEL_CAPABILITIES=['travel','rewards','finance','taxes','attention
 // Automatic mode has no menu row: it is the state the sidebar starts in, and
 // the toggle names it, so listing it again would be a row for "no tool chosen".
 export const AUTO_CAPABILITY={id:'auto',label:'Current tab'};
+// The screen both hosts open on. It is not a tool, so it stays out of the
+// registry, but both menus lead with it so it can be reached from any page.
+export const HOME_CAPABILITY={id:'home',label:'Home',icon:'M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z M9.5 21v-6h5v6'};
 export const capabilities=[
   // The panel is where a tool belongs: beside the page the work came from. A
   // capability keeps its `href` only while it has no home in the panel yet.

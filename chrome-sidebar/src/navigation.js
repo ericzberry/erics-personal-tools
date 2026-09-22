@@ -1,4 +1,6 @@
-import {AUTO_CAPABILITY,capabilities} from './capabilities.js';
+import {AUTO_CAPABILITY,HOME_CAPABILITY,capabilities} from './capabilities.js';
+// Home is chosen like any tool; it just is not one of the registry's entries.
+const destinations=[HOME_CAPABILITY,...capabilities];
 let currentTool='football',selection=AUTO_CAPABILITY.id,settingsOpen=false;
 // Anyone who wants to know which tool is on screen now: the strip under the
 // header, which must not offer what the owner is already looking at.
@@ -9,9 +11,9 @@ function render(){
   const active=selection===AUTO_CAPABILITY.id?currentTool:selection;
   for(const key of ['football','finance','gmail','home','rewards','taxes','travel','attention','subscriptions','gifts','sizes','replacements','reminders','cards','advisor','personal'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
   $('settings-tool').hidden=!settingsOpen;
-  $('current-function').textContent=settingsOpen?'Settings':selection===AUTO_CAPABILITY.id?AUTO_CAPABILITY.label:capabilities.find(item=>item.id===selection)?.label;
+  $('current-function').textContent=settingsOpen?'Settings':selection===AUTO_CAPABILITY.id?AUTO_CAPABILITY.label:destinations.find(item=>item.id===selection)?.label;
   $('open-settings').setAttribute('aria-expanded',String(settingsOpen));
-  for(const item of capabilities){
+  for(const item of destinations){
     const node=$(`navigate-${item.id}`);
     if(!settingsOpen&&selection===item.id){node.setAttribute('aria-current','page');node.closest('.capability-submenu')?.setAttribute('open','');}
     else node.removeAttribute('aria-current');
@@ -28,7 +30,7 @@ export function showSettings(open){settingsOpen=open;closeNavigation();render();
 export function selectCapability(id){selection=id;settingsOpen=false;closeNavigation();render();$('navigation-toggle').focus();}
 export function showRewards(open){selectCapability(open?'rewards':AUTO_CAPABILITY.id);}
 export function initializeNavigation(){
-  for(const item of capabilities)if(!item.href)$(`navigate-${item.id}`).addEventListener('click',()=>selectCapability(item.id));
+  for(const item of destinations)if(!item.href)$(`navigate-${item.id}`).addEventListener('click',()=>selectCapability(item.id));
   document.addEventListener('pointerdown',event=>{if(!$('app-navigation').contains(event.target))closeNavigation();});
   render();
 }

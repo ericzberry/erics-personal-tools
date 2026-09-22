@@ -33,3 +33,18 @@ test('the selected row is marked by aria-current alone, with no label suffix',()
   selectTool('');
   assert.equal(document.getElementById('current-function').textContent,'Current tab');
 });
+test('Home leads the Tools menu and stays open whatever the tab shows',()=>{
+  const {document}=parseHTML('<html><body><main id="app"></main></body></html>');
+  globalThis.document=document;mountApp(document.getElementById('app'));
+  const home=document.getElementById('navigate-home');
+  assert.equal(document.querySelector('.capability-list').firstElementChild,home);
+  assert.equal(home.tagName,'BUTTON');
+  showTool('gmail');selectTool('home');
+  assert.equal(document.getElementById('home-tool').hidden,false);
+  assert.equal(document.getElementById('gmail-tool').hidden,true);
+  assert.equal(home.getAttribute('aria-current'),'page');
+  assert.equal(document.getElementById('current-function').textContent,'Home');
+  showTool('finance');
+  assert.equal(document.getElementById('home-tool').hidden,false);
+  selectTool('');
+});
