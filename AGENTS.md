@@ -167,6 +167,7 @@ Apply these rules to every user-facing interface in this repository. Follow each
 - Reuse shared components and data adapters across extension and mobile. Persist private records in encrypted device storage, keep secret values masked, and never put authenticated responses in the service-worker shell cache.
 - Support durable offline changes with per-record revisions, a pending-change queue, reconnect/foreground synchronization, explicit sync status, and conflict resolution. Never overwrite newer cloud data or discard unsynced changes silently.
 - Disconnecting a device must explain and clear its private offline copies while leaving cloud records intact. Require pending changes to be synchronized or explicitly resolved before disconnecting. Browser storage can be evicted; do not present a device cache as a permanent backup.
+- Register every store a device keeps in `chrome-sidebar/src/private-resources.js`, in the same change that adds it. Both hosts build their stores from that registry and walk it to disconnect or change tokens; never keep a separate per-host list of stores to check or clear.
 - Verify a cold offline reopen, access to private values without a network request, queued edits surviving a restart, reconnection, conflicts, and cache clearing. Check the sidebar Tools dropdown and the mobile tool launcher at mobile and narrow sidebar widths.
 
 ## Complete app fixes through release

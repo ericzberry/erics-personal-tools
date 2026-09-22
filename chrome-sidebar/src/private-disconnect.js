@@ -1,23 +1,13 @@
-import {subscriptionsOffline} from './subscriptions-offline.js';
-import {remindersOffline} from './reminders-offline.js';
-import {giftsOffline} from './gifts-offline.js';
-import {rewardsOffline} from './rewards-offline.js';
-import {travelOffline} from './travel-offline.js';
-import {cardsOffline} from './cards-offline.js';
-import {financeOffline} from './finance-offline.js';
-import {personalOffline} from './personal-offline.js';
-import {programsOffline} from './program-offline.js';
+import {privateStores,assertNothingPending,disconnectStores} from './private-resources.js';
 import {forgetProgramReads} from './reward-programs.js';
-import {dailyWeather} from './weather.js';
-import {encryptedDeviceStore} from './offline-storage.js';
-export async function disconnectPrivateData(token){
-  if(!token||!globalThis.indexedDB)return;
-  // A program catalogue queues nothing — only a visit to the program's site
-  // writes one — so it is cleared with the rest but never blocks a disconnect.
-  const resources=[subscriptionsOffline(),remindersOffline(),giftsOffline(),travelOffline(),cardsOffline(),rewardsOffline(),financeOffline(),personalOffline(),programsOffline()];
-  for(const resource of resources)if(await resource.hasPending(token))throw Error('Sync or resolve your pending private changes before disconnecting.');
-  for(const resource of resources)await resource.disconnect(token);
-  // Today's weather names where the device was this morning.
-  await dailyWeather({store:encryptedDeviceStore()}).forget(token);
+// The extension's copies are every store in the registry, plus the note of
+// which program pages were read, which only the extension keeps.
+const deviceStores=()=>globalThis.indexedDB?privateStores():null;
+export async function assertPrivateDataSynced(token,stores=deviceStores()){
+  if(token&&stores)await assertNothingPending(stores,token);
+}
+export async function disconnectPrivateData(token,stores=deviceStores()){
+  if(!token||!stores)return;
+  await disconnectStores(stores,token);
   await forgetProgramReads();
 }

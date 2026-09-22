@@ -60,7 +60,7 @@ test('a failed attempt keeps nothing, and two looks at once share one attempt',a
   await weather.today('token','2026-09-21');
   assert.equal(calls,2);
   // Disconnecting clears the copy that names where the device was.
-  await weather.forget('token');
+  await weather.disconnect('token');
   assert.equal(await store.read(WEATHER_RESOURCE,'token'),null);
 });
 

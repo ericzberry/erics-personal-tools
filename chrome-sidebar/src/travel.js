@@ -65,6 +65,9 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
     if(dirty)throw Error('Save or cancel your edits before reconnecting.');
     const next=$('token').value.trim()||await credentials.get();
     if(token&&next!==token&&await offline?.hasPending(token))throw Error('Sync or resolve pending changes before changing access tokens.');
+    // The old token's copies in every other tool go with this one, so their
+    // unsynced changes stop the change before this copy is cleared.
+    if(token&&next!==token)await credentials.beforeDisconnect?.();
     const result=await request(next,'/v1/travel');if(token&&next!==token)await offline?.disconnect(token);await credentials.set(next);token=next;records=result.records;
     $('token').value='';$('cloud').open=false;edit();loadEditor();render();status(result.syncMessage??'','alert');onConnectionChange();
   },'connection-status'));

@@ -70,6 +70,8 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
     return {record:rows(state).find(record=>record.id===id),records:rows(state).map(metadata),syncMessage:message(state)};
   });
   return {
+    // Which copy this is, so a disconnect can be checked against every one.
+    resource,
     request,
     // The device's own copy, with no request and no sync. Recognizing what the
     // owner is looking at has to cost nothing, so it must not reach for the

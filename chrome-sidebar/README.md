@@ -4120,3 +4120,16 @@ storms or snow when one is likely; the Worker now asks Open-Meteo for those
 codes, so deploy `tools-api` with this release. A day already worked out in
 0.6.266 is worked out once more, to pick up its sky.
 Archive: `release/erics-sidebar-0.6.267.zip`.
+
+## Disconnect clears clothing sizes, and every store comes from one registry (0.6.268 / mobile 0.1.217)
+
+The extension's disconnect named its stores by hand and had left Sizes out: an
+unsynced size edit did not stop a disconnect or a token change, and the
+encrypted sizes copy stayed on the device afterwards. Both hosts now build
+their stores from `src/private-resources.js` and walk it to disconnect — every
+copy or none, and nothing while a change is waiting. The Travel wallet's
+disconnect and token change ask every store before clearing their own, not
+only Best card's. `tests/private-resources.test.js` reads `src/` for any store
+a tool opens and fails if the registry leaves it out; the phone's own test
+holds `capabilities.js` to building its stores from the registry.
+Archive: `release/erics-sidebar-0.6.268.zip`.

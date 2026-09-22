@@ -117,7 +117,12 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `CONNECTION_KEY`), `travel-changes.js` (cross-window change notification —
   one resource name per tool, and the marker it hands back lets a view tell its
   own save from another's; the Finance panel and its page use it as `finance`),
-  `private-disconnect.js`.
+  `private-resources.js` (the registry of every private copy a device keeps —
+  one store per tool, plus today's weather — which both hosts build their
+  stores from and walk to disconnect: every copy or none, never while a change
+  is waiting; `tests/private-resources.test.js` fails for a store left out),
+  `private-disconnect.js` (the extension's disconnect: the registry, plus the
+  program-read note only the extension keeps).
 - **Device-held secrets** — `secret-vault.js` (WebAuthn PRF key derivation,
   sealed envelopes, the recovery code, `sharedVault()` — one vault per host so a
   single passkey opens every protected section — and `vaultSessionStore()`,
@@ -457,7 +462,7 @@ The extension build now includes `attention.html` and `subscriptions.html`.
 
 | Task | Start at |
 | --- | --- |
-| Add a capability (tool) | `chrome-sidebar/src/capabilities.js` (id, label, href, 24x24 `icon`), a page + controller, a `*-data.js`/`*-offline.js` pair, mobile mounting in `mobile-app/public/app/capabilities.js`, the shared list in `mobile-app/build.js`, the `SHELL` list in `sw.js`, and a Worker route if it stores records |
+| Add a capability (tool) | `chrome-sidebar/src/capabilities.js` (id, label, href, 24x24 `icon`), a page + controller, a `*-data.js`/`*-offline.js` pair registered in `private-resources.js`, mobile mounting in `mobile-app/public/app/capabilities.js`, the shared list in `mobile-app/build.js`, the `SHELL` list in `sw.js`, and a Worker route if it stores records |
 | Change a control's look | `chrome-sidebar/src/components/ui.js` + `styles.css`/`tokens.css` — never in a feature controller |
 | Say that something failed, needs attention, is running, or worked | `setStatus(node, text, tone)` from `components/ui.js`, with `Spinner`/`ProgressBar` for an in-place indicator — never a colour chosen in a feature |
 | Add a dropdown | `components/select.js` via `FormField({kind:'select'})` |

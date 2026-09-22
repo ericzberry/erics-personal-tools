@@ -1,33 +1,23 @@
 import {mountAttention} from './shared/attention.js';
 import {mountSubscriptions} from './shared/subscriptions.js';
-import {subscriptionsOffline} from './shared/subscriptions-offline.js';
 import {mountRewards} from './shared/rewards-tool.js';
-import {rewardsOffline} from './shared/rewards-offline.js';
-import {programsOffline} from './shared/program-offline.js';
 import {mountToolNavigation,SETTINGS_SCREEN} from './tool-navigation.js';
 import {CapabilitiesView} from './shared/components/capabilities.js';
 import {CAPABILITIES} from './shared/capabilities.js';
 import {mountCards} from './shared/cards.js';
-import {cardsOffline} from './shared/cards-offline.js';
 import {mountFinance} from './shared/finance.js';
-import {financeOffline} from './shared/finance-offline.js';
 import {mountPersonal} from './shared/personal.js';
 import {mountReminders} from './shared/reminders.js';
 import {mountHome} from './shared/home.js';
-import {dailyWeather} from './shared/weather.js';
-import {remindersOffline} from './shared/reminders-offline.js';
 import {mountCapture} from './shared/capture.js';
 import {mountPushBridge} from './push-bridge.js';
 import {captureStores} from './shared/capture-stores.js';
 import {mountGifts} from './shared/gifts.js';
-import {giftsOffline} from './shared/gifts-offline.js';
 import {mountSizes} from './shared/sizes.js';
-import {sizesOffline} from './shared/sizes-offline.js';
 import {mountTaxes} from './shared/taxes.js';
-import {personalOffline} from './shared/personal-offline.js';
 import {mountTravel} from './shared/travel.js';
-import {travelOffline} from './shared/travel-offline.js';
 import {offlineResource} from './shared/offline-resource.js';
+import {privateStores,assertNothingPending,disconnectStores} from './shared/private-resources.js';
 import {encryptedDeviceStore} from './shared/offline-storage.js';
 import {mobileCredentials, protectedStore, mobileRequest as cloudRequest, mobileUpload} from './mobile-session.js';
 import {mountLibrary} from './shared/data-library.js';
@@ -41,24 +31,21 @@ connectionRoot.parentElement.append(connectionRoot);
 connectionRoot.hidden=true;
 const ai=offlineResource({resource:'ai-metadata',path:'/v1/ai-connections',store:protectedStore(encryptedDeviceStore()),remote:async token=>({records:(await cloudRequest(token,'/v1/ai-connections')).connections}),normalize:value=>value,metadata:value=>value});
 const restaurantDownloads=restaurantCache({store:protectedStore(encryptedDeviceStore()),credentials:mobileCredentials});
-const rewardStore=rewardsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-// The phone shows a program's offers and never reads one: the reading needs the
-// browser that is signed in to the program's site. Its copy is downloaded like
-// any other record, so the offers stay readable with no signal.
-const programStore=programsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-const cardStore=cardsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-const financeStore=financeOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-const personalStore=personalOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-const reminderStore=remindersOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-const giftStore=giftsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-const sizeStore=sizesOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-const subscriptionStore=subscriptionsOffline({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-const weather=dailyWeather({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
+// Every tool's store comes from the shared registry, so a store added there is
+// one this phone clears on disconnect without being named here. The phone
+// shows a program's offers and never reads one: the reading needs the browser
+// that is signed in to the program's site. Its copy is downloaded like any
+// other record, so the offers stay readable with no signal.
+const stores=privateStores({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())},{travel:{includeNumbers:true}});
+const {subscriptions:subscriptionStore,rewards:rewardStore,programs:programStore,cards:cardStore,finance:financeStore,personal:personalStore,
+  reminders:reminderStore,gifts:giftStore,sizes:sizeStore,travel:travelStore,weather}=stores;
+// What a disconnect clears: the registry's stores and the two only the phone keeps.
+const deviceCopies={...stores,ai,restaurants:restaurantDownloads};
 const credentials={
-  async beforeDisconnect(){const token=await this.get();if(token&&(await subscriptionStore.hasPending(token)||await cardStore.hasPending(token)||await rewardStore.hasPending(token)||await financeStore.hasPending(token)||await personalStore.hasPending(token)||await reminderStore.hasPending(token)||await giftStore.hasPending(token)||await sizeStore.hasPending(token)))throw Error('Sync or resolve pending changes before disconnecting.');},
+  async beforeDisconnect(){const token=await this.get();if(token)await assertNothingPending(deviceCopies,token);},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token){await subscriptionStore.disconnect(token);await cardStore.disconnect(token);await rewardStore.disconnect(token);await programStore.disconnect(token);await financeStore.disconnect(token);await personalStore.disconnect(token);await reminderStore.disconnect(token);await giftStore.disconnect(token);await sizeStore.disconnect(token);await weather.forget(token);await restaurantDownloads.disconnect();await ai.disconnect(token);}subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 // Best card reads the same wallet Rewards keeps, for the cards it already
 // knows the owner holds but has no rates for.
@@ -96,10 +83,9 @@ const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai'
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
 async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
-const offline=travelOffline({includeNumbers:true,remote:cloudRequest,store:protectedStore(encryptedDeviceStore())});
-mountTravel(document.getElementById('capability-travel'),{credentials,offline,showNumbers:true,request:offline.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
+mountTravel(document.getElementById('capability-travel'),{credentials,offline:travelStore,showNumbers:true,request:travelStore.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
 const subscriptionTool=mountSubscriptions(document.getElementById('capability-subscriptions'),{credentials,offline:subscriptionStore,remote:cloudRequest,onSettings:openSettings});
-const attentionTool=mountAttention(document.getElementById('capability-attention'),{credentials,stores:{reminders:reminderStore,rewards:rewardStore,travel:offline,personal:personalStore,finance:financeStore,subscriptions:subscriptionStore},onSettings:openSettings,onOpen:(id)=>navigation.show(id,{focus:true})});
+const attentionTool=mountAttention(document.getElementById('capability-attention'),{credentials,stores:{reminders:reminderStore,rewards:rewardStore,travel:travelStore,personal:personalStore,finance:financeStore,subscriptions:subscriptionStore},onSettings:openSettings,onOpen:(id)=>navigation.show(id,{focus:true})});
 const rankings=mountLibrary(document.getElementById('capability-rankings'),{kind:'rankings',load:async()=>({value:await (await fetch('/app/data/rankings-2026.json')).json()})});
 await rankings.refresh();
 let selectedTool;

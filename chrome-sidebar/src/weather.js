@@ -47,6 +47,7 @@ export function dailyWeather({store,remote,locate=locateDevice}={}){
     return result;
   }
   return {
+    resource:WEATHER_RESOURCE,
     saved,
     // One attempt at a time: the home screen refreshes on every return to it,
     // and two returns in a row must not ask for the location twice.
@@ -57,6 +58,8 @@ export function dailyWeather({store,remote,locate=locateDevice}={}){
       }
       return pending.promise;
     },
-    async forget(token){try{await store.remove(WEATHER_RESOURCE,token);}catch{}}
+    // Cleared like every other private copy when the device disconnects:
+    // it names where the device was this morning.
+    async disconnect(token){try{await store.remove(WEATHER_RESOURCE,token);}catch{}}
   };
 }
