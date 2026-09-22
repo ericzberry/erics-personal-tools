@@ -44,6 +44,10 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
         // it before hearing back: the cloud holds this device's own work.
         if(current&&change.earlier?.includes(current.revision))change.baseRevision=current.revision;
         if((current?.revision??null)!==change.baseRevision){change.conflict=true;continue;}
+        // From here the write may land with no answer coming back, and a create
+        // deleted afterwards can no longer be forgotten, so the device has to
+        // know that before anything leaves it.
+        if(change.unsent){delete change.unsent;await store.write(resource,token,state);}
         try{
           const response=await remote(token,`${path}/${id}`,{method:change.method,value:{...change.value,revision:change.baseRevision,...(change.operation?{operation:change.operation}:{})}});
           state.cloud=state.cloud.filter(record=>record.id!==id);
@@ -77,11 +81,16 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
     const old=state.pending[id];
     const value=options.method==='PUT'?{...normalize(options.value,previous),id,updatedAt:now()}:previous;
     if(!value)throw Error('Record not found. Refresh your records.');
-    if(options.method==='DELETE'&&old?.baseRevision===null){delete state.pending[id];}
+    // A create that never left the device can simply be forgotten. One that was
+    // sent may have landed with its answer lost, so deleting it is queued like
+    // any other change: the snapshot then shows either nothing to delete, or the
+    // revision one of this record's earlier writes produced, to delete from. A
+    // queue from before sends were marked cannot prove it never left.
+    if(options.method==='DELETE'&&old?.baseRevision===null&&old.unsent){delete state.pending[id];}
     // The operation names this write for as long as it is queued, so a retry is
     // recognizable as the same write. A queue from before names were given has
     // none, and is recognized by its content alone.
-    else state.pending[id]={method:options.method,value,baseRevision:old?old.baseRevision:previous?.revision??null,localRevision:`local:${crypto.randomUUID()}`,operation:crypto.randomUUID(),earlier:old?[...(old.earlier||[]),old.operation].filter(Boolean).slice(-20):[],conflict:old?.conflict||false};
+    else state.pending[id]={method:options.method,value,baseRevision:old?old.baseRevision:previous?.revision??null,localRevision:`local:${crypto.randomUUID()}`,operation:crypto.randomUUID(),earlier:old?[...(old.earlier||[]),old.operation].filter(Boolean).slice(-20):[],conflict:old?.conflict||false,...(!old||old.unsent?{unsent:true}:{})};
     // Commit the queue BEFORE attempting the network. A restart cannot lose it.
     await store.write(resource,token,state);
     state=await sync(token,state);

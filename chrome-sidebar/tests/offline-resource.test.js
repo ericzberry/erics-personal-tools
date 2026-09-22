@@ -92,11 +92,12 @@ test('mobile number list opts in to cached numbers without exposing private note
 // subscription's charges, reviewed evidence and research never arrive as the
 // arrays and objects the device queued, even when they hold exactly the same.
 function subscriptionFixture({operations=true,reshape=false}={}){
-  const db=new Map(),cloud=new Map(),writes=[];let loseResponse=false;
+  const db=new Map(),cloud=new Map(),writes=[];let loseResponse=false,loseRequest=false,online=true;
   const store={async read(r,t){return structuredClone(db.get(`${r}:${t}`)||null);},async write(r,t,v){db.set(`${r}:${t}`,structuredClone(v));},async remove(r,t){db.delete(`${r}:${t}`);}};
   const wire=value=>JSON.parse(JSON.stringify(value));
   const remote=async(token,path,options={})=>{
     if(path.endsWith('/snapshot'))return wire({records:[...cloud.values()]});
+    if(loseRequest){loseRequest=false;throw Error('Request lost.');}
     const id=path.split('/').at(-1),previous=cloud.get(id),input=wire(options.value);writes.push(input);
     if(operations&&input.operation&&input.operation!==input.revision&&previous?.revision===input.operation)return wire({record:previous});
     if((previous?.revision??null)!==(input.revision??null))throw Object.assign(Error('Conflict'),{status:409});
@@ -109,8 +110,8 @@ function subscriptionFixture({operations=true,reshape=false}={}){
     if(loseResponse){loseResponse=false;throw Error('Response lost.');}
     return wire({record});
   };
-  const create=()=>offlineResource({resource:'subscriptions',path:'/v1/subscriptions',store,remote,normalize:normalizeSubscription,metadata:record=>record,online:()=>true,locks:null});
-  return {create,cloud,writes,loseResponse:()=>loseResponse=true};
+  const create=()=>offlineResource({resource:'subscriptions',path:'/v1/subscriptions',store,remote,normalize:normalizeSubscription,metadata:record=>record,online:()=>online,locks:null});
+  return {create,cloud,writes,loseResponse:()=>loseResponse=true,loseRequest:()=>loseRequest=true,setOnline:value=>online=value};
 }
 const subscription={name:'Synthetic Stream',account:'Example Card',currency:'USD',amount:15,cycle:'monthly',state:'Active',renewal:'',canceledOn:'',notice:14,url:'',notes:'',
   charges:[{on:'2026-08-01',amount:15,description:'SYNTHETIC STREAM',source:'August'},{on:'2026-09-01',amount:15,description:'SYNTHETIC STREAM',source:'September'}],
@@ -157,4 +158,34 @@ test('an edit made on top of a write whose response was lost syncs without a con
   const again=await adapter.request('token','/v1/subscriptions/one',{method:'PUT',value:{...subscription,notes:'Price rises in October.',revision:first.record.revision}});
   assert.equal(again.records[0].conflict,undefined);assert.equal(again.records[0].pending,undefined);
   assert.equal(f.cloud.get('one').notes,'Price rises in October.');assert.equal(f.writes.length,2);assert.equal(f.writes[1].revision,f.writes[0].operation);
+});
+test('a create sent without an answer and then deleted is deleted from the cloud, not brought back',async()=>{
+  const f=subscriptionFixture();let adapter=f.create();await adapter.request('token','/v1/subscriptions');
+  f.setOnline(false);await adapter.request('token','/v1/subscriptions/one',{method:'PUT',value:{...subscription,revision:null}});
+  // Back online, the create lands and its answer is lost.
+  f.setOnline(true);f.loseResponse();
+  const listed=await adapter.request('token','/v1/subscriptions');
+  assert.equal(f.cloud.size,1);assert.equal(listed.records[0].pending,true);
+  // Deleted before any snapshot shows it landed, then synced after a restart.
+  f.setOnline(false);
+  const deleted=await adapter.request('token','/v1/subscriptions/one',{method:'DELETE',value:{revision:listed.records[0].revision}});
+  assert.equal(deleted.records[0].deleting,true);assert.equal(await adapter.hasPending('token'),true);
+  adapter=f.create();f.setOnline(true);
+  const synced=await adapter.request('token','/v1/subscriptions');
+  assert.equal(synced.records.length,0);assert.equal(f.cloud.size,0);assert.equal(await adapter.hasPending('token'),false);
+  assert.equal(f.writes.length,2);assert.equal(f.writes[1].revision,f.writes[0].operation);
+  assert.equal((await adapter.request('token','/v1/subscriptions')).records.length,0);
+});
+test('a deleted create is forgotten on the device only if it never left, and one lost on the way needs no delete',async()=>{
+  const f=subscriptionFixture();const adapter=f.create();await adapter.request('token','/v1/subscriptions');
+  f.setOnline(false);
+  const kept=await adapter.request('token','/v1/subscriptions/one',{method:'PUT',value:{...subscription,revision:null}});
+  const forgotten=await adapter.request('token','/v1/subscriptions/one',{method:'DELETE',value:{revision:kept.record.revision}});
+  assert.equal(forgotten.records.length,0);assert.equal(await adapter.hasPending('token'),false);
+  // Sent, but lost before it reached the Worker: the snapshot shows nothing to delete.
+  f.setOnline(true);f.loseRequest();
+  const sent=await adapter.request('token','/v1/subscriptions/two',{method:'PUT',value:{...subscription,revision:null}});
+  assert.equal(sent.records[0].pending,true);assert.equal(f.cloud.size,0);
+  const deleted=await adapter.request('token','/v1/subscriptions/two',{method:'DELETE',value:{revision:sent.record.revision}});
+  assert.equal(deleted.records.length,0);assert.equal(await adapter.hasPending('token'),false);assert.equal(f.writes.length,0);
 });
