@@ -8,8 +8,8 @@ import {advise} from './purchase-data.js';
 // Rewards', `programs` holds the offer catalogues; every one is read and never
 // written, so what is in them stays those tools' to change. A host that has no
 // programs store simply has no offers.
-export function mountPurchaseAdvisor(root,{credentials,cards,wallet=null,programs=null,remote,onSettings=()=>{}}){
-  root.replaceChildren(AdvisorView());
+export function mountPurchaseAdvisor(root,{credentials,cards,wallet=null,programs=null,remote,onSettings=()=>{},embedded=false}){
+  root.replaceChildren(AdvisorView({embedded}));
   const $=key=>root.querySelector(`#advisor-${key}`);
   let token='',generation=0,busy=false,reading=null,readFrom='',records=[],held=[],catalogs=[],conditionKey='';
   const connections=aiConnections({load:async current=>(await remote(current,'/v1/ai-connections')).connections,need:'to read a purchase.'});
@@ -53,7 +53,7 @@ export function mountPurchaseAdvisor(root,{credentials,cards,wallet=null,program
   function recommend(){
     if(!$('category').value)throw Error('Choose a reward category to compare your saved cards.');
     const purchase={amount:$('amount').value,category:$('category').value,channel:$('channel').value,merchant:reading?.merchant||''};
-    if(records.some(card=>!card.deleting&&!card.conflict&&card.unit==='points'&&card.cpp<=0))throw Error('Enter a redemption value above 0 for each points card in Best card before comparing.');
+    if(records.some(card=>!card.deleting&&!card.conflict&&card.unit==='points'&&card.cpp<=0))throw Error('Enter a planning value above 0 for each points card under Card rates before comparing.');
     const key=JSON.stringify([purchase.category,purchase.channel,purchase.merchant,records]);
     if(key!==conditionKey){$('conditions').replaceChildren(...AdviceConditions(records,purchase));conditionKey=key;}
     const confirmed=[...$('conditions').querySelectorAll('input:checked')].map(node=>node.getAttribute('data-confirm'));
@@ -99,7 +99,7 @@ export function mountPurchaseAdvisor(root,{credentials,cards,wallet=null,program
     records=found;held=entries;catalogs=lists;
     if(changed&&$('result').children.length){try{recommend();}catch(error){clearResult();status(error.message,'purchase-status','error');}}
     controls();
-    status(records.length?'':'No card has reward rates yet. Add them in Best card.');
+    status(records.length?'':'No card has earning rates yet. Add them under Card rates.');
     await connectionList();
   }
   const reload=()=>{if(!busy)return run(refresh);};

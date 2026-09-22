@@ -115,6 +115,9 @@ fails the suite for everyone at HEAD.
 | **UI-28** | A list of groups opens one group at a time, and a closed group's heading carries its own number — its name, its kind, its total, and anything a reader needs before deciding to open it. Stated in full under [From a complaint](#from-a-complaint). | The list closed, one group open, and after a refresh |
 | **UI-49** | A reading is drawn as a reading, not as a run of records: its figure in the serif at lead size, what it means beside it, what follows from it underneath, and no heading or rule between them. Stated in full under [From a complaint](#from-a-complaint). | The home screen's weather at 380px and 280px, and any new single figure a screen opens on |
 | **UI-15** | Reviewed at the real sizes with no horizontal overflow: 380px and the 280px sidebar minimum, 390px and 320px on the phone, and a desktop viewport for full-tab pages. | [VISUAL_QA.md](VISUAL_QA.md) harnesses |
+| **UI-52** | A figure says what kind of fact it is. An allowance, what is left of it, an estimate and a planning value are four different figures; an unknown is said in words — *not read*, *not set* — never as a zero, an empty slot or the headline amount. Stated in full under [From a complaint](#from-a-complaint). | Rewards' Wallet, Pay and Points, and any screen that prints a figure it did not read |
+| **UI-53** | Conditional value stays out of the headline. A total states only what holds now; what could hold after a step — enrolling, activating, reading a tracker — is listed under it with the step named, and never lifts one answer over another. Stated in full under [From a complaint](#from-a-complaint). | Rewards' Pay, and any screen that ranks on a sum |
+| **UI-54** | One record per real thing, recognised everywhere. A card, a program or an account entered once is the same record on every view and every host; a second screen never keeps its own copy or asks for it again, and two things that differ — two accounts of one product — are never folded into one because their names match. Stated in full under [From a complaint](#from-a-complaint). | Rewards' Wallet and Pay, and any tool that names a record another tool holds |
 
 ## From a complaint
 
@@ -639,3 +642,39 @@ give those `break-word`, and make the rest a ratcheting budget.
 - **Retiring a rule** is allowed when the canon changed. Say so in DESIGN.md
   first, because that is where the reasoning lives; this file only records the
   rule and its check.
+
+**UI-52 — a figure says what kind of fact it is.** *By eye.* "$200 per
+year" is what the card gives; "$25 left" is what the issuer's tracker last
+said; "about $205" is a scenario on a planning value; and a credit whose
+tracker was never read has an allowance and no figure. A screen prints the
+kind with the number — *left*, *allowance*, *planning value*, *scenario* — and
+where a value is not known it says so in words, *Balance not read*, *Point
+value not set*, rather than printing a zero, leaving the slot empty, or
+standing the headline allowance in for the amount. *From the rewards
+overhaul: "it's not getting my data" — a credit whose remaining amount had been
+dropped on the way to the cloud read as the whole allowance, and looked like
+data.* Look at every figure on a changed screen and ask which of the four it
+is.
+
+**UI-53 — conditional value stays out of the headline.** *By eye; the
+arithmetic is enforced in `tests/purchase-data.test.js`.* A total is what holds
+now. An offer not yet added, a credit still to activate, a tracker never read,
+a ceiling the merchant decides, a minimum that cannot be checked: each is
+listed under the total with the step that would make it real, and the figure
+the step would earn where that figure is known, under **Could be better
+after…**. None of it lifts one answer over another, and an expired one adds
+nothing anywhere. *From the rewards overhaul: "the relationship between Best
+Card and rewards isn't clear" — an unenrolled $50 offer had been lifting a 1%
+card over a 2% one.* Look at every screen that ranks on a sum.
+
+**UI-54 — one record per real thing, recognised everywhere.** *Enforced for
+card accounts in `tests/wallet-data.test.js` and `tests/cards.test.js`.* A card
+entered in the wallet is the card Pay compares, the card coverage reports on,
+and the account a page's credit lands on; no view keeps a second list of cards
+or asks for one again. Identity is decided in one place
+(`wallet-data.js`): a binding the owner confirmed, then the digits, then the
+words — and two records whose digits differ are two records however alike their
+names. *From the rewards overhaul: "it's not linking well with my existing
+credit cards" — two Amex Platinums with different account hints collapsed into
+one row, and every screen reconciled the four stores its own way.* Look at any
+tool that names a record another tool holds.

@@ -4,11 +4,13 @@ import {PURCHASE_CATEGORIES,PURCHASE_CHANNELS,rewardRules} from '../card-data.js
 const options=values=>values.map(value=>({value,text:value}));
 const field=(key,label,kind='text',values,extra={})=>FormField({id:`cards-${key}`,label,kind,options:values,...extra});
 const button=(label,key,variant='secondary',props={})=>Button(label,{id:`cards-${key}`,variant,...props});
-export function CardsView(){
+// The purchase box is Pay's now: inside Rewards this view is the card terms
+// alone, under the tab's own heading, and the comparison lives beside it.
+export function CardsView({purchase=true,heading=true}={}){
   return Stack([
-    Heading('Best card',1),
+    ...(heading?[Heading('Best card',1)]:[]),
     Notice('',{id:'cards-status'}),
-    Section([Heading('Your purchase',2),Form([
+    ...(purchase?[Section([Heading('Your purchase',2),Form([
       field('purchase','What are you buying, and where?','textarea',undefined,{className:'purchase-intake',rows:3}),
       ActionGroup([button('Find best card','compare','primary',{type:'submit'})]),
       Notice('',{id:'cards-purchase-status'}),
@@ -20,7 +22,7 @@ export function CardsView(){
       ],{id:'cards-adjust',hidden:true}),
       Stack([],{id:'cards-conditions'}),Stack([],{id:'cards-results',className:'comparison-results'}),
       Notice('',{id:'cards-ai-status'})
-    ],{id:'cards-purchase-form',className:'form-stack'})],{className:'settings-group'}),
+    ],{id:'cards-purchase-form',className:'form-stack'})],{className:'settings-group'})]:[]),
     Section([Heading('Your cards',2),Stack([],{id:'cards-list'}),Stack([],{id:'cards-known',className:'wallet-cards'}),
       ActionGroup([button('Add card','add','primary',{size:'compact'}),button('Refresh cards','refresh','secondary',{size:'compact'})])],{className:'settings-group'}),
     Disclosure('Add or edit a card',[

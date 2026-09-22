@@ -1,9 +1,82 @@
 # Rewards & benefits
 
 Choose **Rewards & benefits** from Tools in the extension or the unlocked mobile
-app. It is the wallet for everything a card, airline or membership gives you that
-is not money in an account: points balances, statement credits, program access,
-and the deadlines attached to them.
+app. It is the one place for everything a card, airline or membership gives you
+that is not money in an account: points balances, statement credits, program
+access, the deadlines attached to them, and what to pay with. It answers four
+questions, one tab each, through the shared `Tabs`:
+
+| View | Question | What is under it |
+| --- | --- | --- |
+| **For you** | What is worth doing? | A short ranked list of opportunities, then **Browse offers** |
+| **Wallet** | What do I actually have? | The cards and programs, what has been read for each, and the ways in |
+| **Pay** | Which card should I use? | One purchase, one answer, with the card terms it rests on under **Card rates** |
+| **Points** | What can my points do? | Each balance, what earns into it, and what a point is worth to you |
+
+A tab is in the row only while it has something to answer. A new wallet opens on
+Wallet alone; Pay arrives once a card with earning terms is saved; Points once a
+balance has a figure; For you once there is something to do or a catalogue to
+browse. An established wallet opens on For you, and after that on whichever
+view was last open on that device.
+
+**Best card** and **Purchase advisor** are the Pay view now. Their old pages
+(`cards.html`, `advisor.html`) and their capability ids stay as ways in — a
+bookmark, an older link, the strip under the header — and land on Pay rather
+than on a second calculator; see [BEST_CARD.md](BEST_CARD.md) and
+[PURCHASE_ADVISOR.md](PURCHASE_ADVISOR.md) for what that view does.
+
+## For you
+
+`rewardOpportunities` in
+[`reward-opportunities.js`](../chrome-sidebar/src/reward-opportunities.js) is
+one deterministic projection over the wallet, the card terms and the
+catalogues, read by For you, Needs attention and (in a later phase) the home
+screen, and written by none of them. Every row is a rule over saved records —
+no model chooses what is relevant — and each carries a stable key, so a row
+resolved on one screen is resolved on every screen.
+
+What it raises, in priority buckets that decide before any score does: access
+the card includes and nobody has switched on (*Set up …*); a credit or
+certificate closing with its period (*Use … within N days*), worded as useful
+only if you were already going to spend it; what the wallet lacks and a
+recommendation would lean on — a card's credit trackers never read, a card
+with no earning terms, a balance more than 30 days old; a catalogue held for a
+program no wallet entry says you are in (*Check whether … is yours to use*);
+and, last and at most once, a catalogue to browse. A membership or a
+protection with no dollar figure ranks on how useful and how urgent it is,
+never on a cash value it has not got, and nothing here says you are losing
+money by not spending.
+
+The list is five rows, no more than two from one card or program, with **More
+opportunities** for the rest. Each row's verbs are **Done** and **Not useful to
+me**, kept as a resolution record against the row's key and the terms it was
+decided on: a dismissal holds until the period turns or the terms change, and
+a reminder until its date. The wallet's own records — resolutions, the
+bindings below, point values — are `/v1/wallet`
+([`wallet-data.js`](../chrome-sidebar/src/wallet-data.js),
+[`wallet-offline.js`](../chrome-sidebar/src/wallet-offline.js)), synced and
+kept offline like every other record.
+
+## Wallet
+
+**Update wallet** leads the view once a card is held: one line per card
+account saying what has been read for it and when — its earning terms, its
+credit trackers, its offers, the balance it earns into — and the page that
+would fill the largest gap. `accountCoverage` and `walletGaps` in
+`wallet-data.js` compute it from the records; an attempt that failed advances
+nothing, only a save does. The status above it is the reconciliation: how many
+cards, how many links still need a choice, how many balances have never been
+read. Nothing here connects to an issuer: the owner opens the page and the
+sidebar reads it.
+
+A card is an account, not a product. Two cards of one product are two rows,
+told apart by the digits the issuer prints beside them, sharing the product's
+earning terms and nothing else; a credit read off a page belongs to the account
+the page named. A page name that fits two of your cards asks which, once, in
+the import review, and keeps the answer as a binding so the next reading of
+that name files itself. Conflicting digits never match; missing digits prove
+nothing either way. `cardAccounts` and `matchAccount` in `wallet-data.js` are
+the one reading of "which account is that".
 
 ## Entry kinds
 
@@ -100,11 +173,26 @@ Earning rates are Best card's, not the wallet's: [BEST_CARD.md](BEST_CARD.md)
 lists the cards this wallet holds and finds the rates for one with a press of
 its own.
 
-## Points and miles
+## Points
 
-The wallet opens with the programs themselves: one row each, the program on the
-left and what it holds on the right, read down a single column of figures.
-Nothing is summed over them. A hotel's points, an airline's miles and the cash
+The Points view lists each balance the wallet holds a figure for: the brand
+and the figure on one line, and under it the currency's full name, when it was
+last read and whether that is more than 30 days old, the cards that earn into
+it, and what a point is worth. Nothing is summed over programs. A point's
+value is the owner's planning figure, kept per currency in `/v1/wallet` with
+where it came from and when; until one is saved, the value a card's terms give
+stands in and says so, and where no card earns into the program the value is
+**not set** rather than assumed at 1¢. A balance as cash is shown as a
+scenario on that value, never as a redemption
+([`points-data.js`](../chrome-sidebar/src/points-data.js)). Goals, award
+quotes and transfer paths are later phases of
+[the rewards system spec](REWARDS_SYSTEM_SPEC.md).
+
+## Points and miles in the wallet
+
+The wallet's program rows are one row each, the program on the left and what
+it holds on the right, read down a single column of figures. Nothing is summed
+over them. A hotel's points, an airline's miles and the cash
 back a card keeps in money are different things, and one number over the pair
 answers no question anybody has; a balance that has gone out of date is raised
 by name in Next actions, which is where something to do about it belongs.
@@ -133,39 +221,28 @@ program called MileagePlus.
 
 ### The programs themselves
 
-**Add the points programs** puts every program this tool knows into the wallet
-at once — each one a balance with no figure in it yet, carrying the page its
-balance is printed on. Getting to that page is then one press instead of a
-search through an airline's marketing site, and the wallet is the list of
-programs you are in rather than a list you have to build a program at a time.
-
-You prune it: a program awaiting its first reading holds nothing you would
-miss, so deleting one takes a single press and asks nothing. Everything with
-something in it still asks before it goes. The offer appears only while the
-wallet holds no program at all, because once they are in, pruning is the work.
-
-A program with no figure yet is never raised in Next actions — it has never
-been read, so there is nothing about it to update. Its row says as much on its
-own. Once a reading fills one in, the ordinary 30-day rule applies to it like
-any other balance.
+A program in the registry is not a program you are in, so the wallet no longer
+offers to add every program it knows. A program arrives when you add it, or
+when a reading of its page finds a balance. A program with no figure yet says
+**Balance not read** on its row and is never raised in For you — it has never
+been read, so there is nothing about it to update. Once a reading fills one in,
+the ordinary 30-day rule applies to it like any other balance.
 
 The programs are in
-[`chrome-sidebar/src/loyalty-sites.js`](../chrome-sidebar/src/loyalty-sites.js),
-and a program already in the wallet is never added twice, so adding again after
-pruning brings back only what was never there.
+[`chrome-sidebar/src/loyalty-sites.js`](../chrome-sidebar/src/loyalty-sites.js).
 
 ### Reading a balance off the program's page
 
 Open a program's own site with the sidebar beside it — united.com, marriott.com,
-americanexpress.com — and Rewards offers to read your balance under **This
-page**, a tab that is there only while such a page is. One press takes
+americanexpress.com — and Rewards offers to read your balance at the head of
+**Wallet**, a block that is there only while such a page is. One press takes
 one text snapshot of the page you are already looking at, turns it into a
 figure per program, and shows it. Nothing is saved by reading: each balance
 names the entry it would land on, and a press of yours saves it.
 
 An issuer's page also lists the offers it has picked for your cards, and those
 are a catalogue rather than wallet entries: the same press saves them under
-**Offers**, beside the other catalogue, and says how many. There is a list per
+**Browse offers** in For you, beside the other catalogue, and says how many. There is a list per
 card, each on a page of its own, so every offer says which card it is on and
 links back to that card's list; reading them all means a press on each. Nothing there waits
 to be reviewed, because a hundred merchants reviewed one at a time is not a
@@ -226,23 +303,28 @@ That figure sits beside the card's own terms rather than replacing them, because
 them changes. Everything else about a saved benefit — its notes, its link, its
 expiration, the card it is filed under — stays yours.
 
-A credit is filed under the card the page names it against, matched to your
-saved cards on the words that tell one card from another; a name that fits two
-of them equally files under neither, because a Platinum's credits under a Blue
-Cash is worse than credits under no card at all. A credit with nothing left is
-marked used, which takes it off Next actions until the next reading finds the
-period has turned over.
+A credit is filed under the card the page names it against: a binding you
+confirmed for that page name first, then the account digits the page prints,
+then the words that tell one card from another. A name that fits two of them
+equally asks **Which card is this on?** in the review, and the answer is kept
+as a binding so it is never asked for that name again; nothing is filed under
+a guess, because a Platinum's credits under a Blue Cash is worse than credits
+under no card at all. A credit with nothing left is marked used, which takes
+it off For you until the next reading finds the period has turned over. A
+credit whose tracker has never been read says **remaining not read** on its
+row: the allowance is known, what is left of it is not, and Pay counts it only
+once it is.
 
 Research and this reading answer different questions: **Add a card you hold**
 brings back what the card gives, and the tracker says how much of it is left.
 A credit read before it has ever been researched is saved with the amount the
 page states.
 
-## Resets and Next actions
+## Resets and For you
 
 Most card credits are not one-time offers — they come back, and the unused part
 does not carry over. An entry's **Resets** says which calendar period it follows:
-monthly, quarterly, twice a year, or yearly. Next actions raises a recurring
+monthly, quarterly, twice a year, or yearly. For you raises a recurring
 credit as its period closes, sooner for a shorter period (7 days for monthly,
 14 for quarterly, 30 for twice a year, 45 for yearly), because a monthly credit
 is always within a month of resetting and would otherwise never leave the list.
@@ -251,9 +333,10 @@ A credit whose period follows your account anniversary rather than the calendar
 gets no cadence — only you know the anniversary — so give it an explicit date.
 An explicit expiration always wins over the period the entry would sit in.
 
-Next actions also raises a passed deadline to verify, a benefit that still needs
+For you also raises a passed deadline to check, a benefit that still needs
 activating, and a balance not updated in 30 days. A card itself carries no
-deadline and is never raised.
+deadline and is never raised. Needs attention shows the rows about something
+closing or waiting to be set up, from the same projection.
 
 ### Before the quarter closes
 
@@ -279,11 +362,10 @@ and enrollment, eligibility, caps, tiers and merchant exclusions are yours to
 confirm against the linked terms. It returns at most 40 benefits per card, omits
 welcome offers and introductory rates, and knows nothing about how much of a
 credit you have used — that comes from reading the card's own tracker, which the
-issuer itself says may not reflect recent activity. Earning rates stay on the card entry; **Best card**
-is where rates are compared (see [BEST_CARD.md](BEST_CARD.md)), and it reads this
-wallet for the cards you hold: a card entry, or a card an issuer's page named
-when a credit was read off it, appears there as a card awaiting its rates rather
-than one to add again.
+issuer itself says may not reflect recent activity. Earning rates stay on the card's terms under **Card rates** in Pay (see
+[BEST_CARD.md](BEST_CARD.md)), which reads this wallet for the cards you hold:
+a card entry, or a card an issuer's page named when a credit was read off it,
+appears there as a card awaiting its rates rather than one to add again.
 
 ## Private data and offline behavior
 
@@ -308,6 +390,11 @@ its model through the central task policy
 
 - `GET /v1/rewards`, `PUT /v1/rewards` — the whole wallet, revisioned. See
   [tools-api/README.md](../tools-api/README.md).
+- `GET /v1/wallet[/snapshot]`, `GET/PUT/DELETE /v1/wallet/:uuid`,
+  `GET /v1/wallet/capabilities` — the wallet's records about itself: bindings,
+  resolutions, valuations, goals, one typed encrypted record each in
+  `wallet_records` (apply `tools-api/wallet-schema.sql`). Validated by
+  `wallet-data.js` on both sides.
 - `POST /v1/ai-connections/:uuid/balance-intake` — `{text, program, source, unit,
   programs}` in; `{balances, credits, unread}` out. `programs` is every currency
   that site states, so an issuer running two of them is read for both; a device
@@ -322,9 +409,12 @@ its model through the central task policy
 
 A perks portal — Morgan Stanley Reserved — publishes a catalogue of offers that
 changes without notice. Those are not wallet entries: they are read off the
-program's own pages and listed under **Offers**, the tab beside **Wallet**,
-refreshed whenever the owner visits the site. The tab is there only once a
-catalogue has been read, and with nothing read the screen is the wallet alone.
+program's own pages and listed under **Browse offers**, one closed line at the
+foot of **For you**, refreshed whenever the owner visits the site. The line is
+there only once a catalogue has been read. A catalogue held is not a
+membership held: with no wallet entry saying you are in the program, For you
+raises **Check whether … is yours to use** rather than assuming the offers
+are yours.
 They are grouped — what is new, then one closed line per category — because one
 program alone publishes well over a hundred. Each list has its own search, since
 the wallet's narrows what you hold and this one narrows what is on offer, and a

@@ -7,8 +7,12 @@ Express picks for the cards you hold — is the second. Offers change without
 notice, so a catalogue is read from the program's own pages instead of being
 typed in.
 
-The offers appear under **Offers**, the tab beside **Wallet** in Rewards &
-benefits, on the extension and on the phone.
+The offers appear under **Browse offers**, one closed line at the foot of
+**For you** in Rewards & benefits, on the extension and on the phone. A
+catalogue is evidence and something to browse, not the organizing principle:
+For you raises at most one row about it, and where no wallet entry says the
+owner is in the program that row asks them to check eligibility rather than
+presenting the offers as theirs.
 
 ## Two kinds of catalogue
 

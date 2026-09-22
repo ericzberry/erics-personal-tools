@@ -1,9 +1,13 @@
 import {offlineResource} from './offline-resource.js';
 import {encryptedDeviceStore} from './offline-storage.js';
 import {cloudRequest} from './cloud-storage.js';
-// Every field the wallet stores. A field missing here is silently dropped on its
-// way to the cloud, so it has to match the validator in rewards-data.js.
-const fields=['id','kind','name','source','value','due','state','url','notes','secret','secretHint','card','cadence','updatedAt'];
+import {REWARD_FIELDS} from './rewards-data.js';
+// Every field the wallet stores, read off the validator so the two cannot
+// drift: a field missing here is silently dropped on its way to the cloud,
+// which is how `remaining` — what a card's tracker said was left of a credit —
+// was lost on every save for a release. tests/rewards-offline.test.js saves a
+// credit with a remaining amount through this adapter and reads it back.
+const fields=['id',...REWARD_FIELDS,'updatedAt'];
 const normalize=value=>Object.fromEntries(fields.map(key=>[key,value[key]||'']));
 const record=value=>({...normalize(value),revision:JSON.stringify(normalize(value))});
 // The existing API revisions the wallet as a whole. Merge one queued record into

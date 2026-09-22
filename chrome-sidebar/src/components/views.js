@@ -92,7 +92,7 @@ export function SettingsView() {
 // controller for it fills the section in on first use.
 const PanelTool=id=>Section([],{id:`${id}-tool`,className:'tool-page',hidden:true});
 export function mountApp(root) {root.replaceChildren(AppHeader({}),UI.PageOfferBar(),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),
-  ...['finance','taxes','attention','subscriptions','gifts','sizes','replacements','reminders','cards','advisor','personal'].map(PanelTool),SettingsView());}
+  ...['finance','taxes','attention','subscriptions','gifts','sizes','replacements','reminders','personal'].map(PanelTool),SettingsView());}
 
 // One AI action and the model that runs it. The action's name reads down the
 // left and its model sits at the end of the line, the way a record's own

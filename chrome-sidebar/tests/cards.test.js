@@ -79,7 +79,7 @@ test('card queue survives cold offline reopen, reconciles writes and conflicts, 
 
 test('the wallet says which cards the owner holds, whatever an issuer page calls them',()=>{
   const entries=[
-    {id:'a',kind:'card',name:'The Platinum Card® from American Express',secretHint:'1005'},
+    {id:'a',kind:'card',name:'The Platinum Card® from American Express',secretHint:'1007'},
     // The same card, named by the page a credit was read off. One card, once.
     {id:'b',kind:'benefit',name:'$200 Airline Fee Credit',source:'Platinum Card® (-61007)'},
     {id:'c',kind:'benefit',name:'$7 Monthly Dining Credit',source:'Blue Cash Preferred® Card (-31002)'},
@@ -94,7 +94,7 @@ test('the wallet says which cards the owner holds, whatever an issuer page calls
   assert.equal(held[0].card.id,'x');
   assert.equal(held[1].card,null);
   // The account an issuer prints beside a card stays out of the product name.
-  assert.deepEqual(held.map(row=>row.digits),['1005','1002']);
+  assert.deepEqual(held.map(row=>row.digits),['1007','1002']);
   for(const [name,product,digits] of [
     ['Morgan Stanley Platinum Card® (-61007)','Morgan Stanley Platinum Card®','1007'],
     ['Sapphire Reserve (...4321)','Sapphire Reserve','4321'],
@@ -114,6 +114,20 @@ test('the wallet says which cards the owner holds, whatever an issuer page calls
   assert.equal(reserve.card,null);assert.equal(reserve.ambiguous,false);
   assert.equal(walletCards([{id:'h',kind:'card',name:'Chase Sapphire Reserve (-4321)'}],[{id:'s',name:'Chase Sapphire Reserve Card (United States)'}])[0].card.id,'s');
   assert.deepEqual(walletCards([],[]),[]);
+  // Two cards of one product are two accounts. The digits are the one thing
+  // that tells them apart, so two Platinums with different account hints stay
+  // two rows sharing the product's terms — and a page naming the product with
+  // digits that match neither is a third, not a guess at one of the two.
+  const twoPlatinums=walletCards([
+    {id:'p1',kind:'card',name:'The Platinum Card® from American Express',secretHint:'1111'},
+    {id:'p2',kind:'card',name:'The Platinum Card® from American Express',secretHint:'2222'},
+    {id:'b',kind:'benefit',name:'Airline credit',source:'Platinum Card® (-62222)'},
+    {id:'b2',kind:'benefit',name:'Hotel credit',source:'Platinum Card® (-63333)'}
+  ],[{id:'x',name:'The Platinum Card® from American Express (United States)'}]);
+  assert.deepEqual(twoPlatinums.map(row=>[row.id,row.digits,row.card?.id]),[['p1','1111','x'],['p2','2222','x'],['','3333','x']]);
+  // A card with no digits at all still folds into the one product row it
+  // names, because missing digits are not proof of a second account.
+  assert.equal(walletCards([{id:'p1',kind:'card',name:'Platinum Card'},{id:'b',kind:'benefit',name:'Credit',source:'Platinum Card® (-61007)'}],[]).length,1);
 });
 
 // The tool itself, mounted over a synthetic wallet: a card the owner already

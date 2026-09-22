@@ -1,15 +1,18 @@
-import {RewardsView,RewardGroup,CardBenefits,BalancePanel,readingSummary} from './components/rewards.js';
+import {RewardsView,RewardGroup,CardBenefits,BalancePanel,readingSummary,OpportunityRow,PointsRow,ValuationForm,REWARDS_VIEWS} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
-import {RecordRow,RecordGroup,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,SHOW_GLYPH,HIDE_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
-import {validateReward,nextActions,luhnValid,parseCardBenefits,unheldBenefits,CADENCE_LABELS} from './rewards-data.js';
+import {RecordRow,RecordGroup,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,HIDE_GLYPH,SHOW_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
+import {validateReward,luhnValid,parseCardBenefits,unheldBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl,rewardProgram,parseOfferReading,validateProgramCatalog,MAX_CATALOG_BYTES,READ_TEXT} from './program-data.js';
-import {parseBalanceReading,matchBalances,balanceRecord,directoryBalances,programName,programShort,walletRun,WALLET_RUNS,UNREAD_BALANCE} from './balance-data.js';
+import {parseBalanceReading,matchBalances,balanceRecord,programName,programShort,walletRun,WALLET_RUNS,UNREAD_BALANCE} from './balance-data.js';
 import {parseCreditReading,parseBenefitReading,matchCredits,creditRecord,benefitRecord} from './credit-data.js';
 import {parseRateReading,matchRates,rateCards,rateCardRecord} from './rate-data.js';
-import {LOYALTY_PROGRAMS,loyaltySitePrograms,loyaltyProgramNamed} from './loyalty-sites.js';
+import {loyaltySitePrograms,loyaltyProgramNamed} from './loyalty-sites.js';
 import {institutionNamed} from './account-sites.js';
 import {aiConnections} from './ai-connection.js';
+import {cardAccounts,accountCoverage,coverageLine,walletGaps,applyBindings,bindingFor} from './wallet-data.js';
+import {rewardOpportunities,resolutionFor} from './reward-opportunities.js';
+import {pointsAccounts,valuationFor} from './points-data.js';
 const fields=['kind','name','source','card','value','due','cadence','state','url','notes'];
 // A revealed number returns to its masked form on its own, so an unattended
 // sidebar does not keep a card number on screen.
@@ -18,6 +21,11 @@ const REVEAL_MS=60000;
 // again, and on this timer while a change is still waiting to reach the cloud.
 // Nothing here asks the owner to press a refresh button.
 const RETRY_MS=60000;
+// The view the owner was last on, kept per device so the tool reopens where
+// it was left. A brand-new wallet ignores it and opens on Wallet.
+const VIEW_KEY='rewards-view';
+const remembered=()=>{try{return globalThis.localStorage?.getItem(VIEW_KEY)||'';}catch{return '';}};
+const remember=key=>{try{globalThis.localStorage?.setItem(VIEW_KEY,key);}catch{/* A view not remembered is a view chosen again. */}};
 const STATES={available:'Available',activation:'Needs activation',used:'Used'};
 const grouped=digits=>digits.replace(/(.{4})/g,'$1 ').trim();
 const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
@@ -29,10 +37,15 @@ const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
 // `readPage` is the host's ability to read the tab the owner is looking at. The
 // sidebar sits beside that tab and supplies it; a full tab and the phone have
 // no such page, so they pass nothing and the balance panel never appears.
-// `cards` is the Best card store. A rate read off a card's own page is a bonus
-// rule on a card saved there rather than a wallet entry, so the wallet reaches
-// for that store only when a reading actually returns rates.
-export function mountRewards(root,{credentials,offline,remote=null,programs=null,readPage=null,cards=null,onSettings=()=>{},onChanged=()=>{},vault=sharedVault()}){
+// `cards` is the Best card store: the terms a card earns on. With it the Pay
+// view is mounted — the purchase advisor and the card terms it rests on —
+// and coverage can say which cards have no rates.
+// `wallet` is the store of the wallet's records about itself: which page name
+// is which account, which opportunity was dismissed, what a point is worth.
+// Without it those choices are asked again each time and nothing else changes.
+// `mountPay` and `mountRates` build the Pay view's two tools on first use;
+// the host supplies them so a harness without those tools mounts none.
+export function mountRewards(root,{credentials,offline,remote=null,programs=null,readPage=null,cards=null,wallet=null,mountPay=null,mountRates=null,adapter=null,onSettings=()=>{},onChanged=()=>{},vault=sharedVault()}){
   root.replaceChildren(RewardsView());
   const $=id=>root.querySelector(`#${id}`);
   let entries=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;
@@ -44,12 +57,17 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // trackers say is left of each recurring credit on the card. `rates` is what
   // the card earns, which belongs to its saved terms rather than the wallet,
   // and `benefits` is everything the page states that carries no figure at all.
-  // `held` is the owner's saved cards, fetched only when a rate needs one.
+  // `held` is the owner's saved cards, read with the wallet so coverage, Pay
+  // and For you can lean on them.
   let site=null,balances=null,credits=null,rates=null,benefits=null,held=[];
+  // The wallet's own records: bindings, resolutions, valuations, goals.
+  let records=[],expanded=false,valuing='';
   let vaultBusy=false,vaultMessage='',vaultOpen=false,clearSecret=false,revealTimer=null,syncFailed=false;
   let found=[],connectionsFor='';
+  let payTool=null,ratesTool=null,requestedView='',chosenView=false;
   const connections=aiConnections({load:async token=>(await remote(token,'/v1/ai-connections')).connections,need:'to read a balance off a page or look up a card.'});
   const revealed=new Map();
+  const tabs=$('rewards-tabs');
   const status=(text,tone='')=>setStatus($('rewards-status'),text,tone);
   const cardStatus=(text,tone='')=>setStatus($('reward-card-status'),text,tone);
   const action=(label,fn,variant='secondary')=>{const b=Button(label,{variant,size:'compact',disabled:busy||!loaded});b.addEventListener('click',fn);return b;};
@@ -60,6 +78,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // state rather than to the list's.
   const rowAction=(glyph,label,fn,danger=false)=>RowAction(glyph,label,fn,{danger,disabled:busy||!loaded});
   const vaultRowAction=(glyph,label,fn)=>RowAction(glyph,label,fn,{disabled:vaultBusy});
+  const live=()=>entries.filter(entry=>!entry.deleting&&!entry.conflict);
   function forget(){revealed.clear();clearTimeout(revealTimer);revealTimer=null;$('vault-code').replaceChildren();}
   function hold(){clearTimeout(revealTimer);revealTimer=setTimeout(()=>{forget();renderVault();render();},REVEAL_MS);}
   function edit(entry){
@@ -68,6 +87,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     for(const key of fields)$(`reward-${key}`).value=entry[key]||'';
     $('reward-secret-number').value='';$('reward-secret-expiry').value='';
     renderKind();renderSecret();
+    tabs.select('wallet');
     $('reward-editor').open=true;$('reward-name').focus();
   }
   function clearForm(){
@@ -174,6 +194,35 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     }catch{catalogs=[];}
     renderPrograms();
   }
+  // The owner's saved card terms, read alongside the wallet: coverage says
+  // which cards have none, For you raises those, and Pay compares on them.
+  // The device's own copy answers when the cloud will not, and a store that
+  // cannot be read at all is Best card's trouble rather than the wallet's.
+  async function loadCards(token){
+    if(!cards)return;
+    try{held=(await cards.request(token,'/v1/cards')).records||[];}
+    catch{try{held=await cards.saved(token);}catch{/* The cards saved here are unchanged. */}}
+  }
+  // The wallet's records about itself, read the same way.
+  async function loadRecords(token){
+    if(!wallet)return;
+    try{records=(await wallet.request(token,'/v1/wallet')).records||[];}
+    catch{try{records=await wallet.saved(token);}catch{/* Choices not read are choices asked again. */}}
+  }
+  // One record per thing it is about: a second decision on the same key
+  // replaces the first rather than sitting beside it.
+  async function saveRecord(record){
+    if(!wallet)return false;
+    try{
+      const token=await credentials.get();
+      if(!token)throw Error('Open Settings to connect this device.');
+      const existing=records.find(other=>other.kind===record.kind&&other.key===record.key);
+      const id=existing?.id||crypto.randomUUID();
+      const result=await wallet.request(token,`/v1/wallet/${id}`,{method:'PUT',value:{...record,revision:existing?.revision??null}});
+      records=result.records||records;
+      return true;
+    }catch(error){status(error.message,'error');return false;}
+  }
   // The picker is rebuilt only when the categories themselves change, so
   // choosing one does not replace the control being used.
   function syncCategories(categories){
@@ -189,23 +238,24 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   }
   function renderPrograms(){
     // No catalogue store, and nothing read yet, come to the same thing: there
-    // is nothing on offer to show, so the tab is not in the row at all.
-    const live=programs?catalogs.filter(catalog=>catalog?.offers?.length):[];
-    $('rewards-tabs').show('offers',!!live.length);
-    if(!live.length){$('programs-list').replaceChildren();$('programs-filter').replaceChildren();categorySignature='';return;}
-    syncCategories([...new Set(live.flatMap(catalogCategories))].sort((a,b)=>a.localeCompare(b)));
+    // is nothing on offer to browse, so the drawer is not there at all.
+    const catalogsLive=programs?catalogs.filter(catalog=>catalog?.offers?.length):[];
+    $('programs-browse').hidden=!catalogsLive.length;
+    renderForYou();
+    if(!catalogsLive.length){$('programs-list').replaceChildren();$('programs-filter').replaceChildren();categorySignature='';return;}
+    syncCategories([...new Set(catalogsLive.flatMap(catalogCategories))].sort((a,b)=>a.localeCompare(b)));
     const query=$('programs-search').value;
-    const groups=live.map(catalog=>({catalog,offers:catalogOffers(catalog,{query,category:programCategory})})).filter(group=>group.offers.length);
-    const total=live.reduce((count,catalog)=>count+catalog.offers.length,0);
+    const groups=catalogsLive.map(catalog=>({catalog,offers:catalogOffers(catalog,{query,category:programCategory})})).filter(group=>group.offers.length);
+    const total=catalogsLive.reduce((count,catalog)=>count+catalog.offers.length,0);
     const shown=groups.reduce((count,group)=>count+group.offers.length,0);
     // The date the whole catalogue was last seen at once. A reading taken on a
     // single offer's page refreshes part of it and does not move this on.
-    const read=live.map(catalog=>catalog.listedAt||'').filter(Boolean).sort().at(-1);
+    const read=catalogsLive.map(catalog=>catalog.listedAt||'').filter(Boolean).sort().at(-1);
     // With one program the heading cannot name it, so the status does. With
     // several, each group names itself instead.
     // What is listed, plainly — not a result and nothing to act on, so it
     // takes no tone.
-    setStatus($('programs-status'),[live.length===1?live[0].label:'',
+    setStatus($('programs-status'),[catalogsLive.length===1?catalogsLive[0].label:'',
       shown===total?`${total} offer${total===1?'':'s'}`:`${shown} of ${total} offers`,
       read?`read ${read.slice(0,10)}`:''].filter(Boolean).join(' · '));
     // One row per offer, and — unless the owner has already narrowed the list —
@@ -226,7 +276,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
         actions:url?[RowLink(OPEN_GLYPH,`Open the ${offer.name} offer`,url)]:[]});
     };
     $('programs-list').replaceChildren(...(shown?groups.flatMap(({catalog})=>[
-      live.length>1?Note(catalog.label):null,
+      catalogsLive.length>1?Note(catalog.label):null,
       ...catalogGroups(catalog,{query,category:programCategory}).flatMap(group=>group.flat
         ? group.offers.map(offer=>offerRow(catalog,offer,programCategory))
         : [RewardGroup({title:group.label,
@@ -235,18 +285,138 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
             children:group.offers.map(offer=>offerRow(catalog,offer,group.label))})])
     ].filter(Boolean)):[Note('No matching offers.')]));
   }
+  // What is worth doing, in one short ranked list. Every row is a rule over
+  // saved records (`reward-opportunities.js`); this only draws it and keeps
+  // the owner's answer to each row.
+  function renderForYou(){
+    const result=loaded?rewardOpportunities({entries:live(),cards:held,catalogs,resolutions:records},{now:new Date()}):{top:[],rest:[],all:[]};
+    const catalogsLive=programs?catalogs.some(catalog=>catalog?.offers?.length):false;
+    tabs.show('foryou',loaded&&(result.all.length>0||catalogsLive));
+    const list=expanded?result.all:result.top;
+    const resolve=(item,choice,until='')=>async()=>{
+      if(!wallet){status('Connect this device to keep that choice.','alert');return;}
+      if(await saveRecord(resolutionFor(item,choice,{until})))renderForYou();
+    };
+    const rows=list.map(item=>{
+      const actions=[
+        ...(item.kind==='explore'?[]:[rowAction(DONE_GLYPH,`Done: ${item.title}`,resolve(item,'done'))]),
+        rowAction(HIDE_GLYPH,`Not useful: ${item.title}`,resolve(item,'not_useful')),
+        ...(item.kind==='explore'?[rowAction(OPEN_GLYPH,`Browse ${item.source} offers`,()=>{$('programs-browse').open=true;$('programs-search').focus();})]
+          :item.action?.url?[RowLink(OPEN_GLYPH,`Open the site for ${item.source}`,item.action.url)]
+          :item.kind==='gap'&&item.key.startsWith('rates:')?[rowAction(OPEN_GLYPH,`Add the rates for ${item.source}`,()=>{view('pay');$('rewards-rates-drawer').open=true;})]:[])
+      ];
+      return OpportunityRow(item,{actions});
+    });
+    $('rewards-foryou').replaceChildren(...(rows.length?rows:loaded&&result.all.length===0&&catalogsLive?[Note('Nothing to do right now.')]:[]));
+    $('rewards-foryou-actions').replaceChildren(...(result.rest.length&&!expanded
+      ?[action(`More opportunities (${result.rest.length})`,()=>{expanded=true;renderForYou();})]
+      :expanded&&result.all.length>result.top.length?[action('Fewer',()=>{expanded=false;renderForYou();})]:[]));
+    renderTabs();
+  }
+  // What the wallet has and has not read, one line per card, and the first
+  // page that would fill the largest gap. It never pretends to reach an
+  // issuer: the owner opens the page and the sidebar reads it.
+  function renderCoverage(){
+    const accounts=loaded?cardAccounts(live(),held):[];
+    const gaps=walletGaps(accounts,{entries:live(),catalogs});
+    const group=$('rewards-coverage-group');
+    group.hidden=!accounts.length;
+    if(!accounts.length){$('rewards-coverage').replaceChildren();setStatus($('rewards-coverage-status'),'');return;}
+    // The reconciliation line: what is here, and what still needs a choice
+    // or a reading. Counts, not a percentage, and computed from the records.
+    const unread=live().filter(entry=>entry.kind==='balance'&&entry.value===UNREAD_BALANCE).length;
+    const undecided=accounts.filter(account=>account.ambiguous).length;
+    setStatus($('rewards-coverage-status'),[`${accounts.length} card${accounts.length===1?'':'s'}`,
+      undecided?`${undecided} link${undecided===1?'':'s'} need your choice`:'',
+      unread?`${unread} balance${unread===1?'':'s'} not read`:'',
+      gaps.length?`${gaps.length} thing${gaps.length===1?'':'s'} to read`:'everything read'].filter(Boolean).join(' · '));
+    const rows=accounts.map(account=>{
+      const coverage=accountCoverage(account,{entries:live(),catalogs});
+      const next=gaps.find(gap=>gap.account===account);
+      const site=account.entry?siteOf(account.entry):'';
+      return RecordRow({title:account.product,meta:account.hint?`•••• ${account.hint}`:'',detail:coverageLine(coverage),
+        // The next page to read is a footnote under the coverage, not a line
+        // of body text louder than the facts above it.
+        extra:next?[Note(next.next)]:[],
+        actions:site?[RowLink(OPEN_GLYPH,`Open the site for ${account.product}`,site)]:[]});
+    });
+    $('rewards-coverage').replaceChildren(...rows);
+  }
+  // Balances by program, each with what earns into it and what a point is
+  // worth on the owner's own value. Nothing is summed across programs.
+  function renderPoints(){
+    const rows=loaded?pointsAccounts({entries:live(),cards:held,valuations:records}):[];
+    tabs.show('points',rows.length>0);
+    $('rewards-points').replaceChildren(...rows.map(row=>{
+      const editing=valuing===row.id;
+      const actions=[
+        ...(row.unit==='dollars'?[]:[rowAction(EDIT_GLYPH,`Set what a ${row.label} point is worth`,()=>{valuing=editing?'':row.id;renderPoints();})]),
+        ...(row.url?[RowLink(OPEN_GLYPH,`Open the site for ${row.label}`,row.url)]:[])];
+      const extra=editing?[ValuationForm(row,{
+        onSave:async cents=>{
+          try{
+            const record=valuationFor(row.currency,cents);
+            if(!(record.cents>0))throw Error('Enter what a point is worth, in cents.');
+            if(!wallet)throw Error('Connect this device to keep that value.');
+            if(await saveRecord(record)){valuing='';renderPoints();}
+          }catch(error){status(error.message,'error');}
+        },
+        onCancel:()=>{valuing='';renderPoints();}})]:[];
+      return PointsRow(row,{actions,extra});
+    }));
+    renderTabs();
+  }
+  // Which tabs are in the row, and which one the tool opens on. A tab is
+  // there while it has something to answer; the first open of an established
+  // wallet lands on For you, and after that wherever the owner last was.
+  function renderTabs(){
+    const canPay=!!mountPay&&loaded&&(held.length>0||live().some(entry=>entry.kind==='card'));
+    tabs.show('pay',canPay);
+  }
+  // Decided once, after the first full load — the wallet, the cards and the
+  // catalogues — because which tabs there are is not known before then.
+  function settleView(){
+    if(!loaded||chosenView)return;
+    const wanted=[requestedView,remembered(),'foryou','wallet'].find(key=>REWARDS_VIEWS.includes(key)&&!$(`rewards-tabs-${key}-tab`).hidden);
+    if(wanted){chosenView=true;tabs.select(wanted);opened(wanted);}
+  }
+  // The Pay view's two tools are built the first time the view is opened,
+  // never before: building them reads the device's connection and its
+  // records, and a wallet that was never asked for Pay owes no such reads.
+  function ensurePay(){
+    if(!mountPay||payTool)return;
+    payTool=mountPay($('rewards-pay'));
+    ratesTool=mountRates?.($('rewards-rates'))||null;
+  }
+  function opened(key){
+    if(key==='pay'){ensurePay();payTool?.refresh?.();ratesTool?.refresh?.();}
+  }
+  function view(key){
+    if(!REWARDS_VIEWS.includes(key))return;
+    requestedView=key;
+    if(!loaded)return;
+    if($(`rewards-tabs-${key}-tab`).hidden)return;
+    chosenView=true;tabs.select(key);opened(key);
+  }
   // Offered only where all three hold: a program's own page beside the panel, a
   // host that can read it, and a connection that can be asked to. Anywhere else
   // the panel is not there to be pressed.
   function renderBalances(){
     const show=!!site&&!!readPage&&!!remote;
-    $('rewards-tabs').show('page',show);
+    $('balance-panel').hidden=!show;
     if(!show){$('balance-body').replaceChildren();setStatus($('balance-status'),'');return;}
     $('balance-body').replaceChildren(BalancePanel({
       site,programs:loyaltySitePrograms(site),rows:balances||[],credits:credits||[],
       rates:rates||[],benefits:benefits||[],disabled:busy||!loaded,
-      onRead:readSnapshot,onSave:saveSnapshot,onDiscard:discardSnapshot
+      cards:entries.filter(entry=>entry.kind==='card'&&!entry.deleting),
+      onRead:readSnapshot,onSave:saveSnapshot,onDiscard:discardSnapshot,onChoose:chooseAccount
     }));
+  }
+  // A row that fit several cards, answered. The answer is kept with the save,
+  // so the next reading of that page name files itself.
+  function chooseAccount(row,cardId){
+    const holder=entries.find(entry=>entry.id===cardId&&entry.kind==='card')||null;
+    row.holder=holder;row.ambiguous=!holder;row.chosen=!!holder;
   }
   const balanceStatus=(text,tone='')=>setStatus($('balance-status'),text,tone);
   const discardSnapshot=()=>{balances=null;credits=null;rates=null;benefits=null;renderBalances();balanceStatus('');};
@@ -280,18 +450,16 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       const rows=matchBalances(parseBalanceReading(result,programs),entries);
       // One `taken` set across both lists: a saved benefit may be claimed by a
       // credit or by an untracked benefit, never by both, or the same entry
-      // would be proposed twice and saved over itself.
+      // would be proposed twice and saved over itself. A card name the owner
+      // once matched to an account is matched the same way again.
       const claimed=new Set();
-      const found=matchCredits(parseCreditReading(result,site.source),entries,claimed);
-      const extra=matchCredits(parseBenefitReading(result,site.source),entries,claimed);
-      // A rate belongs to a saved card's terms, so the cards are fetched only
-      // when there is a rate to land on one. The device's own copy answers if
-      // the cloud will not.
+      const bind=list=>applyBindings(list,records,entries,{adapter:site.id});
+      const found=bind(matchCredits(parseCreditReading(result,site.source),entries,claimed));
+      const extra=bind(matchCredits(parseBenefitReading(result,site.source),entries,claimed));
+      // A rate belongs to a saved card's terms, so the cards are read again
+      // only when there is a rate to land on one.
       const read=parseRateReading(result,site.source);
-      if(read.length&&cards){
-        try{held=(await cards.request(token,'/v1/cards')).records;}
-        catch{held=await cards.saved(token);}
-      }
+      if(read.length&&cards)await loadCards(token);
       const rated=matchRates(read,held);
       balances=rows.length?rows:null;credits=found.length?found:null;
       rates=rated.length?rated:null;benefits=extra.length?extra:null;
@@ -307,8 +475,8 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       // is scrolled — so it adds and updates and retires nothing.
       const listed=await saveOffers(token,page.url,result);
       balanceStatus(readingSummary({rows,credits:found,rates:rated,benefits:extra}).length
-        ?listed?`${listed} offer${listed===1?'':'s'} saved under Offers.`:''
-        :listed?`${listed} offer${listed===1?'':'s'} saved under Offers.`
+        ?listed?`${listed} offer${listed===1?'':'s'} saved under Browse offers.`:''
+        :listed?`${listed} offer${listed===1?'':'s'} saved under Browse offers.`
         :['Nothing to read on that page. Open your account or benefits page and read again.',result.unread||''].filter(Boolean).join(' '),listed?'success':'alert');
     }catch(error){balanceStatus(reason(error),'error');}
     finally{busy=false;render();renderBalances();}
@@ -349,11 +517,14 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     balances=null;
     // A credit goes through the same validator and queue as a typed benefit,
     // one at a time, so one that fails leaves itself and the rest on screen to
-    // be saved again rather than taking the reading down with it.
+    // be saved again rather than taking the reading down with it. A card the
+    // owner chose for a row is kept as a binding for the next reading.
+    const keepChoice=async row=>{if(row.chosen&&row.holder&&site)await saveRecord(bindingFor(site.id,row.card,{id:row.holder.id,name:row.holder.name}));};
     while(credits?.length){
       const [row]=credits,match=row.match;
       const entry=creditRecord(row,match,row.ambiguous?null:row.holder);
       if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent,'error');return;}
+      await keepChoice(row);
       credits=credits.slice(1);tracked++;
     }
     credits=null;
@@ -364,6 +535,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       const [row]=benefits,match=row.match;
       const entry=benefitRecord(row,match,row.ambiguous?null:row.holder);
       if(!await save({...entry,id:match?.id||entry.id,revision:match?.revision??null})){renderBalances();balanceStatus($('rewards-status').textContent,'error');return;}
+      await keepChoice(row);
       benefits=benefits.slice(1);kept++;
     }
     benefits=null;
@@ -402,24 +574,6 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     }catch(error){balanceStatus(reason(error),'error');return false;}
   }
   function startCard(){$('reward-card-intake').open=true;$('reward-card-name').focus();}
-  // The wallet as a directory of programs. Every program this tool recognizes
-  // arrives as a balance with no figure in it and the page its balance is
-  // printed on, so reaching that page is one press; the owner then deletes the
-  // ones they do not hold, which is one press each. A program already in the
-  // wallet is never added twice, so pressing this again after pruning brings
-  // back only what was never there — and a save that stops part way says how
-  // far it got rather than losing the rest.
-  async function addDirectory(){
-    if(busy||!loaded)return;
-    const pending=directoryBalances(LOYALTY_PROGRAMS,entries);
-    if(!pending.length){status('Every program this tool knows is already in your wallet.','success');return;}
-    let saved=0;
-    for(const entry of pending){
-      if(!await save(entry)){status(`Added ${saved} of ${pending.length} programs. Press again to add the rest.`,'error');return;}
-      saved++;
-    }
-    status(`Added ${saved} program${saved===1?'':'s'}. Delete the ones you do not have, and read a balance from any program's own page.`,'success');
-  }
   // A balance is one line: the program on the left, the figure at the end of
   // it. The program is named by its brand and nothing else — "United", not
   // "United Airlines MileagePlus" — because the run it sits in has already
@@ -432,19 +586,23 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   const titleOf=(e,inGroup)=>inGroup?e.name:programShort(e)||programName(e.source,e.name);
   // A program the owner has never read has no figure, and an empty place where
   // the figure goes says that better than 26 rows all printing the same three
-  // words. What is counted, and what is not, is already summed above the list.
+  // words.
   const figureOf=e=>e.kind==='balance'&&e.value===UNREAD_BALANCE?'':e.value;
   // What is left once the name and the figure have their places: what is true
   // of this row and not of every other one. "Available" is the resting state
   // of the whole wallet — of a card, of a program never read, of every balance
-  // in it — so it states nothing.
+  // in it — so it states nothing. A balance never read says so in words,
+  // because an empty figure beside a program can be read as nothing held.
   const metaOf=e=>[
+    e.kind==='balance'&&e.value===UNREAD_BALANCE?'Balance not read':'',
     // What the issuer's own tracker last said is left of it. The card's terms
     // stay in the value beside it, because "$25 per month" and "$25 left this
     // month" are different facts and only one of them changes — and when they
     // are the same figure, which is a credit read before its terms were ever
-    // researched, the row says it once.
+    // researched, the row says it once. A credit with terms and no reading
+    // says that too: the allowance is known, what is left of it is not.
     e.remaining&&e.remaining!==e.value?`${e.remaining} left`:'',
+    !e.remaining&&['benefit'].includes(e.kind)&&e.cadence&&/\$/.test(String(e.value||''))?'remaining not read':'',
     e.state==='available'?'':STATES[e.state],CADENCE_LABELS[e.cadence]||'',
     e.secretHint?`•••• ${e.secretHint}`:'',e.due?`Due ${e.due}`:'',e.pending?'Waiting to sync':'',
     e.conflict?'Conflict':'',e.deleting?'Pending deletion':''].filter(Boolean).join(' · ');
@@ -499,49 +657,51 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   function render(){
     const query=$('rewards-search').value.trim().toLowerCase();
     const hit=e=>[e.name,e.source,e.notes,e.value].join(' ').toLowerCase().includes(query);
-    const cards=entries.filter(e=>e.kind==='card'),held=new Set(cards.map(card=>card.id));
+    const cardEntries=entries.filter(e=>e.kind==='card'),held=new Set(cardEntries.map(card=>card.id));
     // Looking up the cards the wallet holds is an action about those cards, so
     // it is there while there are some and gone while there are none.
-    $('reward-card-sweep').hidden=!remote||!cards.length;
+    $('reward-card-sweep').hidden=!remote||!cardEntries.length;
     $('reward-card-sweep').disabled=busy||!loaded;
     // Benefits live inside the card that carries them; a search opens the groups
     // it matched so a benefit is never hidden behind a closed card.
-    const groups=cards.map(card=>{
+    const groups=cardEntries.map(card=>{
       const filed=entries.filter(e=>e.kind!=='card'&&e.card===card.id);
       return {card,filed,visible:hit(card)?filed:filed.filter(hit),matched:hit(card)||filed.some(hit)};
     }).filter(group=>group.matched);
     const loose=entries.filter(e=>e.kind!=='card'&&!held.has(e.card)&&hit(e));
+    // The collapsed line says the one useful thing about the card: what is
+    // waiting to be set up, or that its trackers have not been read.
+    const summary=group=>{
+      const setup=group.filed.filter(e=>e.state==='activation').length;
+      const money=group.filed.filter(e=>e.kind==='benefit'&&/\$/.test(String(e.value||''))&&e.state!=='used');
+      const unread=money.filter(e=>!e.remaining).length;
+      return [group.card.source,`${group.filed.length} benefit${group.filed.length===1?'':'s'}`,
+        setup?`${setup} to set up`:'',money.length&&unread===money.length?'credit balances not read':unread?`${unread} credit${unread===1?'':'s'} not read`:'',
+        group.card.secretHint?`•••• ${group.card.secretHint}`:'',group.card.pending?'Waiting to sync':'',
+        group.card.conflict?'Conflict':''].filter(Boolean).join(' · ');
+    };
     const cardRows=groups.sort((a,b)=>a.card.name.localeCompare(b.card.name)).map(group=>RewardGroup({
       title:group.card.name,
-      detail:[group.card.source,`${group.filed.length} benefit${group.filed.length===1?'':'s'}`,
-        group.card.secretHint?`•••• ${group.card.secretHint}`:'',group.card.pending?'Waiting to sync':'',
-        group.card.conflict?'Conflict':''].filter(Boolean).join(' · '),
+      detail:summary(group),
       open:!!query,
       children:[row(group.card,true),...group.visible.map(e=>row(e,true))]
     }));
-    // The wallet is read in runs — airlines, then hotels, then the cards you
-    // hold — and each run is one alphabetical column, because a program is
-    // looked for by what it is and not by the day it was saved. A run with
-    // nothing in it draws no heading.
+    // The wallet is read in two sections — the cards you hold, then the
+    // programs — and each program run is one alphabetical column, because a
+    // program is looked for by what it is and not by the day it was saved. A
+    // run with nothing in it draws no heading.
     const filed=new Map(WALLET_RUNS.map(run=>[run.key,[]]));
     for(const e of loose)filed.get(walletRun(e)).push(e);
-    const rows=WALLET_RUNS.flatMap(run=>{
+    const ordered=[WALLET_RUNS.find(run=>run.key==='cards'),...WALLET_RUNS.filter(run=>run.key!=='cards')];
+    const rows=ordered.flatMap(run=>{
       const inRun=run.key==='cards'?cardRows
         :filed.get(run.key).sort((a,b)=>titleOf(a).localeCompare(titleOf(b))).map(e=>row(e));
       return inRun.length?[RecordGroup(run.title,inRun)]:[];
     });
     $('rewards-list').replaceChildren(...(rows.length?rows:emptyState()));
     const picker=$('reward-card'),chosen=picker.value;
-    picker.replaceChildren(Option('Not a card benefit',''),...cards.map(card=>Option(card.name,card.id)));
-    picker.value=cards.some(card=>card.id===chosen)?chosen:'';
-    const next=nextActions(entries.filter(e=>!e.deleting&&!e.conflict));
-    // What to do, what it is about, and the figure it is about, on the one
-    // line the wallet below it is read in.
-    $('rewards-actions').replaceChildren(...next.map(e=>RecordRow({title:e.reason,meta:titleOf(e),
-      figure:e.remaining?`${e.remaining} left`:figureOf(e),
-      actions:[rowAction(EDIT_GLYPH,`Review ${e.name}`,()=>edit(e)),
-        ...(siteOf(e)?[RowLink(OPEN_GLYPH,`Open the site for ${e.name}`,siteOf(e))]:[])]})));
-    $('rewards-actions').closest('section').hidden=!next.length;
+    picker.replaceChildren(Option('Not a card benefit',''),...cardEntries.map(card=>Option(card.name,card.id)));
+    picker.value=cardEntries.some(card=>card.id===chosen)?chosen:'';
     for(const key of fields)$(`reward-${key}`).disabled=busy||!loaded;
     for(const key of ['number','expiry'])$(`reward-secret-${key}`).disabled=busy||!loaded||vaultBusy;
     $('reward-save').disabled=busy||!loaded;$('reward-cancel').disabled=busy;
@@ -552,14 +712,10 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('reward-card-find').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     // The wallet syncs on its own, so the title carries no Refresh. A wallet
     // that never loaded is the one case with something to press.
-    // Offered only while the wallet holds no program at all: once the directory
-    // is in, pruning it is the work, and an Add that re-adds what was just
-    // deleted would be the loudest thing on the screen.
-    const holdsPrograms=entries.some(e=>e.kind==='balance'&&!e.deleting);
-    $('wallet-actions').replaceChildren(...(loaded&&!holdsPrograms
-      ?[action('Add the points programs',addDirectory,'secondary')]:[]));
+    $('wallet-actions').replaceChildren();
     $('rewards-connection').replaceChildren(...(loaded?[]:[connectAction()]));
     for(const node of $('balance-panel').querySelectorAll('button'))node.disabled=busy||!loaded;
+    renderCoverage();renderPoints();renderForYou();
   }
   async function run(operation){if(busy)return false;busy=true;const current=++generation;render();try{const token=await credentials.get();if(!token)throw Error('Open Settings to connect this device.');if(activeToken&&activeToken!==token){clear();throw Error('Connection changed. This wallet is reloading for the new connection.');}activeToken=token;const result=await operation(token);if(current!==generation)return false;entries=result.records;loaded=true;syncFailed=false;status(result.syncMessage||'','alert');return true;}catch(error){if(current!==generation)return false;syncFailed=true;status(error.message,'error');setStatus($('reward-form-status'),error.message,'error');return false;}finally{busy=false;render();renderVault();}}
   async function save(entry,method='PUT'){
@@ -568,8 +724,17 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     return success;
   }
   async function resolve(id,choice){if(await run(token=>offline.resolve(token,id,choice)))onChanged();}
-  async function refresh({quiet=false}={}){if(busy)return;if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…','progress');await run(token=>offline.request(token,'/v1/rewards'));await connectionList();await loadPrograms();}
-  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=[];catalogs=[];balances=null;credits=null;rates=null;benefits=null;held=[];connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');render();renderVault();renderPrograms();renderBalances();}
+  async function refresh({quiet=false}={}){
+    if(busy)return;
+    if(!quiet)status(loaded?'Checking for changes…':'Loading rewards…','progress');
+    // The cards and the wallet's records are read with the wallet, before it
+    // is drawn, so the first drawing already knows what has rates and what
+    // was dismissed.
+    await run(async token=>{const result=await offline.request(token,'/v1/rewards');await Promise.all([loadCards(token),loadRecords(token)]);return result;});
+    await connectionList();await loadPrograms();
+    settleView();
+  }
+  function clear(){generation++;entries=[];editing=null;loaded=false;activeToken='';connectionsFor='';found=[];catalogs=[];balances=null;credits=null;rates=null;benefits=null;held=[];records=[];expanded=false;valuing='';chosenView=false;connections.forget();forget();vault.lock();clearForm();discardFound();status('Open Settings to connect this device.');payTool?.clear?.();ratesTool?.clear?.();render();renderVault();renderPrograms();renderBalances();tabs.select('wallet');}
   // Whether a connection exists at all is the only thing worth saying, and it
   // is checked once per connected device rather than on every automatic sync.
   async function connectionList(){
@@ -603,12 +768,12 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // six times is six presses again. Those cards are named at the end and left
   // to the intake, which is where choosing between products belongs.
   async function sweepCards(){
-    const cards=entries.filter(entry=>entry.kind==='card'&&!entry.deleting);
-    if(!cards.length)throw Error('No saved cards to look up yet. Name one below and it will be researched as it is added.');
+    const cardEntries=entries.filter(entry=>entry.kind==='card'&&!entry.deleting);
+    if(!cardEntries.length)throw Error('No saved cards to look up yet. Name one below and it will be researched as it is added.');
     const {token,connection}=await lookupReady();
     const results=[],asked=[],missed=[];
-    for(const [index,card] of cards.entries()){
-      cardStatus(`Looking up ${card.name} · ${index+1} of ${cards.length}…`,'progress');
+    for(const [index,card] of cardEntries.entries()){
+      cardStatus(`Looking up ${card.name} · ${index+1} of ${cardEntries.length}…`,'progress');
       // One card that cannot be researched is not the end of the sweep. An
       // invitation-only card whose issuer publishes nothing, a name research
       // cannot place, a request that timed out: each of those is one card, and
@@ -640,7 +805,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       .filter(Boolean).join(' ');
     cardStatus([total
       ?`Found ${total} benefit${total===1?'':'s'} your wallet does not have. Review them, then save.`
-      :`Nothing new for ${cards.length===1?'that card':'those cards'}.`,named].filter(Boolean).join(' '),
+      :`Nothing new for ${cardEntries.length===1?'that card':'those cards'}.`,named].filter(Boolean).join(' '),
       total?'success':'alert');
   }
   async function researchCard(name){
@@ -687,10 +852,10 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
         saved++;
       }
     }
-    const cards=found.length,only=cards===1?found[0].card.name:'';
+    const count=found.length,only=count===1?found[0].card.name:'';
     discardFound();$('reward-card-name').value='';
     cardStatus(only?`Saved ${only} and ${saved} benefit${saved===1?'':'s'}.`
-      :`Saved ${saved} benefit${saved===1?'':'s'} across ${cards} cards.`,'success');
+      :`Saved ${saved} benefit${saved===1?'':'s'} across ${count} cards.`,'success');
   }
   async function cardRun(operation){
     if(busy)return;
@@ -722,6 +887,15 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const entry=validateReward({...base,...await protectedValues(base.id)},base.updatedAt);
     if(await save({...entry,revision:editing?.revision??null})){clearForm();$('reward-editor').open=false;}
   }catch(error){setStatus($('reward-form-status'),reason(error),'error');}});
+  // A view chosen by the owner is remembered, and Pay is built on its first
+  // opening.
+  tabs.addEventListener('click',event=>{
+    const button=event.target.closest?.('[role=tab]');
+    if(!button)return;
+    const key=REWARDS_VIEWS.find(name=>button.id===`rewards-tabs-${name}-tab`);
+    if(!key)return;
+    chosenView=true;remember(key);opened(key);
+  });
   clearForm();render();renderVault();renderPrograms();renderBalances();
   const reconnect=()=>{if(!$('reward-editor').open)refresh({quiet:true});};
   window.addEventListener('online',reconnect);
@@ -742,7 +916,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   const watch=setInterval(()=>{if(vault.unlocked()!==vaultOpen){forget();renderVault();render();renderSecret();}},1000);
   // Keeping the lock state honest must not keep a host process alive.
   watch?.unref?.();
-  return {refresh,clear,
+  return {refresh,clear,view,
     // The tab beside the panel, as the host already knows it. Leaving a
     // program's page takes the reading with it: a figure read off one program's
     // site has nothing to say beside another's.

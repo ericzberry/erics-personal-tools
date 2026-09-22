@@ -36,9 +36,9 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `sidepanel.html` | `src/app.js` | The side panel shell; mounts views, then navigation and feature controllers |
 | `settings.html` | `src/settings-page.js` | Connections, credentials, AI settings |
 | `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
-| `rewards.html` | `src/rewards.js` | Rewards & benefits |
-| `cards.html` | `src/cards-page.js` | Best card |
-| `advisor.html` | `src/advisor-page.js` | Purchase advisor: one purchase, and what to pay with once Best card's rates, the wallet's credits and the programs' offers are put together |
+| `rewards.html` | `src/rewards.js` | Rewards & benefits: For you, Wallet, Pay and Points in one tool; `?view=pay` opens on a view |
+| `cards.html` | `src/cards-page.js` | Alias: sends its reader to `rewards.html?view=pay` (Best card is the Pay view's **Card rates**) |
+| `advisor.html` | `src/advisor-page.js` | Alias: sends its reader to `rewards.html?view=pay` (the purchase advisor is the Pay view) |
 | `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation, entities, private positions, houses, institutions, and the sources every total rests on — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
@@ -94,7 +94,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 ### `src/` shared core (used by more than one host or feature)
 
 - **Navigation / registry** — `capabilities.js` (the capability registry both hosts
-  read; every entry needs an `icon`), `navigation.js`, `capability-links.js`,
+  read; every entry needs an `icon`; `CAPABILITY_ALIASES` maps the retired
+  `cards` and `advisor` ids to Rewards' Pay view, and `navigation.js` hands
+  the requested view to the tool on arrival), `navigation.js`, `capability-links.js`,
   `page-offers.js` (which capabilities have something for the page in front of
   the owner — one entry per source, and no page is read to answer it) and
   `page-strip.js` (the controller for the row under the header that offers
@@ -146,7 +148,23 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   issuer prints beside it, and `walletCards` — the cards the Rewards wallet
   already says the owner holds, matched against the cards saved here),
   `rewards-data.js`/`rewards-offline.js`,
-  `rewards-sync.js`, `balance-data.js` (points and miles: what a page reading
+  `rewards-sync.js`, `wallet-data.js`/`wallet-offline.js` (one identity per
+  thing in the wallet: `cardAccounts` — a product is not an account, two
+  accounts of one product share its terms and are told apart by their digits —
+  `matchAccount` and `applyBindings` for which account a page's card name is,
+  `accountCoverage`/`walletGaps` for what has been read per account and how
+  fresh it is, and `validateWalletRecord` for the wallet's records about
+  itself — bindings, opportunity resolutions, per-currency valuations, goals —
+  kept in `/v1/wallet`; shared with mobile and the Worker),
+  `reward-opportunities.js` (`rewardOpportunities`: the one deterministic
+  projection of what is worth doing — access to set up, credits closing, data
+  the wallet lacks, a catalogue to check or browse — in priority buckets with
+  an explainable score, capped at five with two per source, and resolved
+  against stable keys; read by For you and Needs attention),
+  `points-data.js` (`pointsAccounts`: one row per balance with the cards that
+  earn into it and the owner's planning value per point, never summed across
+  currencies; `redemptionValue` for an actual cash-versus-award pair),
+  `balance-data.js` (points and miles: what a page reading
   may become, which saved balance it updates, and the per-unit totals the
   wallet opens with — shared with mobile and the Worker),
   `credit-data.js` (the other halves of that reading: what an issuer's own
@@ -249,9 +267,16 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   in-page reader that lifts the published offer catalogue off the program's own
   pages, and the watcher `background.js` registers, so a visit updates the
   catalogue whether or not the panel is open.
-- **Capability controllers** — `travel.js`, `cards.js`, `purchase-advisor.js`
+- **Capability controllers** — `travel.js`, `cards.js` (the card terms;
+  `purchase:false` mounts it without its own purchase box, which is how
+  Rewards' Pay view carries it under **Card rates**), `purchase-advisor.js`
   (reads the cards, rewards and programs stores and writes to none; its
-  arithmetic is `purchase-data.js`, shared with mobile), `rewards-tool.js`,
+  arithmetic is `purchase-data.js`, shared with mobile — supported figures
+  apart from what could hold after a step, expired offers left out, two
+  accounts of one product as two plans, a points card's break-even value;
+  `embedded:true` mounts it as the Pay view), `rewards-tool.js` (the four
+  views; the host hands it `mountPay`/`mountRates` to build the Pay view's
+  tools on first opening),
   `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `sizes.js`, `replacements.js`, `capture.js`, `taxes.js`, `data-library.js`.
 - **Restaurants** — `restaurants.js` (the shared controller: form, interpretation,
   research, ranking, the bounded availability run, revisions, stop and reopen;
@@ -334,7 +359,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   (`restaurants` takes a legacy `{search}` or a v2 `{intent}`; the v2 path runs
   `src/restaurants.js` discovery and then `src/source-fetch.js`, which reads each
   cited source and marks claims supported only where the page says so),
-  `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
+  `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/wallet[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`, `/v1/replacements[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`,
   `/v1/storage`, `/v1/backup[/files|/run|/restore]`, `/v1/weather`. `/v1/push/key` is public like the release route,
@@ -361,7 +386,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   benefits it carries, and the reading that turns a loyalty page into a points
   balance),
   `src/programs.js` (one catalogue document per reward program, folded into what
-  is stored on every write), `src/releases.js`, `src/ai-settings.js`. `src/drive.js` is not a record store: it holds the
+  is stored on every write), `src/wallet.js` (the wallet's records about
+  itself over `wallet_records` through the generic store, plus
+  `/v1/wallet/capabilities`), `src/releases.js`, `src/ai-settings.js`. `src/drive.js` is not a record store: it holds the
   owner's Google Drive connection and files tax documents through it, and
   `src/taxes.js` is the reading that names one.
   `src/voice.js` is the other thing that Google connection is for: it reads a
@@ -404,6 +431,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `finance_properties`, `finance_valuations`, `finance_flows`, `finance_imports`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
   `replacements-schema.sql` (`replacement_records`),
+  `wallet-schema.sql` (`wallet_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `voice-schema.sql` (`voice_profiles`),

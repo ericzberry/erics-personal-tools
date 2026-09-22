@@ -2,23 +2,36 @@ import * as UI from './ui.js';
 import {CADENCE_LABELS} from '../rewards-data.js';
 import {programName} from '../balance-data.js';
 import {formatRate} from '../rate-data.js';
-const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label,Tabs}=UI;
+const {Stack,Note,Notice,Button,ActionGroup,Disclosure,ToolTitle,Section,Strong,Link,Label,Tabs,FormField,Option}=UI;
 const CADENCE_OPTIONS=[{text:'Does not reset',value:''},...Object.entries(CADENCE_LABELS).map(([value,text])=>({text,value}))];
+// The four questions the wallet answers, one tab each, in the order they are
+// asked: what is worth doing, what is held, what to pay with, what the points
+// can do. A tab is in the row only while it has something to answer — a new
+// wallet opens on Wallet alone — and the row's label is the heading for what
+// is under it, so nothing inside repeats it.
+export const REWARDS_VIEWS=Object.freeze(['foryou','wallet','pay','points']);
 export function RewardsView(){
   const field=(key,label,kind='text',options,placeholder)=>UI.FormField({id:`reward-${key}`,label,kind,options,placeholder});
-  // Three things, and they are not the same question: what is on the page in
-  // front of you, what you hold, and what the programs are currently offering.
-  // Run down one page, a catalogue of a hundred offers sat between the wallet
-  // and the drawer that adds to it. Each is a tab now, and the tab's label is
-  // its heading.
   return Stack([ToolTitle('Rewards & benefits',{actionsId:'rewards-connection',statusId:'rewards-status'}),
     Tabs({id:'rewards-tabs',label:'Rewards',items:[
-      {key:'page',label:'This page',hidden:true,content:
-        Stack([Stack([],{id:'balance-body'}),Notice('',{id:'balance-status'})],{id:'balance-panel',className:'balance-panel'})},
+      // What is worth doing: the short ranked list, then the catalogues to
+      // browse behind one closed line rather than a tab of their own.
+      {key:'foryou',label:'For you',hidden:true,content:[
+        Stack([],{id:'rewards-foryou',className:'rewards-foryou'}),
+        ActionGroup([],{id:'rewards-foryou-actions',compact:true}),
+        Disclosure('Browse offers',[
+          UI.FormField({id:'programs-search',label:'Find an offer',kind:'search',placeholder:'Airline, hotel, merchant…'}),
+          Stack([],{id:'programs-filter'}),
+          Notice('',{id:'programs-status'}),
+          Stack([],{id:'programs-list',className:'program-offers'})
+        ],{id:'programs-browse',hidden:true})]},
       {key:'wallet',label:'Wallet',content:[
-        UI.SettingsGroup({title:'Next actions',level:2,children:[Stack([],{id:'rewards-actions'})]}),
+        // The page beside the panel, when it is one a reading can be taken
+        // off: the import review sits at the head of the wallet it fills.
+        Stack([Stack([],{id:'balance-body'}),Notice('',{id:'balance-status'})],{id:'balance-panel',className:'balance-panel',hidden:true}),
+        UI.SettingsGroup({title:'Update wallet',level:2,children:[Notice('',{id:'rewards-coverage-status'}),Stack([],{id:'rewards-coverage'})],id:'rewards-coverage-group',hidden:true}),
         UI.SettingsGroup({actionsId:'wallet-actions',children:[
-          UI.FormField({id:'rewards-search',label:'Find a program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
+          UI.FormField({id:'rewards-search',label:'Find a card, program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
           Stack([],{id:'rewards-list'})]}),
         UI.SettingsGroup({title:'Protected values',level:2,children:[
           Notice('',{id:'vault-status'}),
@@ -33,8 +46,8 @@ export function RewardsView(){
         ]}),
         // Naming a card is the whole intake: research reads the issuer's current
         // pages and brings back the card and every benefit it carries, which is work
-        // no owner finishes by hand.
-        Disclosure('Add a card you hold',[
+        // no owner finishes by hand. The same box takes a program.
+        Disclosure('Add a card or program',[
           UI.Form([
             UI.FormField({id:'reward-card-name',label:'Which card do you have?',placeholder:'amex platinum, blue cash, jp morgan reserve'}),
             // Two ways in, one row: a card the wallet has never heard of is
@@ -65,15 +78,14 @@ export function RewardsView(){
           ],{id:'reward-form',className:'form-stack'})
         ],{id:'reward-editor'})
       ]},
-      // What the programs publish is its own reading, with its own search: the
-      // wallet's filter narrows what you hold, and this one narrows what is on
-      // offer. The tab is there only while a catalogue has been read.
-      {key:'offers',label:'Offers',hidden:true,content:
-        UI.SettingsGroup({children:[
-          UI.FormField({id:'programs-search',label:'Find an offer',kind:'search',placeholder:'Airline, hotel, merchant…'}),
-          Stack([],{id:'programs-filter'}),
-          Notice('',{id:'programs-status'}),
-          Stack([],{id:'programs-list',className:'program-offers'})]})}
+      // One purchase, one answer, with the card terms it rests on behind one
+      // closed line. Both are mounted by the controller when the tab is
+      // first opened, because each is a tool of its own.
+      {key:'pay',label:'Pay',hidden:true,content:[
+        Stack([],{id:'rewards-pay'}),
+        Disclosure('Card rates',[Stack([],{id:'rewards-rates'})],{id:'rewards-rates-drawer'})]},
+      {key:'points',label:'Points',hidden:true,content:[
+        Stack([],{id:'rewards-points'})]}
     ]})
   ],{className:'travel-wallet rewards-wallet'});
 }
@@ -133,8 +145,10 @@ export function readingSummary({rows=[],credits=[],rates=[],benefits=[]}={}){
 // site. Before anything is read it is one action; afterwards it is what came
 // off the page, because every figure is the owner's to check before it is
 // saved. `programs` is every currency that site prints, which is more than one
-// wherever an issuer runs a currency per kind of card.
-export function BalancePanel({site,programs=[],rows=[],credits=[],rates=[],benefits=[],disabled=false,onRead,onSave,onDiscard}){
+// wherever an issuer runs a currency per kind of card. `cards` are the owner's
+// saved cards, offered where a row cannot tell which of them it belongs to,
+// and `onChoose` keeps the answer.
+export function BalancePanel({site,programs=[],rows=[],credits=[],rates=[],benefits=[],cards=[],disabled=false,onRead,onSave,onDiscard,onChoose=()=>{}}){
   const action=(label,variant,handler)=>{
     const node=Button(label,{variant,size:'compact',disabled});
     node.addEventListener('click',handler);
@@ -165,20 +179,33 @@ export function BalancePanel({site,programs=[],rows=[],credits=[],rates=[],benef
   // page's own issuer still names itself in full.
   const rowLabel=row=>programName(row.source,row.name)===title?''
     :row.source===site.source?row.name:programName(row.source,row.name);
+  const choose=(row,index)=>AccountChoice(row,index,cards,onChoose);
   // The rows above already say what would be saved and that nothing is yet, so
   // the action is one stable verb rather than a sentence that grows a clause
   // per kind of row the page turned out to state.
   return Section([heading,...rows.map(row=>BalanceRow(row,rowLabel(row))),
-    ...credits.map(CreditRow),...rates.map(RateRow),...benefits.map(PageBenefitRow),ActionGroup([
+    ...credits.map((row,index)=>CreditRow(row,choose(row,`credit-${index}`))),...rates.map(RateRow),
+    ...benefits.map((row,index)=>PageBenefitRow(row,choose(row,`benefit-${index}`))),ActionGroup([
     action('Save','primary',onSave),
     action('Discard','subtle',onDiscard)
   ],{compact:true})],{className:'record-row'});
+}
+// A row that fits more than one of the owner's cards asks which, once. The
+// answer is kept as a binding, so the next reading of the same page name
+// files itself.
+function AccountChoice(row,index,cards,onChoose){
+  if(!row.ambiguous||!cards.length)return null;
+  const field=FormField({id:`snapshot-account-${index}`,label:'Which card is this on?',kind:'select',
+    options:[{text:'Choose the card',value:''},...cards.map(card=>({text:card.name,value:card.id}))]});
+  field.querySelector('select').addEventListener('change',event=>onChoose(row,event.target.value));
+  return field;
 }
 // Where a read row would land, and how sure the reading was. A row that would
 // land nowhere says so here rather than being quietly filed under a card it
 // might not belong to.
 const landing=(row,noun)=>[row.match?`Updates ${row.match.name}`:row.holder?`New ${noun} on ${row.holder.name}`
-  :row.ambiguous?'Several of your cards match — saves without one':row.card?`New ${noun} · ${row.card}`:`New ${noun}`,
+  :row.ambiguous?'Several of your cards match — choose one':row.card?`New ${noun} · ${row.card}`:`New ${noun}`,
+  row.bound?'account kept from last time':'',
   row.confidence==='high'?'':`${row.confidence} confidence`].filter(Boolean).join(' · ');
 // What the card earns, in the page's own wording, and the rule it would become.
 // A rate with no saved card to land on is shown all the same: the owner can see
@@ -200,17 +227,18 @@ function RateRow(row){
 // elite status, an included subscription. What it is worth is a sentence rather
 // than a figure, so it reads down the line the way a researched benefit does
 // instead of being squeezed into the column a balance's number sits in.
-function PageBenefitRow(row){
+function PageBenefitRow(row,choice=null){
   return Stack([
     Strong(row.name),
     Note([...benefitLine(row).split(' · '),landing(row,row.kind==='membership'?'membership':'benefit')].filter(Boolean).join(' · ')),
-    ...(row.notes?[Note(row.notes)]:[])
-  ],{className:'snapshot-row'});
+    ...(row.notes?[Note(row.notes)]:[]),
+    choice
+  ].filter(Boolean),{className:'snapshot-row'});
 }
 // A credit the issuer's own tracker states, and where it would land. What is
 // left in the period is the figure, because it is the one that decides whether
 // the owner does anything before it resets.
-function CreditRow(row){
+function CreditRow(row,choice=null){
   // Which card it belongs to is said once, in the line that says where the
   // credit would land. Carried on the name as well it was the longest thing in
   // the panel, repeated down every row of a card that has a dozen of them.
@@ -218,8 +246,9 @@ function CreditRow(row){
   return Stack([
     Stack([Label(row.name),Strong(`${row.left} left`)],{className:'snapshot-figure'}),
     Note([CADENCE_LABELS[row.cadence]||'',target].filter(Boolean).join(' · ')),
-    ...(row.notes?[Note(row.notes)]:[])
-  ],{className:'snapshot-row'});
+    ...(row.notes?[Note(row.notes)]:[]),
+    choice
+  ].filter(Boolean),{className:'snapshot-row'});
 }
 // A read balance names the entry it would land on, and nothing more is implied
 // until it is saved.
@@ -232,3 +261,34 @@ function BalanceRow(row,label=''){
     ...(row.notes?[Note(row.notes)]:[])
   ],{className:'snapshot-row'});
 }
+// One opportunity, one line: what to do, why now, on which card or program,
+// and one primary next step at the end of the line. What decides it — done,
+// not useful — are the row's own verbs; the rest of the resolutions wait
+// under the row until asked for.
+export function OpportunityRow(item,{actions=[],extra=[]}={}){
+  return UI.RecordRow({title:item.title,meta:[item.source,item.hint?`•••• ${item.hint}`:''].filter(Boolean).join(' · '),
+    figure:item.figure||'',detail:item.why,actions,extra});
+}
+// A points balance: the program, the figure, what earns into it and what a
+// point is worth on the owner's planning value — a scenario, said as one.
+export function PointsRow(row,{actions=[],extra=[]}={}){
+  const earners=row.earners.length?`Earned by ${row.earners.map(account=>`${account.name}${account.hint?` •••• ${account.hint}`:''}`).join(', ')}`:'';
+  const worth=row.unit==='dollars'?''
+    :row.valuation?`${row.valuation.cents}¢ a point · ${row.valuation.source}${row.scenarioCents!==null?` · about ${UI.money(row.scenarioCents/100)} as a scenario`:''}`
+    :row.amount!==null?'Point value not set':'';
+  // The brand and the figure share the line; everything else — the currency's
+  // full name, when it was read, what earns into it, what a point is worth —
+  // goes on the line under it, where it can wrap at the narrowest width.
+  return UI.RecordRow({title:row.label,figure:row.amount===null?'':row.value,
+    detail:[row.name!==row.label?row.name:'',row.observedAt?`Read ${row.observedAt}${row.stale?' · out of date':''}`:'',earners,worth].filter(Boolean).join(' · '),actions,extra});
+}
+// The small form a valuation is set with, under the balance it values.
+export function ValuationForm(row,{onSave,onCancel}){
+  const field=FormField({id:`points-cents-${row.id}`,label:`What a ${row.label} point is worth to you (cents)`,kind:'number',min:0.1,max:100,step:0.01});
+  const input=field.querySelector('input');
+  if(row.valuation?.saved)input.value=String(row.valuation.cents);
+  const save=Button('Save value',{variant:'primary',size:'compact'}),cancel=Button('Cancel',{variant:'secondary',size:'compact'});
+  save.addEventListener('click',()=>onSave(input.value));cancel.addEventListener('click',onCancel);
+  return Stack([field,ActionGroup([save,cancel],{compact:true})],{className:'form-stack'});
+}
+export {Option};

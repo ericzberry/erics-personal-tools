@@ -1,10 +1,16 @@
 # Purchase advisor
 
-Choose **Purchase advisor** from Tools in the extension or the unlocked mobile
-app. Say what you are buying — `I'm buying a laptop from Dell for $2,000`,
-`uber to the airport`, `groceries` — and select Recommend. One block answers:
-the card to pay with, what the purchase comes to in rewards, the lines that
-make up that figure, and what has to hold for each of them.
+The purchase advisor is the **Pay** view of [Rewards & benefits](REWARDS.md),
+on the extension and the phone. `advisor.html` and the `advisor` capability id
+stay as ways in and open Rewards on Pay. Say what you are buying — `I'm buying
+a laptop from Dell for $2,000`, `uber to the airport`, `groceries` — and
+select Compare. One block answers: the account to pay with, what the purchase
+comes to in rewards today, the lines that make up that figure, and what has to
+hold for each of them. What could hold after a step is kept apart from that.
+
+Two accounts of one product are two plans: each carries its own credits and
+the digits that tell it apart, so **Pay with** names the account the credit is
+on, not only the product.
 
 Three tools already know one part of the answer each, and this is the screen
 where they are read together:
@@ -30,17 +36,34 @@ Best card, and an unconfirmed one keeps that bonus out.
 
 ## The recommendation
 
-**Pay with** the card that comes to the most, then the figure: `$210.00 back`
-with an amount, or the effective rate without one. Under it, one line per
-thing the card gives here, each with its money down the right edge so the
-figure above reads as their sum:
+**Pay with** the account that comes to the most on what holds today, then the
+figure: `$210.00 back` with an amount, or the effective rate without one.
+Under it, one line per thing the card gives here now, each with its money down
+the right edge so the figure above reads as their sum:
 
-- the rate — `3% Online shopping bonus` or `2% base rate` — and what it earns;
-- each credit the wallet files under this card at this merchant, with what is
-  left of it, worth at most the purchase, because spending twice does not earn
-  a monthly credit twice;
-- each offer on this card at this merchant, in the program's own words, with
-  what it comes to.
+- the rate — `3% Online shopping bonus` or `2% base rate` — and what it earns,
+  with points said in points and the planning value that turned them into
+  money;
+- each credit the wallet files under this card at this merchant whose tracker
+  has been read, with what is left of it, worth at most the purchase, because
+  spending twice does not earn a monthly credit twice;
+- each offer already on this card at this merchant with its minimum met, in
+  the program's own words, with what it comes to.
+
+**Could be better after…** holds what is not in that figure and could be after
+one step: an offer not yet added to the card, a credit still to activate, a
+tracker never read. Where the step has a known figure behind it the block says
+what the card would come to; a ceiling the merchant decides, a minimum that
+cannot be checked without an amount, or a tracker never read is named as a
+step and adds nothing. An offer whose stated date has passed adds nothing
+anywhere and is counted as left out. A points card's block says where its
+figure stops holding: the value a point would have to carry to beat the best
+cash return. Cards within $0.50, or a tenth of a point of rate, are called
+effectively tied rather than ranked on a difference this cannot support.
+
+Coverage is named: a card in the wallet with no earning terms, or whose name
+fits more than one saved card, is listed as not compared and able to change
+the answer, so **Pay with** is never "best" over cards it could not evaluate.
 
 **Conditions** follow, one line each, only when there are any: the rule's own
 requirement, the purchase method it needs, the date it runs to, the eligible
@@ -70,8 +93,10 @@ get $100 back` is $100 once $599 is met, `10% off` is a tenth of the amount,
 `up to $50` is a ceiling and is marked as the merchant's to decide. A sentence
 that states no figure — `3 additional points per dollar` — is listed in its
 words and added to nothing. An issuer's offer counts toward the card it is on
-and says it has to be added first unless the issuer's own badge says it
-already is.
+only once the issuer's own badge says it is added; until then it is what the
+card could come to, never part of what it comes to. Its date is read out of
+what the program printed beside it — `Expires 10/15/2026`, `Ends Sep 30,
+2026` — and an offer past that date is left out.
 
 Without an amount the rate decides, and a credit or a fixed offer is listed
 beside it rather than added to a percentage; a minimum spend then cannot be
@@ -84,7 +109,8 @@ chooses nothing. The estimate carries Best card's limits — the issuer decides
 the merchant category, and fees, interest and signup bonuses are outside it —
 and adds the offers' own: the program's sentence is what is read, and an offer
 worded in a way this cannot read is listed rather than counted. An offer's
-dates are shown as the program states them, not checked against today.
+dates are shown as the program states them; only a date this can read is
+checked against today, and a date it cannot read is a date to check.
 
 ## Private data and offline behavior
 

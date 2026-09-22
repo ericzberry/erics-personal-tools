@@ -33,9 +33,9 @@ test('the collapsed menu is a hamburger naming the open screen',()=>{
   const summary=nav.querySelector('#navigation-toggle');
   assert.equal(summary.getAttribute('aria-label'),'Tools menu');
   assert.ok(summary.querySelector('svg.glyph'),'the toggle renders a hamburger icon');
-  nav.querySelector('#navigate-cards').click();
+  nav.querySelector('#navigate-gifts').click();
   assert.equal(summary.hidden,false);
-  assert.equal(nav.querySelector('#current-function').textContent,'Best card');
+  assert.equal(nav.querySelector('#current-function').textContent,'Gift ideas');
 });
 
 test('tools are alphabetical inside their section, with Fantasy items under Misc',()=>{
@@ -64,13 +64,13 @@ test('every capability ships an icon so the launcher can render it',()=>{
 
 test('opening a tool collapses the icons behind the hamburger, and Home brings them back',()=>{
   const {nav,screens}=setup();
-  nav.querySelector('#navigate-cards').click();
-  assert.equal(screens.at(-1),'cards');
+  nav.querySelector('#navigate-gifts').click();
+  assert.equal(screens.at(-1),'gifts');
   assert.equal(nav.open,false);
   assert.equal(nav.querySelector('#navigation-toggle').hidden,false);
-  assert.equal(nav.querySelector('#current-function').textContent,'Best card');
+  assert.equal(nav.querySelector('#current-function').textContent,'Gift ideas');
   assert.equal(nav.querySelectorAll('[aria-current="page"]').length,1);
-  assert.equal(nav.querySelector('[aria-current="page"]').id,'navigate-cards');
+  assert.equal(nav.querySelector('[aria-current="page"]').id,'navigate-gifts');
   // Home is only reachable from inside a screen, so the menu now offers it.
   assert.equal(nav.querySelector('#navigate-home').hidden,false);
   nav.querySelector('#navigate-home').click();
@@ -87,7 +87,7 @@ test('Settings is a screen of its own, reached only from the menu',()=>{
   assert.ok(settings);
   assert.equal(settings.getAttribute('aria-controls'),'capability-settings');
   assert.ok(settings.classList.contains('launcher-tile--settings'));
-  nav.querySelector('#navigate-cards').click();
+  nav.querySelector('#navigate-gifts').click();
   settings.click();
   assert.equal(screens.at(-1),SETTINGS_SCREEN);
   // Settings takes the screen, so no tool stays selected behind it.

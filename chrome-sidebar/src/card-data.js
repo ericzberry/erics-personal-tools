@@ -153,6 +153,9 @@ export const key=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' 
 // card, so matching on those words matches every card the owner holds.
 const COMMON=new Set(['card','cards','american','express','from','the','and','with','credit','rewards','preferred','account']);
 const words=value=>key(value).split(' ').filter(word=>word.length>2&&!COMMON.has(word));
+// The words that tell one card from another, for anything else that has to
+// score a name the way this file does.
+export const cardWords=words;
 // The four digits a page prints beside a card's name — "(-61007)", "•••• 72005".
 // Only a run long enough to be an account's tail counts, and only the last four
 // of it, because that is the part a card is known by wherever it is written down.
@@ -226,8 +229,14 @@ export function walletCards(entries=[],cards=[]){
   for(const row of found){
     const product=cardProductName(row.name);
     // The same card named by the wallet and named again by the page a credit
-    // was read from is one card, and the wallet's own name for it wins.
-    if(!product||held.some(kept=>coversCard(kept.product,product)||coversCard(product,kept.product)||(kept.digits&&kept.digits===row.digits)))continue;
+    // was read from is one card, and the wallet's own name for it wins. Two
+    // cards of the same product are not one card: an owner can hold two
+    // Platinums, and the account digits are the one thing that tells them
+    // apart, so a row whose known digits differ from the kept row's is kept
+    // as an account of its own. Missing digits decide nothing either way.
+    const same=kept=>(kept.digits&&kept.digits===row.digits)
+      ||((coversCard(kept.product,product)||coversCard(product,kept.product))&&!(kept.digits&&row.digits&&kept.digits!==row.digits));
+    if(!product||held.some(same))continue;
     held.push({...row,product});
   }
   return held.map(row=>{

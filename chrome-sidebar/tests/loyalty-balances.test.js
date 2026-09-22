@@ -276,3 +276,31 @@ test('a saved balance finds its program by the name it carries',()=>{
   assert.equal(loyaltyProgramNamed('Priority Pass Select','Amex Platinum'),null);
   assert.equal(loyaltyProgramNamed('',''),null);
 });
+
+// W05. With only one American Express balance in the wallet — the Membership
+// Rewards points — a Reward Dollars reading used to land on it: a source with
+// one figure matched the one entry that shared the issuer's name, and cash
+// back was saved over the points. An issuer's name is not a currency.
+test('a cash reading never lands on the only points entry an issuer has',()=>{
+  const entries=[balance('Membership Rewards','American Express','13,674 points')];
+  const amex=loyaltySitePrograms(loyaltySite('https://global.americanexpress.com/'));
+  const [cash]=matchBalances(parseBalanceReading({balances:[
+    {program:'Reward Dollars',source:'American Express',amount:'125.49',unit:'dollars'}
+  ]},amex),entries);
+  assert.equal(cash.match,null,'a new balance, not an overwrite of the points');
+  assert.equal(cash.ambiguous,false);
+  // The same reading of the points program alone still updates the points.
+  const [points]=matchBalances(parseBalanceReading({balances:[
+    {program:'Membership Rewards',source:'American Express',amount:'14,000',unit:'points'}
+  ]},amex),entries);
+  assert.equal(points.match?.id,'Membership Rewards-id');
+  // A program the owner typed by hand — "Amex points" — is still matched on
+  // the issuer alone when the figure is counted the same way, and an entry
+  // never read states no unit and takes the first reading of either.
+  const typed=[balance('Amex points','American Express','9,000 points')];
+  assert.equal(matchBalances(parseBalanceReading({balances:[{program:'Membership Rewards',source:'American Express',amount:'14,000',unit:'points'}]},amex),typed)[0].match?.id,'Amex points-id');
+  assert.equal(matchBalances(parseBalanceReading({balances:[{program:'Reward Dollars',source:'American Express',amount:'12',unit:'dollars'}]},amex),typed)[0].match,null);
+  const unread=[balance('Reward Dollars','American Express',UNREAD_BALANCE)];
+  assert.equal(matchBalances(parseBalanceReading({balances:[{program:'Reward Dollars',source:'American Express',amount:'12',unit:'dollars'}]},amex),unread)[0].match?.id,'Reward Dollars-id');
+  assert.equal(matchBalances(parseBalanceReading({balances:[{program:'Membership Rewards',source:'American Express',amount:'14,000',unit:'points'}]},amex),unread)[0].match,null,'but not the other currency, which the registry knows is a different program');
+});

@@ -24,9 +24,9 @@ export function resetDate(cadence,now=new Date()){
 // empty on everything else, including every entry saved before a tracker was
 // ever read — which is why it is a field of its own rather than something
 // folded into `value`, where it would overwrite what the card actually gives.
-const FIELDS=['kind','name','source','value','due','state','url','notes','secret','secretHint','card','cadence','remaining'];
+export const REWARD_FIELDS=Object.freeze(['kind','name','source','value','due','state','url','notes','secret','secretHint','card','cadence','remaining']);
 export function validateReward(input,now=new Date().toISOString()){
-  const entry=Object.fromEntries(FIELDS.map(key=>[key,String(input[key]||'').trim()]));
+  const entry=Object.fromEntries(REWARD_FIELDS.map(key=>[key,String(input[key]||'').trim()]));
   if(!entry.name||!entry.source||!entry.value)throw Error('Enter a name, source, and balance or benefit.');
   if(!REWARD_KINDS.includes(entry.kind)||!REWARD_STATES.includes(entry.state))throw Error('Choose a valid entry type and status.');
   if(entry.cadence&&!CADENCES.includes(entry.cadence))throw Error('Choose how often this benefit resets.');

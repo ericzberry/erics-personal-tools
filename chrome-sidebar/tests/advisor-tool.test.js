@@ -61,13 +61,20 @@ test('one sentence becomes one recommendation: the card, the figure, its parts a
   assert.deepEqual(lines,[['3% Online shopping bonus','$60.00'],['Dell credit','$150.00']]);
   assert.match(best.textContent,/\$150 left/);
   assert.doesNotMatch(best.textContent,/Conditions/,'nothing has to hold for the Platinum');
-  assert.match(best.textContent,/Synthetic Everyday Card is next: \$70\.00 less here\./);
-  // The other card, with the offer that is on it and what still has to hold.
+  // The Everyday's offer is not on the card yet, so it is not in the
+  // Everyday's figure: the gap is the whole $170, and what adding the offer
+  // would make of it is said apart from what holds now.
+  assert.match(best.textContent,/Synthetic Everyday Card is next: \$170\.00 less here\./);
+  // Adding the offer would lift the Everyday to $140, still short of the
+  // Platinum's $210, so the answer would not change and the step is said
+  // under the Everyday rather than as something to do.
+  assert.doesNotMatch($('advisor-result').textContent,/Could be better after…/);
+  // The other card, with what holds on it and what still has to.
   const others=h.document.querySelector('.advice-others');
   assert.match(others.textContent,/Synthetic Everyday Card/);
-  assert.match(others.textContent,/\$140\.00/);
-  assert.match(others.textContent,/2% base rate · Dell offer · \$70\.00 less\./);
-  assert.match(others.textContent,/Add the Dell offer to the card first\. Spend \$599\.00 or more\./);
+  assert.match(others.textContent,/\$40\.00/);
+  assert.match(others.textContent,/2% base rate · \$170\.00 less\./);
+  assert.match(others.textContent,/Could be better after: Add the Dell offer to the card first\. Spend \$599\.00 or more\./);
   // Correcting the amount recomputes without asking the model again.
   $('advisor-amount').value='400';
   $('advisor-amount').dispatchEvent(new h.window.Event('input',{bubbles:true}));
@@ -110,7 +117,7 @@ test('nothing saved and no connection each say so, and a disconnect clears the a
   const tool=mountPurchaseAdvisor(h.document.querySelector('main'),{credentials:{get:async()=>token},cards:store([]),wallet:store([]),programs:store([]),remote});
   await tool.ready;
   const $=id=>h.document.getElementById(id);
-  assert.equal($('advisor-status').textContent,'No card has reward rates yet. Add them in Best card.');
+  assert.equal($('advisor-status').textContent,'No card has earning rates yet. Add them under Card rates.');
   tool.clear();
   assert.equal($('advisor-status').textContent,'Connect in Settings to download your cards.');
   assert.equal($('advisor-recommend').disabled,true);

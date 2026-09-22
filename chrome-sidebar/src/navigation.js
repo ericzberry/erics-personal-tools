@@ -1,4 +1,4 @@
-import {AUTO_CAPABILITY,HOME_CAPABILITY,capabilities} from './capabilities.js';
+import {AUTO_CAPABILITY,HOME_CAPABILITY,capabilities,CAPABILITY_ALIASES} from './capabilities.js';
 // Home is chosen like any tool; it just is not one of the registry's entries.
 const destinations=[HOME_CAPABILITY,...capabilities];
 let currentTool='football',selection=AUTO_CAPABILITY.id,settingsOpen=false;
@@ -9,7 +9,7 @@ export function onNavigate(listener){navigated.add(listener);return()=>navigated
 const $=id=>document.getElementById(id);
 function render(){
   const active=selection===AUTO_CAPABILITY.id?currentTool:selection;
-  for(const key of ['football','finance','gmail','home','rewards','taxes','travel','attention','subscriptions','gifts','sizes','replacements','reminders','cards','advisor','personal'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
+  for(const key of ['football','finance','gmail','home','rewards','taxes','travel','attention','subscriptions','gifts','sizes','replacements','reminders','personal'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
   $('settings-tool').hidden=!settingsOpen;
   $('current-function').textContent=settingsOpen?'Settings':selection===AUTO_CAPABILITY.id?AUTO_CAPABILITY.label:destinations.find(item=>item.id===selection)?.label;
   $('open-settings').setAttribute('aria-expanded',String(settingsOpen));
@@ -27,7 +27,15 @@ export const activeCapability=()=>settingsOpen?'settings':selection===AUTO_CAPAB
 function closeNavigation(){ $('app-navigation').open=false; }
 export function showTool(tool){currentTool=tool;render();}
 export function showSettings(open){settingsOpen=open;closeNavigation();render();}
-export function selectCapability(id){selection=id;settingsOpen=false;closeNavigation();render();$('navigation-toggle').focus();}
+// A view a tool was asked for on the way in — Pay, for the old Best card and
+// Purchase advisor ids — waits here until that tool takes it.
+let requestedView='';
+export const takeRequestedView=()=>{const view=requestedView;requestedView='';return view;};
+export function selectCapability(id){
+  const alias=CAPABILITY_ALIASES[id];
+  if(alias){requestedView=alias.view;id=alias.capability;}
+  selection=id;settingsOpen=false;closeNavigation();render();$('navigation-toggle').focus();
+}
 export function showRewards(open){selectCapability(open?'rewards':AUTO_CAPABILITY.id);}
 export function initializeNavigation(){
   for(const item of destinations)if(!item.href)$(`navigate-${item.id}`).addEventListener('click',()=>selectCapability(item.id));

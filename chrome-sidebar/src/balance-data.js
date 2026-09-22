@@ -98,12 +98,25 @@ export function matchBalances(rows=[],entries=[]){
   // nothing does, and what nothing decides is saved as a new balance.
   const perSource=new Map();
   for(const row of rows)perSource.set(key(row.source),(perSource.get(key(row.source))||0)+1);
+  // Matching on the source alone is only ever right within one currency. A
+  // Reward Dollars reading taken beside a wallet that holds only Membership
+  // Rewards used to land on that points entry — the one American Express
+  // balance there was — and overwrite 13,674 points with $125.49. So a
+  // source-only match has to be the same program where the registry knows
+  // both, and counted in the same unit where the entry states one; an entry
+  // never read ("Not read yet") states none and stays eligible.
+  const compatible=(entry,row)=>{
+    const known=loyaltyProgramNamed(entry.name,entry.source),wanted=loyaltyProgramNamed(row.name,row.source);
+    if(known&&wanted&&known.id!==wanted.id)return false;
+    const unit=balanceUnit(entry.value);
+    return !unit||!row.unit||unit===row.unit;
+  };
   return rows.map(row=>{
     const candidates=balances.filter(entry=>!taken.has(entry.id)&&
       (key(entry.name)===key(row.name)||(key(entry.source)===key(row.source)&&key(entry.name)===key(row.name))));
     const alone=perSource.get(key(row.source))===1;
     const bySource=candidates.length?candidates
-      :alone?balances.filter(entry=>!taken.has(entry.id)&&key(entry.source)===key(row.source)):[];
+      :alone?balances.filter(entry=>!taken.has(entry.id)&&key(entry.source)===key(row.source)&&compatible(entry,row)):[];
     const match=bySource.length===1?bySource[0]:null;
     if(match)taken.add(match.id);
     return {...row,match,ambiguous:!match&&bySource.length>1};

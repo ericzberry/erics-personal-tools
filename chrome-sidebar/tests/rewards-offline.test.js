@@ -43,3 +43,37 @@ test('a benefit keeps the card it belongs to and the period it resets on all the
  assert.equal(reloaded.card,card.id);
  assert.equal(reloaded.cadence,'monthly');
 });
+
+// W01. What a card's tracker said was left of a credit is the one figure that
+// decides whether anything is worth doing, and for a release the sync layer
+// dropped it on the way to the cloud: the field list here was a copy of the
+// validator's, one field behind. It is read off the validator now, and this
+// saves a credit with a remaining amount through every layer — queued
+// offline, sent, reopened cold, and reconciled after a lost response.
+test('what is left of a credit survives every layer: offline queue, cloud, cold reopen and a lost response',async()=>{
+ const f=fixture();let adapter=f.create();
+ const card=validateReward({id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',kind:'card',name:'Test card',source:'Test bank',value:'5x flights',state:'available'});
+ const credit=validateReward({id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',kind:'benefit',name:'Dining credit',source:card.name,value:'$25 per month',state:'available',cadence:'monthly',card:card.id,remaining:'$25'});
+ await adapter.request('token','/v1/rewards');
+ await adapter.request('token',`/v1/rewards/${card.id}`,{method:'PUT',value:{...card,revision:null}});
+ f.offline();
+ await adapter.request('token',`/v1/rewards/${credit.id}`,{method:'PUT',value:{...credit,revision:null}});
+ // Cold reopen while still offline: the queued copy carries it.
+ adapter=f.create();
+ assert.equal((await adapter.request('token','/v1/rewards')).records.find(entry=>entry.id===credit.id).remaining,'$25');
+ f.online();
+ await adapter.request('token','/v1/rewards');
+ assert.equal(f.wallet.entries.find(entry=>entry.id===credit.id).remaining,'$25','the cloud holds it');
+ assert.equal(await adapter.hasPending('token'),false);
+ // A later reading whose response is lost still reconciles on the field.
+ const saved=(await adapter.request('token','/v1/rewards')).records.find(entry=>entry.id===credit.id);
+ f.lose();
+ await adapter.request('token',`/v1/rewards/${credit.id}`,{method:'PUT',value:{...saved,remaining:'$10'}});
+ assert.equal(await adapter.hasPending('token'),true);
+ const after=(await adapter.request('token','/v1/rewards')).records.find(entry=>entry.id===credit.id);
+ assert.equal(after.remaining,'$10');
+ assert.equal(await adapter.hasPending('token'),false,'the write landed; the lost response is not a second write');
+ assert.equal(f.wallet.entries.find(entry=>entry.id===credit.id).remaining,'$10');
+ // A fresh device sees the same figure.
+ assert.equal((await f.create().request('token','/v1/rewards')).records.find(entry=>entry.id===credit.id).remaining,'$10');
+});

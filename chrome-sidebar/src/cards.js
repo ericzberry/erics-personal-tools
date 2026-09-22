@@ -8,8 +8,8 @@ import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIn
 // filed it under. Knowing a card exists costs nothing and is not something to
 // be typed in twice, so this tool asks the wallet rather than the owner. A host
 // that has no wallet simply has no such cards.
-export function mountCards(root,{credentials,offline,remote,wallet=null}){
-  root.replaceChildren(CardsView());
+export function mountCards(root,{credentials,offline,remote,wallet=null,purchase=true,heading=true,onChanged=()=>{}}){
+  root.replaceChildren(CardsView({purchase,heading}));
   const $=key=>root.querySelector(`#cards-${key}`);
   const fields=['name','unit','base','cpp','source','checked','notes'];
   for(const input of root.querySelectorAll('input[type=number]')){input.min='0';input.step='any';}
@@ -17,13 +17,16 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
   let held=[],downloaded=false,unrated=0;
   const connections=aiConnections({load:async current=>(await remote(current,'/v1/ai-connections')).connections,need:'to read a purchase or look up a card.'});
   const status=(message,target='status',tone='')=>setStatus($(target),message,tone);
+  // Without the purchase section there is no reading and no result to clear,
+  // and the comparison's controls are simply not there.
+  const comparing=!!$('purchase-form');
   function controls(){
     for(const control of root.querySelectorAll('input,select,textarea,button'))control.disabled=busy||!token;
     $('research').disabled=busy||!token||globalThis.navigator?.onLine===false;
     $('cpp').disabled=busy||!token||$('unit').value==='cash';
   }
-  function clearResults(){conditionKey='';$('conditions').replaceChildren();$('results').replaceChildren();status('','purchase-status');}
-  function clearReading(){reading=null;readFrom='';$('reading').replaceChildren();$('adjust').hidden=true;$('adjust').open=false;$('category').value='';$('amount').value='';$('channel').value='Direct';}
+  function clearResults(){if(!comparing)return;conditionKey='';$('conditions').replaceChildren();$('results').replaceChildren();status('','purchase-status');}
+  function clearReading(){if(!comparing)return;reading=null;readFrom='';$('reading').replaceChildren();$('adjust').hidden=true;$('adjust').open=false;$('category').value='';$('amount').value='';$('channel').value='Direct';}
   // The reading is the only thing between the description and the comparison, so
   // it is always shown and always editable, whether AI or the owner supplied it.
   // Once the controls are revealed they stay reachable, even with no reading yet.
@@ -88,7 +91,7 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
     renderWallet();
     $('list').replaceChildren(...(records.length?records.map(card=>SavedCard(card,{
       onEdit:()=>{if(dirty){status('Save or cancel your current edit first.','form-status','alert');return;}edit(card);$('editor').open=true;$('name').focus();},
-      onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting a card.');const result=await request(`/v1/cards/${card.id}`,{method:'DELETE',value:{revision:card.revision}});records=result.records;clearResults();render();status(result.syncMessage||'Card deleted.','status',result.syncMessage?'alert':'success');}),
+      onDelete:()=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before deleting a card.');const result=await request(`/v1/cards/${card.id}`,{method:'DELETE',value:{revision:card.revision}});records=result.records;clearResults();render();status(result.syncMessage||'Card deleted.','status',result.syncMessage?'alert':'success');onChanged();}),
       onResolve:choice=>run(async()=>{if(dirty)throw Error('Save or cancel your edits before resolving a conflict.');const result=await offline.resolve(token,card.id,choice);records=result.records;clearResults();render();status(result.syncMessage,'status','alert');})
     })):[Note(token?'No cards saved.':'Connect this device in Settings.')]));controls();
   }
@@ -99,6 +102,7 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
   }
   async function request(path,options){const current=generation;const result=await offline.request(token,path,options);if(current!==generation)throw Error('Connection changed.');return result;}
   async function connectionList(){
+    if(!comparing)return;
     if(!token||globalThis.navigator?.onLine===false){status('Offline · Select a category to compare saved cards.','ai-status');return;}
     try{status(await connections.note(token),'ai-status','alert');}
     catch(error){status(error.message,'ai-status','error');}
@@ -153,6 +157,7 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
     $('results').replaceChildren(...ComparisonResults(compareCards(records,{...input,confirmed}),
       {unrated,perks:perksAt(input.merchant)}));controls();
   }
+  if(comparing){
   $('purchase-form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
     // A changed description invalidates the previous reading; an owner-adjusted
     // reading is kept, so re-comparing never overwrites a manual correction.
@@ -166,6 +171,7 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
   $('amount').addEventListener('input',()=>{clearResults();manualReading();});
   for(const key of ['category','channel'])$(key).addEventListener('change',()=>{clearResults();manualReading();});
   $('conditions').addEventListener('change',()=>{try{comparison();}catch(error){status(error.message,'purchase-status','error');}});
+  }
   $('add').addEventListener('click',()=>{if(dirty){status('Save or cancel your current edit first.','form-status','alert');return;}edit();$('editor').open=true;$('find').focus();});
   $('add-rule').addEventListener('click',()=>{const values=rules();if(values.length>=20){status('Save up to 20 bonus categories.','form-status','alert');return;}renderRules([...values,{}]);dirty=true;});
   $('unit').addEventListener('change',()=>{if($('unit').value==='cash')$('cpp').value='1';else $('cpp').value='';controls();});
@@ -182,7 +188,7 @@ export function mountCards(root,{credentials,offline,remote,wallet=null}){
     if(card.unit==='points'&&card.cpp<=0){$('details').open=true;throw Error('Enter what one point is worth, in cents.');}
     if(!card.checked)throw Error('Review the card terms and enter the review date before saving.');
     const result=await request(`/v1/cards/${selected?.id||newId}`,{method:'PUT',value:{...card,revision:selected?.revision??null}});
-    records=result.records;edit();$('editor').open=false;clearResults();render();status(result.syncMessage||'Card saved.','status',result.syncMessage?'alert':'success');
+    records=result.records;edit();$('editor').open=false;clearResults();render();status(result.syncMessage||'Card saved.','status',result.syncMessage?'alert':'success');onChanged();
   },'form-status');});
   // The wallet as this device already has it: no request, no sync, and nothing
   // written back. A device that has never opened Rewards holds no copy of it,

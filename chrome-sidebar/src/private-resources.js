@@ -6,6 +6,7 @@ import {replacementsOffline} from './replacements-offline.js';
 import {travelOffline} from './travel-offline.js';
 import {cardsOffline} from './cards-offline.js';
 import {rewardsOffline} from './rewards-offline.js';
+import {walletOffline} from './wallet-offline.js';
 import {programsOffline} from './program-offline.js';
 import {financeOffline} from './finance-offline.js';
 import {personalOffline} from './personal-offline.js';
@@ -35,6 +36,7 @@ export const PRIVATE_RESOURCES=Object.freeze({
   travel:travelOffline,
   cards:cardsOffline,
   rewards:rewardsOffline,
+  wallet:walletOffline,
   programs:programsOffline,
   finance:financeOffline,
   personal:personalOffline,

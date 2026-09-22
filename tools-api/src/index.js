@@ -18,6 +18,7 @@ import {latestRelease} from './releases.js';
 import {storageUsage,sweepStorage} from './quota.js';
 import {backupRoutes,sweepBackup,BACKUP_CRON} from './backup.js';
 import {rewardsSettings,researchCardBenefits,readLoyaltyBalances} from './rewards.js';
+import {wallet} from './wallet.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
 import {discoverRestaurants} from './restaurants.js';
@@ -168,6 +169,7 @@ export default {
       if(path==='/v1/voice'||path.startsWith('/v1/voice/'))return await voice(request,env,readValue,json);
       if(path==='/v1/rewards/programs'||path.startsWith('/v1/rewards/programs/'))return await rewardPrograms(request,env,readValue,json);
       if(path==='/v1/rewards')return await rewardsSettings(request,env,readValue,json);
+      if(path==='/v1/wallet'||path.startsWith('/v1/wallet/'))return await wallet(request,env,readValue,json);
       if(path==='/v1/finance'||path.startsWith('/v1/finance/'))return await finance(request,env,readValue,json);
       if(path==='/v1/personal'||path.startsWith('/v1/personal/'))return await personal(request,env,readValue,json);
       if(path==='/v1/subscriptions'||path.startsWith('/v1/subscriptions/'))return await subscriptions(request,env,readValue,json);

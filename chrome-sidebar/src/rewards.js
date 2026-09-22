@@ -5,8 +5,11 @@ import {programsOffline} from './program-offline.js';
 import {cardsOffline} from './cards-offline.js';
 import {loadRewards} from './rewards-sync.js';
 import {cloudRequest,CONNECTION_KEY} from './cloud-storage.js';
-import {showRewards,onNavigate} from './navigation.js';
+import {showRewards,onNavigate,takeRequestedView} from './navigation.js';
 import {readOpenAccountPage} from './finance-page-read.js';
+import {walletOffline} from './wallet-offline.js';
+import {mountPurchaseAdvisor} from './purchase-advisor.js';
+import {mountCards} from './cards.js';
 const storage=globalThis.chrome?.storage?.local;
 const credentials={get:async()=>storage?(await storage.get(CONNECTION_KEY))[CONNECTION_KEY]?.token||'':''};
 const offline=rewardsOffline({remote:async(token,path,options)=>{
@@ -18,13 +21,25 @@ const programs=programsOffline();
 // the terms belong to. The wallet touches it only when a reading returns a
 // rate; the same adapter and the same lock serve Best card itself.
 const cards=cardsOffline();
+// The wallet's records about itself: bindings, dismissals, point values.
+const wallet=walletOffline();
 const root=document.getElementById('rewards-root');
 const changes=travelChanges(()=>rewardsTool.refresh({quiet:true}),{resource:'rewards'});
 window.addEventListener('pagehide',()=>changes.close(),{once:true});
 // The page beside the panel is the sidebar's to read; a full tab has no such
 // page, and neither has the phone, so neither is given one.
 const readPage=globalThis.chrome?.scripting&&document.getElementById('rewards-tool')?options=>readOpenAccountPage(globalThis.chrome,options):null;
-export const rewardsTool=mountRewards(root,{credentials,offline,programs,readPage,cards,remote:cloudRequest,onChanged:()=>changes.publish(),onSettings:()=>document.getElementById('open-settings')?document.getElementById('open-settings').click():location.assign('settings.html')});
+const onSettings=()=>document.getElementById('open-settings')?document.getElementById('open-settings').click():location.assign('settings.html');
+// The Pay view's two tools, built on the view's first opening: the purchase
+// advisor over the card terms, the wallet and the catalogues, and the card
+// terms themselves without a second purchase box.
+export const rewardsTool=mountRewards(root,{credentials,offline,programs,readPage,cards,wallet,remote:cloudRequest,onChanged:()=>changes.publish(),onSettings,
+  mountPay:node=>mountPurchaseAdvisor(node,{credentials,cards,wallet:offline,programs,remote:cloudRequest,onSettings,embedded:true}),
+  mountRates:node=>mountCards(node,{credentials,offline:cards,wallet:offline,remote:cloudRequest,purchase:false,heading:false,onChanged:()=>rewardsTool.refresh({quiet:true})})});
+// A page opened as `rewards.html?view=pay` — where cards.html and advisor.html
+// now send their readers — opens on that view once the wallet has loaded.
+const asked=globalThis.location?.href?new URL(globalThis.location.href).searchParams.get('view'):'';
+if(asked)rewardsTool.view(asked);
 // The sidebar owns the page heading and return navigation.
 root.querySelector('h1').hidden=!!document.getElementById('close-rewards');
 document.getElementById('close-rewards')?.addEventListener('click',()=>showRewards(false));
@@ -40,7 +55,7 @@ let onScreen=false;
 onNavigate(capability=>{
   const arrived=capability==='rewards'&&!onScreen;
   onScreen=capability==='rewards';
-  if(arrived)rewardsTool.refresh({quiet:true});
+  if(arrived){rewardsTool.refresh({quiet:true});const view=takeRequestedView();if(view)rewardsTool.view(view);}
 });
 if(storage)chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes[CONNECTION_KEY]){rewardsTool.clear();rewardsTool.refresh();}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.getElementById('rewards-tool')?.hidden)rewardsTool.refresh({quiet:true});});
