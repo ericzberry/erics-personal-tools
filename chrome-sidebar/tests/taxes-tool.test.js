@@ -34,6 +34,13 @@ const GROUPS=[{name:'Berry EA 2024 Family Trust',folderId:'trust',files:[],group
   {name:'Payments',folderId:'payments',
     files:[{name:'Estimated payment - Q3 Federal - Berry EA 2024 Family Trust.pdf',modifiedTime:'2026-09-15T00:00:00.000Z',size:90000,webViewLink:'https://drive.example/q3'}]}
 ]}];
+// Every year, as a search reads the folder.
+const EVERY_YEAR=[
+  {year:'2026',files:[],groups:[{name:'Berry EA 2024 Family Trust',files:[],groups:[
+    {name:'Filings',files:[{id:'r26',name:'Return - Federal - Berry EA 2024 Family Trust.pdf',webViewLink:'https://drive.example/r26'}]}]}]},
+  {year:'2025',files:[{id:'v25',name:'Estimated K1 - Vista.pdf',webViewLink:'https://drive.example/v25'},...FILED],groups:[]},
+  {year:'2024',files:[{id:'v24',name:'K-1 - Vista.pdf',webViewLink:'https://drive.example/v24'}],groups:[]}
+];
 // One synthetic Worker, recording what the tool asked it for.
 function worker({connected=true,groups=[],connections=[{id:'newest',name:'Newest',hasApiKey:true},{id:'older',name:'Older',hasApiKey:true}]}={}){
   const asked=[];
@@ -41,6 +48,7 @@ function worker({connected=true,groups=[],connections=[{id:'newest',name:'Newest
     async remote(_token,path,options={}){
       asked.push({path,value:options.value});
       if(path==='/v1/drive/status')return {connected,account:connected?'owner@example.com':'',configured:true};
+      if(path==='/v1/drive/filed?year=all')return {years:EVERY_YEAR};
       if(path.startsWith('/v1/drive/filed'))return {year:'2025',files:connected?FILED:[],groups:connected?groups:[]};
       if(path==='/v1/ai-connections')return {connections};
       if(path.endsWith('/tax-intake'))return {type:'1099',issuer:'Schwab',year:'2025',confidence:'high',reason:'Read off the form header.'};
@@ -195,6 +203,47 @@ test('without a page beside it, a filed row is only a link',async()=>{
   mountTaxes(root,{credentials:{get:async()=>'token'},remote:worker().remote,upload:async()=>({})});
   await settle(()=>root.querySelectorAll('.tax-filed-row').length===1);
   assert.equal(root.querySelector('.tax-filed-row').draggable,false);
+  restore();
+});
+
+// A search is for "where is that Vista K-1", whatever year it was filed in and
+// however its name was typed then.
+test('a search reads every year once, forgives the punctuation, and gives the year back when cleared',async()=>{
+  const {document,window,restore}=setup();
+  const api=worker();
+  const root=document.querySelector('main');
+  mountTaxes(root,{credentials:{get:async()=>'token'},remote:api.remote,
+    upload:async()=>({filed:{name:'Form 1099 - Schwab.txt',year:'2025',path:['2025']}})});
+  await settle(()=>root.querySelectorAll('.tax-filed-row').length===1);
+  const search=document.getElementById('taxes-search');
+  const type=value=>{search.value=value;search.dispatchEvent(new window.Event('input',{bubbles:true}));};
+  const rows=()=>[...root.querySelectorAll('.tax-filed-row')].map(node=>node.textContent);
+  const reads=()=>api.asked.filter(request=>request.path==='/v1/drive/filed?year=all').length;
+
+  type('k1 vista');
+  await settle(()=>rows().length===2);
+  assert.deepEqual(rows(),['Estimated K1 - Vista.pdf','K-1 - Vista.pdf']);
+  // Each under the year it was filed in, newest first.
+  assert.deepEqual([...root.querySelectorAll('#taxes-filed .record-group-title')].map(node=>node.textContent),
+    ['2025 · 1 document','2024 · 1 document']);
+  assert.equal(document.getElementById('taxes-filed-status').textContent,'');
+  // Typing on searches what was already read.
+  type('trust return');
+  assert.deepEqual(rows(),['Return - Federal - Berry EA 2024 Family Trust.pdf']);
+  type('nothing like this');
+  assert.match(document.getElementById('taxes-filed').textContent,/Nothing matches that\./);
+  assert.equal(reads(),1);
+
+  // Filing something changes what a search has to read.
+  type('schwab');
+  document.getElementById('taxes-drop').dispatchEvent(Object.assign(new window.Event('drop',{bubbles:true,cancelable:true}),{dataTransfer:{files:[document1099()]}}));
+  await settle(()=>document.getElementById('taxes-destination').hidden===false);
+  document.getElementById('taxes-file-actions').querySelector('button').click();
+  await settle(()=>reads()===2);
+
+  // Nothing typed: the year chosen above, as before.
+  type('');
+  assert.deepEqual(rows(),['K-1 - Averin Capital LLC.pdf']);
   restore();
 });
 

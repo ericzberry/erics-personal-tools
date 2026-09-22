@@ -54,9 +54,14 @@ export function TaxesView({today=new Date()}={}){
       Notice('',{id:'taxes-file-form-status',role:'status'}),
       Stack([],{id:'taxes-file-actions',className:'action-group action-group--compact'})
     ],{open:true}),
+    // A search reads every year; with nothing typed, the list is the year
+    // chosen above.
     Stack([Part('Already filed',[
-      Notice('',{id:'taxes-filed-status',role:'status'}),
-      Stack([],{id:'taxes-filed'}),
+      Stack([
+        FormField({id:'taxes-search',label:'Find a document',kind:'search'}),
+        Notice('',{id:'taxes-filed-status',role:'status'}),
+        Stack([],{id:'taxes-filed',className:'tax-filed'})
+      ],{className:'record-search'}),
       Link('Open the tax folder',TAX_ROOT_FOLDER_URL,{className:'footnote tax-folder-link'})
     ],{id:'taxes-filed-panel'})],{id:'taxes-drive-contents',hidden:true})
     // The shared wallet surface every tool's root carries: record rows, action
@@ -165,6 +170,13 @@ export function FiledList(year,files,groups=[],{onDrag=null}={}){
     ...groups.flatMap(group=>under(group,1))
   ],{className:'record-group tax-filed-list'});
 }
+
+// What a search found: every year holding a match, newest first, each read the
+// way its own year's list reads, so a match sits under the taxpayer and the
+// category it was filed under.
+export const FoundList=(years,{onDrag=null}={})=>years.length
+  ?years.map(year=>FiledList(year.year,year.files,year.groups,{onDrag}))
+  :[Note('Nothing matches that.')];
 
 // One row, and only what applies: a connected account offers Disconnect, an
 // unconnected one offers Connect. `consentUrl` appears only when the host could

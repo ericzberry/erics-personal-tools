@@ -33,6 +33,10 @@ const GROUPS=[
 // One synthetic Worker per state, so the states can sit side by side.
 const api=({connected=true,filed=FILED,groups=[],existing=null}={})=>async(_token,path,options={})=>{
   if(path==='/v1/drive/status')return {connected,account:connected?'owner@example.com':'',configured:true,folderId:'synthetic'};
+  if(path==='/v1/drive/filed?year=all')return {years:[
+    {year:'2026',files:[],groups:GROUPS},
+    {year:'2025',files:[...filed,{id:'synthetic-vista',name:'Estimated K1 - Vista Equity Partners Fund VII, L.P.pdf',webViewLink:'#'}],groups:[]},
+    {year:'2024',files:[{id:'synthetic-vista-24',name:'K-1 - Vista.pdf',webViewLink:'#'},{id:'synthetic-schwab-24',name:'1099-DIV - Schwab.pdf',webViewLink:'#'}],groups:[]}]};
   if(path.startsWith('/v1/drive/filed'))return {year:'2025',files:filed,groups};
   if(path==='/v1/ai-connections')return {connections:[{id:'synthetic','name':'Synthetic model',provider:'openai',hasApiKey:true}]};
   if(path.endsWith('/tax-intake'))return {type:'1099',issuer:'Schwab',year:'2025',confidence:'high',reason:'Read off the form header.'};
@@ -64,7 +68,9 @@ const states=[
   ['Filed, and its folder opens from the line that says so',{upload:uploadDivided},'filed'],
   ['The document needs a password',{},'locked'],
   ['A year divided by taxpayer and by what a document is for',{filed:[],groups:GROUPS}],
-  ['A filed row dragged to the page beside the panel, and not handed over',{handOff:true},'handoff']
+  ['A filed row dragged to the page beside the panel, and not handed over',{handOff:true},'handoff'],
+  ['Searching every year for what was filed',{},'search'],
+  ['A search that finds nothing',{},'search-none']
 ];
 for(const [label,options,step] of states){
   const heading=document.createElement('h2');
@@ -76,7 +82,14 @@ for(const [label,options,step] of states){
   const handOff=options.handOff?(_event,offer)=>offer.onResult({accepted:false,error:'That document is no longer in the tax folder.'}):null;
   const tool=mountTaxes(host,{credentials,remote:api(options),upload:options.upload||upload,openExternal:()=>true,
     download:async()=>new File(['%PDF'],'synthetic.pdf',{type:'application/pdf'}),handOff});
-  if(step==='handoff'){
+  if(step==='search'||step==='search-none'){
+    await tool.refresh();
+    host.querySelector('#taxes-filed-panel').open=true;
+    const search=host.querySelector('#taxes-search');
+    search.value=step==='search'?'k1 vista':'brokerage 2019';
+    search.dispatchEvent(new Event('input',{bubbles:true}));
+    await new Promise(resolve=>setTimeout(resolve,200));
+  }else if(step==='handoff'){
     await tool.refresh();
     host.querySelector('#taxes-filed-panel').open=true;
     host.querySelector('.tax-filed-row').dispatchEvent(new Event('dragstart',{bubbles:true}));

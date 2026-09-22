@@ -1,9 +1,9 @@
-import {TaxesView,Destination,ConflictPanel,PasswordPanel,FiledList,ConnectionPanel,fileSize} from './components/taxes.js';
+import {TaxesView,Destination,ConflictPanel,PasswordPanel,FiledList,FoundList,ConnectionPanel,fileSize} from './components/taxes.js';
 import {AttachmentCard,Button,Link,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED} from './statement-text.js';
 import {taxFileName,taxFolderPath,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,filesIntoSubfolder,
-  needsIssuer,needsJurisdiction,needsQuarter,defaultCategoryFor,DEFAULT_TAXPAYER,MAX_DOCUMENT_BYTES,extensionOf,driveFolderUrl} from './tax-data.js';
+  needsIssuer,needsJurisdiction,needsQuarter,defaultCategoryFor,DEFAULT_TAXPAYER,MAX_DOCUMENT_BYTES,extensionOf,driveFolderUrl,searchFiled} from './tax-data.js';
 
 const today=()=>new Date().toISOString().slice(0,10);
 // Google's consent page is a round trip through another tab, so the tool waits
@@ -31,6 +31,10 @@ export function mountTaxes(root,{credentials,remote,upload,download=null,handOff
   // password. `original` is the file as it arrived, kept so a document whose
   // password nobody has can still be filed exactly as it is.
   let dropped=null,original=null,reading=null,plan=null,filed={year:'',files:[],groups:[]},polling=0,consentUrl='',connectionId='',locked='',typed='';
+  // Every year's names, for searching. Read the first time a search needs it
+  // and again after anything changes what is filed; `edition` keeps a reading
+  // that was overtaken by a filing from being kept.
+  let index=null,indexing=false,edition=0;
 
   const status=(text,target='status',tone='')=>setStatus($(target),text,tone);
   const action=(label,handler,variant='secondary',extra={})=>{
@@ -63,6 +67,8 @@ export function mountTaxes(root,{credentials,remote,upload,download=null,handOff
       if(!quiet)status(drive.configured?'':'Google Drive is not configured on the Worker yet.');
       if(drive.connected)await loadFiled(token);
       else filed={year:'',files:[],groups:[]};
+      forgetIndex();
+      if(searching())readIndex();
       return drive;
     },'status');
   }
@@ -201,6 +207,30 @@ export function mountTaxes(root,{credentials,remote,upload,download=null,handOff
     },'file-form-status');
   }
 
+  // --- Searching what is filed
+  const forgetIndex=()=>{index=null;edition++;};
+  const searching=()=>$('search').value.trim();
+  function readIndex(){
+    if(index||indexing||!drive.connected)return;
+    indexing=true;
+    const current=edition;
+    status('Searching…','filed-status','progress');
+    (async()=>{
+      const token=await credentials.get();
+      if(!token)throw Error('Open Settings to connect this device.');
+      return (await remote(token,'/v1/drive/filed?year=all',{timeoutMs:60000})).years||[];
+    })().then(years=>{
+      if(current===edition)index=years;
+      status('','filed-status');
+    },error=>status(error.message,'filed-status','error'))
+      .finally(()=>{
+        indexing=false;
+        // Overtaken by a filing while it read: read again for what is there now.
+        if(current!==edition&&searching())readIndex();
+        render();
+      });
+  }
+
   // --- Handing a filed document to the page beside the panel
   // Nothing is said when it lands: the page shows the file arriving. Only a
   // document that did not go, or a spot on the page that would not take it,
@@ -248,6 +278,8 @@ export function mountTaxes(root,{credentials,remote,upload,download=null,handOff
     clearFiling({keepFields:false});
     $('year').value=year;
     await loadFiled(token);
+    forgetIndex();
+    if(searching())readIndex();
     status([`${result.replaced?'Replaced':'Filed'} `,folderId?Link(where,driveFolderUrl(folderId)):where,` / ${name}.`],
       'file-form-status','success');
   }
@@ -316,7 +348,9 @@ export function mountTaxes(root,{credentials,remote,upload,download=null,handOff
     // Connecting Drive goes through this device's cloud connection, so without
     // one the button would only repeat what the status line already says.
     for(const node of $('connection').querySelectorAll('button'))node.disabled=busy||!drive.configured||!activeToken;
-    $('filed').replaceChildren(FiledList(filed.year||$('year').value,filed.files,filed.groups,{onDrag:offer}));
+    $('filed').replaceChildren(...(searching()
+      ?(index?FoundList(searchFiled(index,searching()),{onDrag:offer}):[])
+      :[FiledList(filed.year||$('year').value,filed.files,filed.groups,{onDrag:offer})]));
     // Only what applies. The type, the taxpayer and the name describe a
     // document, so they appear once there is one, and a document that is still
     // locked is not being named yet. Which government and which instalment are
@@ -363,6 +397,7 @@ export function mountTaxes(root,{credentials,remote,upload,download=null,handOff
       if(key==='type')$('category').value=defaultCategoryFor($('type').value);
       plan=null;renderConflict();renderDestination();render();
     });
+  $('search').addEventListener('input',()=>{if(searching())readIndex();render();});
   $('year').addEventListener('change',()=>{
     plan=null;renderConflict();renderDestination();
     run(loadFiled,'status').then(render);
@@ -372,9 +407,10 @@ export function mountTaxes(root,{credentials,remote,upload,download=null,handOff
     generation++;polling=0;activeToken='';
     drive={connected:false,account:'',configured:true};
     filed={year:'',files:[],groups:[]};consentUrl='';connectionId='';
+    forgetIndex();$('search').value='';
     $('year').value=defaultTaxYear();
     clearFiling({keepFields:false});
-    for(const target of ['status','file-form-status','ai-status'])status('',target);
+    for(const target of ['status','file-form-status','ai-status','filed-status'])status('',target);
     render();
   }
   async function refresh(){

@@ -120,6 +120,35 @@ export function groupFiled(files=[]){
   }).filter(category=>category.types.length);
 }
 
+// Searching what is filed, across every year. Names were typed by hand for
+// years, so a search ignores case and punctuation — "k1 vista" finds
+// "K-1 - Vista.pdf" — and every word has to be found somewhere in the
+// document's name, the folders it sits in, or what its name says it is, so a
+// year or a taxpayer narrows a search the way a word of the name does.
+const squash=text=>String(text).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'');
+export const searchWords=query=>String(query||'').split(/\s+/).map(squash).filter(Boolean);
+const TYPE_LABELS=new Map(TAX_DOCUMENT_TYPES.map(type=>[type.id,type.label]));
+const CATEGORY_LABELS=new Map(TAX_CATEGORIES.map(category=>[category.id,category.label]));
+export function filedMatches(file,words,where=[]){
+  const type=taxTypeFromName(file.name);
+  const text=squash([...where,file.name,TYPE_LABELS.get(type),CATEGORY_LABELS.get(defaultCategoryFor(type))].join(' '));
+  return words.every(word=>text.includes(word));
+}
+// `years` is what `/v1/drive/filed?year=all` answers: one tree per year, as the
+// list shows a year. What comes back is the same trees holding only what
+// matches, with every year, taxpayer and category that is left empty dropped.
+export function searchFiled(years=[],query=''){
+  const words=searchWords(query);
+  if(!words.length)return [];
+  const keep=(files=[],where)=>files.filter(file=>filedMatches(file,words,where));
+  return years.map(year=>({...year,files:keep(year.files,[year.year]),
+    groups:(year.groups||[]).map(group=>({...group,files:keep(group.files,[year.year,group.name]),
+      groups:(group.groups||[]).map(inner=>({...inner,files:keep(inner.files,[year.year,group.name,inner.name])}))
+        .filter(inner=>inner.files.length)}))
+      .filter(group=>group.files.length||group.groups.length)}))
+    .filter(year=>year.files.length||year.groups.length);
+}
+
 // Three kinds of document the household produces rather than receives: the
 // return itself, the voucher that goes with an instalment, and the receipt
 // proving the instalment was paid. They are named from who filed them and

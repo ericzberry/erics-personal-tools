@@ -254,6 +254,18 @@ not recognise is listed under Other. Reading a year is finding its folder and on
 Drive request per level below it, because each level is asked for all of its
 parents at once rather than one folder at a time.
 
+**Find a document** searches the names across every year. It ignores case and
+punctuation — `k1 vista` finds `K-1 - Vista.pdf` and `Estimated K1 - Vista.pdf`
+— and every word has to appear in the document's name, the folders it sits in,
+or what its name says it is, so `2024 vista` or `trust return` narrows the way
+a word of the name does. What matches is listed under its year, newest first,
+exactly as that year's own list would show it, and a match can be dragged out
+like any other row. With nothing typed the list is the year chosen above.
+`GET /v1/drive/filed?year=all` reads the whole folder in four listings however
+many years it holds — the years, then each level below them for all of them at
+once — once, the first time a search needs it, and again after a filing or a
+Refresh; the matching happens on the device as you type.
+
 The tool's sections are disclosures (UI-35). **File a document** starts open,
 since filing is what the tool is opened for; **Already filed** starts shut, so
 a year of dozens of names is there when asked for rather than under every drop.

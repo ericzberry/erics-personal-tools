@@ -9,6 +9,8 @@
    rather than as a page of underlined links. A year holds dozens of these, so
    the row is the name and nothing else. */
 .tax-filed-list{display:grid;gap:0}
+/* A search's years, one list after another. */
+.tax-filed{display:grid;gap:16px}
 .tax-filed-list .record-group-title{padding:0 0 6px}
 .tax-filed-row{display:block;padding:3px 0;border-bottom:1px solid var(--wallet-line);
   font-size:12px;font-weight:450;line-height:1.35;color:var(--wallet-ink);text-decoration:none;overflow-wrap:anywhere}

@@ -203,6 +203,38 @@ const NATIVE_PREFIX='application/vnd.google-apps.';
 // Five taxpayers, three things a document can be for. The caps are what keep
 // one listing from turning into an unbounded run of requests.
 const MAX_GROUPS=12;
+// Reading every year at once: a level at a time, with each level asked for all
+// its parents together, in slices short enough for one query and pages Drive
+// is asked for a bounded number of times.
+const MAX_YEARS=30,PARENTS_PER_QUERY=40,MAX_PAGES=5;
+async function childrenOfAll(env,request,fetcher,folderIds){
+  const found=[];
+  for(let at=0;at<folderIds.length;at+=PARENTS_PER_QUERY){
+    const slice=folderIds.slice(at,at+PARENTS_PER_QUERY);
+    let pageToken='';
+    for(let page=0;page<MAX_PAGES;page++){
+      const result=await driveFetch(env,request,fetcher,listing({
+        q:`(${slice.map(id=>`'${quote(id)}' in parents`).join(' or ')}) and trashed = false`,
+        fields:'nextPageToken,files(id,name,mimeType,webViewLink,parents)',pageSize:'1000',orderBy:'name',
+        ...(pageToken?{pageToken}:{})
+      }));
+      found.push(...(result.files||[]));
+      pageToken=result.nextPageToken||'';
+      if(!pageToken)break;
+    }
+  }
+  return found;
+}
+// One year as the list shows it: its own documents, then each taxpayer's, then
+// each of theirs by what it is for. `items` is everything listed below the year,
+// flat, and each thing is placed by the parent it names.
+function yearTree(year,folderId,items){
+  const named=one=>({name:one.name,folderId:one.id,webViewLink:one.webViewLink});
+  return {year,folderId,files:documentsUnder(items,folderId),
+    groups:foldersUnder(items,folderId,MAX_GROUPS).map(person=>({...named(person),
+      files:documentsUnder(items,person.id),
+      groups:foldersUnder(items,person.id,MAX_GROUPS).map(kind=>({...named(kind),files:documentsUnder(items,kind.id)}))}))};
+}
 
 // Drive's one-request upload: the metadata and the file in one multipart body.
 // Exported because this is the part that depends on the runtime rather than on
@@ -312,7 +344,21 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
   }
 
   // What is already filed for a year, so a document is not filed twice under
-  // two spellings of the same name.
+  // two spellings of the same name — or, with `year=all`, in every year, which
+  // is what a search of the names reads. Four requests however many years there
+  // are: the years, then each level below them for all of them at once.
+  if(path==='/v1/drive/filed'&&method==='GET'&&url.searchParams.get('year')==='all'){
+    const years=(await childrenOfAll(env,request,fetcher,[TAX_ROOT_FOLDER_ID]))
+      .filter(item=>isFolder(item)&&/^\d{4}$/.test(item.name))
+      .sort((a,b)=>b.name.localeCompare(a.name)).slice(0,MAX_YEARS);
+    const first=years.length?await childrenOfAll(env,request,fetcher,years.map(year=>year.id)):[];
+    const people=years.flatMap(year=>foldersUnder(first,year.id,MAX_GROUPS));
+    const second=people.length?await childrenOfAll(env,request,fetcher,people.map(one=>one.id)):[];
+    const kinds=people.flatMap(person=>foldersUnder(second,person.id,MAX_GROUPS));
+    const third=kinds.length?await childrenOfAll(env,request,fetcher,kinds.map(one=>one.id)):[];
+    const items=[...first,...second,...third];
+    return json({years:years.map(year=>yearTree(year.name,year.id,items))});
+  }
   if(path==='/v1/drive/filed'&&method==='GET'){
     const year=url.searchParams.get('year')||'';
     if(!/^\d{4}$/.test(year))fail(400,'Choose a tax year.');
@@ -327,12 +373,7 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
     const inside=people.length?(await childrenOf(env,request,fetcher,people.map(one=>one.id))).files||[]:[];
     const kinds=people.flatMap(person=>foldersUnder(inside,person.id,MAX_GROUPS));
     const deepest=kinds.length?(await childrenOf(env,request,fetcher,kinds.map(one=>one.id))).files||[]:[];
-    const named=one=>({name:one.name,folderId:one.id,webViewLink:one.webViewLink});
-    const groups=people.map(person=>({...named(person),
-      files:documentsUnder(inside,person.id),
-      groups:foldersUnder(inside,person.id,MAX_GROUPS)
-        .map(kind=>({...named(kind),files:documentsUnder(deepest,kind.id)}))}));
-    return json({year,folderId:folder.id,files:documentsUnder(top,folder.id),groups});
+    return json(yearTree(year,folder.id,[...top,...inside,...deepest]));
   }
 
   fail(404,'Unknown Drive request.');

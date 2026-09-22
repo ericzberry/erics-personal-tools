@@ -383,3 +383,37 @@ test('a filed document is read back as itself, and only from inside the tax fold
     assert.deepEqual(filed.files.map(file=>file.id).sort(),['k1-document-vista','sheet-document-1']);
   });
 });
+
+// Searching the names reads every year at once, so it has to cost the same
+// few requests whether the folder holds three years or thirty.
+test('every year is read in one pass of four listings, newest first',async()=>{
+  const {env}=environment();
+  const fake=fakeGoogle();
+  await withGoogle(fake,async()=>{
+    await connect(env);
+    const loose=await (await call(env,'/v1/drive/plan','POST',{type:'k1',issuer:'Vista',year:'2025',fileName:'a.pdf'})).json();
+    await send(env,`/v1/drive/upload?ticket=${loose.ticket}&mode=new`,new Uint8Array([1]));
+    const owned=await (await call(env,'/v1/drive/plan','POST',{type:'return',taxpayer:'family-2020',jurisdiction:'ny',year:'2026',fileName:'b.pdf'})).json();
+    await send(env,`/v1/drive/upload?ticket=${owned.ticket}&mode=new`,new Uint8Array([1]));
+    // An older year made by hand, and a folder beside the years that is not one.
+    fake.files.set('year-2023',{id:'year-2023',name:'2023',parent:ROOT,folder:true});
+    fake.files.set('old-1099',{id:'old-1099',name:'1099-DIV - Schwab.pdf',parent:'year-2023',folder:false});
+    fake.files.set('archive-folder',{id:'archive-folder',name:'Scans to sort',parent:ROOT,folder:true});
+
+    const before=fake.calls.length;
+    const every=await (await call(env,'/v1/drive/filed?year=all')).json();
+    const listings=fake.calls.slice(before).filter(one=>new URL(one.url).pathname==='/drive/v3/files');
+    assert.equal(listings.length,4,'years, then taxpayers, then what each is for, then the documents under those');
+    assert.deepEqual(every.years.map(year=>year.year),['2026','2025','2023']);
+    const [y2026,y2025,y2023]=every.years;
+    assert.deepEqual(y2025.files.map(file=>file.name),['K-1 - Vista.pdf']);
+    assert.ok(y2025.files[0].id);
+    assert.deepEqual(y2023.files.map(file=>file.name),['1099-DIV - Schwab.pdf']);
+    assert.equal(y2026.groups[0].name,'Berry 2020 Irrevocable Family Trust');
+    assert.equal(y2026.groups[0].groups[0].name,'Filings');
+    assert.match(y2026.groups[0].groups[0].files[0].name,/^Return - New York - /);
+    // One year still reads as it did.
+    const one=await (await call(env,'/v1/drive/filed?year=2025')).json();
+    assert.deepEqual(one.files.map(file=>file.name),['K-1 - Vista.pdf']);
+  });
+});
