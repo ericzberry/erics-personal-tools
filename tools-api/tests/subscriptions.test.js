@@ -37,3 +37,31 @@ test('additive schema preserves existing records; encrypted CRUD rejects stale e
   assert.equal((await call(path,'DELETE',{revision:saved.record.revision})).status,200);
   sql.close();
 });
+test('a named write becomes the revision, and its retry is answered with the record instead of a conflict',async()=>{
+  const sql=new DatabaseSync(':memory:');sql.exec(readFileSync(new URL('../subscriptions-schema.sql',import.meta.url),'utf8'));
+  const token='synthetic-token-at-least-32-characters';const env={API_TOKEN:token,SETTINGS_ENCRYPTION_KEY:'12'.repeat(32),DB:{prepare(query){const stmt=sql.prepare(query);let args=[];return {bind(...v){args=v;return this;},async first(){return stmt.get(...args)||null;},async all(){return {results:stmt.all(...args)};},async run(){return {meta:{changes:Number(stmt.run(...args).changes)}};}};}}};
+  const path='/v1/subscriptions/55555555-5555-4555-8555-555555555555';
+  const put=value=>worker.fetch(new Request(`https://example.com${path}`,{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(value)}),env);
+  const value={...reading.subscriptions[0],state:'Active',charges:[{on:'2026-09-01',amount:15,description:'SYNTHETIC STREAM',source:'September'}],reviewedCharges:[]};
+  const first='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',second='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const saved=await (await put({...value,revision:null,operation:first})).json();
+  assert.equal(saved.record.revision,first);
+  // The same write again, as a device sends it when the first response was lost.
+  const retried=await put({...value,revision:null,operation:first});
+  assert.equal(retried.status,200);assert.equal((await retried.json()).record.revision,first);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM subscription_records').get().n,1);
+  // A later write on top of it is an ordinary write; the earlier retry arriving
+  // after that is stale, not a second copy of the first.
+  const next=await (await put({...value,notes:'Checked the plan.',revision:first,operation:second})).json();
+  assert.equal(next.record.revision,second);assert.equal(next.record.notes,'Checked the plan.');
+  assert.equal((await put({...value,revision:null,operation:first})).status,409);
+  // A name that is its own base, or not a name at all, gets a revision minted for it.
+  const self=await (await put({...value,revision:second,operation:second})).json();
+  assert.notEqual(self.record.revision,second);
+  const odd=await (await put({...value,revision:self.record.revision,operation:'not-an-operation'})).json();
+  assert.notEqual(odd.record.revision,'not-an-operation');assert.notEqual(odd.record.revision,self.record.revision);
+  // An older device that names nothing still gets a fresh revision and a 409 when stale.
+  const plain=await (await put({...value,revision:odd.record.revision})).json();
+  assert.match(plain.record.revision,/^[0-9a-f-]{36}$/);assert.equal((await put({...value,revision:odd.record.revision})).status,409);
+  sql.close();
+});

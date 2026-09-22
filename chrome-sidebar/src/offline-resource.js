@@ -6,7 +6,19 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
     const result=chain.then(execute,execute);chain=result.catch(()=>{});return result;
   };
   const empty=()=>({cloud:[],pending:{},syncedAt:null,error:''});
-  const same=(left,right)=>Object.keys(normalize(right)).every(key=>left?.[key]===right[key]);
+  // A write whose response was lost may still have landed, and the snapshot is
+  // the only witness. The server names the revision after the write when it
+  // can; otherwise the record is compared by content. Content arrives as JSON,
+  // so arrays and objects are new values and are compared as JSON would write
+  // them: keys in any order, an undefined field the same as a missing one.
+  const canonical=value=>JSON.stringify(value,(key,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(name=>[name,item[name]])):item);
+  function landed(current,change){
+    if(change.method==='DELETE')return !current;
+    if(!current)return false;
+    if(change.operation&&current.revision===change.operation)return true;
+    try{const content=normalize(change.value);return Object.keys(content).every(key=>canonical(current[key])===canonical(content[key]));}
+    catch{return false;}
+  }
   const rows=state=>{
     const records=new Map(state.cloud.map(record=>[record.id,record]));
     for(const [id,change] of Object.entries(state.pending))records.set(id,{...change.value,id,revision:change.localRevision,pending:true,conflict:!!change.conflict,deleting:change.method==='DELETE'});
@@ -27,10 +39,13 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
       for(const [id,change] of Object.entries(state.pending)){
         const current=state.cloud.find(record=>record.id===id);
         // Reconcile a successful write whose response was lost before retrying.
-        if((change.method==='DELETE'&&!current)||(change.method==='PUT'&&current&&same(current,change.value))){delete state.pending[id];continue;}
+        if(landed(current,change)){delete state.pending[id];continue;}
+        // An earlier write of this change landed and the owner edited on top of
+        // it before hearing back: the cloud holds this device's own work.
+        if(current&&change.earlier?.includes(current.revision))change.baseRevision=current.revision;
         if((current?.revision??null)!==change.baseRevision){change.conflict=true;continue;}
         try{
-          const response=await remote(token,`${path}/${id}`,{method:change.method,value:{...change.value,revision:change.baseRevision}});
+          const response=await remote(token,`${path}/${id}`,{method:change.method,value:{...change.value,revision:change.baseRevision,...(change.operation?{operation:change.operation}:{})}});
           state.cloud=state.cloud.filter(record=>record.id!==id);
           if(change.method==='PUT')state.cloud.unshift({...change.value,...response.record});
           delete state.pending[id];
@@ -63,7 +78,10 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
     const value=options.method==='PUT'?{...normalize(options.value,previous),id,updatedAt:now()}:previous;
     if(!value)throw Error('Record not found. Refresh your records.');
     if(options.method==='DELETE'&&old?.baseRevision===null){delete state.pending[id];}
-    else state.pending[id]={method:options.method,value,baseRevision:old?old.baseRevision:previous?.revision??null,localRevision:`local:${crypto.randomUUID()}`,conflict:old?.conflict||false};
+    // The operation names this write for as long as it is queued, so a retry is
+    // recognizable as the same write. A queue from before names were given has
+    // none, and is recognized by its content alone.
+    else state.pending[id]={method:options.method,value,baseRevision:old?old.baseRevision:previous?.revision??null,localRevision:`local:${crypto.randomUUID()}`,operation:crypto.randomUUID(),earlier:old?[...(old.earlier||[]),old.operation].filter(Boolean).slice(-20):[],conflict:old?.conflict||false};
     // Commit the queue BEFORE attempting the network. A restart cannot lose it.
     await store.write(resource,token,state);
     state=await sync(token,state);
@@ -82,7 +100,9 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
       const state=await load(token),change=state.pending[id];
       if(!change)throw Error('This change was already resolved. Refresh your records.');
       if(choice==='cloud')delete state.pending[id];
-      else if(choice==='local'){change.baseRevision=state.cloud.find(record=>record.id===id)?.revision??null;change.conflict=false;}
+      // Keeping this device's change is a new write on a new base. It takes a new
+      // name, because the old one may already be a revision the cloud has held.
+      else if(choice==='local'){change.baseRevision=state.cloud.find(record=>record.id===id)?.revision??null;change.operation=crypto.randomUUID();change.conflict=false;}
       else throw Error('Choose a conflict resolution.');
       await store.write(resource,token,state);
       await sync(token,state);
