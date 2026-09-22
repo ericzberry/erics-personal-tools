@@ -218,4 +218,4 @@ export function mountSettings(root) {root.replaceChildren(AISettingsView());}
 
 export function RewardsView(){return SubPage({id:'rewards-tool',title:'Rewards & benefits',backId:'close-rewards',children:[Stack([],{id:'rewards-root'})]});}
 
-export {RestaurantWorkspace,RestaurantCandidate,ReservationResult} from './restaurant-views.js';
+export {RestaurantWorkspace,MobileRestaurantWorkspace,RestaurantResult} from './restaurant-views.js';

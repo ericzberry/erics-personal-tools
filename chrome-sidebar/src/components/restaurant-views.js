@@ -1,7 +1,11 @@
 import * as UI from './ui.js';
-const {Workspace,WorkspaceFlow,FieldGrid,FormField:F,Form,Section,Heading,Note,Notice,Button,Link,Stack,Toggle,SegmentedField,SettingsGroup,ActionGroup,Disclosure,ResultBlock,ChoiceRow,EvidenceList}=UI;
-// One full-width page: the search sits above its own results, so nothing is
-// squeezed into a side column and the shortlist appears where it was asked for.
+import {displayTime,displayDate,kindLabel,describeValue,areaLabel,CLAIM_FIELDS} from '../restaurant-data.js';
+const {Workspace,WorkspaceFlow,FieldGrid,FormField:F,Form,Section,Heading,Note,Notice,Button,Link,Stack,Toggle,ActionGroup,Disclosure,RecordGroup,Text,Strong,Label,ProgressBar,RowLink,OPEN_GLYPH}=UI;
+const TIMES=Array.from({length:23},(_,i)=>{const minutes=11*60+30+i*30;const value=`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;return {text:displayTime(value),value};});
+const WINDOWS=[{text:'± 30 min',value:'30'},{text:'± 1 hour',value:'60'},{text:'± 1½ hours',value:'90'},{text:'± 2 hours',value:'120'}];
+// One page: the request, then what was understood, then one result per
+// restaurant (docs/RESTAURANT_SEARCH_SPEC.md §3.1, §4). Nothing here decides;
+// it lays out what the controller hands it.
 export function RestaurantWorkspace({mobile=false}={}) {
   return Workspace([
     Stack([Stack([mobile?null:Note('ERIC’S PERSONAL TOOLS'),Heading('Find a table',1)]),mobile?null:Link('AI settings','settings.html')],{className:'workspace-heading'}),
@@ -9,89 +13,131 @@ export function RestaurantWorkspace({mobile=false}={}) {
       Section([
         Form([
           Stack([
-            SettingsGroup({title:'Where to eat',level:2,children:[
-              SegmentedField({id:'restaurant-mode',label:'Search for',options:[{text:'A specific restaurant',value:'restaurant'},{text:'A category',value:'category'}]}),
-              F({id:'restaurant-query',label:'Restaurant name',kind:'text',placeholder:'Name or approximate spelling'}),
-              Note('For example: 2 Michelin stars, NYT top 20, Infatuation above 8.5.',{id:'restaurant-category-help',hidden:true}),
-              FieldGrid([F({id:'restaurant-city',label:'City',kind:'text'}),F({id:'restaurant-neighborhood',label:'Neighborhood (optional)',kind:'text',placeholder:'Any neighborhood'})]),
-              Stack([Toggle({id:'restaurant-travel',label:'Include longer travel options',descriptionId:'restaurant-travel-help'}),Note('Off excludes the Lower East Side, East Village, Brooklyn, and Queens.',{id:'restaurant-travel-help'})],{id:'restaurant-nyc'})
-            ]}),
-            SettingsGroup({title:'When & how many',level:2,children:[
-              Stack([Toggle({id:'restaurant-flex-dates',label:'Flexible dates',descriptionId:'restaurant-date-help'})],{id:'restaurant-date-options',hidden:true}),
-              FieldGrid([F({id:'restaurant-date',label:'Date',kind:'date'}),Stack([F({id:'restaurant-through',label:'Last date',kind:'date'})],{id:'restaurant-through-field',hidden:true})]),
-              Note('Up to 7 dates.',{id:'restaurant-date-help',hidden:true}),
-              FieldGrid([F({id:'restaurant-start',label:'From',kind:'time'}),F({id:'restaurant-end',label:'Until',kind:'time'})]),
-              Toggle({id:'restaurant-flexible',label:'Flexible party size',descriptionId:'restaurant-party-help'}),
-              Stack([F({id:'restaurant-party',label:'People',kind:'number'})],{id:'restaurant-fixed-fields'}),
-              Stack([FieldGrid([F({id:'restaurant-min',label:'Minimum people',kind:'number'}),F({id:'restaurant-max',label:'Maximum people',kind:'number'})])],{id:'restaurant-flex-fields',hidden:true}),
-              Note('Up to 8 sizes, 1 to 20.',{id:'restaurant-party-help',hidden:true})
-            ]})
-          ],{className:'workspace-form'}),
-          Disclosure('Research settings',[
-            F({id:'restaurant-limit',label:'Maximum restaurants',kind:'select',options:[{text:'6 restaurants',value:'6'},{text:'12 restaurants',value:'12'},{text:'24 restaurants',value:'24'}]}),
-            Notice('',{id:'restaurant-connection-status',role:'status',hidden:true})
-          ],{className:'research-settings'}),
-          ActionGroup([Button('Find restaurants',{id:'restaurant-find',variant:'primary',type:'submit'}),Button('Stop search',{id:'restaurant-stop',variant:'secondary',hidden:true})],{compact:true}),
+            F({id:'restaurant-text',label:'Restaurant or dinner idea',kind:'text',placeholder:'Quiet Italian near the UWS, no tasting menu'}),
+            F({id:'restaurant-city',label:'City',kind:'text'})
+          ],{className:'form-stack collapsible',id:'restaurant-request'}),
+          Stack([
+            F({id:'restaurant-date',label:'Date',kind:'date'}),
+            F({id:'restaurant-people',label:'People',kind:'number',min:1,max:20,step:1}),
+            F({id:'restaurant-time',label:'Time',kind:'select',options:TIMES}),
+            F({id:'restaurant-window',label:'Window',kind:'select',options:WINDOWS})
+          ],{className:'outing-row'}),
+          Stack([
+            Stack([Toggle({id:'restaurant-flex-dates',label:'More dates'}),Stack([F({id:'restaurant-through',label:'Last date',kind:'date'})],{id:'restaurant-through-field',hidden:true})],{className:'outing-flex'}),
+            Stack([Toggle({id:'restaurant-flex-party',label:'More sizes'}),Stack([F({id:'restaurant-max',label:'Up to',kind:'number',min:1,max:20,step:1})],{id:'restaurant-max-field',hidden:true})],{className:'outing-flex'})
+          ],{className:'outing-flex-row',id:'restaurant-flex-row'}),
+          Disclosure('Preferences',[
+            FieldGrid([F({id:'restaurant-neighborhood',label:'Neighborhood',kind:'text',placeholder:'Any'}),F({id:'restaurant-spend',label:'Most per person',kind:'money',placeholder:'Any'})]),
+            FieldGrid([F({id:'restaurant-dietary',label:'Dietary',kind:'text',placeholder:'None'}),F({id:'restaurant-format',label:'Menu',kind:'select',options:[{text:'Any',value:''},{text:'No tasting menu',value:'no-tasting'},{text:'Tasting menu',value:'tasting'}]})]),
+            Stack([Toggle({id:'restaurant-travel',label:'Include longer travel'})],{id:'restaurant-nyc'})
+          ],{id:'restaurant-preferences',className:'research-settings collapsible'}),
+          ActionGroup([Button('Find restaurants',{id:'restaurant-find',variant:'primary',type:'submit'}),Button('Stop',{id:'restaurant-stop',variant:'secondary',hidden:true})],{compact:true}),
+          Notice('',{id:'restaurant-connection-status',role:'status',hidden:true}),
           Notice('',{id:'restaurant-status','aria-live':'polite',hidden:true}),
           Notice('',{id:'restaurant-error',role:'alert',hidden:true})
         ],{id:'restaurant-form',className:'form-stack'})
       ],{id:'restaurant-search-section','aria-label':'Restaurant search'}),
       Section([
-        Heading('Shortlist',2),
-        Note('Your last shortlist, kept offline.',{id:'restaurant-empty',hidden:true}),
-        Notice('',{id:'restaurant-summary',hidden:true}),
-        Notice('',{id:'restaurant-clarification',hidden:true}),
-        Stack([],{id:'restaurant-candidates',className:'result-list'}),
-        ActionGroup([Button('Check selected restaurants',{id:'restaurant-check',variant:'primary',hidden:true})],{compact:true}),
-        Section([Heading('Availability',2),Note('',{id:'restaurant-result-context'}),Stack([],{id:'restaurant-results',className:'result-list'})],{id:'restaurant-availability',hidden:true})
-      ],{id:'restaurant-shortlist',hidden:true,'aria-label':'Restaurant results'})
+        Stack([Stack([],{id:'restaurant-summary-chips',className:'query-summary'}),ActionGroup([Button('Edit search',{id:'restaurant-edit',variant:'secondary',size:'compact'}),Button('',{id:'restaurant-mode-switch',variant:'quiet',size:'compact',hidden:true})],{compact:true})],{className:'query-summary-line'}),
+        Note('',{id:'restaurant-summary-notes'})
+      ],{id:'restaurant-summary',hidden:true,'aria-label':'What was understood'}),
+      Section([Heading('Which location?',2),Stack([],{id:'restaurant-choices',className:'choice-list'})],{id:'restaurant-choice',hidden:true,'aria-label':'Choose the restaurant'}),
+      Section([
+        Stack([ProgressBar({id:'restaurant-progress',label:'Checking availability'})],{id:'restaurant-progress-row',hidden:true}),
+        Stack([],{id:'restaurant-groups',className:'result-groups'}),
+        Note('',{id:'restaurant-limited'}),
+        ActionGroup([Button('Check remaining restaurants',{id:'restaurant-more',variant:'secondary',hidden:true}),Button('Continue checking',{id:'restaurant-continue',variant:'secondary',hidden:true}),Button('Retry research',{id:'restaurant-retry',variant:'secondary',hidden:true})],{compact:true}),
+        Disclosure('',[Stack([],{id:'restaurant-unverified-list'})],{id:'restaurant-unverified',hidden:true,className:'result-fold'}),
+        Disclosure('',[Stack([],{id:'restaurant-excluded-list'})],{id:'restaurant-excluded',hidden:true,className:'result-fold'})
+      ],{id:'restaurant-results',hidden:true,'aria-label':'Restaurant results'})
     ])
   ]);
 }
-
-// Mobile uses the same research form and candidate evidence. Booking providers
-// are opened explicitly: a web app cannot inspect another site's signed-in tab.
 export function MobileRestaurantWorkspace() {
   const view=RestaurantWorkspace({mobile:true});
   view.classList.add('workspace-shell--mobile');
-  const columns=view.querySelector('.workspace-flow');
-  const form=columns.firstElementChild,results=columns.lastElementChild;
-  results.hidden=false;
-  const disclosure=Disclosure('Search restaurants',[form],{id:'restaurant-search-panel'});
-  disclosure.open=true;
-  columns.replaceChildren(results,disclosure);
-  // Keep success and cache errors visible even after collapsing the search form.
-  view.querySelector('.workspace-heading').after(view.querySelector('#restaurant-status'),view.querySelector('#restaurant-error'));
-  view.querySelector('#restaurant-check').remove();
-  view.querySelector('#restaurant-availability').remove();
   return view;
 }
-
-export function MobileRestaurantCandidate(r,{search,links,expired=false}) {
-  return ResultBlock({title:r.name,meta:[r.neighborhood,r.borough,r.city].filter(Boolean).join(' · '),detail:r.reason,children:[
-    Note(r.address),
-    r.travel==='longer'?Notice('Longer travel from the UWS. Review the address before booking.'):r.travel==='unknown'?Notice('Neighborhood is unverified. Review the address before booking.'):null,
-    EvidenceList(r.evidence),
-    Disclosure('Booking pages',[
-      Note(`${search.endDate&&search.endDate!==search.date?`${search.date} – ${search.endDate}`:search.date} · ${search.startTime}–${search.endTime} local time`),
-      expired?Note('This date has passed. Search again for current links.'):
-        links.length?Stack(links.map(link=>Link(`${link.provider} · ${link.size} people${link.date?` · ${link.date}`:''}${link.time?` · near ${link.time}`:''}`,link.url)),{className:'booking-links'}):Note('No booking destination was verified.')
-    ])
-  ]});
+// The request as it was understood: one chip per thing it asks for (§3.2).
+export function summaryChips(parts){return parts.map(text=>Label(text,{className:'pill query-chip'}));}
+// Up to three places that share a name, each a press (§3.3).
+export function LocationChoice(options,onChoose){
+  return options.map(option=>{
+    const button=Button('',{variant:'secondary',className:'choice-option'});
+    button.append(Strong(option.name),Note([option.neighborhood,option.address].filter(Boolean).join(' · ')));
+    button.addEventListener('click',()=>onChoose(option));
+    return button;
+  });
 }
-export function RestaurantCandidate(r,selected,onChange) {
-  return ResultBlock({title:r.name,meta:[r.neighborhood,r.borough,r.city].filter(Boolean).join(' · '),detail:r.reason,children:[
-    ChoiceRow({title:`Check ${r.name}`,description:r.address,checked:selected,onChange}),
-    r.travel==='longer'?Notice('Longer travel from the UWS. Select this restaurant to include it.'):r.travel==='unknown'?Notice('Neighborhood is unverified. Review the address before selecting.'):null,
-    Note(r.booking.length?`Booking providers: ${r.booking.map(b=>b.provider).join(', ')}`:'No current booking destination was verified.'),EvidenceList(r.evidence)
-  ]});
+const FIELD_LABELS={michelin_stars:'Michelin stars',michelin_bib:'Bib Gourmand',nyt_rank:'NYT rank',nyt_stars:'NYT stars',infatuation_score:'Infatuation score',price_per_person:'Price per person',dining_format:'Menu',cuisine:'Cuisine',area:'Area',address:'Address',status:'Status',dietary:'Dietary',atmosphere:'Atmosphere',booking:'Booking',menu:'Menu'};
+const claimValue=c=>c.value===null||c.value===undefined?'':c.field==='price_per_person'?`$${Math.round(c.value.minorUnits/100)} (${c.value.basis})`:Array.isArray(c.value)?c.value.join(', '):typeof c.value==='boolean'?(c.value?'Yes':'No'):String(c.value);
+const STATUS_WORDS={supported:'read from the source',contradicted:'contradicted',unknown:'not verified'};
+// Each fact with what it rests on: the value, the source, whether it was read
+// there, and the passage (§5.1). A lead says it is a lead.
+export function ClaimRows(claims){
+  return claims.map(c=>Stack([
+    Stack([Strong(`${FIELD_LABELS[c.field]||c.field}${claimValue(c)?`: ${claimValue(c)}`:''}`),Label(STATUS_WORDS[c.status]||c.status,{className:'pill'})],{className:'claim-line'}),
+    c.source.url?Link(c.source.title||c.source.publisher||c.source.url,c.source.url):null,
+    Note([c.excerpt?`“${c.excerpt}”`:'',c.edition?`${c.edition} edition`:'',c.published?`Published ${c.published}`:'',c.retrievedAt?`Read ${new Date(c.retrievedAt).toLocaleDateString()}`:'',c.status!=='supported'&&c.reason?c.reason:''].filter(Boolean).join(' · '))
+  ],{className:'evidence-row'}));
 }
-const labels={available:'Tables found',unavailable:'No tables shown',unreleased:'Not released',attention:'Needs attention',checking:'Checking…',error:'Check failed',cancelled:'Not checked'};
-export function ReservationResult(result,{onOpen,onRecheck,busy}) {
-  const open=Button('Open booking page',{variant:'secondary'});open.addEventListener('click',onOpen);
-  const recheck=Button('Recheck page',{variant:'secondary',disabled:busy||!result.tabId});recheck.addEventListener('click',onRecheck);
-  return ResultBlock({title:`${result.restaurant.name} · ${result.size} ${result.size===1?'person':'people'}`,meta:`${result.provider} · ${result.date}${result.checkedAt?` · Checked ${new Date(result.checkedAt).toLocaleTimeString()}`:''}`,status:labels[result.status]||result.status,detail:result.detail,children:[
-    result.slots?.length?Stack(result.slots.map(slot=>UI.Badge(`${slot.time} · ${slot.label}`)),{className:'slot-list','aria-label':'Available times'}):null,
-    ActionGroup([open,recheck],{compact:true}),result.status==='attention'?Note('Sign in and set the filters on the page, then recheck.'):null
-  ]});
+const ago=(iso,now)=>{const minutes=Math.max(0,Math.round((now-Date.parse(iso))/60000));return minutes<1?'just now':minutes<60?`${minutes} min ago`:`${Math.round(minutes/60)} h ago`;};
+const STATUS_LINES={checking:'Checking…',not_checked:'',login_required:'Sign in on the site to see times.',challenge_required:'The site asked for a verification step.',choose_experience:'Choose an experience on the site to see times.',unsupported:'Times are checked on the site.',failed:'',cancelled:'Not checked.',stale:'Previously observed.'};
+// One restaurant, one result (§4.1): who it is, why it fits, what it costs,
+// what was observed, one way in, and the detail behind a disclosure.
+export function RestaurantResult(entry,{outing=null,summary=null,mobile=false,handoffs=[],onOpen,onRecheck,userTab=false,busy=false,now=Date.now()}={}){
+  const {venue,explanation,eligibility,fit}=entry;
+  const meta=[venue.neighborhood||areaLabel(''),...(venue.cuisine||[]).slice(0,2)].filter(Boolean).join(' · ');
+  const price=fit.contributions.find(d=>d.dimension==='price'&&!d.unknown)?.detail||(venue.claims||[]).filter(c=>c.field==='price_per_person'&&c.status==='supported'&&c.value).map(c=>`About $${Math.round(c.value.minorUnits/100)} per person`)[0]||'';
+  const missing=[...new Set([...explanation.unknowns,...eligibility.checks.filter(c=>c.status==='unknown').map(c=>c.detail)])].filter(Boolean);
+  const basis=[price,explanation.compromise&&explanation.compromise!==price?`Compromise: ${explanation.compromise}`:'',missing.length?`Not verified: ${missing.join('; ')}`:''].filter(Boolean).join(' · ');
+  const children=[];
+  if(explanation.reason)children.push(Text(explanation.reason));
+  if(basis)children.push(Note(basis));
+  const providers=venue.providers||[];
+  if(outing&&!mobile){
+    if(summary?.slots?.length){
+      // A time with a stable link opens that slot; without one the action says
+      // what it does — open the provider's search near that time — and the
+      // seating stays on the label, because 7:15 at the bar is not 7:15 in
+      // the dining room (§4.1).
+      const times=summary.slots.map(slot=>{
+        const where=slot.seating||slot.experience||'Seating not specified';
+        const text=slot.slotURL?`${displayTime(slot.time)} · ${where}`:`Open ${displayTime(slot.time)} search · ${where}`;
+        const button=Button(text,{variant:'secondary',size:'compact',className:'slot-action',title:slot.slotURL?`Opens this ${displayTime(slot.time)} slot on ${venue.providers?.[0]?.provider||'the provider'}`:`Opens the provider search near ${displayTime(slot.time)}; the table is chosen there`});
+        button.addEventListener('click',()=>onOpen?.(slot));
+        return button;
+      });
+      children.push(Stack(times,{className:'slot-list','aria-label':'Times observed'}));
+      if(summary.detail)children.push(Note(summary.detail));
+    }else if(summary){
+      const line=summary.detail||STATUS_LINES[summary.status]||'';
+      if(line)children.push(Note(line));
+    }else if(providers.length)children.push(Note('Not checked yet.'));
+    else children.push(Note('No booking page was verified for this restaurant.'));
+  }
+  const actions=[];
+  if(mobile||!outing){
+    for(const link of handoffs)actions.push(Link(link.label,link.url,{className:'button-secondary button--compact'}));
+  }else{
+    const primary=providers[0];
+    if(primary){const open=Button(`Open on ${primary.provider}`,{variant:summary?.slots?.length?'secondary':'primary',size:'compact'});open.addEventListener('click',()=>onOpen?.(null));actions.push(open);}
+    if(userTab){const recheck=Button('Recheck page',{variant:'secondary',size:'compact',disabled:busy});recheck.addEventListener('click',()=>onRecheck?.());actions.push(recheck);}
+  }
+  const details=[];
+  if(venue.address)details.push(Note(venue.address));
+  if(venue.officialURL)details.push(Link('Official site',venue.officialURL));
+  if(venue.claims?.length)details.push(...ClaimRows(venue.claims));
+  if(providers.length)details.push(Note(`Booking: ${providers.map(p=>p.provider).join(', ')}`));
+  if(summary?.observedAt)details.push(Note(`Observed ${ago(summary.observedAt,now)}${summary.coverage==='partial'?' · Coverage incomplete':''}`));
+  if(details.length)children.push(Disclosure('Details',details,{className:'result-details'}));
+  const head=Stack([Stack([Heading(venue.name,3),meta?Label(meta,{className:'record-meta'}):null],{className:'record-head'}),ActionGroup(actions,{compact:true,className:'action-group action-group--compact record-actions'})],{className:'record-line'});
+  return Section([head,...children],{className:'result-block',id:`restaurant-result-${venue.id}`});
+}
+export const ResultGroup=(title,rows)=>title?RecordGroup(title,rows):Stack(rows,{className:'record-group'});
+// A restaurant that is not a choice, with the fact that placed it here (§3.4).
+export function FoldedResult(entry){
+  const {venue,eligibility}=entry;
+  const why=eligibility.closure?.detail||eligibility.checks.filter(c=>c.status!=='pass').map(c=>c.detail).filter(Boolean).join(' · ');
+  return Section([Stack([Stack([Strong(venue.name),Label(venue.neighborhood||'',{className:'record-meta'})],{className:'record-head'})],{className:'record-line'}),why?Note(why):null],{className:'record-row'});
 }

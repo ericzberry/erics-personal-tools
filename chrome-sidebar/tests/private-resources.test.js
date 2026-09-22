@@ -4,6 +4,7 @@ import {readdirSync,readFileSync} from 'node:fs';
 import {privateStores} from '../src/private-resources.js';
 import {assertPrivateDataSynced,disconnectPrivateData} from '../src/private-disconnect.js';
 import {WEATHER_RESOURCE} from '../src/weather.js';
+import {restaurantHistory} from '../src/restaurant-history.js';
 
 const src=new URL('../src/',import.meta.url);
 function memory(){
@@ -21,7 +22,7 @@ const registered=()=>new Set(Object.values(privateStores({store:memory(),remote:
 
 // A module that writes to the device store itself, rather than through an
 // offline resource, and the copy it keeps there.
-const direct={'weather.js':WEATHER_RESOURCE};
+const direct={'weather.js':WEATHER_RESOURCE,'restaurant-history.js':restaurantHistory({store:memory(),remote:offline}).resource};
 
 // The registry is read off the directory rather than a list, so a tool's store
 // is held to it the day its file appears — the sizes store was once left out of

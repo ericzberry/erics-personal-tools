@@ -1,5 +1,10 @@
 import {safePublicURL} from './public-url.js';
-// Shared, deterministic search rules. No catalogue or availability is invented here.
+import {evidenceKey} from './restaurant-data.js';
+// The compatibility parser (docs/RESTAURANT_SEARCH_SPEC.md §11): the legacy
+// search object an older client posts and an older Worker validates, the
+// provider URL rules both generations share, and the legacy research reply.
+// New behavior lives in restaurant-data.js; this file keeps the old contract
+// alive for clients still on it.
 export const normalizeName = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 export const isNYC = city => ['nyc','new york','new york city','new york ny','manhattan'].includes(normalizeName(city));
 const neighborhoodName=value=>({uws:'upper west side',ues:'upper east side',les:'lower east side',ev:'east village'}[normalizeName(value)]||normalizeName(value));
@@ -61,15 +66,19 @@ export function bookingProvider(value) {
   if(h==='sevenrooms.com' && /^\/(?:reservations|explore)\//.test(u.pathname))return 'SevenRooms';
   return 'Restaurant website';
 }
-export function bookingURL(value,search,size,time=search.startTime,date=search.date) {
+// The provider's own search for one date, party and time. The venue path is
+// kept exactly; only the outing parameters are set, so a link can never name
+// a venue the source did not (§7.4).
+export function providerSearchURL(value,{date,partySize,time='19:00'}) {
   const safe=safePublicURL(value); if(!safe)throw Error('The booking link is not a public HTTPS address.');
   const u=new URL(safe),provider=bookingProvider(safe);
-  if(provider==='Resy'){u.searchParams.set('date',date);u.searchParams.set('seats',size);u.searchParams.set('time','all-day');}
-  if(provider==='OpenTable'){u.searchParams.set('dateTime',`${date}T${time}:00`);u.searchParams.set('covers',size);}
-  if(provider==='Tock'){u.searchParams.set('date',date);u.searchParams.set('size',size);u.searchParams.set('time',time);}
-  if(provider==='SevenRooms'){u.searchParams.set('date',date);u.searchParams.set('party_size',size);}
+  if(provider==='Resy'){u.searchParams.set('date',date);u.searchParams.set('seats',partySize);u.searchParams.set('time','all-day');}
+  if(provider==='OpenTable'){u.searchParams.set('dateTime',`${date}T${time}:00`);u.searchParams.set('covers',partySize);}
+  if(provider==='Tock'){u.searchParams.set('date',date);u.searchParams.set('size',partySize);u.searchParams.set('time',time);}
+  if(provider==='SevenRooms'){u.searchParams.set('date',date);u.searchParams.set('party_size',partySize);}
   return u.href;
 }
+export const bookingURL=(value,search,size,time=search.startTime,date=search.date)=>providerSearchURL(value,{date,partySize:size,time});
 export function travelDisposition(restaurant,search) {
   if(!isNYC(search.city)||search.includeLongTravel)return 'included';
   const neighborhood=normalizeName(restaurant.neighborhood),borough=normalizeName(restaurant.borough);
@@ -81,7 +90,8 @@ export function parseJSON(text) {
   try {return JSON.parse(String(text).trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));}
   catch {throw Error('The research response was incomplete. Try a smaller restaurant shortlist.');}
 }
-const sourceKey = value => {const safe=safePublicURL(value);if(!safe)return '';const u=new URL(safe);u.search='';return u.href.replace(/\/$/,'');};
+// A source is the same source with its tracking parameters removed and nothing else (§5.3).
+const sourceKey=evidenceKey;
 export function discoveryResult(raw, sources, search) {
   if(!Array.isArray(raw?.restaurants))throw Error('Research did not return a restaurant list.');
   const verified=new Set(sources.map(s=>sourceKey(s.url)).filter(Boolean)),seen=new Set();

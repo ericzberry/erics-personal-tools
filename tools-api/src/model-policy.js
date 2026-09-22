@@ -91,7 +91,12 @@ export const TASK_POLICIES = {
   'voice.samples':{label:'Sent mail reading',level:2,outputTokens:600,web:false,maxCost:0.03},
   'voice.profile':{label:'Writing voice profile',model:'gpt-5.6-terra',level:3,outputTokens:2500,web:false,maxCost:0.12},
   'restaurant.availability':{label:'Reservation page interpretation',level:2,outputTokens:2000,web:false,maxCost:0.05},
-  'restaurant.research':{label:'Restaurant research',level:2,outputTokens:7000,web:true,maxCost:0.15}
+  'restaurant.research':{label:'Restaurant research',level:2,outputTokens:7000,web:true,maxCost:0.15},
+  // Discovery finds candidates and quotes the sentence each fact was read in,
+  // so the Worker can read that source itself; the quotes are what the
+  // output budget pays for. An editorial requirement is read at the tier
+  // above, where the edition and the exact figure are held apart reliably.
+  'restaurant.discovery':{label:'Restaurant discovery',level:2,outputTokens:6000,web:true,maxCost:0.15}
 };
 // Counts the text a request carries, whether a message is a plain string or a
 // list of parts, and how many images ride along with it.
@@ -125,6 +130,7 @@ export function taskPolicy(task,input={}) {
   const {characters,images}=measureInput(input);
   // Email summaries use Eric’s explicitly selected Terra model.
   if(task==='restaurant.research'&&input.search?.mode==='category'&&input.search?.limit>12)policy.level=3;
+  if(task==='restaurant.discovery'&&(input.intent?.requirements||[]).some(item=>item.kind==='editorial'))policy.level=3;
   return {...policy,task,images,vision:images>0,
     inputTokens:(Math.ceil(characters/3)||(policy.web?6000:1000))+images*IMAGE_TOKENS};
 }

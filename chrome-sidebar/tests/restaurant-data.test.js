@@ -1,0 +1,156 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {interpretRequest,buildIntent,intentFromJSON,checkConstraint,closureCheck,claim,venue,sameVenue,venueKey,evidenceKey,legacySearch,legacyIntent,summarizeIntent,outingCombinations,candidatesFromResearch,canonicalArea,venueArea,dateIn,constraint,STANDING_EXCLUSIONS,mergeVenues} from '../src/restaurant-data.js';
+const now=new Date('2030-09-15T03:00:00Z');
+const ids=list=>list.map(item=>item.id);
+test('words become requirements or preferences by how they are said',()=>{
+  const r=interpretRequest('Quiet Italian near the UWS, no tasting menu');
+  assert.equal(r.mode,'discovery');
+  assert.deepEqual(ids(r.requirements),['dining_format:exclude:tasting menu','cuisine:eq:italian']);
+  assert.deepEqual(ids(r.preferences),['atmosphere:in:quiet','geography:in:uws']);
+  const m=interpretRequest('exactly two Michelin stars, under $150 all-in with wine');
+  assert.deepEqual(m.requirements.map(i=>[i.id,i.qualifiers]),[['editorial:eq:2',{publisher:'Michelin',system:'stars'}],['price:lte:150',{currency:'USD',basis:'all-in',includes:'food,tax,tip,fees',alcohol:true}]]);
+  assert.equal(interpretRequest('at least two michelin stars').requirements[0].operator,'gte');
+  assert.equal(interpretRequest('Infatuation above 8.5').requirements[0].operator,'gt');
+  assert.equal(interpretRequest('Infatuation of at least 8.5').requirements[0].operator,'gte');
+  const nyt=interpretRequest('NYT top 20');
+  assert.equal(nyt.requirements[0].qualifiers.latest,true);assert.match(nyt.notes[0],/latest edition/);
+  assert.equal(interpretRequest('NYT top 20 in 2025').requirements[0].qualifiers.edition,'2025');
+  const celiac=interpretRequest('celiac-safe pasta place');
+  assert.equal(celiac.requirements.find(i=>i.kind==='dietary').qualifiers.safety,'allergy');assert.match(celiac.notes[0],/confirmed with the restaurant/);
+  assert.equal(interpretRequest('vegetarian options would be nice').requirements.find(i=>i.kind==='dietary').qualifiers.safety,'preference');
+  assert.equal(interpretRequest('prefer French').preferences[0].kind,'cuisine');
+  assert.deepEqual(interpretRequest('no sushi tonight, date night').requirements[0],constraint({kind:'cuisine',operator:'exclude',value:['sushi'],origin:'query'}));
+});
+test('a name is a name, and an excluded neighborhood named on purpose is included (R16)',()=>{
+  assert.equal(interpretRequest('Le Bernardin').mode,'named');
+  for(const name of ['Example Bistro','Sushi Nakazawa','Bar Boulud','Trattoria Dell’Arte'])assert.equal(interpretRequest(name).mode,'named',name);
+  assert.deepEqual(interpretRequest('Example Bistro').requirements,[],'a name carries no criteria');
+  for(const words of ['sushi','italian bistro','quiet bistro','Italian'])assert.equal(interpretRequest(words).mode,'discovery',words);
+  assert.equal(buildIntent({text:'Example Bistro',city:'NYC'},{now}).requirements.length,0,'a named venue is wanted wherever it is');
+  assert.deepEqual(summarizeIntent(buildIntent({text:'Example Bistro',city:'NYC'},{now})),['Example Bistro'],'a name is summarised as the name');
+  assert.equal(interpretRequest('“The Odeon”').name,'The Odeon');
+  assert.equal(interpretRequest('somewhere good for dinner').mode,'discovery');
+  const ev=interpretRequest('ramen in the East Village');
+  assert.equal(ev.includeLongTravel,true);assert.deepEqual(ev.requirements.find(i=>i.kind==='geography').value,['east-village']);
+  assert.match(ev.notes[0],/standing exclusion is set aside/);
+  const intent=buildIntent({text:'ramen in the East Village',city:'NYC'},{now});
+  assert.equal(intent.requirements.some(i=>i.operator==='exclude'&&i.kind==='geography'),false,'the standing exclusion is dropped for this search');
+  assert.ok(summarizeIntent(intent).includes('Longer travel included'));
+  const standing=buildIntent({text:'ramen',city:'NYC'},{now});
+  assert.deepEqual(standing.requirements.find(i=>i.kind==='geography').value,STANDING_EXCLUSIONS);
+  assert.equal(standing.requirements.find(i=>i.kind==='geography').origin,'saved_preference');
+  assert.deepEqual(standing.preferences.find(i=>i.kind==='geography').value,['uws']);
+});
+test('a control the owner set wins over the words, and says so',()=>{
+  const intent=buildIntent({text:'Italian under $100',city:'NYC',maxSpend:'150',dietary:'nut allergy',format:'no-tasting',neighborhood:'West Village'},{now});
+  const price=intent.requirements.find(i=>i.kind==='price');
+  assert.equal(price.value,150);assert.equal(price.origin,'explicit_control');
+  assert.match(intent.notes.join(' '),/Budget taken from the form \(the text said Under \$100 per person\)/);
+  assert.deepEqual(intent.requirements.find(i=>i.kind==='dietary').value,['nut-free']);
+  assert.equal(intent.requirements.find(i=>i.kind==='dining_format').operator,'exclude');
+  assert.deepEqual(intent.preferences.find(i=>i.kind==='geography').value,['west-village']);
+  assert.throws(()=>buildIntent({text:'Italian',city:'NYC',neighborhood:'Narnia'},{now}),/not a neighborhood/);
+});
+test('the outing is judged on the destination’s own calendar (R18), and stays bounded',()=>{
+  // 03:00 UTC on the 15th is still the 14th in New York and already the 15th in Tokyo.
+  assert.equal(dateIn('America/New_York',now),'2030-09-14');assert.equal(dateIn('Asia/Tokyo',now),'2030-09-15');
+  assert.ok(buildIntent({text:'sushi',city:'NYC',date:'2030-09-14',people:2,time:'19:30'},{now}).outing);
+  assert.throws(()=>buildIntent({text:'sushi',city:'Tokyo',date:'2030-09-14',people:2,time:'19:30'},{now}),/on or after .* in Tokyo/);
+  const tokyo=buildIntent({text:'sushi',city:'Tokyo',date:'2030-09-15',people:2,time:'19:30'},{now});
+  assert.equal(tokyo.city.timezone,'Asia/Tokyo');
+  const o=buildIntent({text:'sushi',city:'NYC',date:'2030-09-20',endDate:'2030-09-22',flexibleDates:true,people:2,maxPeople:4,flexibleParty:true,time:'19:30',window:'60'},{now}).outing;
+  assert.deepEqual(o,{dates:['2030-09-20','2030-09-21','2030-09-22'],preferredDate:'2030-09-20',partySizes:[2,3,4],preferredParty:2,preferredTime:'19:30',startTime:'18:30',endTime:'20:30'});
+  assert.deepEqual(outingCombinations({...o,preferredParty:3}).slice(0,4),[{date:'2030-09-20',partySize:3},{date:'2030-09-20',partySize:2},{date:'2030-09-20',partySize:4},{date:'2030-09-21',partySize:3}]);
+  for(const bad of [{people:0},{people:21},{people:2,maxPeople:7,flexibleParty:true},{endDate:'2030-09-19',flexibleDates:true},{endDate:'2030-09-30',flexibleDates:true},{date:'2030-02-30'}])
+    assert.throws(()=>buildIntent({text:'sushi',city:'NYC',date:'2030-09-20',people:2,time:'19:30',...bad},{now}));
+  const late=buildIntent({text:'sushi',city:'NYC',date:'2030-09-20',people:2,time:'23:00',window:'120'},{now});
+  assert.equal(late.outing.endTime,'23:59');assert.match(late.notes.join(' '),/stops at midnight/);
+  assert.equal(buildIntent({text:'sushi',city:'NYC'},{now}).outing,null);
+  assert.match(buildIntent({text:'sushi',city:'Ulaanbaatar'},{now}).notes[0],/device’s clock/);
+});
+test('an intent survives JSON and refuses what it cannot hold (R27)',()=>{
+  const intent=buildIntent({text:'Quiet Italian near the UWS',city:'NYC',date:'2030-09-20',people:4,time:'19:30'},{now});
+  const back=intentFromJSON(JSON.parse(JSON.stringify(intent)),{now});
+  assert.deepEqual(back,intent);
+  assert.throws(()=>intentFromJSON({...intent,schemaVersion:3}),/Unsupported search format/);
+  assert.throws(()=>intentFromJSON({...intent,requirements:[{kind:'sql',operator:'eq',value:'x',origin:'query'}]}),/Unknown constraint kind/);
+  assert.throws(()=>intentFromJSON({...intent,requirements:[{kind:'price',operator:'lte',value:100,qualifiers:{expression:'1=1'},origin:'query'}]}),/cannot carry/);
+  assert.throws(()=>intentFromJSON({...intent,outing:{...intent.outing,partySizes:[1,2,3,4,5],preferredParty:2}}),/party sizes/);
+  assert.deepEqual(legacySearch(intent),{mode:'category',query:'Quiet Italian near the UWS',city:'New York City',neighborhood:'Upper West Side',date:'2030-09-20',endDate:'2030-09-20',flexibleDates:false,flexible:false,minParty:4,maxParty:4,startTime:'18:30',endTime:'20:30',includeLongTravel:false,limit:24,partySize:4});
+  const old=legacyIntent({mode:'restaurant',query:'Example Bistro',city:'NYC',date:'2029-01-01',endDate:'2029-01-02',minParty:2,maxParty:3,startTime:'17:00',endTime:'22:00'});
+  assert.equal(old.mode,'named');assert.deepEqual(old.outing.dates,['2029-01-01','2029-01-02']);assert.equal(old.interpretationVersion,'legacy');
+});
+const michelin=(value,extra={})=>claim({field:'michelin_stars',value,status:'supported',source:{url:'https://guide.michelin.com/us/en/x',title:'Guide'},excerpt:'awarded two stars',retrievedAt:'2030-09-14T00:00:00Z',expiresAt:'2030-09-21T00:00:00Z',...extra});
+const place=(claims,extra={})=>venue({name:'Example Bistro',address:'100 Example Street, New York, NY',city:'New York City',neighborhood:'Upper West Side',borough:'Manhattan',claims,...extra});
+const at=Date.parse('2030-09-15T00:00:00Z');
+test('a requirement passes only on a fresh, supported claim in the publication’s own units (R01–R04)',()=>{
+  const two=constraint({kind:'editorial',operator:'eq',value:2,qualifiers:{publisher:'Michelin',system:'stars'},origin:'query'});
+  const menuOnly=place([claim({field:'menu',value:'https://example.com/menu',status:'supported',source:{url:'https://example.com/menu'}})]);
+  assert.equal(checkConstraint(two,menuOnly,{now:at}).status,'unknown');
+  assert.equal(checkConstraint(two,place([michelin(3)]),{now:at}).status,'fail');
+  assert.equal(checkConstraint(two,place([michelin(2)]),{now:at}).status,'pass');
+  assert.equal(checkConstraint(two,place([michelin(2,{status:'unknown'})]),{now:at}).status,'unknown','a lead is not a fact');
+  assert.equal(checkConstraint(two,place([michelin(2,{expiresAt:'2030-09-10T00:00:00Z'})]),{now:at}).status,'unknown','a stale claim does not satisfy a current requirement');
+  const score=constraint({kind:'editorial',operator:'gt',value:8.5,qualifiers:{publisher:'The Infatuation',system:'score'},origin:'query'});
+  const infatuation=v=>claim({field:'infatuation_score',value:v,status:'supported',source:{url:'https://www.theinfatuation.com/x'},excerpt:'rated',retrievedAt:'2030-09-14T00:00:00Z'});
+  assert.equal(checkConstraint(score,place([infatuation(8.5)]),{now:at}).status,'fail');
+  assert.equal(checkConstraint(score,place([infatuation(8.6)]),{now:at}).status,'pass');
+  const latest=constraint({kind:'editorial',operator:'lte',value:20,qualifiers:{publisher:'The New York Times',system:'rank',latest:true},origin:'query'});
+  const rank=claim({field:'nyt_rank',value:7,status:'supported',source:{url:'https://www.nytimes.com/x'},excerpt:'ranked',edition:'2025',retrievedAt:'2030-09-14T00:00:00Z'});
+  const prior=checkConstraint(latest,place([rank]),{now:at});
+  assert.equal(prior.status,'unknown');assert.match(prior.detail,/latest edition is not established; 2025/);
+  assert.equal(checkConstraint(latest,place([{...rank,latest:true,edition:'2030'}]),{now:at}).status,'pass');
+  assert.equal(checkConstraint({...latest,qualifiers:{...latest.qualifiers,latest:false,edition:'2024'}},place([rank]),{now:at}).status,'unknown');
+});
+test('an all-in budget needs tax and fees (R17), geography is canonical, dietary never fails, and a closure blocks (R25)',()=>{
+  const budget=constraint({kind:'price',operator:'lte',value:150,qualifiers:{currency:'USD',basis:'all-in'},origin:'query'});
+  const food=claim({field:'price_per_person',value:{minorUnits:9500,currency:'USD',basis:'food'},status:'supported',source:{url:'https://example.com/menu'},retrievedAt:'2030-09-14T00:00:00Z'});
+  const unknown=checkConstraint(budget,place([food]),{now:at});
+  assert.equal(unknown.status,'unknown');assert.match(unknown.detail,/Tax, tip and fees/);
+  assert.equal(checkConstraint({...budget,qualifiers:{currency:'USD',basis:'food'}},place([food]),{now:at}).status,'pass');
+  assert.equal(checkConstraint(budget,place([{...food,value:{...food.value,basis:'all-in',minorUnits:16000}}]),{now:at}).status,'fail');
+  const uws=constraint({kind:'geography',operator:'in',value:['uws'],origin:'query'});
+  assert.equal(checkConstraint(uws,place([],{neighborhood:'West Village'}),{now:at}).status,'fail','a substring is not an area');
+  assert.equal(checkConstraint(uws,place([],{neighborhood:'Lincoln Square'}),{now:at}).status,'pass');
+  assert.equal(checkConstraint(uws,place([],{neighborhood:'',borough:''}),{now:at}).status,'unknown');
+  assert.equal(checkConstraint(uws,place([],{city:'Boston'}),{now:at}).status,'fail');
+  const exclude=constraint({kind:'geography',operator:'exclude',value:STANDING_EXCLUSIONS,origin:'saved_preference'});
+  assert.equal(checkConstraint(exclude,place([],{neighborhood:'Williamsburg',borough:'Brooklyn'}),{now:at}).status,'fail');
+  assert.deepEqual(venueArea({neighborhood:'Astoria',borough:'Queens',city:'New York City'}).id,'queens');
+  assert.equal(canonicalArea('Le Marais','Paris').id,'le-marais');
+  const dietary=constraint({kind:'dietary',operator:'in',value:['gluten-free'],qualifiers:{safety:'allergy'},origin:'query'});
+  assert.equal(checkConstraint(dietary,place([]),{now:at}).status,'unknown');
+  assert.equal(checkConstraint(dietary,place([claim({field:'dietary',value:['Gluten-free options'],status:'supported',source:{url:'https://example.com'},retrievedAt:'2030-09-14T00:00:00Z'})]),{now:at}).status,'pass');
+  const closed=place([claim({field:'status',value:'permanently closed',status:'supported',source:{url:'https://example.com',title:'Official site'},retrievedAt:'2030-09-14T00:00:00Z'})]);
+  assert.match(closureCheck(closed,{now:at}).detail,/permanently closed/);
+  assert.equal(closureCheck(place([]),{now:at}),null);
+});
+test('identity: a name alone never merges two places (R05), and a venue-defining query parameter is kept (R24)',()=>{
+  const a=venue({name:'Example Bistro',address:'100 Example St, New York, NY'}),b=venue({name:'Example Bistro',address:'200 Other Ave, Brooklyn, NY'});
+  assert.equal(sameVenue(a,b),false);
+  assert.equal(sameVenue(a,venue({name:'Example Bistro',address:'100 Example Street, New York, NY, USA'})),true);
+  assert.equal(sameVenue(venue({name:'A',providers:[{provider:'Resy',id:'123',url:'https://resy.com/cities/ny/venues/a'}]}),venue({name:'B',providers:[{provider:'Resy',id:'123',url:'https://resy.com/cities/ny/venues/a'}]})),true);
+  assert.equal(sameVenue(venue({name:'A',address:'1 Main St',officialURL:'https://a.example.com'}),venue({name:'A',address:'1 Main St',officialURL:'https://b.example.com'})),false);
+  assert.notEqual(venueKey(a),venueKey(b));
+  assert.equal(evidenceKey('https://www.opentable.com/restref/client/?rid=123&utm_source=x'),'https://opentable.com/restref/client/?rid=123');
+  assert.notEqual(evidenceKey('https://www.opentable.com/restref/client/?rid=123'),evidenceKey('https://www.opentable.com/restref/client/?rid=456'));
+  assert.equal(mergeVenues([a,venue({name:'Example Bistro NYC',address:'100 Example Street, New York, NY'})]).length,2,'a different name at the same address is not merged on the address alone');
+  const merged=mergeVenues([a,venue({name:'Example Bistro',aliases:['Example Bistro NYC'],address:'100 Example Street, New York, NY',claims:[michelin(2)]})]);
+  assert.equal(merged.length,1);assert.equal(merged[0].claims.length,1);
+});
+test('research replies keep only claims and bookings whose pages were actually opened',()=>{
+  const intent=buildIntent({text:'two michelin stars',city:'NYC'},{now});
+  const sources=[{url:'https://guide.michelin.com/us/en/x'},{url:'https://resy.com/cities/new-york-ny/venues/x'}];
+  const raw={candidates:[{name:'Example Bistro',address:'100 Example St, New York, NY',city:'New York City',neighborhood:'Upper West Side',borough:'Manhattan',cuisine:['French'],
+    claims:[{field:'michelin_stars',value:2,url:'https://guide.michelin.com/us/en/x',quote:'Two MICHELIN Stars',edition:'2030',latest:true},{field:'michelin_stars',value:3,url:'https://invented.example.com',quote:'x'},{field:'price_per_person',value:145,basis:'all-in',url:'https://guide.michelin.com/us/en/x',quote:'menu 145'}],
+    booking:[{provider:'Resy',url:'https://resy.com/cities/new-york-ny/venues/x'},{provider:'OpenTable',url:'https://www.opentable.com/r/unopened'}]},
+    {name:'',address:''},{name:'Example Bistro',address:'100 Example Street, New York, NY',claims:[],booking:[]}]};
+  const result=candidatesFromResearch(raw,sources,intent);
+  assert.equal(result.candidates.length,1);assert.equal(result.unverified,1);
+  const [c]=result.candidates;
+  assert.deepEqual(c.claims.map(x=>[x.field,x.status]),[['michelin_stars','unknown'],['price_per_person','unknown']]);
+  assert.deepEqual(c.claims[1].value,{minorUnits:14500,currency:'USD',basis:'all-in'});
+  assert.deepEqual(c.providers.map(p=>p.provider),['Resy']);
+  assert.throws(()=>candidatesFromResearch({},sources,intent),/restaurant list/);
+});

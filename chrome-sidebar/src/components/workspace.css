@@ -82,3 +82,31 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .workspace-shell--mobile .booking-links{display:grid;gap:4px;margin:12px 0}
 .workspace-shell--mobile .booking-links a{display:block;padding:10px 0;min-height:44px}
 .workspace-shell--mobile :focus-visible{outline:2px solid var(--forest);outline-offset:3px}
+
+/* The search as one line of controls: date, people, time and the window sit
+   in a row while there is room and fold two by two on a phone (§3.1). */
+.outing-row {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr));gap:12px;align-items:start;}
+.outing-flex-row {display:flex;flex-wrap:wrap;gap:8px 24px;}
+.outing-flex {display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}
+.outing-flex .form-field {min-width:150px;}
+.workspace-shell .toggle-field {display:inline-flex;align-items:center;gap:8px;margin:0;}
+/* Once results are in, the request folds to its summary and only the outing stays open (§4.3). */
+.form-stack.is-collapsed > .collapsible {display:none;}
+.query-summary-line {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;}
+.query-summary {display:flex;flex-wrap:wrap;gap:6px;}
+.query-chip {font-size:12px;color:var(--ink);padding:3px 8px;}
+.choice-list {display:grid;gap:8px;}
+.choice-option {display:grid;gap:2px;text-align:start;padding:10px 12px;}
+.choice-option .footnote {margin:0;}
+.result-groups {display:grid;gap:16px;}
+.result-groups .record-group-title {margin:0 0 4px;}
+.workspace-shell .result-block .record-line {align-items:flex-start;}
+.workspace-shell .result-block .record-head {flex:1 1 0;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;}
+.workspace-shell .result-block .record-meta {color:var(--muted);font-size:12px;}
+.slot-list {display:flex;flex-wrap:wrap;gap:6px;}
+.slot-action {white-space:nowrap;}
+.claim-line {display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;}
+.result-fold {margin-top:8px;}
+.result-fold .record-row:last-child {border-bottom:0;}
+.workspace-shell--mobile .outing-row {grid-template-columns:repeat(2,minmax(0,1fr));}
+.workspace-shell--mobile .slot-list a,.workspace-shell--mobile .record-actions a {display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;text-decoration:none;}

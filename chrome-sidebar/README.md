@@ -4194,3 +4194,56 @@ Empty states keep their first sentence and lose the instruction after it. The
 rule is UI-17 in [UI_RULES.md](../docs/UI_RULES.md), now checked for every
 static note in a component: `tests/ui-rules.test.js` holds the allowlist of
 the three that remain. Archive: `release/erics-sidebar-0.6.277.zip`.
+
+## Restaurant search, rebuilt (0.6.278 / mobile 0.1.227)
+
+"I don't think the restaurant search works well." It did four things wrong at
+once, and this release is the first phase of the redesign in
+[docs/RESTAURANT_SEARCH_SPEC.md](../docs/RESTAURANT_SEARCH_SPEC.md): it
+called a citation a verification, it took a time-of-day selector for a table,
+it researched everything again when the date moved, and it showed each
+restaurant twice — once in a shortlist and once under Availability.
+
+The form is one field — a name, a misspelt name, or a dinner in words — a
+city, and a Date · People · Time · Window row, with more dates and more sizes
+behind a toggle and the preferences behind a disclosure. The words are read
+deterministically: "exactly", "under", "no" and an allergy require; "prefer"
+and "near" lean; a short phrase that describes nothing is a name. After
+submitting, the form folds to a line of chips saying what was understood, and
+the standing Upper West Side preference and the four excluded areas carry over
+unless the request names one of them.
+
+Research now returns claims, not links: discovery quotes the sentence each
+fact was read in, and the Worker reads up to eight of those pages itself and
+marks a claim **read from the source** only where the passage, with its
+figure, is on the page. A requirement passes only on such a claim, in the
+publication's own units; everything else folds under **Could not verify** with
+the missing fact named, and nothing is padded to five. Ranking is
+deterministic and explained: only the dimensions asked for take part, an
+unknown scores nothing, and each result says its reason and its one
+compromise.
+
+One block per restaurant carries its own availability. A time counts only
+inside the page's reservation region, enabled, under the selected date and
+exact party; "no tables" needs the provider's own message for that party.
+Checks run two at a time and one per site, twelve pages and a minute per
+pass, the first three choices automatically and the rest on **Check remaining
+restaurants**. Changing the date, party or time rechecks; nothing is
+researched again. Reopening restores the last search with its observations
+and their ages and starts nothing. The phone shows one **Check on Resy** per
+provider with the date filled in, rebuilt as the date changes.
+
+New shared modules: `restaurants.js` (the controller both hosts mount),
+`restaurant-data.js`, `restaurant-ranking.js`, `restaurant-history.js` (the
+`restaurants` store in `private-resources.js`, which replaces the phone's
+`restaurant-cache.js`); the Worker gains `source-fetch.js` and the
+`restaurant.discovery` task. Phases B–D — persisted venues and staged routes,
+recovery offers and live adapter acceptance, saved restaurants and feedback —
+are listed with their state in [RESTAURANTS.md](RESTAURANTS.md).
+
+Validation: the extension, mobile and API suites pass on a clean export of
+the commit, with 31 restaurant tests across R01–R11, R14–R20, R24, R25 and
+R27 of the spec's regression table. Reviewed in `tests/restaurant-preview.html`
+at 1440px, 390px and 280px and in the phone shell at 375px; live OpenAI
+discovery and live provider pages were not exercised.
+Archive: `release/erics-sidebar-0.6.278.zip`.

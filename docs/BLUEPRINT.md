@@ -49,7 +49,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `subscriptions.html` | `src/subscriptions-page.js` | Recurring charges, renewal decisions and alternatives |
 | `unlock.html` | `src/unlock-page.js` | The small window the side panel opens to ask for the passkey, which the panel cannot raise itself |
 | `taxes.html` | `src/taxes-page.js` | Taxes: file a K-1 or 1099 into Google Drive |
-| `restaurants.html` | `src/restaurant-page.js` | Restaurant reservation workspace |
+| `restaurants.html` | `src/restaurant-page.js` | Restaurants: thin host wiring for the shared search in `src/restaurants.js` |
 | `data.html` | `src/data-page.js` | Read-only player rankings reference data |
 
 Every capability except Player rankings and Restaurants is a side-panel tool as
@@ -78,7 +78,7 @@ every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns
 modules: `capabilities.*`, `cards.*`, `purchase-advisor.js`/`advisor.css`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
 `vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `replacements.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
-`restaurant-views.js`,
+`restaurant-views.js` (the compact form, the query summary, one result per restaurant),
 `workspace.css`, `sidebar-launcher.js`. `charts.{js,css}` are the two pictures
 of money every host can draw — `LineChart` (a figure over time) and
 `ProportionBar` (the parts of a whole, in runs), positioned through the CSSOM
@@ -252,8 +252,20 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 - **Capability controllers** — `travel.js`, `cards.js`, `purchase-advisor.js`
   (reads the cards, rewards and programs stores and writes to none; its
   arithmetic is `purchase-data.js`, shared with mobile), `rewards-tool.js`,
-  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `sizes.js`, `replacements.js`, `capture.js`, `taxes.js`, `data-library.js`,
-  `restaurant-search.js`, `reservation-*.js`.
+  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `sizes.js`, `replacements.js`, `capture.js`, `taxes.js`, `data-library.js`.
+- **Restaurants** — `restaurants.js` (the shared controller: form, interpretation,
+  research, ranking, the bounded availability run, revisions, stop and reopen;
+  the hosts inject research, the browser and history), `restaurant-data.js`
+  (the v2 contracts: intent, constraints, claims, venue identity, the
+  deterministic request parser, claim comparison; imported by the Worker),
+  `restaurant-ranking.js` (eligibility, fit, explanations, slot order, groups),
+  `reservation-availability.js` (provider adapters, positive slot validation,
+  observations, the check planner, bounded concurrency), `reservation-reader.js`
+  (the in-page snapshot with each control's region), `reservation-browser.js`
+  (owned tabs and readiness), `restaurant-history.js` (the device's encrypted
+  search history, registered as `restaurants`), and `restaurant-search.js`
+  (the legacy request and reply the old Worker route still understands, plus
+  the provider URL rules). See [RESTAURANTS.md](../chrome-sidebar/RESTAURANTS.md).
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
   `email-cloud.js` (the email summary and the reply, both through the Worker).
 - **Writing voice** — `voice-data.js` (what Eric wrote, taken out of what he
@@ -307,8 +319,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   (`#capability-capture`) — both hidden as soon as a tool is open; `tool-navigation.js`/`.css` render the home-screen
   icon grid and, once a tool or Settings is open, the same grid behind the
   hamburger menu.
-- `restaurants.js` + `restaurant-cache.js` — mobile restaurant view and its
-  read-only download cache.
+- `restaurants.js` — thin wiring of the shared restaurant controller: research
+  through the Worker, no browser, history from the shared `restaurants` store.
 - `push.js` (in the shell) and `push-bridge.js` (in the frame) — notifications:
   the browser half where the page is, the authenticated half where the token is.
 - `sw.js` — offline shell cache; its cache name carries the version, plus the
@@ -318,7 +330,10 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 ## tools-api/
 
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
-  `/health`, `/v1/releases/latest`, `/v1/ai-tasks[/:task]`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`,
+  `/health`, `/v1/releases/latest`, `/v1/ai-tasks[/:task]`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`
+  (`restaurants` takes a legacy `{search}` or a v2 `{intent}`; the v2 path runs
+  `src/restaurants.js` discovery and then `src/source-fetch.js`, which reads each
+  cited source and marks claims supported only where the page says so),
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`, `/v1/replacements[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`,

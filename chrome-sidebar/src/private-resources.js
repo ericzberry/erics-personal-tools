@@ -10,6 +10,7 @@ import {programsOffline} from './program-offline.js';
 import {financeOffline} from './finance-offline.js';
 import {personalOffline} from './personal-offline.js';
 import {dailyWeather} from './weather.js';
+import {restaurantHistory} from './restaurant-history.js';
 import {encryptedDeviceStore} from './offline-storage.js';
 import {cloudRequest} from './cloud-storage.js';
 
@@ -21,9 +22,10 @@ import {cloudRequest} from './cloud-storage.js';
 // that adds its store; tests/private-resources.test.js fails for any store
 // that is not.
 //
-// A program catalogue and today's weather queue nothing — one is written only
-// by a visit to the program's site, the other is worked out afresh each day —
-// so they are cleared with the rest and never hold a disconnect up.
+// A program catalogue, today's weather and the restaurant searches queue
+// nothing — one is written only by a visit to the program's site, one is
+// worked out afresh each day, one is downloaded research — so they are cleared
+// with the rest and never hold a disconnect up.
 export const PRIVATE_RESOURCES=Object.freeze({
   subscriptions:subscriptionsOffline,
   reminders:remindersOffline,
@@ -36,6 +38,7 @@ export const PRIVATE_RESOURCES=Object.freeze({
   programs:programsOffline,
   finance:financeOffline,
   personal:personalOffline,
+  restaurants:restaurantHistory,
   weather:({store=encryptedDeviceStore(),remote=cloudRequest,...options}={})=>dailyWeather({store,remote,...options})
 });
 

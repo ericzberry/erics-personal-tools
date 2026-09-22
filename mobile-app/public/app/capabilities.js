@@ -24,7 +24,6 @@ import {encryptedDeviceStore} from './shared/offline-storage.js';
 import {mobileCredentials, protectedStore, mobileRequest as cloudRequest, mobileUpload} from './mobile-session.js';
 import {mountLibrary} from './shared/data-library.js';
 import {mountRestaurants} from './restaurants.js';
-import {restaurantCache} from './restaurant-cache.js';
 const root=document.getElementById('capabilities-root');
 root.replaceChildren(CapabilitiesView());
 // Connection maintenance and AI connections belong to the Settings screen.
@@ -32,7 +31,6 @@ const connectionRoot=document.getElementById('capability-settings');
 connectionRoot.parentElement.append(connectionRoot);
 connectionRoot.hidden=true;
 const ai=offlineResource({resource:'ai-metadata',path:'/v1/ai-connections',store:protectedStore(encryptedDeviceStore()),remote:async token=>({records:(await cloudRequest(token,'/v1/ai-connections')).connections}),normalize:value=>value,metadata:value=>value});
-const restaurantDownloads=restaurantCache({store:protectedStore(encryptedDeviceStore()),credentials:mobileCredentials});
 // Every tool's store comes from the shared registry, so a store added there is
 // one this phone clears on disconnect without being named here. The phone
 // shows a program's offers and never reads one: the reading needs the browser
@@ -41,8 +39,8 @@ const restaurantDownloads=restaurantCache({store:protectedStore(encryptedDeviceS
 const stores=privateStores({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())},{travel:{includeNumbers:true}});
 const {subscriptions:subscriptionStore,rewards:rewardStore,programs:programStore,cards:cardStore,finance:financeStore,personal:personalStore,
   reminders:reminderStore,gifts:giftStore,sizes:sizeStore,replacements:replacementStore,travel:travelStore,weather}=stores;
-// What a disconnect clears: the registry's stores and the two only the phone keeps.
-const deviceCopies={...stores,ai,restaurants:restaurantDownloads};
+// What a disconnect clears: the registry's stores and the one only the phone keeps.
+const deviceCopies={...stores,ai};
 const credentials={
   async beforeDisconnect(){const token=await this.get();if(token)await assertNothingPending(deviceCopies,token);},
   get:()=>mobileCredentials.get(),
@@ -95,7 +93,7 @@ const attentionTool=mountAttention(document.getElementById('capability-attention
 const rankings=mountLibrary(document.getElementById('capability-rankings'),{kind:'rankings',load:async()=>({value:await (await fetch('/app/data/rankings-2026.json')).json()})});
 await rankings.refresh();
 let selectedTool;
-const restaurants=mountRestaurants(document.getElementById('capability-restaurants'),{credentials,request:cloudRequest,cache:restaurantDownloads,loadConnections:async()=>{
+const restaurants=mountRestaurants(document.getElementById('capability-restaurants'),{credentials,request:cloudRequest,history:stores.restaurants,loadConnections:async()=>{
   const result=await ai.request(await credentials.get(),'/v1/ai-connections');return result.records;
 }});
 // The cloud connection belongs to Settings, so it is always expanded there.

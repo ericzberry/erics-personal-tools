@@ -52,7 +52,9 @@ export async function settingsAction(message, chromeApi, request = cloudRequest)
   if (message.action === 'ai-task-save') return request(token, `/v1/ai-tasks/${encodeURIComponent(message.task)}`, {method:'PUT', value:{model:message.model}});
   if (message.action === 'list') return request(token, '/v1/ai-connections');
   if (!['save', 'remove','models','test','generate','restaurants'].includes(message.action) || !/^[a-f0-9-]{36}$/.test(message.id || '')) throw Error('Unknown settings action.');
-  if(message.action==='restaurants')return request(token,`/v1/ai-connections/${message.id}/restaurants`,{method:'POST',value:{model:message.model,search:message.search},timeoutMs:130000});
+  // Research reads the web and then the sources it cites, so it is given the
+  // Worker's own two minutes plus the source reads.
+  if(message.action==='restaurants')return request(token,`/v1/ai-connections/${message.id}/restaurants`,{method:'POST',value:{model:message.model,search:message.search,intent:message.intent},timeoutMs:150000});
   if(message.action==='models')return request(token,`/v1/ai-connections/${message.id}/models`);
   if(message.action==='test')return request(token,`/v1/ai-connections/${message.id}/test`,{method:'POST',value:{model:message.model}});
   if(message.action==='generate')return request(token,`/v1/ai-connections/${message.id}/generate`,{method:'POST',value:{task:message.task,model:message.model,messages:message.messages,maxTokens:message.maxTokens}});

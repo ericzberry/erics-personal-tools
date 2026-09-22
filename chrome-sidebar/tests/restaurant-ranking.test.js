@@ -1,0 +1,83 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {buildIntent,venue,claim,constraint} from '../src/restaurant-data.js';
+import {rankVenues,fit,eligibility,explain,sortSlots,availabilityGroup,groupResults,WEIGHTS,STALE_AFTER} from '../src/restaurant-ranking.js';
+const now=new Date('2030-09-15T03:00:00Z'),at=now.getTime();
+const supported=(field,value,extra={})=>claim({field,value,status:'supported',source:{url:'https://example.com/'+field,title:field},retrievedAt:'2030-09-14T12:00:00Z',expiresAt:'2030-09-21T00:00:00Z',...extra});
+const place=(name,extra={},claims=[])=>venue({id:name.toLowerCase().replace(/\s+/g,'-'),name,address:`${name} St, New York, NY`,city:'New York City',neighborhood:'Upper West Side',borough:'Manhattan',claims,...extra});
+test('eligibility puts every venue in one of three places, and a table never lifts a mismatch',()=>{
+  const intent=buildIntent({text:'Italian, exactly two Michelin stars',city:'NYC'},{now});
+  const stars=place('Two Stars',{cuisine:['Italian']},[supported('michelin_stars',2)]);
+  const three=place('Three Stars',{cuisine:['Italian']},[supported('michelin_stars',3)]);
+  const unknown=place('Unread',{cuisine:['Italian']},[]);
+  const brooklyn=place('Far',{cuisine:['Italian'],borough:'Brooklyn',neighborhood:'Williamsburg'},[supported('michelin_stars',2)]);
+  const r=rankVenues([three,unknown,stars,brooklyn],intent,{now:at});
+  assert.deepEqual(r.eligible.map(e=>e.venue.name),['Two Stars']);
+  assert.deepEqual(r.unverified.map(e=>e.venue.name),['Unread']);
+  assert.match(r.unverified[0].eligibility.checks.find(c=>c.status==='unknown').detail,/not verified from Michelin/);
+  assert.deepEqual(r.excluded.map(e=>e.venue.name).sort(),['Far','Three Stars']);
+  const found={[three.id]:{status:'available',slots:[{time:'19:00'}],observedAt:now.toISOString()}};
+  assert.deepEqual(groupResults(r.eligible,found,{now:at,outing:{}}).map(g=>g.key),['checking'],'an excluded venue with a table is still excluded');
+});
+test('fit uses only the dimensions asked for, renormalised, and never scores an unknown as neutral',()=>{
+  const intent=buildIntent({text:'quiet Italian near the UWS',city:'NYC'},{now});
+  const quiet=place('Quiet',{cuisine:['Italian']},[supported('atmosphere',['quiet','intimate'],{published:'2030-06-01'})]);
+  const loud=place('Loud',{cuisine:['Italian']},[supported('atmosphere',['lively','loud'],{published:'2030-06-01'})]);
+  const silent=place('Silent',{cuisine:['Italian']});
+  const q=fit(quiet,intent,{now:at}),l=fit(loud,intent,{now:at}),s=fit(silent,intent,{now:at});
+  assert.deepEqual(q.contributions.map(d=>d.dimension),['atmosphere','geography']);
+  assert.ok(Math.abs(q.contributions.reduce((sum,d)=>sum+d.weight,0)-1)<1e-9);
+  assert.equal(q.contributions[0].weight,WEIGHTS.atmosphere/(WEIGHTS.atmosphere+WEIGHTS.geography));
+  assert.equal(q.score,1);assert.ok(l.score<q.score);
+  assert.deepEqual(s.unknowns,['Atmosphere not described by a dated review']);
+  assert.equal(s.contributions[0].match,0);
+  const r=rankVenues([silent,loud,quiet],intent,{now:at});
+  assert.deepEqual(r.eligible.map(e=>e.venue.name),['Quiet','Loud','Silent']);
+  assert.equal(r.eligible[1].explanation.compromise,'Reviews describe it as lively');
+  // Fewer unknowns break a tie, then fresher decisive evidence, then the id.
+  const a=place('Alpha',{cuisine:['Italian']},[supported('atmosphere',['quiet'],{published:'2030-06-01'})]);
+  const b=place('Beta',{cuisine:['Italian']},[supported('atmosphere',['quiet'],{published:'2030-06-01'}),supported('price_per_person',{minorUnits:9000,currency:'USD',basis:'food'})]);
+  const tie=rankVenues([b,a],intent,{now:at});
+  assert.deepEqual(tie.eligible.map(e=>e.venue.name),['Beta','Alpha'],'equal fit and equal unknowns fall to fresher decisive evidence: Beta has a price read, Alpha none');
+  const plainA=place('Alpha',{cuisine:['Italian']},[supported('atmosphere',['quiet'],{published:'2030-06-01'})]),plainB=place('Beta',{cuisine:['Italian']},[supported('atmosphere',['quiet'],{published:'2030-06-01'})]);
+  assert.deepEqual(rankVenues([plainB,plainA],intent,{now:at}).eligible.map(e=>e.venue.name),['Alpha','Beta'],'with nothing else to tell them apart, the stable id decides');
+  const fresher=place('Alpha',{cuisine:['Italian']},[supported('atmosphere',['quiet'],{published:'2030-06-01'}),supported('michelin_stars',1,{retrievedAt:'2030-09-14T18:00:00Z'})]);
+  const older=place('Beta',{cuisine:['Italian']},[supported('atmosphere',['quiet'],{published:'2030-06-01'}),supported('michelin_stars',1,{retrievedAt:'2030-09-10T18:00:00Z'})]);
+  assert.deepEqual(rankVenues([older,fresher],intent,{now:at}).eligible.map(e=>e.venue.name),['Alpha','Beta']);
+  assert.deepEqual(rankVenues([fresher,{...older,id:'aaa'}],intent,{now:at}).eligible.map(e=>e.venue.name),['Alpha','Beta'],'fresher decisive evidence outranks an earlier id');
+});
+test('with nothing asked the order is evidence completeness, and the screen is told it is arbitrary',()=>{
+  // Paris has no standing area preference, so nothing at all is active.
+  const intent=buildIntent({text:'somewhere for dinner',city:'Paris'},{now});
+  const thin=place('Thin',{city:'Paris',neighborhood:'Marais'}),full=place('Full',{city:'Paris',neighborhood:'Marais'},[supported('price_per_person',{minorUnits:8000,currency:'USD',basis:'food'}),supported('cuisine',['French'])]);
+  const r=rankVenues([thin,full],intent,{now:at});
+  assert.equal(r.arbitrary,true);
+  assert.deepEqual(r.eligible.map(e=>e.venue.name),['Full','Thin']);
+  assert.equal(r.eligible[0].fit.score,null);
+});
+test('explicit feedback is the only personal signal: would-return lifts, not-for-me hides except by name',()=>{
+  const intent=buildIntent({text:'Italian',city:'NYC'},{now});
+  const a=place('Alpha',{cuisine:['Italian']}),b=place('Beta',{cuisine:['Italian']}),c=place('Gamma',{cuisine:['Italian']});
+  const r=rankVenues([a,b,c],intent,{now:at,feedback:{[b.id]:{state:'return'},[c.id]:{state:'not_for_me'}}});
+  assert.deepEqual(r.eligible.map(e=>e.venue.name),['Beta','Alpha']);
+  assert.deepEqual(r.suppressed.map(e=>e.venue.name),['Gamma']);
+  assert.equal(r.eligible[0].explanation.reason.includes('You would return'),true);
+  const named=buildIntent({text:'Gamma',city:'NYC'},{now});
+  assert.equal(rankVenues([c],named,{now:at,feedback:{[c.id]:{state:'not_for_me'}}}).eligible.length,1);
+  assert.equal(fit(a,intent,{now:at,feedback:{[b.id]:{state:'return'}}}).contributions.find(d=>d.dimension==='feedback').match,0.5,'no feedback on this venue is neutral, not negative');
+});
+test('slots sort by distance from the wanted time, then seating, then the clock; freshness groups but never reorders (R19)',()=>{
+  const slots=[{time:'17:00',seating:'Bar'},{time:'20:00',seating:'Dining room'},{time:'19:00',seating:'Bar'},{time:'19:00',seating:'Dining room'},{time:'19:45',seating:null}];
+  assert.deepEqual(sortSlots(slots,{preferredTime:'19:30',seating:'Dining room'}).map(s=>`${s.time} ${s.seating}`),['19:45 null','19:00 Dining room','20:00 Dining room','19:00 Bar','17:00 Bar']);
+  const fresh={status:'available',slots:[{time:'19:00'}],observedAt:new Date(at-60000).toISOString()};
+  assert.equal(availabilityGroup(fresh,{now:at}),'found');
+  assert.equal(availabilityGroup(fresh,{now:at+STALE_AFTER+1}),'stale');
+  assert.equal(availabilityGroup({status:'none_in_checked_window'},{now:at}),'none');
+  assert.equal(availabilityGroup({status:'login_required'},{now:at}),'checking');
+  assert.equal(availabilityGroup(null,{now:at}),'checking');
+  const intent=buildIntent({text:'Italian',city:'NYC',date:'2030-09-20',people:2,time:'19:30'},{now});
+  const list=['One','Two','Three','Four'].map(name=>({venue:place(name,{cuisine:['Italian']}),fit:{score:null,unknowns:[],contributions:[]},eligibility:{checks:[]},explanation:{}}));
+  const groups=groupResults(list,{one:{status:'none_in_checked_window'},three:fresh,four:{...fresh,observedAt:new Date(at-STALE_AFTER-1).toISOString()}},{now:at,outing:intent.outing});
+  assert.deepEqual(groups.map(g=>[g.key,g.items.map(e=>e.venue.name)]),[['found',['Three']],['checking',['Two']],['stale',['Four']],['none',['One']]]);
+  assert.deepEqual(groupResults(list,{},{now:at,outing:null}).map(g=>g.items.length),[4]);
+});

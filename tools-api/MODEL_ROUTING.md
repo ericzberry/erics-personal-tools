@@ -12,7 +12,8 @@ Current policies:
 | --- | --- | --- |
 | `email.summary` | GPT-5.6 Terra by default, replaceable in Settings | No silent fallback; reasoning disabled |
 | `restaurant.availability` | Level 2: structured extraction from booking pages | No automatic downgrade |
-| `restaurant.research` | Level 2 plus native web search | Level 3 for category searches above 12 candidates |
+| `restaurant.research` | Level 2 plus native web search (legacy `{search}` requests) | Level 3 for category searches above 12 candidates |
+| `restaurant.discovery` | Level 2 plus native web search; candidates with quoted claims for the Worker to read against their sources | Level 3 when the request carries an editorial requirement; a model chosen for `restaurant.research` carries over until discovery has its own |
 
 The initial catalog covers the OpenAI connections used by these features. Other providers remain available for explicit playground requests; automatic cross-provider routing is not yet implemented. Selecting a different provider must never silently send content to another account or endpoint. Add reviewed provider candidates to the same catalog when integrating another automatic task.
 
