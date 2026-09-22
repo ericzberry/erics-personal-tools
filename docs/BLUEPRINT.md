@@ -41,6 +41,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `advisor.html` | `src/advisor-page.js` | Alias: sends its reader to `rewards.html?view=pay` (the purchase advisor is the Pay view) |
 | `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation, entities, private positions, houses, institutions, and the sources every total rests on — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
+| `health.html` | `src/health-page.js` | Health (passkey-gated): the notebook of personal and family history — a sentence is a record, filed under a relative when it names one — with its summary, medication history and visit-summary PDF. The panel mounts the same controller |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
 | `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
 | `sizes.html` | `src/sizes-page.js` | Clothing sizes: what the label says, brand by brand, and the measurements behind it |
@@ -76,7 +77,7 @@ progress indicators, imported by `tokens.css` so every host has them) ·
 every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns
 `{message, tone}` when what it got was not a success) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `purchase-advisor.js`/`advisor.css`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
-`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `replacements.*`, `capture.*`
+`vault.*` (the shared lock screen), `health.*`, `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `replacements.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js` (the compact form, the query summary, one result per restaurant),
 `workspace.css`, `sidebar-launcher.js`. `charts.{js,css}` are the two pictures
@@ -210,6 +211,17 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   Institutions on the ledger's page by `InstitutionCard` in
   `components/finance-overview.js`),
   `personal-data.js`/`personal-offline.js`,
+  `health-data.js`/`health-offline.js` (the health notebook: the plaintext
+  validators run on the device before sealing and after opening, `parseWhen`
+  for a date kept as typed, `detectRelative` for the one sentence shape that
+  files a note under a relative, the summary, history and search projections,
+  the medication change and review rules, and the lines of the visit summary;
+  `normalizeHealth` is what the Worker imports, and it accepts nothing but a
+  sealed envelope. The offline module also holds `healthDrafts`, the unsaved
+  note sealed with the vault key — see [HEALTH.md](HEALTH.md)),
+  `pdf-write.js` (a text PDF written on the device with no library: WinAnsi
+  Helvetica, wrapped lines, an honest count of what the character set could
+  not carry — what the visit summary leaves the vault as),
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored, plus `birthdaysAhead`
   — the fortnight both hosts' home screens lead with),
@@ -277,7 +289,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `embedded:true` mounts it as the Pay view), `rewards-tool.js` (the four
   views; the host hands it `mountPay`/`mountRates` to build the Pay view's
   tools on first opening),
-  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `sizes.js`, `replacements.js`, `capture.js`, `taxes.js`, `data-library.js`.
+  `finance.js`, `personal.js`, `health.js`, `reminders.js`, `gifts.js`, `sizes.js`, `replacements.js`, `capture.js`, `taxes.js`, `data-library.js`.
 - **Restaurants** — `restaurants.js` (the shared controller: form, interpretation,
   research, ranking, the bounded availability run, revisions, stop and reopen;
   the hosts inject research, the browser and history), `restaurant-data.js`
@@ -360,7 +372,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `src/restaurants.js` discovery and then `src/source-fetch.js`, which reads each
   cited source and marks claims supported only where the page says so),
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/wallet[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
-  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`, `/v1/replacements[/…]`,
+  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/health[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`, `/v1/replacements[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`,
   `/v1/storage`, `/v1/backup[/files|/run|/restore]`, `/v1/weather`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
@@ -371,8 +383,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/v1/drive/callback` is the one route outside the bearer check — Google's
   redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
-  `src/personal.js`, `src/reminders.js`, `src/gifts.js`, `src/sizes.js` and
-  `src/replacements.js` reuse it for `card_records`, `personal_records`,
+  `src/personal.js`, `src/health.js`, `src/reminders.js`, `src/gifts.js`, `src/sizes.js` and
+  `src/replacements.js` reuse it for `card_records`, `personal_records`, `health_records`,
   `reminder_records`, `gift_records`, `size_records` and `replacement_records`.
   `src/finance.js` does not: the ledger is two relational tables, so it has its
   own handler, its own `p3` / `3-1-20260919` / `h3` / `r3` / `f5-…` / `i…` addressing, and the
@@ -411,7 +423,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   same hourly `scheduled` trigger, and notifies once per threshold crossed. The
   limits and the wording are `chrome-sidebar/src/quota-data.js`, which the
   Settings screen reads too. See [CLOUDFLARE.md](CLOUDFLARE.md).
-- `src/backup.js` — the quarterly backup: every table (discovered, not listed)
+- `src/backup.js` — the quarterly backup, and the daily `daily-health` copy of
+  the health tables on any day they changed, pruned to the newest thirty: every table (discovered, not listed)
   read in one batch and written as one JSON file to the owner's backup folder in
   Google Drive through the connection `drive.js` holds, then checked against
   Drive's own checksum; and the table-by-table restore from one, which previews
@@ -428,7 +441,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_portfolios`, `finance_marks`, `finance_holdings`, `finance_capital`,
-  `finance_properties`, `finance_valuations`, `finance_flows`, `finance_imports`), `personal-schema.sql` (`personal_records`),
+  `finance_properties`, `finance_valuations`, `finance_flows`, `finance_imports`), `personal-schema.sql` (`personal_records`), `health-schema.sql` (`health_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
   `replacements-schema.sql` (`replacement_records`),
   `wallet-schema.sql` (`wallet_records`),
@@ -558,6 +571,6 @@ checks, held by `chrome-sidebar/tests/ui-rules.test.js` and the
 `ui-consistency` agent), `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/PURCHASE_ADVISOR.md`, `docs/REWARDS.md`,
-`docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/BACKUPS.md`, `docs/REWARD_PROGRAMS.md`,
+`docs/PROTECTED_SECTIONS.md`, `docs/HEALTH.md`, `docs/TAXES.md`, `docs/BACKUPS.md`, `docs/REWARD_PROGRAMS.md`,
 `docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/REPLACEMENTS.md`, `docs/QUICK_ADD.md`, `docs/NOTIFICATIONS.md`, `docs/WEATHER.md`,
 `chrome-sidebar/RESTAURANTS.md`.

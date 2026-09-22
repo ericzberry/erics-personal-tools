@@ -41,7 +41,7 @@ const issuerCatalog={id:'amex-offers',programId:'amex-offers',label:'Amex Offers
   offers:[{key:'synthetic-everyday-dell',name:'Dell',category:'Electronics',badge:'',dates:'Expires 10/31/2026',card:'Synthetic Everyday (-72005)',path:'/offers/eligible?account_key=synthetic',
     summary:'Spend $1,500 or more, get $300 back.',firstSeenAt:new Date().toISOString()}],
   readAt:new Date().toISOString(),listedAt:'',revision:'synthetic-issuer',updatedAt:new Date().toISOString()};
-let finance=[];let personal=[];let subscriptions=[];
+let finance=[];let personal=[];let health=[];let subscriptions=[];
 // Dated commitments, as the phone receives them: one overdue service, one
 // birthday inside its notice, one renewal with months of warning.
 let reminders=[
@@ -183,7 +183,7 @@ createServer(async (req, res) => {
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
       cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
     }
-    for(const [name,list,set] of [['subscriptions',()=>subscriptions,value=>{subscriptions=value;}],['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}],['sizes',()=>sizes,value=>{sizes=value;}],['replacements',()=>replacements,value=>{replacements=value;}]]){
+    for(const [name,list,set] of [['subscriptions',()=>subscriptions,value=>{subscriptions=value;}],['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['health',()=>health,value=>{health=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}],['sizes',()=>sizes,value=>{sizes=value;}],['replacements',()=>replacements,value=>{replacements=value;}]]){
       if(url.pathname===`/v1/${name}/snapshot`){res.end(JSON.stringify({records:list()}));return;}
       if(url.pathname.startsWith(`/v1/${name}/`)){
         const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');

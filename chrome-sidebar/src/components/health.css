@@ -1,0 +1,43 @@
+@import url('./travel.css');
+/* The health notebook. The gate wrapper carries the wallet system, so controls,
+   spacing and typography come from there; this sheet only places what is
+   particular to a run of notes: the whole note when a row opens, a relative's
+   own verbs on its heading line, and the small decisions a record raises. */
+.health-notebook{display:grid;gap:12px}
+.health-notebook .travel-list{display:grid;gap:12px}
+.health-notebook .record-row{padding:6px 0}
+.health-notebook .record-row>p{margin:0}
+/* A note is read as it was written: line for line, wrapped, never on one line. */
+.health-note{white-space:pre-wrap;font-size:13px;line-height:1.5}
+.health-notebook .health-note-line{align-items:flex-start}
+.health-notebook .health-note-line>.health-note{flex:1 1 0;min-width:0}
+.health-notebook .record-row-content{display:grid;gap:4px;padding:6px 0 2px}
+.health-notebook .record-row-content .footnote{margin:0}
+.health-notebook .record-row-content>.action-group{margin-top:4px}
+/* What a record or a relative is asking to have decided stays under it. */
+.health-decision{display:grid;gap:8px;padding:8px 0 4px}
+.health-decision .footnote{margin:0}
+.health-change,.health-relative-editor{padding:8px 0 4px}
+/* A relative's heading line carries its own verbs at the end. */
+.health-group-head{padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
+.health-group-head>.record-group-title{padding:0;border-bottom:0}
+/* Where the note will be filed, beside the save. */
+.health-destination{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.health-destination-label{font-size:12px;color:var(--wallet-muted)}
+.health-destination-label:empty{display:none}
+.health-notebook .health-details{border-top:0;padding:0}
+.health-notebook .health-details[open]>:not(summary){margin-top:8px}
+/* The visit summary preview: one choice per record, and the text as it will
+   leave, so what is about to be outside the vault is read here first. */
+.health-export{display:grid;gap:8px}
+.health-export-group{display:grid;gap:2px}
+.health-export-heading{font-size:13px}
+.health-notebook .choice-row{display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:6px 0}
+.health-notebook .choice-row input{width:auto;min-height:0;margin:3px 0 0;flex-shrink:0;accent-color:var(--wallet-forest)}
+.health-notebook .choice-row .footnote{margin:2px 0 0}
+.health-export-lines{display:grid;gap:4px;padding:8px 10px;border:1px solid var(--wallet-line);border-radius:8px;background:var(--wallet-surface)}
+.health-export-lines:empty{display:none}
+.health-export-lines .footnote{margin:0}
+.health-review .record-row{padding:4px 0}
+/* Where there is no pointer, the words a record carries keep a touchable line. */
+@media(pointer:coarse){.health-notebook .record-row-content .button--compact{min-height:36px}}

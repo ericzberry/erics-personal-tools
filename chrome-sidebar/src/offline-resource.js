@@ -21,7 +21,10 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
   }
   const rows=state=>{
     const records=new Map(state.cloud.map(record=>[record.id,record]));
-    for(const [id,change] of Object.entries(state.pending))records.set(id,{...change.value,id,revision:change.localRevision,pending:true,conflict:!!change.conflict,deleting:change.method==='DELETE'});
+    // A conflicted change keeps the cloud version beside it, so a tool can show
+    // both texts and let the owner choose with the other one in view.
+    for(const [id,change] of Object.entries(state.pending))records.set(id,{...change.value,id,revision:change.localRevision,pending:true,conflict:!!change.conflict,deleting:change.method==='DELETE',
+      ...(change.conflict&&records.has(id)?{cloud:records.get(id)}:{})});
     return [...records.values()];
   };
   function message(state){

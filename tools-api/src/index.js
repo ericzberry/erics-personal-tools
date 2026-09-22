@@ -7,6 +7,7 @@ import {calendarRoutes,sweepBirthdays} from './calendar.js';
 import {voice} from './voice.js';
 import {readTaxDocument} from './taxes.js';
 import {personal} from './personal.js';
+import {health} from './health.js';
 import {subscriptions,readSubscriptions,researchSubscriptions} from './subscriptions.js';
 import {reminders} from './reminders.js';
 import {gifts} from './gifts.js';
@@ -16,7 +17,7 @@ import {readCapture} from './capture.js';
 import {pushSubscriptions, sendTestPush, deliverDueReminders} from './push.js';
 import {latestRelease} from './releases.js';
 import {storageUsage,sweepStorage} from './quota.js';
-import {backupRoutes,sweepBackup,BACKUP_CRON} from './backup.js';
+import {backupRoutes,sweepBackup,sweepHealthBackup,BACKUP_CRON} from './backup.js';
 import {rewardsSettings,researchCardBenefits,readLoyaltyBalances} from './rewards.js';
 import {wallet} from './wallet.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
@@ -85,7 +86,11 @@ export default {
   // per-invocation limit the morning notification needs.
   async scheduled(event, env, ctx) {
     if (event?.cron === BACKUP_CRON) {
-      ctx.waitUntil(sweepBackup(env, {log: message => console.log(message)}));
+      // The health notebook's daily copy follows the quarterly sweep in the
+      // same invocation, one after the other, so the two share one query
+      // budget in a known order rather than racing for it.
+      const log = message => console.log(message);
+      ctx.waitUntil(sweepBackup(env, {log}).then(() => sweepHealthBackup(env, {log})));
       return;
     }
     ctx.waitUntil(deliverDueReminders(env, {log: message => console.log(message)}));
@@ -172,6 +177,7 @@ export default {
       if(path==='/v1/wallet'||path.startsWith('/v1/wallet/'))return await wallet(request,env,readValue,json);
       if(path==='/v1/finance'||path.startsWith('/v1/finance/'))return await finance(request,env,readValue,json);
       if(path==='/v1/personal'||path.startsWith('/v1/personal/'))return await personal(request,env,readValue,json);
+      if(path==='/v1/health'||path.startsWith('/v1/health/'))return await health(request,env,readValue,json);
       if(path==='/v1/subscriptions'||path.startsWith('/v1/subscriptions/'))return await subscriptions(request,env,readValue,json);
       if(path==='/v1/reminders'||path.startsWith('/v1/reminders/'))return await reminders(request,env,readValue,json);
       if(path==='/v1/gifts'||path.startsWith('/v1/gifts/'))return await gifts(request,env,readValue,json);

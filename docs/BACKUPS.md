@@ -19,6 +19,14 @@ itself, its digests, and which versions can be read). The operator's way in is
   1st of January is the ledger as the year closed. A day that fails is tried
   again the next day. When a quarter still has no backup after a second failed
   day, every subscribed device is told once, with the reason.
+- **Daily, for Health.** After the quarterly check, the same trigger reads the
+  `health_` tables' row count and latest write; on a day either changed it
+  writes a `daily-health` file of those tables only and then removes all but
+  the newest thirty `daily-health` files. Only files of that kind are ever
+  removed — the quarterly, manual and safety files stay under this document's
+  no-deletion rule. The state row keeps the last mark, so an unchanged day
+  costs two queries and no file. A failed day keeps the last good file and
+  says so in the log without any health detail.
 - **Manual.** `backup.mjs run`, any time. It does not stand in for the quarter's
   own.
 - **Before every restore**, automatically, of exactly the tables about to be
@@ -152,8 +160,9 @@ node tools-api/scripts/backup.mjs restore <drive-file-id> --tables finance --con
 
 - `--tables finance` is every `finance_` table in the file at once, which is the
   unit that makes sense for the ledger: its figures, capital accounts and
-  valuations point at its portfolios, holdings and properties. Other tables are
-  named individually, comma-separated.
+  valuations point at its portfolios, holdings and properties. `--tables
+  health` is every `health_` table, from a quarterly or a `daily-health` file.
+  Other tables are named individually, comma-separated.
 - The restore is one D1 transaction with foreign-key checks deferred to the
   end: every named table goes back, or — a figure left pointing at a portfolio
   that is not there, a column that no longer exists — none does.
@@ -199,8 +208,8 @@ conflict rather than overwrite the restored row — resolve it there. See
   Free plan's 50 queries: it fails, saying so, past 42 tables.
 - The state the daily trigger keeps is one row in `backup_state`
   ([`backup-schema.sql`](../tools-api/backup-schema.sql)): the last quarterly
-  file, the last of any kind, the last restore, and a failing quarter's day
-  count. Losing it costs at most one extra backup.
+  file, the last of any kind, the last restore, a failing quarter's day
+  count, and the health tables' last mark. Losing it costs at most one extra backup.
 
 ## Routes
 
@@ -208,7 +217,7 @@ All behind the bearer token.
 
 | Route | Does |
 | --- | --- |
-| `GET /v1/backup` | What the last runs did, from D1 alone |
+| `GET /v1/backup` | What the last runs did, from D1 alone, the daily health copy included |
 | `GET /v1/backup/files` | The backups in the folder, newest first |
 | `POST /v1/backup/run` | Takes one now |
 | `POST /v1/backup/restore` | `{fileId, tables, confirm}` — a preview unless `confirm` is exactly `true`. Reads only files in the backup folder |

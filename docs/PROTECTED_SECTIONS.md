@@ -1,7 +1,9 @@
 # Finance and Personal information
 
 Two capabilities whose entire contents sit behind the device passkey. Choose
-either from Tools in the extension or the unlocked mobile app.
+either from Tools in the extension or the unlocked mobile app. Health is the
+third section behind the same gate; it seals everything, not only a value, and
+is described in [HEALTH.md](HEALTH.md).
 
 ## The gate
 

@@ -125,6 +125,8 @@ export async function driveFetch(env,request,fetcher,path,init={},{retried=false
   }
   if(response.status===404)fail(404,notFound);
   if(!response.ok)fail(502,`Google Drive is unavailable (${response.status}).`);
+  // A delete is answered with nothing, and nothing is what it means.
+  if(response.status===204)return {};
   return response.json();
 }
 

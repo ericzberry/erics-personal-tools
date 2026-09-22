@@ -27,6 +27,7 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | Clothing sizes | [docs/SIZES.md](docs/SIZES.md) |
 | Things to buy again | [docs/REPLACEMENTS.md](docs/REPLACEMENTS.md) |
 | Turning a typed note into a record | [docs/QUICK_ADD.md](docs/QUICK_ADD.md) |
+| Health history, family records, medications, the visit summary | [docs/HEALTH.md](docs/HEALTH.md) |
 | Gmail or restaurant workflows | [Gmail](docs/GMAIL.md) or [restaurants](chrome-sidebar/RESTAURANTS.md) |
 | Filing tax documents or Google Drive access | [docs/TAXES.md](docs/TAXES.md) |
 | Backups, restoring data, or the backup file format | [docs/BACKUPS.md](docs/BACKUPS.md) |

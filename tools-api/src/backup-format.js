@@ -75,7 +75,7 @@ const fileDigest = file => sha256(JSON.stringify([...HEADER.map(key => file[key]
 // The quarter a moment falls in, in UTC: the scheduled backup is one per
 // quarter and this is the name of the quarter it stands for.
 export const quarterOf = (when = new Date()) => `${when.getUTCFullYear()}-Q${Math.floor(when.getUTCMonth() / 3) + 1}`;
-export const BACKUP_KINDS = ['quarterly', 'manual', 'before-restore'];
+export const BACKUP_KINDS = ['quarterly', 'manual', 'before-restore', 'daily-health'];
 // Sortable, unique to the minute, and says what it is before it is opened.
 export const backupName = (when, kind) => {
   const stamp = when.toISOString();

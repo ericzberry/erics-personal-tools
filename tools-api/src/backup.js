@@ -160,6 +160,65 @@ export async function sweepBackup(env,{fetcher=fetch,now:when=new Date(),log=()=
   }
 }
 
+// --- The daily health backup. The notebook is written to far more often than
+// once a quarter, and what a device holds is a cache the browser may evict, so
+// on any day the health tables changed the same trigger writes them — and only
+// them — to the folder as a `daily-health` file, and keeps the newest thirty
+// of those. Whether anything changed is read off the tables' row count and
+// latest write, kept in the state row from the last run; nothing is decrypted.
+// Only files this sweep wrote are ever removed: the quarterly backups, manual
+// ones and safety copies stay under their own policy, which deletes nothing.
+export const HEALTH_DAILY_KEEP=30;
+export const HEALTH_KIND='daily-health';
+async function healthMark(env,tables){
+  const health=tables.filter(table=>HEALTH.test(table.name));
+  if(!health.length)return null;
+  const results=await env.DB.batch(health.map(table=>env.DB.prepare(`SELECT count(*) AS n, max(updated_at) AS latest FROM ${quoted(table.name)}`)));
+  return health.map((table,index)=>{const row=results[index]?.results?.[0]||{};return `${table.name}:${row.n||0}:${row.latest||''}`;}).join('|');
+}
+async function pruneHealthBackups(env,request,fetcher){
+  const found=await driveFetch(env,request,fetcher,`/files?${new URLSearchParams({
+    q:`'${BACKUP_FOLDER_ID}' in parents and trashed = false and appProperties has { key='backupKind' and value='${HEALTH_KIND}' }`,
+    fields:'files(id,name,createdTime,appProperties)',orderBy:'createdTime desc',pageSize:'200',
+    supportsAllDrives:'true',includeItemsFromAllDrives:'true'})}`,{},{notFound:FOLDER_GONE});
+  // Checked again here: a listing filter is a request, and only a file this
+  // sweep wrote may go.
+  const mine=(found.files||[]).filter(file=>file.appProperties?.backupKind===HEALTH_KIND&&file.appProperties?.ericsToolsBackup)
+    .sort((a,b)=>String(b.createdTime).localeCompare(String(a.createdTime)));
+  const removed=[];
+  for(const file of mine.slice(HEALTH_DAILY_KEEP)){
+    await driveFetch(env,request,fetcher,`/files/${encodeURIComponent(file.id)}?supportsAllDrives=true`,{method:'DELETE'},{notFound:'already gone'});
+    removed.push(file.name);
+  }
+  return removed;
+}
+export async function sweepHealthBackup(env,{fetcher=fetch,now:when=new Date(),log=()=>{}}={}){
+  let state;
+  try{state=await backupState(env);}
+  catch(error){log(`health backup state unreadable: ${errorText(error)}`);return {failed:errorText(error)};}
+  try{
+    const list=await tableList(env);
+    const mark=await healthMark(env,list);
+    if(mark===null)return {skipped:'no health tables'};
+    if(state.health?.mark===mark)return {skipped:'unchanged'};
+    const request=new Request('https://tools.invalid/v1/backup');
+    const tables=await readTables(env,list.filter(table=>HEALTH.test(table.name)));
+    const result=await takeBackup(env,{request,fetcher,kind:HEALTH_KIND,now:when,tables});
+    let pruned=[];
+    try{pruned=await pruneHealthBackups(env,request,fetcher);}
+    catch(error){log(`health backup pruning failed: ${errorText(error)}`);}
+    await saveState(env,{...await backupState(env),last:result,health:{mark,last:result,pruned:pruned.length,at:when.toISOString(),failure:null}});
+    log(`health backup ${result.name}: ${result.rows} rows, ${result.bytes} bytes, ${pruned.length} older removed`);
+    return {backedUp:true,pruned,...result};
+  }catch(error){
+    // A failed day keeps the last good file and says nothing about the notes.
+    const failure={error:errorText(error),at:when.toISOString()};
+    try{await saveState(env,{...await backupState(env),health:{...(state.health||{}),failure}});}catch(problem){log(`health backup state not saved: ${errorText(problem)}`);}
+    log(`health backup failed: ${failure.error}`);
+    return {failed:failure.error};
+  }
+}
+
 // --- Restoring.
 //
 // Table by table, because corruption is rarely everywhere: the ledger can be
@@ -167,11 +226,13 @@ export async function sweepBackup(env,{fetcher=fetch,now:when=new Date(),log=()=
 // finance_ table in the file at once, which is the unit that makes sense for
 // the ledger — its figures point at its portfolios.
 const FINANCE=/^finance_/;
+const HEALTH=/^health_/;
 function expand(asked,backup){
   const list=Array.isArray(asked)?asked:typeof asked==='string'?[asked]:[];
   const names=list.flatMap(name=>String(name)==='finance'
-    ?backup.tables.filter(table=>FINANCE.test(table.name)).map(table=>table.name):[String(name)]);
-  if(!names.length)fail(400,'Name the tables to restore, or "finance" for the whole ledger.');
+    ?backup.tables.filter(table=>FINANCE.test(table.name)).map(table=>table.name)
+    :String(name)==='health'?backup.tables.filter(table=>HEALTH.test(table.name)).map(table=>table.name):[String(name)]);
+  if(!names.length)fail(400,'Name the tables to restore, or "finance" for the whole ledger, or "health" for the health notebook.');
   return [...new Set(names)];
 }
 const rowKey=row=>JSON.stringify(row);
@@ -334,7 +395,7 @@ export async function backupRoutes(request,env,readValue,json,fetcher=fetch){
     const account=await storedAccount(env);
     return json({version:BACKUP_VERSION,quarter:quarterOf(new Date()),folder:{id:BACKUP_FOLDER_ID,url:BACKUP_FOLDER_URL},
       google:{connected:!!account?.refreshToken,account:account?.email||''},
-      quarterly:state.quarterly||null,last:state.last||null,failure:state.failure||null,restore:state.restore||null});
+      quarterly:state.quarterly||null,last:state.last||null,failure:state.failure||null,restore:state.restore||null,health:state.health||null});
   }
 
   // Every backup in the folder, newest first, told apart from anything else

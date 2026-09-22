@@ -10,6 +10,7 @@ import {walletOffline} from './wallet-offline.js';
 import {programsOffline} from './program-offline.js';
 import {financeOffline} from './finance-offline.js';
 import {personalOffline} from './personal-offline.js';
+import {healthOffline,healthDrafts} from './health-offline.js';
 import {dailyWeather} from './weather.js';
 import {restaurantHistory} from './restaurant-history.js';
 import {encryptedDeviceStore} from './offline-storage.js';
@@ -40,6 +41,9 @@ export const PRIVATE_RESOURCES=Object.freeze({
   programs:programsOffline,
   finance:financeOffline,
   personal:personalOffline,
+  health:healthOffline,
+  // The note being written, sealed with the vault key; it queues nothing.
+  healthDrafts:healthDrafts,
   restaurants:restaurantHistory,
   weather:({store=encryptedDeviceStore(),remote=cloudRequest,...options}={})=>dailyWeather({store,remote,...options})
 });

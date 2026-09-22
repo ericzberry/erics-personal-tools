@@ -42,6 +42,15 @@ This sub-project has its own manifest, source, config, tests, and build. Rules l
 
 The Cloudflare settings API lives in `../tools-api`. Its Worker is `erics-tools-api`, bound as `DB` to D1 database `erics-personal-tools`. It stores AI connections; ESPN data is not uploaded.
 
+## Health (0.6.280)
+
+A private notebook of personal and family history behind the shared passkey
+gate, in the side panel and on `health.html`. One field saves a record; a
+sentence such as "My dad had Parkinson’s" files itself under Dad. Summary,
+History and Family tabs, medication history and review, plain-text search, and
+a visit summary exported as a PDF written on the device. Every object is sealed
+before it leaves the device. See [docs/HEALTH.md](../docs/HEALTH.md).
+
 ## Personal settings page (0.6.17)
 
 Reload the unpacked extension, then type `ericberry` in Chrome’s address bar, press Tab, then Enter. This keyword opens the extension’s `settings.html` page; it is not a domain, and it only works while the extension is installed and enabled. You can also right-click the extension icon → Options, use Chrome’s Extension options button, or click Settings in the sidebar header.

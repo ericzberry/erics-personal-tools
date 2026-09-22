@@ -6,12 +6,12 @@ import {createHash} from 'node:crypto';
 import worker from '../src/index.js';
 import {encryptSettings,decryptSettings} from '../src/ai-settings.js';
 import {DRIVE_SCOPE} from '../src/drive.js';
-import {sweepBackup,takeBackup,restoreBackup,backupRoutes,backupState,readTables,writeTables,BACKUP_FOLDER_ID,BACKUP_CRON} from '../src/backup.js';
+import {sweepBackup,sweepHealthBackup,takeBackup,restoreBackup,backupRoutes,backupState,readTables,writeTables,BACKUP_FOLDER_ID,BACKUP_CRON,HEALTH_DAILY_KEEP} from '../src/backup.js';
 import {buildBackup,verifyBackup,upgradeBackup,encodeCell,quarterOf,backupName,keyCheck,BACKUP_VERSION,BACKUP_FORMAT} from '../src/backup-format.js';
 
 const token='synthetic-token-at-least-32-characters';
 const KEY='12'.repeat(32);
-const SCHEMAS=['schema.sql','drive-schema.sql','finance-schema.sql','reminders-schema.sql','release-schema.sql','backup-schema.sql'];
+const SCHEMAS=['schema.sql','drive-schema.sql','finance-schema.sql','reminders-schema.sql','release-schema.sql','backup-schema.sql','health-schema.sql'];
 
 // D1 as far as this module uses it, over node:sqlite — including batch, which
 // D1 runs as one transaction, and foreign keys, which D1 enforces.
@@ -73,6 +73,7 @@ function fakeDrive({folder=BACKUP_FOLDER_ID,lie=false}={}){
     const id=decodeURIComponent(url.pathname.split('/').pop());
     const file=files.get(id);
     if(!file)return reply({error:{message:'File not found'}},404);
+    if(init.method==='DELETE'){files.delete(id);return new Response(null,{status:204});}
     if(url.searchParams.get('alt')==='media')return new Response(file.content,{headers:{'Content-Type':'application/json'}});
     return reply({id:file.id,name:file.name,parents:file.parents,size:file.size,trashed:false});
   };
@@ -400,4 +401,63 @@ test('the backup has its own daily trigger, and the routes sit behind the bearer
   assert.deepEqual(listed.files.map(file=>[file.id,file.kind,file.version]),[[run.backup.id,'manual',BACKUP_VERSION]]);
   // A manual backup does not stand in for the quarter's own.
   assert.equal((await backupState(env)).quarterly,undefined);
+});
+
+// The health notebook is written to daily, so a day it changed gets a file of
+// its own tables — sealed twice, as they sit in D1 — and only those files are
+// ever pruned, to the newest thirty.
+test('the health tables are backed up on a day they changed, and only the daily health files are pruned to thirty',async()=>{
+  const {env}=environment();
+  await connectGoogle(env);
+  const drive=fakeDrive();
+  const logs=[];
+  const day=n=>new Date(Date.UTC(2026,9,1+n,8));
+  const seal=async(id,text)=>encryptSettings({v:1,secret:JSON.stringify({v:1,iv:'aa',ciphertext:Buffer.from(text).toString('base64url')})},`health:${id}`,env);
+  const write=async(id,text,at)=>env.DB.prepare('INSERT INTO health_records (id, value, revision, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET value = excluded.value, revision = excluded.revision, updated_at = excluded.updated_at')
+    .bind(id,await seal(id,text),crypto.randomUUID(),at).run();
+  // Nothing saved yet: the empty table is still a state worth one file.
+  const first=await sweepHealthBackup(env,{fetcher:drive.fetcher,now:day(0),log:line=>logs.push(line)});
+  assert.equal(first.backedUp,true,first.failed);
+  const stored=drive.files.get(first.id);
+  assert.equal(stored.name,'erics-tools-backup-2026-10-01-0800Z-daily-health.json');
+  assert.equal(stored.appProperties.backupKind,'daily-health');
+  const file=contents(drive,first.id);
+  assert.deepEqual(file.tables.map(table=>table.name),['health_records'],'only the health tables');
+  assert.equal(file.scope,'partial');
+  assert.deepEqual((await verifyBackup(file)).problems,[]);
+  // An unchanged day writes nothing.
+  assert.deepEqual(await sweepHealthBackup(env,{fetcher:drive.fetcher,now:day(1)}),{skipped:'unchanged'});
+  assert.equal(drive.files.size,1);
+  // A changed day writes one, and the sealed row is in it sealed.
+  await write('11111111-1111-4111-8111-111111111111','My dad had Parkinson’s',day(1).toISOString());
+  const second=await sweepHealthBackup(env,{fetcher:drive.fetcher,now:day(2)});
+  assert.equal(second.backedUp,true,second.failed);
+  const saved=contents(drive,second.id).tables[0];
+  assert.equal(saved.rows.length,1);
+  assert.doesNotMatch(JSON.stringify(saved),/Parkinson/);
+  assert.equal((await decryptSettings(saved.rows[0][1],'health:11111111-1111-4111-8111-111111111111',env)).v,1);
+  assert.deepEqual(await sweepHealthBackup(env,{fetcher:drive.fetcher,now:day(3)}),{skipped:'unchanged'});
+  // A quarterly file in the same folder is never touched by the pruning.
+  const quarterly=await sweepBackup(env,{fetcher:drive.fetcher,now:day(3)});
+  assert.equal(quarterly.backedUp,true,quarterly.failed);
+  for(let n=0;n<HEALTH_DAILY_KEEP+4;n++){
+    await write('11111111-1111-4111-8111-111111111111',`edit ${n}`,day(4+n).toISOString());
+    const result=await sweepHealthBackup(env,{fetcher:drive.fetcher,now:day(5+n)});
+    assert.equal(result.backedUp,true,result.failed);
+  }
+  const kinds=[...drive.files.values()].map(file=>file.appProperties.backupKind);
+  assert.equal(kinds.filter(kind=>kind==='daily-health').length,HEALTH_DAILY_KEEP,'the newest thirty daily health files remain');
+  assert.equal(kinds.filter(kind=>kind==='quarterly').length,1);
+  const remaining=[...drive.files.values()].filter(file=>file.appProperties.backupKind==='daily-health').map(file=>file.name).sort();
+  assert.ok(remaining[0]>'erics-tools-backup-2026-10-05','the oldest daily files are the ones removed');
+  const state=await backupState(env);
+  assert.equal(state.health.last.kind,'daily-health');
+  assert.equal(state.quarterly.quarter,'2026-Q4');
+  // The restore alias names the notebook's tables.
+  const json=(value,code=200)=>Response.json(value,{status:code});
+  const readValue=async incoming=>JSON.stringify(await incoming.json());
+  const newest=[...drive.files.values()].filter(file=>file.appProperties.backupKind==='daily-health').sort((a,b)=>b.name.localeCompare(a.name))[0];
+  const preview=await (await backupRoutes(new Request('https://example.com/v1/backup/restore',{method:'POST',body:JSON.stringify({fileId:newest.id,tables:'health'})}),env,readValue,json,drive.fetcher)).json();
+  assert.deepEqual(preview.tables.map(table=>table.table),['health_records']);
+  assert.equal(preview.confirmed,false);
 });

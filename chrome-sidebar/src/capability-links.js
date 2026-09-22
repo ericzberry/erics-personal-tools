@@ -94,9 +94,10 @@ export const openRemindersTool=panelTool('reminders',(root,options)=>import('./r
 export const openCardsTool=panelTool('cards',(root,options)=>import('./cards-page.js').then(({mountExtensionCards})=>mountExtensionCards(root,options)));
 export const openAdvisorTool=panelTool('advisor',(root,options)=>import('./advisor-page.js').then(({mountExtensionAdvisor})=>mountExtensionAdvisor(root,options)));
 export const openPersonalTool=panelTool('personal',(root,options)=>import('./personal-page.js').then(({mountExtensionPersonal})=>mountExtensionPersonal(root,options)));
+export const openHealthTool=panelTool('health',(root,options)=>import('./health-page.js').then(({mountExtensionHealth})=>mountExtensionHealth(root,options)));
 
 const PANEL_TOOLS={attention:openAttentionTool,subscriptions:openSubscriptionsTool,travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,
-  gifts:openGiftsTool,sizes:openSizesTool,replacements:openReplacementsTool,reminders:openRemindersTool,cards:openCardsTool,advisor:openAdvisorTool,personal:openPersonalTool};
+  gifts:openGiftsTool,sizes:openSizesTool,replacements:openReplacementsTool,reminders:openRemindersTool,cards:openCardsTool,advisor:openAdvisorTool,personal:openPersonalTool,health:openHealthTool};
 export const openPanelTool=id=>PANEL_TOOLS[id]?.()??null;
 
 // Standalone settings/data pages use the same data registry in the shared formatted picker.
