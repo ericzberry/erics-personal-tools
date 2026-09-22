@@ -31,7 +31,7 @@ The implementation tokens live in chrome-sidebar/src/components/tokens.css; styl
 
 Short, specific, calm. Lead with the result. One sentence of context is usually enough. Label unfinished tools honestly. Avoid technical implementation details in normal user flows.
 
-Money is written by `money()` in `ui.js` and nowhere else: whole dollars above a thousand, cents below it, and a negative in accounting notation — ($15,835), in the danger red, never -$15,835. A minus sign in front of a currency symbol is a hyphen the eye skips, and what is owed then passes for an asset. It is not a status tone: no mark, no surface, only the ink.
+Money is written by `money()` in `ui.js` and nowhere else: whole dollars above a thousand, cents below it, and a negative in accounting notation — ($15,835), in the danger red, never -$15,835. A minus sign in front of a currency symbol is a hyphen the eye skips, and what is owed then passes for an asset. It is not a status tone: no mark, no surface, only the ink. Money being typed reads the same way: a box that takes a figure groups its thousands as the digits arrive, so 4384000 is 4,384,000 before anyone saves it (UI-50).
 
 The next draft recommendation gets a small highlighted card at the top. Keep the name and position immediately readable; reasoning belongs below. Gmail shows the current subject, two action buttons, and editable results without a large hero or introduction.
 

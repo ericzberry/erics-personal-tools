@@ -16,7 +16,7 @@ export function CardsView(){
       Disclosure('Adjust what AI read',[
         field('category','Reward category','select',[{value:'',text:'Not selected'},...options(PURCHASE_CATEGORIES)]),
         field('channel','Purchase method','select',options(PURCHASE_CHANNELS)),
-        field('amount','Purchase amount (USD, optional)','number')
+        field('amount','Purchase amount (USD, optional)','money')
       ],{id:'cards-adjust',hidden:true}),
       Stack([],{id:'cards-conditions'}),Stack([],{id:'cards-results',className:'comparison-results'}),
       Notice('',{id:'cards-ai-status'})
@@ -98,7 +98,7 @@ export function BonusRule(rule={},index,onRemove){
     // stays as what sort of purchase it is.
     f('merchant','Merchant (blank = the whole category)'),
     f('channel','Eligible purchase method','select',options(['Any',...PURCHASE_CHANNELS])),
-    f('remaining','Remaining eligible spend (blank = unlimited)','number'),
+    f('remaining','Remaining eligible spend (blank = unlimited)','money'),
     f('active','Bonus status','select',[{value:'true',text:'Active'},{value:'false',text:'Inactive / needs activation'}]),
     f('end','Last eligible date (optional)','date'),f('condition','Purchase requirements or exclusions'),
     ActionGroup([remove],{compact:true})

@@ -24,7 +24,7 @@ export function SubscriptionsView(){
     Disclosure('Add or edit a subscription',[
       Form([
         field('name','Service'),field('account','Card or account (optional)'),
-        field('amount','Price','number',{step:'0.01',min:'0'}),field('currency','Currency','text'),
+        field('amount','Price','money'),field('currency','Currency','text'),
         field('cycle','Billing cycle','select',{options:Object.entries(BILLING_CYCLES).map(([value,text])=>({value,text}))}),
         field('state','Status','select',{options:SUBSCRIPTION_STATES.map(value=>({value,text:value}))}),
         // Asked only of a canceled service (UI-40): later charges are checked

@@ -214,7 +214,8 @@ test('Edit puts the folded amounts in fields, and Save writes what the owner lef
   const buttons=()=>[...document.querySelectorAll('#finance-snapshot-body button')];
   buttons().find(node=>node.textContent==='Edit').click();
   const first=document.getElementById('finance-fold-value-0');
-  assert.equal(first.value,'124500.5','an amount is offered as read, not as a blank field');
+  assert.equal(first.value,'124500.50','an amount is offered as read, not as a blank field');
+  assert.equal(first.getAttribute('value'),'124,500.50','and shown the way the ledger prints it (UI-50)');
   assert.equal(document.querySelector('label[for=finance-fold-value-0]').textContent,'Liquid securities');
   assert.deepEqual(buttons().map(node=>node.textContent),['Save','Discard']);
   first.value='124600';

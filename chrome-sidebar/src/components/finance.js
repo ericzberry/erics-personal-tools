@@ -201,7 +201,7 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
   // answer rather than 0.00 — which is what the field does if nothing is typed
   // into it, and is the whole of what a caption underneath would have said.
   const unfundedField=()=>{
-    const node=FormField({id:`finance-capital-unfunded-${index}`,label:'Unfunded commitment',kind:'text',
+    const node=FormField({id:`finance-capital-unfunded-${index}`,label:'Unfunded commitment',kind:'money',
       placeholder:money(derived,row.currency)});
     const input=node.querySelector('input');
     input.value=String(row.unfunded??'');
@@ -227,10 +227,10 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
     field('class','Asset class','select',investedClassOptions()),
     field('portfolio','Portfolio','select',portfolios),
     shareField(),
-    field('value',figures.value),
-    committed?field('commitment','Commitment'):null,
-    field('contributed',figures.contributed),
-    field('distributed',figures.distributed),
+    field('value',figures.value,'money'),
+    committed?field('commitment','Commitment','money'):null,
+    field('contributed',figures.contributed,'money'),
+    field('distributed',figures.distributed,'money'),
     committed?unfundedField():null,
     field('asOf','As of','date'),
     claimed?Note(claimed):null
@@ -257,7 +257,7 @@ function FoldRow(row,{index,editing,dated,onAmount}){
   // The field holds the figure the way it is stored and saved: a positive
   // amount under a liability class. Its label is what says which that is, so
   // correcting a debt is typing what is owed rather than negating it.
-  const field=FormField({id:`finance-fold-value-${index}`,label:what,kind:'text'});
+  const field=FormField({id:`finance-fold-value-${index}`,label:what,kind:'money'});
   const input=field.querySelector('input');
   input.value=String(row.amount);
   input.addEventListener('input',()=>onAmount(index,input.value));
@@ -375,7 +375,7 @@ export function FinanceView({layout='page'}={}){
             ],{id:'finance-portfolio-fields',hidden:true}),
             Stack([
               FormField({id:'finance-class',label:'Asset class',kind:'select',options:classOptions()}),
-              FormField({id:'finance-amount',label:'Amount',kind:'text',placeholder:'0.00'}),
+              FormField({id:'finance-amount',label:'Amount',kind:'money',placeholder:'0.00'}),
               FormField({id:'finance-asOf',label:'As of',kind:'date'})
             ],{id:'finance-figure-fields'}),
             Notice('',{id:'finance-form-status',role:'status'}),
@@ -395,11 +395,11 @@ export function FinanceView({layout='page'}={}){
             Stack([FormField({id:'finance-inv-follows',label:'Same vehicle as',kind:'select',options:[]})],
               {id:'finance-inv-follows-field',hidden:true}),
             Stack([
-              FormField({id:'finance-inv-commitment',label:'Commitment',kind:'text',placeholder:'0.00'}),
-              FormField({id:'finance-inv-value',label:'Capital account value',kind:'text',placeholder:'0.00'}),
-              FormField({id:'finance-inv-funded',label:'Funded to date',kind:'text',placeholder:'0.00'}),
-              FormField({id:'finance-inv-returned',label:'Returned to date',kind:'text',placeholder:'0.00'}),
-              FormField({id:'finance-inv-unfunded',label:'Unfunded commitment',kind:'text',placeholder:'0.00'}),
+              FormField({id:'finance-inv-commitment',label:'Commitment',kind:'money',placeholder:'0.00'}),
+              FormField({id:'finance-inv-value',label:'Capital account value',kind:'money',placeholder:'0.00'}),
+              FormField({id:'finance-inv-funded',label:'Funded to date',kind:'money',placeholder:'0.00'}),
+              FormField({id:'finance-inv-returned',label:'Returned to date',kind:'money',placeholder:'0.00'}),
+              FormField({id:'finance-inv-unfunded',label:'Unfunded commitment',kind:'money',placeholder:'0.00'}),
               FormField({id:'finance-inv-asOf',label:'As of',kind:'date'})
             ],{id:'finance-inv-figures'}),
             Notice('',{id:'finance-inv-status',role:'status'}),
@@ -410,9 +410,9 @@ export function FinanceView({layout='page'}={}){
             FormField({id:'finance-prop-portfolio',label:'Portfolio',kind:'select',options:[]}),
             FormField({id:'finance-prop-name',label:'Address',kind:'text',placeholder:'e.g. 123 Example St, Town ST 00000'}),
             FormField({id:'finance-prop-link',label:'Zillow page',kind:'text',placeholder:'https://www.zillow.com/homedetails/…'}),
-            FormField({id:'finance-prop-value',label:'Market value',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-prop-value',label:'Market value',kind:'money',placeholder:'0.00'}),
             FormField({id:'finance-prop-source',label:'Value from',kind:'select',options:sourceOptions()}),
-            FormField({id:'finance-prop-debt',label:'Still owed',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-prop-debt',label:'Still owed',kind:'money',placeholder:'0.00'}),
             FormField({id:'finance-prop-asOf',label:'As of',kind:'date'}),
             Notice('',{id:'finance-prop-status',role:'status'}),
             ActionGroup([Button('Save property',{id:'finance-prop-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-prop-cancel',variant:'secondary'})])
@@ -425,7 +425,7 @@ export function FinanceView({layout='page'}={}){
             Strong('',{id:'finance-flow-title',hidden:true}),
             FormField({id:'finance-flow-firm',label:'Institution',kind:'select',options:[]}),
             Stack([],{id:'finance-flow-direction',className:'currency-switch entry-switch',role:'group','aria-label':'Which way the cash went'}),
-            FormField({id:'finance-flow-amount',label:'Amount',kind:'text',placeholder:'0.00'}),
+            FormField({id:'finance-flow-amount',label:'Amount',kind:'money',placeholder:'0.00'}),
             FormField({id:'finance-flow-asOf',label:'Date',kind:'date'}),
             Notice('',{id:'finance-flow-status',role:'status'}),
             ActionGroup([Button('Save cash movement',{id:'finance-flow-save',variant:'primary',type:'submit'}),Button('Cancel edit',{id:'finance-flow-cancel',variant:'secondary'})])

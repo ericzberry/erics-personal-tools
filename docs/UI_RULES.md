@@ -69,6 +69,7 @@ here.
 | **UI-46** | A glyph alone carries a verb on the record whose line it rides. An action that makes something new — cash for an institution — says what it makes in words; there is no glyph for adding. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js`, `finance-overview.test.js` |
 | **UI-47** | A dropped file is shown as itself. Every tool that opens one shows it as the one shared card — its name, a few words on what came out of it, Remove — and never puts the text pulled out of it on the screen. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js`, `subscriptions-tool.test.js` |
 | **UI-48** | What is not known is left off the line. A record's line prints what is known; an unknown billing cycle or price is omitted, not spelled out as "Not established" or "Amount unknown", and the ordinary state is not said at all. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/subscriptions-tool.test.js` |
+| **UI-50** | Money is typed the way it reads. Every box a dollar figure is typed into is the shared `money` field: it groups thousands as they are typed and when a figure is filled in, and reads back as the plain number. No money box is a bare text or number input. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
 
 ## Ratcheting
 
@@ -525,6 +526,21 @@ information: the weather's sky glyph is what the day looks like before a word
 is read. A long name in it stays in sentence case (DESIGN.md, record layout).
 `chrome-sidebar/tests/home.test.js` holds that the weather has no heading and
 no rows; look at the next single figure a screen opens on for the same drift.
+
+**UI-50 — money is typed the way it reads.** *Enforced.* Finance's Enter by
+hand showed a capital account's current value as 4384000 — seven digits to
+count, in a form whose every other figure the app prints as $4,384,000 — and
+refused 4,384,000 if the owner typed the commas himself. *"When entering dollar
+amounts by hand include commas etc as they come in."* A box money is typed into
+is `Field` with `kind:'money'` in `ui.js`: it groups thousands as each digit
+arrives, keeps the caret after the digit it was after, shows a figure filled in
+from a record the same way, and reads back as the plain number, so no
+controller strips commas and none can forget to. A browser number input cannot
+hold a comma at all, so a money box is never one. The check builds every form
+that takes money — Finance's four, its two reviews, Cards and Subscriptions —
+and requires each figure's box to be the shared field, and requires the same of
+any field whose placeholder is `0.00`. Look at the next form that asks for a
+price, a balance or a limit.
 
 ## Open
 

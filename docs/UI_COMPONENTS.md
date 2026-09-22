@@ -32,6 +32,7 @@ The catalogue below describes existing exports, not a promise that each componen
 | Actions and links | `Button`, `Link`, `IconButton` | Choose role and density explicitly; use real links for navigation |
 | A record's or group's own action | `RowAction`, `RowLink` | At the end of the record's line, never in a row of words under it. The glyph carries the verb and the label names the record it acts on; a decision that needs a sentence is not a row action |
 | Select or editable suggestions | `Select`, `Field` with `kind: 'select'` or `list` | Shared formatted trigger and open menu; keep custom text for suggestions |
+| Money typed by hand | `Field` with `kind: 'money'` | Groups thousands as they are typed and when filled, and reads back as the plain number; never a text or number input (UI-50) |
 | Choice of two or three | `SegmentedField` | Show the options side by side instead of behind a menu; it is a radio group exposing `value` like a select |
 | Boolean choice | `Toggle`, `ChoiceRow` | Keep the explanation and click target together |
 | Secondary detail | `Disclosure`, `ExpandableRecord` | Current status and frequent actions remain discoverable |

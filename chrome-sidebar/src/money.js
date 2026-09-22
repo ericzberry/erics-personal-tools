@@ -27,3 +27,24 @@ export function moneyShort(value,currency='USD'){
   }
   catch{return money(value,currency);}
 }
+
+// A figure as it is typed: thousands grouped the way the ledger will print it,
+// so 4384000 in a box reads 4,384,000 before anyone has to count the zeros.
+// Only the digits, one point and a leading sign are kept. A pasted "$" goes,
+// and a minus or an opening parenthesis in front stays as a minus, so a check
+// that refuses a negative says so rather than this quietly turning it positive.
+// A figure filled in from a record shows its cents as cents: 1234.5 is
+// 1,234.50, while one being typed is left exactly as far as it has got.
+export function typedAmount(value,{filled=false}={}){
+  const text=String(value??'').trim();
+  const negative=/^[-(−]/.test(text);
+  const kept=text.replace(/[^\d.]/g,'');
+  const point=kept.indexOf('.');
+  const whole=(point<0?kept:kept.slice(0,point)).replace(/^0+(?=\d)/,'');
+  let cents=point<0?'':kept.slice(point+1).replace(/\./g,'');
+  if(filled&&cents.length===1)cents+='0';
+  const grouped=whole.replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return `${negative?'-':''}${grouped}${point<0?'':`.${cents}`}`;
+}
+// The same figure as the plain number every record reads: "4384000".
+export const plainAmount=value=>typedAmount(value).replace(/,/g,'');

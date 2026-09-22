@@ -21,7 +21,7 @@ test('subscriptions preserve rejected edits, accept decimal prices, and exclude 
   await settle(()=>root.textContent.includes('Save an AI connection in Settings')&&!root.querySelector('#subscriptions-save').disabled);
   // Reading a statement never asks which saved connection should do it.
   assert.equal(root.querySelector('#subscriptions-connection'),null);
-  assert.equal(root.querySelector('#subscriptions-total').textContent,'');assert.equal(root.querySelector('#subscriptions-amount').getAttribute('step'),'0.01');
+  assert.equal(root.querySelector('#subscriptions-total').textContent,'');assert.ok(root.querySelector('#subscriptions-amount').hasAttribute('data-money'),'the price is a money box, which takes cents and commas (UI-50)');
   // Confirming a possible subscription opens it with its status already Active.
   [...root.querySelectorAll('button')].find(b=>b.textContent==='Confirm').click();
   assert.equal(root.querySelector('#subscriptions-cycle').value,'monthly');assert.equal(root.querySelector('#subscriptions-state').value,'Active');

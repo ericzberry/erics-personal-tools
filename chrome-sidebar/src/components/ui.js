@@ -1,5 +1,5 @@
 import {FormattedSelect,FormattedSuggestions} from './select.js';
-import {money} from '../money.js';
+import {money,typedAmount,plainAmount} from '../money.js';
 import {capabilities,capabilitiesByName,capabilitySections} from '../capabilities.js';
 // All DOM construction lives here. Features compose components and supply data.
 function element(tag, props={}, children=[]) {
@@ -147,9 +147,51 @@ export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>el
   ...children]);
 export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list,min,max,step}) {
   const caption=element('label',{for:id,id:kind==='select'?`${id}-label`:undefined,text:label,className:hiddenLabel?'sr-only':undefined});
-  const control=kind==='select'?Select({id,label,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'}):element('input',{id,type:kind,placeholder,disabled,list,min,max,step,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
+  const control=kind==='select'?Select({id,label,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'})
+    :kind==='money'?MoneyInput(element('input',{id,type:'text',inputmode:'decimal',autocomplete:'off',placeholder,disabled,'data-money':''}))
+    :element('input',{id,type:kind,placeholder,disabled,list,min,max,step,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
   if(kind==='select'){const trigger=control.querySelector('button');trigger.setAttribute('aria-labelledby',`${id}-label`);caption.addEventListener('click',()=>trigger.focus());}
   return [caption,list?FormattedSuggestions(control,list,label):control];
+}
+// A box money is typed into (UI-50). It groups thousands as they are typed and
+// whenever a figure is filled in, and it reads back as the plain number, so
+// every controller and every record check sees 4384000 whatever the box shows:
+// no reader has to remember to strip the commas, and none can forget to.
+//
+// The caret stays after the same digit it was after, however many commas moved
+// in front of it. A comma is not something the owner typed, so Backspace or
+// Delete on one takes the digit beyond it — otherwise the key would do nothing
+// but put the comma straight back.
+const SIGNIFICANT=/[\d.\-(−]/;
+const significantBefore=(text,end)=>[...text.slice(0,end)].filter(ch=>SIGNIFICANT.test(ch)).length;
+function caretAfter(text,count){
+  let seen=0;
+  for(let index=0;index<text.length;index++){if(seen===count)return index;if(SIGNIFICANT.test(text[index]))seen++;}
+  return text.length;
+}
+function MoneyInput(input){
+  let proto=Object.getPrototypeOf(input);
+  while(proto&&!Object.getOwnPropertyDescriptor(proto,'value'))proto=Object.getPrototypeOf(proto);
+  const native=Object.getOwnPropertyDescriptor(proto,'value');
+  const show=text=>{native.set.call(input,text);shown=text;};
+  let shown='';
+  input.addEventListener('input',event=>{
+    let text=native.get.call(input),caret=input.selectionStart??text.length;
+    if(text.length<shown.length&&text.replace(/,/g,'')===shown.replace(/,/g,'')){
+      if(event.inputType==='deleteContentBackward'&&caret>0){text=text.slice(0,caret-1)+text.slice(caret);caret--;}
+      else if(event.inputType==='deleteContentForward')text=text.slice(0,caret)+text.slice(caret+1);
+    }
+    const grouped=typedAmount(text);
+    show(grouped);
+    if(input.ownerDocument?.activeElement===input&&input.setSelectionRange){
+      const at=caretAfter(grouped,significantBefore(text,caret));
+      input.setSelectionRange(at,at);
+    }
+  });
+  Object.defineProperty(input,'value',{configurable:true,
+    get:()=>plainAmount(native.get.call(input)),
+    set:value=>show(typedAmount(value,{filled:true}))});
+  return input;
 }
 // Grid of small tool icons, alphabetical by label within each section. Used
 // where the whole tool list should be visible at a glance: the mobile home

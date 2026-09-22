@@ -375,3 +375,74 @@ test('a dropped file is shown as one shared card, never as the text pulled out o
       `${file} writes the text pulled out of a file into a field. See UI-47 in docs/UI_RULES.md.`);
   }
 });
+
+// UI-50. Money is typed the way it reads. Finance showed a capital account's
+// value as 4384000 while the owner typed it, and refused 4,384,000 when he put
+// the commas in himself. Every form that takes money is built here, and each
+// figure's box must be the shared money field: grouped as it is typed and as it
+// is filled, and read back as the plain number every record check expects.
+test('money is typed the way it reads, in every form that takes it',async()=>{
+  const {parseHTML}=await import('linkedom');
+  const {document,window}=parseHTML('<html><body></body></html>');
+  const before=globalThis.document;globalThis.document=document;
+  // This DOM cannot set a select's value, and the reviews and bonus rows set
+  // theirs as they are built. The same stand-in the tool tests use.
+  const selectValue=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value');
+  Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,get:selectValue.get,
+    set(value){for(const option of this.options)option.selected=option.value===String(value);}});
+  try{
+    const {Field,Stack}=await import('../src/components/ui.js');
+    const {FinanceView,CapitalReview,FoldReview}=await import('../src/components/finance.js');
+    const {SubscriptionsView}=await import('../src/components/subscriptions.js');
+    const {CardsView,BonusRule}=await import('../src/components/cards.js');
+    const capital={portfolioName:'Synthetic Estate',vehicle:1,asOf:'2026-06-30',share:10000,value:4384000,
+      commitment:1000000,contributed:800000,distributed:250000,unfunded:null,name:'Synthetic Fund'};
+    document.body.append(FinanceView(),SubscriptionsView(),CardsView(),Stack([BonusRule({},0,()=>{})]),
+      CapitalReview({rows:[capital],editing:true,portfolios:[]}),
+      FoldReview({rows:[{class:3,amount:124500.5,currency:'USD',asOf:'2026-09-11'}],editing:true}));
+    const MONEY=['finance-amount','finance-inv-commitment','finance-inv-value','finance-inv-funded','finance-inv-returned',
+      'finance-inv-unfunded','finance-prop-value','finance-prop-debt','finance-flow-amount',
+      'finance-capital-value-0','finance-capital-commitment-0','finance-capital-contributed-0','finance-capital-distributed-0',
+      'finance-capital-unfunded-0','finance-fold-value-0','subscriptions-amount','cards-amount','cards-rule-0-remaining'];
+    const label=input=>document.querySelector(`label[for="${input.id}"]`)?.textContent||'';
+    const money=input=>input.hasAttribute('data-money')&&input.getAttribute('type')==='text'&&input.getAttribute('inputmode')==='decimal';
+    for(const id of MONEY){
+      const input=document.getElementById(id);
+      assert.ok(input,`${id} is not built any more — update this list. See UI-50 in docs/UI_RULES.md.`);
+      assert.ok(money(input),`${id} (${label(input)}) takes money without the shared money field. See UI-50 in docs/UI_RULES.md.`);
+    }
+    // The next form nobody listed: a figure's placeholder, or a number box
+    // whose label names money, is a money box too.
+    const MONEY_WORDS=/\b(amount|price|spend|owed|balance|commitment|funded|returned|invested|proceeds)\b|\$|\bUSD\b/i;
+    for(const input of document.querySelectorAll('input')){
+      if(input.getAttribute('placeholder')==='0.00')assert.ok(money(input),
+        `${input.id} asks for 0.00 but is not the shared money field. See UI-50 in docs/UI_RULES.md.`);
+      if(input.getAttribute('type')==='number')assert.doesNotMatch(label(input),MONEY_WORDS,
+        `${input.id} takes money in a number box, which cannot hold a comma. Use kind:'money'. See UI-50 in docs/UI_RULES.md.`);
+    }
+    // A form nobody has written yet cannot be built here, so the sources are
+    // read too: no field whose label names money is a number box.
+    const components=new URL('../src/components/',import.meta.url);
+    for(const file of readdirSync(components).filter(name=>name.endsWith('.js'))){
+      const code=readFileSync(new URL(file,components),'utf8');
+      for(const [,text] of [...code.matchAll(/'([^']*)','number'/g),...code.matchAll(/label:'([^']*)',kind:'number'/g)])
+        assert.doesNotMatch(text,MONEY_WORDS,`components/${file}: "${text}" takes money in a number box. Use kind:'money'. See UI-50 in docs/UI_RULES.md.`);
+    }
+    // Filled in from a record, typed a digit at a time, pasted as a statement
+    // prints it: shown grouped, read as the number.
+    const [,box]=Field({id:'money-check',label:'Current value',kind:'money'});
+    document.body.append(box);
+    const shown=()=>box.getAttribute('value');
+    box.value=4384000;
+    assert.equal(shown(),'4,384,000');assert.equal(box.value,'4384000');
+    box.value=1234.5;
+    assert.equal(shown(),'1,234.50','a filled figure shows its cents as cents');
+    const native=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value');
+    native.set.call(box,'43840001');box.dispatchEvent(new window.Event('input'));
+    assert.equal(shown(),'43,840,001');assert.equal(box.value,'43840001');
+    native.set.call(box,'$4,384,000.25');box.dispatchEvent(new window.Event('input'));
+    assert.equal(shown(),'4,384,000.25');assert.equal(box.value,'4384000.25');
+    box.value='';
+    assert.equal(box.value,'','an empty box stays empty rather than becoming 0');
+  }finally{globalThis.document=before;Object.defineProperty(window.HTMLSelectElement.prototype,'value',selectValue);}
+});
