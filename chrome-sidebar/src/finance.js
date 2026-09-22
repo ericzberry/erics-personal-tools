@@ -3,6 +3,8 @@ import {NetWorthHero,NetWorthChart,Allocation,LiquiditySummary,PositionsTable,Pr
 import {share} from './components/charts.js';
 import {RecordRow,AttachmentCard,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
+import {staleText,staleNote,sourceLabel} from './components/finance-overview.js';
+import {figuresOn,explainBy} from './finance-data.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,valueSourceLabel,zillowHome,flowRef,FIRMS,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
@@ -24,7 +26,9 @@ const today=()=>new Date().toISOString().slice(0,10);
 // press away on a page of its own through `openDetails`. That page, and the
 // phone — which has no second page to send anyone to — are `page`, and read
 // the whole ledger.
-export function mountFinance(root,{credentials,offline,remote,readPage=null,readZestimate=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false,layout='page',openDetails=null}){
+// `today` is the day a figure's age is measured against — today, except in a
+// test that has to know which figures are stale.
+export function mountFinance(root,{credentials,offline,remote,readPage=null,readZestimate=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false,layout='page',openDetails=null,today:now=today}){
   const gate=mountVaultGate(root,{
     id:'finance-vault',title:'Finance',
     // A tool built because the tab beside the panel is a finance page raises no
@@ -59,6 +63,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   let flowing=null,flowSign=1;
   // Which of the three records the one drawer is currently offering to enter.
   let entering='figure';
+  // How Sources takes the ledger apart — by what stated each figure, by the
+  // entity holding it, or by class — and which of its groups are open, which
+  // survives a redraw the way the entities' does.
+  let sourcesBy='source';
+  const openSources=new Set();
   // Arriving because the tab is a finance page is not the owner asking to see
   // what they are worth. Such an arrival is quiet: the intake is ready for what
   // the page in front of them can put into the ledger, and the ledger's own
@@ -351,7 +360,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       button.addEventListener('click',()=>{currency=entry.currency;render();});
       return button;
     })));
-    const summary=financeSummary(records,{currency});
+    const summary=financeSummary(records,{currency,today:now()});
     const series=netWorthSeries(records,{currency});
     // How current all of this is, stated once at the top where the totals it
     // qualifies are. Every line underneath then carries a date only when it
@@ -376,9 +385,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // held: what is owed has no liquidity to speak of.
     const held=allocationGroups(summary.byClass);
     const heldTotal=held.reduce((total,group)=>total+group.total,0);
-    const stale=summary.stale;
-    $('stale').hidden=!stale.length;
-    $('stale').textContent=stale.length?`${stale.length} portfolio${stale.length===1?'':'s'} not updated in over 90 days — the oldest is ${stale[0].name}${stale[0].asOf?` from ${stale[0].asOf}`:''}. Totals still count ${stale.length===1?'it':'them'} at ${stale.length===1?'its':'their'} last known figure.`:'';
+    // How much of the figure rests on figures older than a season, in money,
+    // under the figure it qualifies. Counting portfolios instead said nothing
+    // about a portfolio whose cash was read last week and whose fund last
+    // spring, and nothing about how much was at stake. Which figures they are
+    // is under Sources on the page.
+    const stale=staleText(summary.explain,currency);
+    $('stale').hidden=!stale;
+    $('stale').textContent=stale;
     // Currencies are never added together, so say what a total covers.
     const only=currencies.length>1?` · ${currency} only`:'';
     if(layout==='panel'){
@@ -833,7 +847,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // houses, with every verb that acts on them, are the page's.
   function renderLedger(){
     if(layout==='panel'){renderPosition();return;}
-    const groups=groupFinanceRecords(records).filter(group=>(group.portfolio.currency||'USD')===currency);
+    const groups=groupFinanceRecords(records,{today:now()}).filter(group=>(group.portfolio.currency||'USD')===currency);
     // The date cascades instead of repeating. The ledger's newest date is
     // stated once above the totals; a portfolio says its own only when it is
     // behind that, and a line inside it only when it is behind the portfolio.
@@ -1047,9 +1061,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         onToggle:isOpen=>{if(isOpen)openPortfolios.add(portfolio.id);else openPortfolios.delete(portfolio.id);},
         // What kind of account this is, as a tag on the name. Under it, only
         // what the line above cannot say: a date behind the rest of the
-        // ledger, and a portfolio still waiting to reach the cloud.
+        // ledger, how much of the total rests on figures older than a season,
+        // and a portfolio still waiting to reach the cloud.
         kind:registrationLabel(portfolio.kind),
-        meta:[since(asOf,newest),portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
+        meta:[since(asOf,newest),staleNote(group.explain,portfolio.currency),
+          portfolio.pending?(portfolio.conflict?'Conflict':'Waiting to sync'):''].filter(Boolean).join(' · '),
         actions:[rowAction(EDIT_GLYPH,`Rename ${portfolio.name}`,()=>fillPortfolio(portfolio)),
           rowAction(DELETE_GLYPH,`Delete ${portfolio.name}`,()=>{confirm.hidden=false;},true)],
         rows:[...rows.map(row=>figure(portfolio,row)),
@@ -1058,6 +1074,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       });
     }):[Note(!loaded?'Connect in Settings to load your ledger.':'No figures yet. Read an account page, drop a statement, or enter one by hand.')]));
     renderHoldings(groups,newest);
+    renderSources();
     renderPosition();
   }
   // The private positions and the houses, each set out as one table across
@@ -1110,11 +1127,69 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
             rowAction(EDIT_GLYPH,`Edit ${property.name}`,()=>fillProperty(entry))]};
       })})]:[]));
   }
+  // Every figure the totals above add up, taken apart one of three ways —
+  // by what stated it, by the entity holding it, or by class — which are the
+  // ways the page draws a total, so any of them opens down to its figures.
+  // Each group is a total explained: its figures largest first, how much of it
+  // is more than a season old on its closed heading, and inside, each figure
+  // with whatever the group does not already say — whose it is, what stated
+  // it, and its date where that disagrees with the group's. Nothing here is
+  // edited; a figure is corrected where it is held, under Entities.
+  const SOURCE_VIEWS=[['source','Source'],['portfolio','Entity'],['class','Class']];
+  function renderSources(){
+    const groups=explainBy(figuresOn(records,{currency}),sourcesBy,{today:now()});
+    $('sources-panel').hidden=!groups.length;
+    $('sources-by').replaceChildren(...SOURCE_VIEWS.map(([by,label])=>{
+      const chosen=by===sourcesBy;
+      const button=Button(label,{variant:chosen?'primary':'secondary',size:'compact','aria-pressed':String(chosen)});
+      button.addEventListener('click',()=>{sourcesBy=by;renderSources();});
+      return button;
+    }));
+    const find=(list,number)=>list.find(entry=>entry.number===number)||null;
+    const named=portfolios(),invested=holdings(),houses=properties();
+    const holder=number=>find(named,number)?.name||'—';
+    // The ledger's own newest date, which the page states once at the top; a
+    // group says its own only when it is behind that.
+    const latest=groups.map(group=>group.newest).sort().at(-1)||'';
+    const whole=groups.reduce((total,group)=>total+Math.max(0,group.total),0);
+    // A figure's name is the named thing it is — a position, a house — or its
+    // class, or, where the group already is the class, whose it is.
+    const title=figure=>figure.kind==='position'?find(invested,figure.holding)?.name||classLabel(figure.class)
+      :figure.kind==='property'?find(houses,figure.property)?.name||classLabel(figure.class)
+      :sourcesBy==='class'?holder(figure.portfolio):classLabel(figure.class);
+    $('sources').replaceChildren(...groups.map(group=>{
+      const key=`${sourcesBy}:${group.id}`;
+      const entity=sourcesBy==='portfolio'?find(named,group.id):null;
+      const dated=asOf=>asOf!==group.newest?asOf:'';
+      return PortfolioGroup({currency,total:group.total,
+        name:sourcesBy==='source'?sourceLabel(group.id):sourcesBy==='portfolio'?entity?.name||'—':classLabel(group.id),
+        kind:entity?registrationLabel(entity.kind):'',
+        share:whole>0&&group.total>0&&groups.length>1?share(group.total/whole):'',
+        meta:[group.newest!==latest?`as of ${group.newest}`:'',staleNote(group,currency)].filter(Boolean).join(' · '),
+        open:openSources.has(key),
+        onToggle:isOpen=>{if(isOpen)openSources.add(key);else openSources.delete(key);},
+        // What qualifies a figure runs to an entity's legal name, so it is the
+        // line under the name, which wraps, rather than the caption beside it,
+        // which never does.
+        rows:group.figures.map(figure=>RecordRow({title:title(figure),figure:Amount(figure.value,currency),
+          detail:[
+            // A house's debt is named for the house, so the line says what it is.
+            figure.kind==='property'&&figure.class===PROPERTY_DEBT_CLASS&&sourcesBy!=='class'?classLabel(figure.class):'',
+            sourcesBy==='portfolio'||(sourcesBy==='class'&&figure.kind==='mark')?'':holder(figure.portfolio),
+            sourcesBy==='source'?'':sourceLabel(figure.source),
+            figure.kind==='position'&&(figure.share??WHOLE_SHARE)!==WHOLE_SHARE?`${shareText(figure.share)} of the vehicle`:'',
+            dated(figure.asOf),
+            // Age in words, because stale is a state and a colour is not words.
+            figure.stale&&dated(figure.asOf)?`${figure.age} days old`:''
+          ].filter(Boolean).join(' · ')}))
+      });
+    }));
+  }
   // Not hidden figures: figures that were never put on the page.
   function sealLedger(){
-    for(const id of ['currency-switch','totals','hero','breakdown','liquidity','trend','firms','list','positions','properties'])$(id)?.replaceChildren();
+    for(const id of ['currency-switch','totals','hero','breakdown','liquidity','trend','firms','list','positions','properties','sources','sources-by'])$(id)?.replaceChildren();
     $('currency-switch').hidden=true;$('stale').hidden=true;
-    for(const id of ['firms-panel','breakdown-panel','positions-panel','properties-panel','change','details-actions'])if($(id))$(id).hidden=true;
+    for(const id of ['firms-panel','breakdown-panel','positions-panel','properties-panel','sources-panel','change','details-actions'])if($(id))$(id).hidden=true;
   }
   function render(){
     // What the ledger holds — the totals and the saved figures — waits to be

@@ -38,7 +38,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
 | `rewards.html` | `src/rewards.js` | Rewards & benefits |
 | `cards.html` | `src/cards-page.js` | Best card |
-| `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation, entities, private positions, houses, institutions — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
+| `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation, entities, private positions, houses, institutions, and the sources every total rests on — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
 | `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
@@ -84,7 +84,9 @@ because the phone forbids inline style attributes — and `tokens.css` imports
 `charts.css` so every host has it. `finance-overview.js` composes the ledger's
 page out of them: `NetWorthHero`, `NetWorthChart`, `Allocation`,
 `LiquiditySummary` (the panel's version), `PositionsTable`, `PropertiesTable`
-and `OverviewSection`.
+and `OverviewSection`, plus the words a total's explanation is said in —
+`staleText` and `staleNote` (how much of it is more than 90 days old) and
+`sourceLabel` (what stated a figure).
 See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 
 ### `src/` shared core (used by more than one host or feature)
@@ -160,7 +162,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   fold, search and grouping of a catalogue — read-only on every host),
   `finance-data.js`/`finance-offline.js` (the ledger: the asset-class and
   registration code registries, the portfolio and figure validators, the totals
-  and the series, `foldReadings` — which turns what a page states into the few
+  and the series — every one of them a sum of `figuresOn`, the dated figures
+  standing on a day, each carrying the row it came from and what stated it, so
+  `explainTotal` and `explainBy` can take any total apart again into its
+  figures, their dates and sources, and how much of it is stale — `foldReadings` — which turns what a page states into the few
   figures the ledger keeps — `legacyLedger` for the retrofit, and
   `ACCOUNT_TITLES`, the portfolio an institution settles by itself — one title,
   overridden by registration where law requires it, or a `holders` roster where

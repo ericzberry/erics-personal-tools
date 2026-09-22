@@ -168,7 +168,7 @@ test('every section of the ledger\u2019s page opens the same way, and none of th
   const ledger=view.querySelector('#finance-ledger');
   assert.equal(ledger.querySelector(':scope details'),null,'a section on the page is put away behind a disclosure');
   assert.deepEqual([...ledger.querySelectorAll('.overview-title')].map(node=>node.textContent),
-    ['Allocation','Entities','Value over time','Institutions','Private investments','Real estate']);
+    ['Allocation','Entities','Value over time','Institutions','Private investments','Real estate','Sources']);
 });
 
 // The side panel keeps what it all comes to and the ways a figure gets in.
@@ -184,7 +184,7 @@ test('the side panel answers what it comes to, and sends the detail to its own p
     remote:async()=>({connections:[]}),offline:{request:async()=>({records})}
   });
   await settle(()=>document.getElementById('finance-totals').textContent.includes('Net'));
-  for(const id of ['finance-list','finance-hero','finance-positions','finance-properties','finance-trend','finance-firms'])
+  for(const id of ['finance-list','finance-hero','finance-positions','finance-properties','finance-trend','finance-firms','finance-sources'])
     assert.equal(document.getElementById(id),null,`${id} is ledger detail, and the panel carries it again`);
   assert.match(document.getElementById('finance-totals').textContent,/Net\$1,639,492As of2026-09-20Assets\$2,039,492Liabilities\(\$400,000\)/);
   // How much could be sold this week, and who holds it.

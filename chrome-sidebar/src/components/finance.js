@@ -485,7 +485,14 @@ function PageLedger(){
     // had cash recorded against it.
     OverviewSection({id:'finance-firms-panel',title:'Institutions',hidden:true,children:[Stack([],{id:'finance-firms'})]}),
     OverviewSection({id:'finance-positions-panel',title:'Private investments',hidden:true,children:[Stack([],{id:'finance-positions'})]}),
-    OverviewSection({id:'finance-properties-panel',title:'Real estate',hidden:true,children:[Stack([],{id:'finance-properties'})]})
+    OverviewSection({id:'finance-properties-panel',title:'Real estate',hidden:true,children:[Stack([],{id:'finance-properties'})]}),
+    // What every total above rests on: each figure it adds up, the day it was
+    // observed and what stated it, taken apart by source, by entity or by
+    // class — so any total the page draws can be opened down to its figures.
+    // Last, because it is where a number above is checked rather than read.
+    OverviewSection({id:'finance-sources-panel',title:'Sources',hidden:true,
+      aside:Stack([],{id:'finance-sources-by',className:'currency-switch',role:'group','aria-label':'Take the figures apart by'}),
+      children:[Stack([],{id:'finance-sources',className:'travel-list'})]})
   ],{id:'finance-ledger',className:'finance-overview'});
 }
 

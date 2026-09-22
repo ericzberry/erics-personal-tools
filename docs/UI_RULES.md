@@ -70,6 +70,7 @@ here.
 | **UI-47** | A dropped file is shown as itself. Every tool that opens one shows it as the one shared card — its name, a few words on what came out of it, Remove — and never puts the text pulled out of it on the screen. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js`, `subscriptions-tool.test.js` |
 | **UI-48** | What is not known is left off the line. A record's line prints what is known; an unknown billing cycle or price is omitted, not spelled out as "Not established" or "Amount unknown", and the ordinary state is not said at all. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/subscriptions-tool.test.js` |
 | **UI-50** | Money is typed the way it reads. Every box a dollar figure is typed into is the shared `money` field: it groups thousands as they are typed and when a figure is filled in, and reads back as the plain number. No money box is a bare text or number input. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
+| **UI-51** | A total shows what it rests on. Any total the ledger draws can be opened down to the dated figures it adds up, each with what stated it, and says in money how much of it rests on figures more than 90 days old — and says nothing about age when none of it does. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-explain.test.js` |
 
 ## Ratcheting
 
@@ -541,6 +542,30 @@ that takes money — Finance's four, its two reviews, Cards and Subscriptions �
 and requires each figure's box to be the shared field, and requires the same of
 any field whose placeholder is `0.00`. Look at the next form that asks for a
 price, a balance or a limit.
+
+**UI-51 — a total shows what it rests on.** *Enforced for Finance.* A net
+worth of $31 million is a sum of forty dated figures, read at five firms, off
+capital account statements and off Zillow, some this week and some last
+spring, and the page printed only the sum and the newest of the dates. The one
+line about age counted portfolios — "1 portfolio not updated in over 90 days"
+— which said nothing about how much money was involved and nothing at all
+about a trust whose cash was read last week and whose fund last spring.
+*"Make financial totals explainable. Let a total reveal its contributing
+observations, their dates, and their sources. Include how much of the total
+rests on stale data."* So every total is computed from one list of figures that
+each carry their date, the row they came from and what stated them, and any
+total can be taken apart again (`figuresOn`, `explainTotal`, `explainBy` in
+`finance-data.js`). How much of a figure is stale is said in money under the
+figure it qualifies, on the panel and on the page; an entity says it on its
+closed heading; and **Sources**, the page's last section, takes the whole
+ledger apart by source, by entity or by class — the ways the page draws a
+total — so each of them opens to its figures, with a date wherever it
+disagrees with the line above it and an age in words wherever it is stale.
+The panel keeps only the sentence (UI-45), and the entity lines still carry no
+date (the date cascade). `chrome-sidebar/tests/finance-explain.test.js` holds
+that every total equals the sum of what explains it and that the words appear
+only when something is stale. The next total that stands for many figures — a
+wallet's points, a quarter's return — is the next case.
 
 ## Open
 

@@ -1,7 +1,8 @@
 import {Stack,Section,Label,Strong,Note,Amount,Heading,GroupTitle,ActionGroup,RecordRow,money} from './ui.js';
 import {LineChart,ProportionBar,linkParts,share} from './charts.js';
 import {moneyShort} from '../money.js';
-import {classSide,classGroup} from '../finance-data.js';
+import {classSide,classGroup,valueSourceLabel,STALE_DAYS} from '../finance-data.js';
+import {firmLabel} from '../account-sites.js';
 // The ledger read as a whole, on a page of its own. The side panel answers
 // what it all comes to and takes new figures in; this is where the owner goes
 // to read the detail — every entity, every private position side by side, and
@@ -70,6 +71,33 @@ export function NetWorthChart({points=[],currency='USD'}){
 // by how much, and against what. A sign is a shape a reader can miss.
 export const changeText=({amount,since},currency='USD')=>
   `${money(Math.abs(amount),currency)} ${amount<0?'lower':'higher'} than ${since}`;
+
+// How much of a total rests on figures older than a season, said once under
+// the total it qualifies and nowhere when none of it does. Money first, since
+// that is what would move if the old figures were read again today.
+export function staleText(explain,currency='USD'){
+  const stale=explain?.stale;
+  if(!stale?.count)return '';
+  const age=`figures more than ${STALE_DAYS} days old`;
+  if(stale.share===1)return `All of this rests on ${age}.`;
+  return `${money(stale.total,currency)} of this${stale.share===null?'':`, ${share(stale.share)},`} rests on ${age}.`;
+}
+// The same fact, short enough for the line under a heading: the whole of a
+// group, or how much of it.
+export const staleNote=(explain,currency='USD')=>!explain?.stale?.count?''
+  :explain.stale.count===explain.count?`over ${STALE_DAYS} days old`
+    :`${money(explain.stale.total,currency)} over ${STALE_DAYS} days old`;
+// What stated a figure, in words. `figureSource` in the ledger says which kind
+// of source; a firm's name lives with the sites, and a valuation's kind with
+// the ledger's own registry. A figure read off no site was typed in or folded
+// out of a dropped statement, and the name says exactly that much.
+export const sourceLabel=key=>{
+  const [kind,code]=String(key).split('-');
+  return kind==='firm'?firmLabel(Number(code))
+    :kind==='valuation'?valueSourceLabel(Number(code))||'Valuation'
+    :kind==='statement'?'Capital accounts'
+    :'Dropped or entered';
+};
 
 // Where the money is, as the question the ledger is really asked: how much of
 // it could be sold this week. One bar holds every asset class, the liquid ones

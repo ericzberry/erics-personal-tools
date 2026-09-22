@@ -6,8 +6,12 @@
 // desktop width and a phone's without anyone's own figures on the screen.
 //
 // ?state= picks one: `today` (one quarter read in full, so no line yet),
-// `year` (five quarters, so the line is drawn), `sparse` (one entity, nothing
-// private and no houses) and `empty`.
+// `year` (five quarters, so the line is drawn), `aging` (today's ledger with
+// part of it left behind — one trust unread since May, one fund's statement
+// from March, one house valued in January — so Sources and the totals have
+// stale figures to account for), `sparse` (one entity, nothing private and no
+// houses) and `empty`. Ages are measured against a fixed day, so a state looks
+// the same whenever it is reviewed.
 import {mountFinance} from '../src/finance.js';
 import {CapabilityPicker} from '../src/components/capabilities.js';
 import {markRef,capitalRef,holdingRef,propertyRef,valuationRef,flowRef} from '../src/finance-data.js';
@@ -76,8 +80,20 @@ function ledger(dates){
     flow(2,'2026-09-02',100000),flow(5,'2027-09-25',150000),flow(4,'2027-05-01',20000));
   return records;
 }
+// Today's ledger, with three things left behind it by different amounts.
+function aging(){
+  return ledger(['2026-09-20']).map(record=>{
+    if(record.row==='mark'&&record.portfolio===2)return mark(2,record.class,'2026-05-15',record.amount,record.firm);
+    if(record.row==='capital'&&record.holding===4)return capital({...record,asOf:'2026-03-31'});
+    if(record.row==='capital'&&[1,2].includes(record.holding))return capital({...record,asOf:'2026-06-30'});
+    if(record.row==='valuation'&&record.property===2)return valuation({...record,asOf:'2026-01-10'});
+    return record;
+  });
+}
+const TODAY='2026-09-22';
 const STATES={
   today:ledger(['2026-09-20']),
+  aging:aging(),
   year:ledger(['2026-09-30','2026-12-31','2027-03-31','2027-06-30','2027-09-20']),
   sparse:[portfolio(1,'Eric and Ariana Berry Estate',1),mark(1,10,'2026-09-20',1668402.54),mark(1,3,'2026-09-20',248422.68)],
   empty:[portfolio(1,'Eric and Ariana Berry Estate',1)]
@@ -96,6 +112,6 @@ const readZestimate=async(link,address)=>{
 document.getElementById('finance-navigation').replaceChildren(CapabilityPicker());
 mountFinance(document.getElementById('finance-root'),{
   vault,credentials:{get:async()=>'synthetic-preview-token-at-least-32-characters'},
-  remote:async()=>({connections:[]}),readZestimate,
+  remote:async()=>({connections:[]}),readZestimate,today:()=>TODAY,
   offline:{request:async()=>({records:STATES[state]})}
 });

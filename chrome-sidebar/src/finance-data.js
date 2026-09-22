@@ -887,11 +887,25 @@ export function positionsOn(records,when){
       disputed:!!holding.stated&&holding.stated!==holding.vehicle};
   });
 }
+// A figure is one observation: an amount, on a date, stated by one source. A
+// total is only ever a sum of them, so any total can be taken apart again into
+// the figures it adds up — each with the day it was observed and where — and
+// that is what makes a total explainable rather than merely large. So every
+// figure that reaches a total carries its provenance: `ref`, the stored row it
+// was read from, and what stated it. A class figure was stated by the firm it
+// was read at, or by nobody in particular (firm 0: typed in, or folded out of
+// a dropped statement, which names no site).
+const markFigure=mark=>({kind:'mark',ref:mark.id||markRef(mark),portfolio:mark.portfolio,class:mark.class,
+  asOf:mark.asOf,amount:mark.amount,firm:Number(mark.firm||0)});
 // A position counts exactly like a class figure, because that is what it is —
 // a named one. Everything that groups, signs, totals or dates a figure works on
 // it unchanged, which is why positions needed no second set of any of that.
-const positionFigure=position=>({portfolio:position.holding.portfolio,class:canonicalClass(position.holding.class),
-  asOf:position.current.asOf,amount:position.value,holding:position.holding.number});
+// What stated it is the capital account statement it was read from, which for
+// a position following another is the vehicle's statement filed there, at
+// this position's share of it.
+const positionFigure=position=>({kind:'position',ref:position.current.id||capitalRef(position.current),
+  portfolio:position.holding.portfolio,class:canonicalClass(position.holding.class),
+  asOf:position.current.asOf,amount:position.value,holding:position.holding.number,from:position.from,share:position.share});
 const livePositions=(records,mine,when)=>positionsOn(records,when)
   .filter(position=>position.current&&mine.has(position.holding.portfolio));
 
@@ -923,12 +937,83 @@ export function propertiesOn(records,when){
 // figures from there on, so the grouping, the signing, the totals and the
 // series all work on them unchanged — a mortgage is negative because its class
 // says so, not because anything here decided it.
-const propertyFigures=entry=>[
-  {portfolio:entry.property.portfolio,class:PROPERTY_CLASS,asOf:entry.current.asOf,amount:entry.value,property:entry.property.number},
-  ...(entry.debt?[{portfolio:entry.property.portfolio,class:PROPERTY_DEBT_CLASS,asOf:entry.current.asOf,amount:entry.debt,property:entry.property.number}]:[])
-];
+// Both were stated by the one valuation, and where that came from — a
+// Zestimate, an appraisal — is its source.
+const propertyFigures=entry=>{
+  const reading={kind:'property',ref:entry.current.id||valuationRef(entry.current),portfolio:entry.property.portfolio,
+    asOf:entry.current.asOf,property:entry.property.number,valuation:entry.source};
+  return [{...reading,class:PROPERTY_CLASS,amount:entry.value},
+    ...(entry.debt?[{...reading,class:PROPERTY_DEBT_CLASS,amount:entry.debt}]:[])];
+};
 const liveProperties=(records,mine,when)=>propertiesOn(records,when)
   .filter(entry=>entry.current&&mine.has(entry.property.portfolio));
+
+// Every figure standing on a date — the step function's answer, class figures,
+// positions and houses alike — in the portfolios of one currency, or of every
+// currency when none is named. This is the one list every total in the ledger
+// is a sum of, which is what lets any of them be taken apart again.
+export function figuresOn(records,{currency='',when=''}={}){
+  const mine=new Set(portfoliosOf(records).filter(portfolio=>!currency||(portfolio.currency||'USD')===currency)
+    .map(portfolio=>portfolio.number));
+  return [...heldOn(marksOf(records).filter(mark=>mine.has(mark.portfolio)),when).map(markFigure),
+    ...livePositions(records,mine,when).map(positionFigure),
+    ...liveProperties(records,mine,when).flatMap(propertyFigures)];
+}
+
+// What stated a figure, as one key a list can be grouped by: the firm it was
+// read at, the capital account statements private positions are read from, the
+// kind of valuation a house was given, or nobody in particular. The words for
+// each belong to whoever draws them — a firm's name lives with the sites.
+export const figureSource=figure=>figure.kind==='position'?'statement'
+  :figure.kind==='property'?`valuation-${figure.valuation}`
+  :figure.firm?`firm-${figure.firm}`:'entered';
+
+// How old a figure is on a day, in whole days. One dated after that day — a
+// statement struck ahead of this device's clock — is no age at all rather
+// than a negative one.
+export const ageOn=(asOf,today)=>Math.max(0,Math.floor((Date.parse(today)-Date.parse(asOf))/86400000));
+
+// A total taken apart: the figures it adds up, largest first, each with its
+// date, its source and how old it is; the span of dates behind it; and how
+// much of it rests on figures older than a season. Stale means what the
+// portfolio check has always meant by it — more than STALE_DAYS old today —
+// but asked of each figure, because a portfolio whose cash was read last week
+// and whose private fund last spring is fresh by its newest date and still
+// carries the fund's number from spring.
+//
+// A figure that comes to nothing is left out: it is a correction's zero, not
+// a holding, and it moves no total. What is stale is said in the total's own
+// terms — a stale mortgage makes the stale part negative — and `share` is how
+// much of the whole that is, at most all of it.
+export function explainTotal(figures,{today=new Date().toISOString().slice(0,10)}={}){
+  const lines=figures.filter(figure=>Math.round(figure.amount*100)!==0).map(figure=>{
+    const age=ageOn(figure.asOf,today);
+    return {...figure,value:signed(figure),source:figureSource(figure),age,stale:age>STALE_DAYS};
+  }).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)||a.asOf.localeCompare(b.asOf)||String(a.ref).localeCompare(String(b.ref)));
+  const total=sum(lines.map(line=>line.value));
+  const old=lines.filter(line=>line.stale);
+  const staleTotal=sum(old.map(line=>line.value));
+  const dates=lines.map(line=>line.asOf).sort();
+  return {total,count:lines.length,newest:dates.at(-1)||'',oldest:dates[0]||'',
+    stale:{total:staleTotal,count:old.length,oldest:old.map(line=>line.asOf).sort()[0]||'',
+      share:!old.length?0:total?Math.min(1,Math.abs(staleTotal/total)):null},
+    figures:lines};
+}
+// The same figures taken apart one level further: by what stated them, by
+// the entity that holds them or by asset class, each group a total explained
+// on its own. Largest first, like every breakdown in the ledger.
+const EXPLAINED_BY={source:figureSource,portfolio:figure=>figure.portfolio,class:figure=>canonicalClass(figure.class)};
+export function explainBy(figures,by,{today}={}){
+  const key=EXPLAINED_BY[by];
+  if(!key)throw Error(`A total can be taken apart by ${Object.keys(EXPLAINED_BY).join(', ')}.`);
+  const groups=new Map();
+  for(const figure of figures){
+    const id=key(figure);
+    groups.set(id,[...(groups.get(id)||[]),figure]);
+  }
+  return [...groups].map(([id,items])=>({id,...explainTotal(items,{today})})).filter(group=>group.count)
+    .sort((a,b)=>Math.abs(b.total)-Math.abs(a.total)||String(a.id).localeCompare(String(b.id)));
+}
 
 export function financeCurrencies(records){
   const counts=new Map();
@@ -944,11 +1029,11 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
   const mine=new Map(portfolios.map(portfolio=>[portfolio.number,portfolio]));
   const held=positionsOn(records).filter(position=>mine.has(position.holding.portfolio));
   const owned=propertiesOn(records).filter(entry=>mine.has(entry.property.portfolio));
-  const live=[...heldOn(marksOf(records).filter(mark=>mine.has(mark.portfolio))),
-    ...held.filter(position=>position.current).map(positionFigure),
-    ...owned.filter(entry=>entry.current).flatMap(propertyFigures)];
+  const live=figuresOn(records,{currency});
   const assets=live.filter(mark=>classSide(mark.class)==='asset');
   const liabilities=live.filter(mark=>classSide(mark.class)==='liability');
+  // Every total carries its own explanation: the figures it adds up, their
+  // dates and sources, and how much of it rests on stale ones.
   const group=(list,key,label)=>{
     const groups=new Map();
     for(const mark of list){
@@ -956,7 +1041,8 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
       if(!groups.has(id))groups.set(id,[]);
       groups.get(id).push(mark);
     }
-    return [...groups].map(([id,items])=>({id,label:label(id),total:sum(items.map(signed)),count:items.length})).sort(byTotal);
+    return [...groups].map(([id,items])=>({id,label:label(id),total:sum(items.map(signed)),count:items.length,
+      explain:explainTotal(items,{today})})).sort(byTotal);
   };
   // Staleness is a portfolio's question, not a class's: a ledger where cash was
   // marked last week and stocks last year is one portfolio to go and look at.
@@ -970,6 +1056,7 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
     assets:sum(assets.map(mark=>mark.amount)),
     liabilities:sum(liabilities.map(mark=>mark.amount)),
     net:sum(live.map(signed)),
+    explain:explainTotal(live,{today}),
     byClass:group(live,mark=>mark.class,classLabel),
     // The question the class list cannot answer on its own: how much of this
     // could be sold this week. Liabilities have no liquidity to speak of and
@@ -1015,8 +1102,7 @@ export function netWorthSeries(records,{currency='USD',since=HISTORY_START}={}){
   const readings=valuationsOf(records).filter(entry=>owned.has(entry.property));
   const dates=[...new Set([...marks.map(mark=>mark.asOf),...statements.map(entry=>entry.asOf),...readings.map(entry=>entry.asOf)].map(asOf=>fromHistoryStart(asOf,since)))].sort();
   return dates.map(asOf=>{
-    const live=[...heldOn(marks,asOf),...livePositions(records,mine,asOf).map(positionFigure),
-      ...liveProperties(records,mine,asOf).flatMap(propertyFigures)];
+    const live=figuresOn(records,{currency,when:asOf});
     return {
       asOf,figures:live.length,
       assets:sum(live.filter(mark=>classSide(mark.class)==='asset').map(mark=>mark.amount)),
@@ -1029,8 +1115,9 @@ export function netWorthSeries(records,{currency='USD',since=HISTORY_START}={}){
 // The ledger as it is read: each portfolio, with its live figure per class and
 // the date that figure was observed. This is what the list shows, and it is
 // where a class's own history is reached from.
-export function groupFinanceRecords(records){
+export function groupFinanceRecords(records,{today}={}){
   const marks=marksOf(records),positions=positionsOn(records),estates=propertiesOn(records);
+  const live=figuresOn(records);
   return portfoliosOf(records).map(portfolio=>{
     const mine=marks.filter(mark=>mark.portfolio===portfolio.number);
     // A line per class and firm, because that is what one figure is. A trust
@@ -1059,7 +1146,8 @@ export function groupFinanceRecords(records){
       // needs that a position does not: its value and its debt are two figures
       // and the portfolio holds the difference.
       total:sum([...rows.map(row=>signed(row.current)),...held.map(position=>position.value),
-        ...owned.map(entry=>entry.equity)])};
+        ...owned.map(entry=>entry.equity)]),
+      explain:explainTotal(live.filter(figure=>figure.portfolio===portfolio.number),{today})};
   });
 }
 

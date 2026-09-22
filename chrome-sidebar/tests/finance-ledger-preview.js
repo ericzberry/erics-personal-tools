@@ -138,7 +138,7 @@ for(const [label,records] of states){
   // looks no further, so each fills its own.
   mountFinance(host,{
     vault,credentials:{get:async()=>'synthetic-preview-token-at-least-32-characters'},
-    remote:async()=>({connections:[]}),readZestimate,layout:'panel',
+    remote:async()=>({connections:[]}),readZestimate,layout:'panel',today:()=>'2026-09-22',
     openDetails:()=>window.open('finance-page-preview.html?state=year','_blank','noopener'),
     offline:{request:async()=>({records})}
   });
