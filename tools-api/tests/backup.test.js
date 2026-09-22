@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import worker from '../src/index.js';
 import {encryptSettings,decryptSettings} from '../src/ai-settings.js';
 import {DRIVE_SCOPE} from '../src/drive.js';
-import {sweepBackup,takeBackup,restoreBackup,backupRoutes,backupState,BACKUP_FOLDER_ID,BACKUP_CRON} from '../src/backup.js';
+import {sweepBackup,takeBackup,restoreBackup,backupRoutes,backupState,readTables,writeTables,BACKUP_FOLDER_ID,BACKUP_CRON} from '../src/backup.js';
 import {buildBackup,verifyBackup,upgradeBackup,encodeCell,quarterOf,backupName,keyCheck,BACKUP_VERSION,BACKUP_FORMAT} from '../src/backup-format.js';
 
 const token='synthetic-token-at-least-32-characters';
@@ -257,6 +257,68 @@ test('the ledger is restored from a backup exactly, after a preview and a safety
   // Asked again, there is nothing to do.
   const again=await restoreBackup(env,{request,fetcher:drive.fetcher,fileId:backup.id,tables:'finance',confirm:true});
   assert.equal(again.restored,false);
+});
+
+test('an edit synced while the safety backup uploads stops the restore rather than being lost',async()=>{
+  const {env,sql}=environment();
+  await connectGoogle(env);await seedLedger(env);
+  const drive=fakeDrive();
+  const backup=await takeBackup(env,{request,fetcher:drive.fetcher,kind:'quarterly',now:new Date('2026-10-01T08:00:00Z')});
+  const good=marks(sql);
+  sql.prepare('UPDATE finance_marks SET cents = 1 WHERE portfolio = 1 AND firm = 5').run();
+  // A device syncs something while the before-restore file is on its way to
+  // Drive: after the tables were read for it, before they are replaced.
+  const whileUploading=edit=>async(input,init={})=>{
+    if(new URL(typeof input==='string'?input:input.url).pathname==='/upload/drive/v3/files')edit();
+    return drive.fetcher(input,init);
+  };
+  const restore=fetcher=>restoreBackup(env,{request,fetcher,fileId:backup.id,tables:'finance',confirm:true});
+
+  await assert.rejects(restore(whileUploading(()=>sql.prepare('INSERT INTO finance_marks (portfolio, class, firm, as_of, cents) VALUES (2, 1, 3, 20260930, 130000)').run())),
+    error=>{assert.match(error.message,/Nothing was restored: a table changed while its before-restore backup was being saved/);return true;});
+  const synced=marks(sql);
+  assert.ok(synced.some(row=>row.cents===130000),'the synced figure is still there');
+  assert.ok(synced.some(row=>row.cents===1),'and nothing was restored');
+  const missed=[...drive.files.values()].find(file=>file.appProperties.backupKind==='before-restore');
+  assert.ok(!JSON.parse(missed.content).tables.find(table=>table.name==='finance_marks').rows.some(row=>row[4]===130000),
+    'the file already in Drive does not hold it, which is why the restore stopped');
+  assert.equal((await backupState(env)).restore,undefined);
+
+  // An edit to a table the restore is not replacing does not stop it, and
+  // running it again saves the figure the first attempt would have lost.
+  const done=await restore(whileUploading(()=>sql.prepare("INSERT INTO reminder_records (id, value, revision, updated_at) VALUES ('r1', 'sealed', 'rev', 'now')").run()));
+  assert.equal(done.restored,true);
+  assert.equal(done.verified,true);
+  assert.deepEqual(marks(sql),good);
+  assert.ok(contents(drive,done.safety.id).tables.find(table=>table.name==='finance_marks').rows.some(row=>row[4]===130000));
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM reminder_records').get().n,1);
+});
+
+test('a table counts as changed for any difference at all, and as unchanged only when it is the same',async()=>{
+  const {env,sql}=environment();
+  // No key, so a row can repeat; a column that ignores case; an empty table.
+  sql.exec('CREATE TABLE notes (n, body TEXT COLLATE NOCASE); CREATE TABLE blank (id INTEGER)');
+  const reset=()=>sql.exec("DELETE FROM notes; DELETE FROM blank; INSERT INTO notes VALUES (1, 'note'), (1, 'note'), (2, 'Other')");
+  const list=[{name:'notes',sql:''},{name:'blank',sql:''}];
+  const replacement=[{name:'notes',columns:['n','body'],rows:[[9,'restored']]},{name:'blank',columns:[],rows:[]}];
+  const cases=[
+    ['a row repeated differently',"DELETE FROM notes WHERE rowid = (SELECT min(rowid) FROM notes WHERE n = 1); INSERT INTO notes VALUES (2, 'Other')"],
+    ['a change of case only',"UPDATE notes SET body = 'other' WHERE n = 2"],
+    ['a number now text',"UPDATE notes SET n = '2' WHERE n = 2"],
+    ['a row in a table read empty','INSERT INTO blank VALUES (1)']
+  ];
+  for(const [what,edit] of cases){
+    reset();
+    const read=await readTables(env,list);
+    sql.exec(edit);
+    const changed=await readTables(env,list);
+    assert.notDeepEqual(changed,read,`${what}: the edit is real`);
+    await assert.rejects(writeTables(env,replacement,read),error=>/a table changed while/.test(error.message),what);
+    assert.deepEqual(await readTables(env,list),changed,`${what}: nothing was replaced`);
+  }
+  reset();
+  await writeTables(env,replacement,await readTables(env,list));
+  assert.deepEqual(sql.prepare('SELECT n, body FROM notes').all().map(row=>({...row})),[{n:9,body:'restored'}]);
 });
 
 test('a restore refuses what it cannot put back faithfully, and changes nothing when it does',async()=>{

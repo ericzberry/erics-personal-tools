@@ -211,20 +211,55 @@ function chunks(rows){
 // Each row travels as a JSON array and is taken apart by SQLite, which keeps
 // every value's type: an integer comes back an integer, a sealed record's text
 // comes back text.
-const insertSql=table=>`INSERT INTO ${quoted(table.name)} (${table.columns.map(quoted).join(', ')}) SELECT ${
-  table.columns.map((_,index)=>`json_extract(value, '$[${index}]')`).join(', ')} FROM json_each(?)`;
+const extracted=columns=>columns.map((_,index)=>`json_extract(value, '$[${index}]')`).join(', ');
+const insertSql=table=>`INSERT INTO ${quoted(table.name)} (${table.columns.map(quoted).join(', ')}) SELECT ${extracted(table.columns)} FROM json_each(?)`;
+
+// A statement that fails unless every table is still exactly as it was read:
+// the same rows, each as many times, value for value, type for type, and byte
+// for byte even in a column that ignores case. It fails by asking json() to
+// read text that is not JSON, only when something differs, because SQLite has
+// no statement that raises an error at will. Nothing else in a restore batch
+// can fail that way — every insert reads JSON this file wrote — so the error
+// says which failure it was.
+const CHANGED=/malformed JSON/i;
+function unchangedCheck(env,read){
+  const params=[];
+  const differences=read.map(table=>{
+    // Read empty: it must still be empty.
+    if(!table.rows.length)return `(SELECT count(*) FROM ${quoted(table.name)})`;
+    const groups=table.columns.map((_,index)=>index+1).join(', ');
+    const now=`SELECT ${table.columns.map(column=>`${quoted(column)} COLLATE BINARY`).join(', ')}, count(*) FROM ${quoted(table.name)} GROUP BY ${groups}`;
+    const then=`SELECT ${extracted(table.columns)}, count(*) FROM (${chunks(table.rows)
+      .map(rows=>`SELECT value FROM json_each(?${params.push(JSON.stringify(rows))})`).join(' UNION ALL ')}) GROUP BY ${groups}`;
+    return `(SELECT count(*) FROM (SELECT * FROM (${now}) EXCEPT SELECT * FROM (${then})))`
+      +` + (SELECT count(*) FROM (SELECT * FROM (${then}) EXCEPT SELECT * FROM (${now})))`;
+  });
+  return env.DB.prepare(`SELECT json('{' || changed) FROM (SELECT ${differences.join(' + ')} AS changed) WHERE changed > 0`).bind(...params);
+}
 
 // Replaces each table's rows with the ones given, in one transaction: every
 // table goes back, or — a foreign key left dangling, a column that no longer
-// exists — none does. Foreign keys are checked at the end rather than per
-// statement, so the order the tables are emptied and filled in cannot matter.
-export async function writeTables(env,tables){
-  const statements=[env.DB.prepare('PRAGMA defer_foreign_keys = on')];
+// exists, a table no longer as `read` found it — none does. Foreign keys are
+// checked at the end rather than per statement, so the order the tables are
+// emptied and filled in cannot matter.
+//
+// `read` is what the caller saved before replacing it. Between that read and
+// this batch a device can sync an edit; replaced, the edit would be in neither
+// the saved copy nor the restored tables. So the batch opens by checking the
+// tables are still what was saved, inside the same transaction as the
+// replacement, and refuses rather than lose anything. Only the tables being
+// replaced are compared: an edit anywhere else does not stop a restore.
+export async function writeTables(env,tables,read){
+  const statements=[env.DB.prepare('PRAGMA defer_foreign_keys = on'),unchangedCheck(env,read)];
   for(const table of tables)statements.push(env.DB.prepare(`DELETE FROM ${quoted(table.name)}`));
   for(const table of tables)
     for(const rows of chunks(table.rows))statements.push(env.DB.prepare(insertSql(table)).bind(JSON.stringify(rows)));
   try{await env.DB.batch(statements);}
-  catch(error){fail(409,`Nothing was restored: the database refused it (${errorText(error)}).`);}
+  catch(error){
+    if(CHANGED.test(errorText(error)))
+      fail(409,'Nothing was restored: a table changed while its before-restore backup was being saved, so that backup would have missed the change. Run the restore again.');
+    fail(409,`Nothing was restored: the database refused it (${errorText(error)}).`);
+  }
 }
 
 export async function restoreBackup(env,{request,fetcher=fetch,fileId,tables:asked,confirm=false,now:when=new Date()}){
@@ -255,12 +290,17 @@ export async function restoreBackup(env,{request,fetcher=fetch,fileId,tables:ask
     if(!saved.get(name).rows.every(row=>row.every(plainCell)))fail(409,`${name} holds values this version cannot write back.`);
   }
   const inserts=names.reduce((sum,name)=>sum+chunks(saved.get(name).rows).length,0);
-  // Reading the tables now, the restore batch, reading them again, and the state.
-  const needed=4+names.length*3+inserts;
+  // Reading the tables now, the restore batch and the check that opens it,
+  // reading them again, and the state.
+  const needed=5+names.length*3+inserts;
   if(needed>queryBudget(env))
     fail(400,`Restoring ${names.length} tables at once needs ${needed} database queries, more than one request may make on the Workers Free plan. Restore fewer tables at a time.`);
 
   const current=await readTables(env,names.map(name=>live.get(name)));
+  // The check that nothing changed while the safety backup was saved compares
+  // through JSON, as the restore writes.
+  const opaque=current.find(table=>!table.rows.every(row=>row.every(plainCell)));
+  if(opaque)fail(409,`${opaque.name} holds values this version cannot check for changes before replacing them.`);
   const plan=names.map((name,index)=>compare(saved.get(name),current[index],live.get(name)));
   const file={id:meta.id,name:meta.name,createdAt:backup.createdAt,quarter:backup.quarter,kind:backup.kind,version:written.version};
   const damaged=check.tables.filter(table=>!table.whole).map(table=>table.name);
@@ -270,9 +310,10 @@ export async function restoreBackup(env,{request,fetcher=fetch,fileId,tables:ask
 
   // Undo first: what is about to be replaced goes to Drive before anything is
   // touched, and a restore that cannot save it does not happen. A write landing
-  // between this read and the batch below is the one thing neither keeps.
+  // while it uploads would be in neither, so the batch below refuses to replace
+  // a table that is no longer what was saved.
   const safety=await takeBackup(env,{request,fetcher,kind:'before-restore',now:when,tables:current});
-  await writeTables(env,names.map(name=>saved.get(name)));
+  await writeTables(env,names.map(name=>saved.get(name)),current);
   const after=await readTables(env,names.map(name=>live.get(name)));
   const verified=names.every((name,index)=>{
     const result=compare(saved.get(name),after[index],live.get(name));

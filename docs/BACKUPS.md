@@ -107,8 +107,9 @@ The rules:
   come back as text nothing can open.
 - A cell is `null`, a number or a string. Bytes (`{"base64": …}`) and
   non-finite reals (`{"real": …}`) are encoded rather than lost; no table holds
-  either today, and a restore refuses a table containing them until a version
-  that decodes them exists.
+  either today, and a restore refuses a table containing them — in the file, or
+  in the database now, which it has to compare before replacing — until a
+  version that handles them exists.
 
 ## How a file proves it is whole
 
@@ -160,6 +161,11 @@ node tools-api/scripts/backup.mjs restore <drive-file-id> --tables finance --con
   rewind a reminder written since.
 - What is about to be replaced is written to Drive first as a `before-restore`
   file. Restoring from that file undoes the restore.
+- If one of those tables changes while that file is being written — a device
+  syncing an edit — the restore stops without changing anything, because the
+  file would not hold the edit: the batch that replaces the tables first checks,
+  inside the same transaction, that they are still exactly what the file saved.
+  Run it again. Edits to tables that are not named do not stop it.
 - After it runs, the tables are read back and compared with the backup;
   the result says whether they matched.
 - On the Workers Free plan one request may make 50 D1 queries, so a restore
