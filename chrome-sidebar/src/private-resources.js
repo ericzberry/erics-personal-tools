@@ -2,6 +2,7 @@ import {subscriptionsOffline} from './subscriptions-offline.js';
 import {remindersOffline} from './reminders-offline.js';
 import {giftsOffline} from './gifts-offline.js';
 import {sizesOffline} from './sizes-offline.js';
+import {replacementsOffline} from './replacements-offline.js';
 import {travelOffline} from './travel-offline.js';
 import {cardsOffline} from './cards-offline.js';
 import {rewardsOffline} from './rewards-offline.js';
@@ -28,6 +29,7 @@ export const PRIVATE_RESOURCES=Object.freeze({
   reminders:remindersOffline,
   gifts:giftsOffline,
   sizes:sizesOffline,
+  replacements:replacementsOffline,
   travel:travelOffline,
   cards:cardsOffline,
   rewards:rewardsOffline,

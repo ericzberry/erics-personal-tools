@@ -43,6 +43,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
 | `gifts.html` | `src/gifts-page.js` | Gift ideas, from the thought to the thing given |
 | `sizes.html` | `src/sizes-page.js` | Clothing sizes: what the label says, brand by brand, and the measurements behind it |
+| `replacements.html` | `src/replacements-page.js` | Replacement drawer: things worth buying again, down to the exact variant, and where they came from |
 | `attention.html` | `src/attention-page.js` | Needs attention across saved records |
 | `subscriptions.html` | `src/subscriptions-page.js` | Recurring charges, renewal decisions and alternatives |
 | `unlock.html` | `src/unlock-page.js` | The small window the side panel opens to ask for the passkey, which the panel cannot raise itself |
@@ -74,7 +75,7 @@ progress indicators, imported by `tokens.css` so every host has them) ·
 every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns
 `{message, tone}` when what it got was not a success) · plus per-feature component
 modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
-`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `capture.*`
+`vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `replacements.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js`,
 `workspace.css`, `sidebar-launcher.js`. `charts.{js,css}` are the two pictures
@@ -196,6 +197,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `gift-data.js`/`gifts-offline.js` (gift ideas, grouped by who they are for),
   `size-data.js`/`sizes-offline.js` (clothing sizes and body measurements in one
   record shape, grouped by brand with General first),
+  `replacement-data.js`/`replacements-offline.js` (things worth buying again:
+  the exact variant and where it was bought, a shop's name or a page),
   `capture-data.js`/`capture-stores.js` (what a typed note may become: the
   capability that owns the record, the path its store writes to, the validator
   that decides it, and the stores a host offers quick add),
@@ -246,7 +249,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   pages, and the watcher `background.js` registers, so a visit updates the
   catalogue whether or not the panel is open.
 - **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
-  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `sizes.js`, `capture.js`, `taxes.js`, `data-library.js`,
+  `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `sizes.js`, `replacements.js`, `capture.js`, `taxes.js`, `data-library.js`,
   `restaurant-search.js`, `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
   `email-cloud.js` (the email summary and the reply, both through the Worker).
@@ -314,7 +317,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
   `/health`, `/v1/releases/latest`, `/v1/ai-tasks[/:task]`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`,
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,
-  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`,
+  `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`, `/v1/replacements[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`,
   `/v1/storage`, `/v1/backup[/files|/run|/restore]`, `/v1/weather`. `/v1/push/key` is public like the release route,
   because a device needs it before it can subscribe to anything. The AI-connection family
@@ -325,9 +328,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   `/v1/drive/callback` is the one route outside the bearer check — Google's
   redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
-  `src/personal.js`, `src/reminders.js`, `src/gifts.js` and `src/sizes.js`
-  reuse it for `card_records`, `personal_records`,
-  `reminder_records`, `gift_records` and `size_records`.
+  `src/personal.js`, `src/reminders.js`, `src/gifts.js`, `src/sizes.js` and
+  `src/replacements.js` reuse it for `card_records`, `personal_records`,
+  `reminder_records`, `gift_records`, `size_records` and `replacement_records`.
   `src/finance.js` does not: the ledger is two relational tables, so it has its
   own handler, its own `p3` / `3-1-20260919` / `h3` / `r3` / `f5-…` / `i…` addressing, and the
   `/v1/finance/backfill` route that retrofits the record-per-account table.
@@ -382,6 +385,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   (`finance_portfolios`, `finance_marks`, `finance_holdings`, `finance_capital`,
   `finance_properties`, `finance_valuations`, `finance_flows`, `finance_imports`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
+  `replacements-schema.sql` (`replacement_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
   `voice-schema.sql` (`voice_profiles`),
@@ -509,5 +513,5 @@ checks, held by `chrome-sidebar/tests/ui-rules.test.js` and the
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
 `tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/REWARDS.md`,
 `docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/BACKUPS.md`, `docs/REWARD_PROGRAMS.md`,
-`docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/QUICK_ADD.md`, `docs/NOTIFICATIONS.md`, `docs/WEATHER.md`,
+`docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/REPLACEMENTS.md`, `docs/QUICK_ADD.md`, `docs/NOTIFICATIONS.md`, `docs/WEATHER.md`,
 `chrome-sidebar/RESTAURANTS.md`.

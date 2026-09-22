@@ -91,3 +91,6 @@ that name whether or not the model has heard of the shop: an unrecognised maker
 is the case the tool exists for, since the brands worth writing down are the
 ones whose sizing is not obvious. An empty brand means the note named no maker
 at all, which is what a measurement looks like.
+
+A particular product to buy again — *Brooks Ghost 16 in 10.5 D* — is not a
+size but a favourite, and goes in the [replacement drawer](REPLACEMENTS.md).

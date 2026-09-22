@@ -7,7 +7,7 @@ await mkdir(output, {recursive: true});
 // fresh checkout does not have one. Reading a spreadsheet is one input among
 // several, and its absence must not hold back a build of everything else.
 const optional = new Set(['vendor']);
-for (const name of ['manifest.json', 'rewards.html', 'sidepanel.html', 'settings.html', 'restaurants.html', 'travel.html', 'cards.html', 'finance.html', 'personal.html', 'reminders.html', 'gifts.html', 'sizes.html', 'attention.html', 'subscriptions.html', 'unlock.html', 'taxes.html', 'data.html', 'src', 'config', 'icons', 'vendor']) {
+for (const name of ['manifest.json', 'rewards.html', 'sidepanel.html', 'settings.html', 'restaurants.html', 'travel.html', 'cards.html', 'finance.html', 'personal.html', 'reminders.html', 'gifts.html', 'sizes.html', 'replacements.html', 'attention.html', 'subscriptions.html', 'unlock.html', 'taxes.html', 'data.html', 'src', 'config', 'icons', 'vendor']) {
   if (optional.has(name) && !await stat(new URL(name, root)).catch(() => null)) {
     console.warn(`No ${name}/ in this checkout — the build carries on without it.`);
     continue;

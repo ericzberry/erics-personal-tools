@@ -12,6 +12,7 @@ export const CAPABILITIES = [
   {id:'attention',label:'Needs attention',href:'attention.html',icon:'M9 4h6l6 16H3L9 4Z M12 9v5 M12 17h.01'},
   {id:'subscriptions',label:'Subscriptions & renewals',href:'subscriptions.html',icon:'M4 8a8 8 0 0 1 14-2l2 2 M20 3v5h-5 M20 16a8 8 0 0 1-14 2l-2-2 M4 21v-5h5'},
   {id:'sizes',label:'Clothing sizes',href:'sizes.html',icon:'M8.5 4 3 6.5 4.5 10 7 9v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9l2.5 1L21 6.5 15.5 4 M8.5 4a3.5 3.5 0 0 0 7 0'},
+  {id:'replacements',label:'Replacement drawer',href:'replacements.html',icon:'M4 4h16v16H4V4Z M4 12h16 M10 8h4 M10 16h4'},
   {id:'gifts',label:'Gift ideas',href:'gifts.html',icon:'M3 11h18v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9Z M2.5 7.5h19V11h-19V7.5Z M12 7.5V21 M12 7.5C10.6 5 9.2 3.6 8 4.3c-1.2.8-.4 3.2 4 3.2Z M12 7.5c1.4-2.5 2.8-3.9 4-3.2 1.2.8.4 3.2-4 3.2Z'},
   {id:'reminders',label:'Reminders',href:'reminders.html',icon:'M12 4a5 5 0 0 0-5 5v3.4L5.5 16h13L17 12.4V9a5 5 0 0 0-5-5Z M10 19a2 2 0 0 0 4 0'},
   {id:'rewards',label:'Rewards & benefits',href:'rewards.html',icon:'M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.3-4.8-2.5-4.8 2.5.9-5.3L4.2 9.7l5.4-.8L12 4Z'},
@@ -37,7 +38,7 @@ export function capabilitySections(items=CAPABILITIES){
   return [...groups].filter(([,list])=>list.length).map(([title,list])=>({title,icon:title?SECTION_ICONS.get(title):null,items:list}));
 }
 // The capabilities that mount inside the side panel rather than opening a tab.
-export const PANEL_CAPABILITIES=['travel','rewards','finance','taxes','attention','subscriptions','gifts','sizes','reminders','cards','personal'];
+export const PANEL_CAPABILITIES=['travel','rewards','finance','taxes','attention','subscriptions','gifts','sizes','replacements','reminders','cards','personal'];
 // Gmail is not listed: it appears on its own when the active tab is Gmail.
 // Automatic mode has no menu row: it is the state the sidebar starts in, and
 // the toggle names it, so listing it again would be a row for "no tool chosen".

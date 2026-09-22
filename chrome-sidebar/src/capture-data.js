@@ -1,6 +1,7 @@
 import {normalizeReminder,describeReminder,reminderDue,duePhrase,REMINDER_KINDS,REMINDER_EVENT_KINDS,DEFAULT_NOTICE_DAYS} from './reminder-data.js';
 import {normalizeGift,isBought,GIFT_STATUSES} from './gift-data.js';
 import {normalizeSize,describeSize} from './size-data.js';
+import {normalizeReplacement,describeReplacement} from './replacement-data.js';
 // What a typed note can become. Each target names the capability that owns the
 // record, the path its store writes to, the validator the tool itself uses —
 // so a captured record is indistinguishable from a typed one and cannot arrive
@@ -48,6 +49,15 @@ There is nowhere to put an occasion, a price or a comment: anything worth keepin
 - fit: how it runs, or when it was measured, in the owner's own words — "runs small, size up", "measured in March". "" when the note says nothing about it.
 A size and a measurement are the same record: the difference is only whether a brand decided it.`,
     summary:record=>describeSize(record)
+  },
+  {
+    capability:'replacements',label:'the replacement drawer',path:'/v1/replacements',normalize:normalizeReplacement,
+    when:'the note records a particular product the owner has and would buy again — a paint colour, a pillow, a cable, a printer cartridge, a filter, a bulb, a pair of running shoes — naming the exact one. A note that only says what size the owner wears belongs in sizes instead',
+    fields:()=>`- item: what the thing is, in a few words, as the owner would look for it later — "Bedroom paint", "Pillow", "Laptop charger", "Printer ink", "Running shoes". Required.
+- variant: the exact product, as precisely as the note gives it and in its own words: maker, model, colour name and code, finish, size, width, length, wattage, part number — "Benjamin Moore Hale Navy HC-154, Regal Select eggshell", "Brooks Ghost 16, 10.5 D, black/white". Required. Never add a detail the note does not state.
+- where: where it was bought — the shop as the note names it, or an https:// address the note contains — and "" when the note does not say.
+- note: anything else worth knowing next time — how much was needed, how long one lasts — otherwise "".`,
+    summary:record=>describeReplacement(record)
   }
 ];
 export const captureTarget=capability=>CAPTURE_TARGETS.find(target=>target.capability===capability)||null;

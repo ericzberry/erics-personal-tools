@@ -25,6 +25,7 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | Push notifications, the cron, or VAPID keys | [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) |
 | Gift ideas | [docs/GIFTS.md](docs/GIFTS.md) |
 | Clothing sizes | [docs/SIZES.md](docs/SIZES.md) |
+| Things to buy again | [docs/REPLACEMENTS.md](docs/REPLACEMENTS.md) |
 | Turning a typed note into a record | [docs/QUICK_ADD.md](docs/QUICK_ADD.md) |
 | Gmail or restaurant workflows | [Gmail](docs/GMAIL.md) or [restaurants](chrome-sidebar/RESTAURANTS.md) |
 | Filing tax documents or Google Drive access | [docs/TAXES.md](docs/TAXES.md) |

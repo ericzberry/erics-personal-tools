@@ -1,0 +1,12 @@
+@import url('./travel.css');
+@import url('./capture.css');
+/* One thing per row: what it is on the line with its actions, the exact
+   variant under it at reading size — it is the answer the drawer was opened
+   for — and where it came from as the quiet line below that. */
+.replacement-list .record-row{padding:6px 0;gap:2px}
+.replacement-list .record-row p{margin:0}
+.replacement-list .travel-list{gap:4px}
+/* The question a Delete asks, and its two answers, belong to the row that
+   raised them, and stop short of the rule under it. */
+.replacement-list .replacement-confirm{display:grid;gap:4px;padding:0 0 8px}
+.replacement-list .footnote:empty,.replacement-list .notice:empty{display:none}

@@ -39,6 +39,13 @@ let gifts=[
   {id:'41111111-1111-4111-8111-111111111111',person:'Ariana',idea:'Cast iron skillet, the 12 inch one',status:'Idea',link:'https://example.com/skillet',revision:'first',updatedAt:new Date().toISOString()},
   {id:'41111111-1111-4111-8111-111111111112',person:'Celeste',idea:'Roller skates, size 3',status:'Bought',link:'',revision:'first',updatedAt:new Date().toISOString()}
 ];
+// The replacement drawer: a shop, a page, a note, and a bare variant.
+let replacements=[
+  {id:'61111111-1111-4111-8111-111111111111',item:'Bedroom paint',variant:'Benjamin Moore Hale Navy HC-154, Regal Select eggshell',where:'Home Depot',note:'Two gallons does the room',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'61111111-1111-4111-8111-111111111112',item:'Pillow',variant:'Coop Sleep Goods Original Adjustable, queen',where:'https://www.coopsleepgoods.com/products/the-original-pillow',note:'',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'61111111-1111-4111-8111-111111111113',item:'Running shoes',variant:'Brooks Ghost 16, men’s 10.5 D, black/black/ebony',where:'Fleet Feet',note:'Every 400 miles',revision:'first',updatedAt:new Date().toISOString()},
+  {id:'61111111-1111-4111-8111-111111111114',item:'Printer ink',variant:'HP 67XL black, 3YM57AN',where:'',note:'',revision:'first',updatedAt:new Date().toISOString()}
+];
 // Sizes as the phone receives them: measurements with no brand, then brands.
 let sizes=[
   {id:'51111111-1111-4111-8111-111111111111',brand:'',item:'Waist',size:'33 in',fit:'Measured in March',revision:'first',updatedAt:new Date().toISOString()},
@@ -154,7 +161,7 @@ createServer(async (req, res) => {
       if((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
       cards=cards.filter(c=>c.id!==id);if(req.method==='PUT'){const record={...value,id,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};cards.push(record);res.end(JSON.stringify({record}));return;}res.end('{}');return;
     }
-    for(const [name,list,set] of [['subscriptions',()=>subscriptions,value=>{subscriptions=value;}],['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}],['sizes',()=>sizes,value=>{sizes=value;}]]){
+    for(const [name,list,set] of [['subscriptions',()=>subscriptions,value=>{subscriptions=value;}],['finance',()=>finance,value=>{finance=value;}],['personal',()=>personal,value=>{personal=value;}],['reminders',()=>reminders,value=>{reminders=value;}],['gifts',()=>gifts,value=>{gifts=value;}],['sizes',()=>sizes,value=>{sizes=value;}],['replacements',()=>replacements,value=>{replacements=value;}]]){
       if(url.pathname===`/v1/${name}/snapshot`){res.end(JSON.stringify({records:list()}));return;}
       if(url.pathname.startsWith(`/v1/${name}/`)){
         const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
@@ -174,6 +181,11 @@ createServer(async (req, res) => {
         res.end(JSON.stringify({capability:'gifts',path:'/v1/gifts',
           record:{person:'Celeste',idea:'Butterfly net',link:'',status:'Idea'},
           summary:'Butterfly net · for Celeste'}));return;
+      }
+      if(/paint|pillow|cable|cartridge|again/i.test(String(note))){
+        res.end(JSON.stringify({capability:'replacements',path:'/v1/replacements',
+          record:{item:'Kitchen bulbs',variant:'Philips Ultra Definition BR30, 2700K',where:'',note:''},
+          summary:'Kitchen bulbs · Philips Ultra Definition BR30, 2700K'}));return;
       }
       if(/size|medium|large|small|inseam|waist|chest|wear/i.test(String(note))){
         res.end(JSON.stringify({capability:'sizes',path:'/v1/sizes',

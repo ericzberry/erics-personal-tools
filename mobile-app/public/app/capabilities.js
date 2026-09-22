@@ -14,6 +14,7 @@ import {mountPushBridge} from './push-bridge.js';
 import {captureStores} from './shared/capture-stores.js';
 import {mountGifts} from './shared/gifts.js';
 import {mountSizes} from './shared/sizes.js';
+import {mountReplacements} from './shared/replacements.js';
 import {mountTaxes} from './shared/taxes.js';
 import {mountTravel} from './shared/travel.js';
 import {offlineResource} from './shared/offline-resource.js';
@@ -38,14 +39,14 @@ const restaurantDownloads=restaurantCache({store:protectedStore(encryptedDeviceS
 // other record, so the offers stay readable with no signal.
 const stores=privateStores({remote:cloudRequest,store:protectedStore(encryptedDeviceStore())},{travel:{includeNumbers:true}});
 const {subscriptions:subscriptionStore,rewards:rewardStore,programs:programStore,cards:cardStore,finance:financeStore,personal:personalStore,
-  reminders:reminderStore,gifts:giftStore,sizes:sizeStore,travel:travelStore,weather}=stores;
+  reminders:reminderStore,gifts:giftStore,sizes:sizeStore,replacements:replacementStore,travel:travelStore,weather}=stores;
 // What a disconnect clears: the registry's stores and the two only the phone keeps.
 const deviceCopies={...stores,ai,restaurants:restaurantDownloads};
 const credentials={
   async beforeDisconnect(){const token=await this.get();if(token)await assertNothingPending(deviceCopies,token);},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 // Best card reads the same wallet Rewards keeps, for the cards it already
 // knows the owner holds but has no rates for.
@@ -57,6 +58,7 @@ const personalTool=mountPersonal(document.getElementById('capability-personal'),
 const reminderTool=mountReminders(document.getElementById('capability-reminders'),{credentials,offline:reminderStore,onSettings:openSettings});
 const giftTool=mountGifts(document.getElementById('capability-gifts'),{credentials,offline:giftStore,onSettings:openSettings});
 const sizeTool=mountSizes(document.getElementById('capability-sizes'),{credentials,offline:sizeStore,onSettings:openSettings});
+const replacementTool=mountReplacements(document.getElementById('capability-replacements'),{credentials,offline:replacementStore,onSettings:openSettings});
 // Today's weather leads the home screen, worked out once a day from where the
 // phone is. The fortnight's birthdays and the money about to reset on a card
 // follow it, read from the same offline copies the tools keep, so a phone with
@@ -67,9 +69,9 @@ const home=mountHome(homeRoot,{credentials,reminders:reminderStore,rewards:rewar
 // the tool uses, so a note typed with no signal queues like any other change.
 const captureRoot=document.getElementById('capability-capture');
 captureRoot.className='travel-wallet';
-mountCapture(captureRoot,{credentials,remote:cloudRequest,stores:captureStores({reminders:reminderStore,gifts:giftStore,sizes:sizeStore}),
+mountCapture(captureRoot,{credentials,remote:cloudRequest,stores:captureStores({reminders:reminderStore,gifts:giftStore,sizes:sizeStore,replacements:replacementStore}),
   onSaved:capability=>{
-    ({gifts:giftTool,sizes:sizeTool,reminders:reminderTool}[capability])?.refresh();
+    ({gifts:giftTool,sizes:sizeTool,replacements:replacementTool,reminders:reminderTool}[capability])?.refresh();
     // A note typed here can be a birthday, and the birthdays are the thing
     // directly above it on this screen.
     if(capability==='reminders')home?.refresh();
@@ -82,7 +84,7 @@ const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai'
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
-async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
+async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
 mountTravel(document.getElementById('capability-travel'),{credentials,offline:travelStore,showNumbers:true,request:travelStore.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
 const subscriptionTool=mountSubscriptions(document.getElementById('capability-subscriptions'),{credentials,offline:subscriptionStore,remote:cloudRequest,onSettings:openSettings});
 const attentionTool=mountAttention(document.getElementById('capability-attention'),{credentials,stores:{reminders:reminderStore,rewards:rewardStore,travel:travelStore,personal:personalStore,finance:financeStore,subscriptions:subscriptionStore},onSettings:openSettings,onOpen:(id)=>navigation.show(id,{focus:true})});

@@ -4133,3 +4133,15 @@ only Best card's. `tests/private-resources.test.js` reads `src/` for any store
 a tool opens and fails if the registry leaves it out; the phone's own test
 holds `capabilities.js` to building its stores from the registry.
 Archive: `release/erics-sidebar-0.6.268.zip`.
+
+## The replacement drawer (0.6.274 / mobile 0.1.223)
+
+A new tool for things liked enough to buy again: the paint colour, the pillow,
+the cable, the cartridge, the running shoe. Each is what it is, the exact
+variant — the answer, at reading size under the name — and where it was
+bought, a shop's name or the page, which the row opens from its own glyph.
+Copy takes the variant for a shop's search box. Quick add files a favourite
+said in a line. Offline and on the phone like every record tool; the Worker's
+`/v1/replacements` needs `replacements-schema.sql` applied before it deploys.
+See [REPLACEMENTS.md](../docs/REPLACEMENTS.md).
+Archive: `release/erics-sidebar-0.6.274.zip`.

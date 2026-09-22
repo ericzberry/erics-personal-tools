@@ -11,6 +11,7 @@ import {subscriptions,readSubscriptions,researchSubscriptions} from './subscript
 import {reminders} from './reminders.js';
 import {gifts} from './gifts.js';
 import {sizes} from './sizes.js';
+import {replacements} from './replacements.js';
 import {readCapture} from './capture.js';
 import {pushSubscriptions, sendTestPush, deliverDueReminders} from './push.js';
 import {latestRelease} from './releases.js';
@@ -173,6 +174,7 @@ export default {
       if(path==='/v1/reminders'||path.startsWith('/v1/reminders/'))return await reminders(request,env,readValue,json);
       if(path==='/v1/gifts'||path.startsWith('/v1/gifts/'))return await gifts(request,env,readValue,json);
       if(path==='/v1/sizes'||path.startsWith('/v1/sizes/'))return await sizes(request,env,readValue,json);
+      if(path==='/v1/replacements'||path.startsWith('/v1/replacements/'))return await replacements(request,env,readValue,json);
       if(path==='/v1/push/test'){
         if(request.method!=='POST')return json({error:'Method not allowed.'},405);
         return json(await sendTestPush(env));

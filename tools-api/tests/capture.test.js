@@ -39,6 +39,17 @@ test('a note about what the owner wears lands in clothing sizes, brand and all',
   assert.equal(measured.summary,'Waist · 33 in');
 });
 
+test('a note about a thing worth buying again lands in the replacement drawer, variant intact',async()=>{
+  const reading=await readCapture(connection,{note:'the bedroom is Benjamin Moore Hale Navy HC-154 in eggshell, from Home Depot',today:'2026-09-22'},
+    reply({capability:'replacements',record:{item:'Bedroom paint',variant:'Benjamin Moore Hale Navy HC-154, eggshell',where:'Home Depot',note:''}}));
+  assert.equal(reading.path,'/v1/replacements');
+  assert.equal(reading.summary,'Bedroom paint · Benjamin Moore Hale Navy HC-154, eggshell · Home Depot');
+  // A page is named by its shop when it is read back.
+  const linked=await readCapture(connection,{note:'pillow is the Coop Original, https://www.coopsleepgoods.com/products/original',today:'2026-09-22'},
+    reply({capability:'replacements',record:{item:'Pillow',variant:'Coop Original, queen',where:'https://www.coopsleepgoods.com/products/original',note:''}}));
+  assert.equal(linked.summary,'Pillow · Coop Original, queen · coopsleepgoods.com');
+});
+
 test('a note that names no date comes back as the owner’s problem, not a server error',async()=>{
   await assert.rejects(readCapture(connection,{note:'buy milk'},reply({error:'That does not name a date to remember.'})),
     error=>error.status===422&&/does not name a date/.test(error.message));
@@ -52,6 +63,7 @@ test('reminders store and validate through the shared record route',async()=>{
   const sql=new DatabaseSync(':memory:');sql.exec(readFileSync(new URL('../reminders-schema.sql',import.meta.url),'utf8'));
   sql.exec(readFileSync(new URL('../gifts-schema.sql',import.meta.url),'utf8'));
   sql.exec(readFileSync(new URL('../sizes-schema.sql',import.meta.url),'utf8'));
+  sql.exec(readFileSync(new URL('../replacements-schema.sql',import.meta.url),'utf8'));
   const token='synthetic-token-at-least-32-characters';
   const env={API_TOKEN:token,SETTINGS_ENCRYPTION_KEY:'12'.repeat(32),DB:{
     prepare(query){
@@ -89,4 +101,14 @@ test('reminders store and validate through the shared record route',async()=>{
   assert.equal(size.item,'ABC joggers');
   assert.equal(sql.prepare('SELECT value FROM size_records').get().value.includes('Lululemon'),false);
   assert.equal((await call(sizePath,'DELETE',{revision:size.revision})).status,200);
+
+  // The replacement drawer is that store again, and a link it keeps is one
+  // this app would open.
+  const drawerPath='/v1/replacements/55555555-5555-4555-8555-555555555555';
+  assert.equal((await call(drawerPath,'PUT',{item:'Printer ink',variant:''})).status,400);
+  assert.equal((await call(drawerPath,'PUT',{item:'Printer ink',variant:'HP 67XL black',where:'http://example.com'})).status,400);
+  const thing=(await (await call(drawerPath,'PUT',{item:'Printer ink',variant:'HP 67XL black',where:'Staples',note:''})).json()).record;
+  assert.equal(thing.variant,'HP 67XL black');
+  assert.equal(sql.prepare('SELECT value FROM replacement_records').get().value.includes('67XL'),false);
+  assert.equal((await call(drawerPath,'DELETE',{revision:thing.revision})).status,200);
 });
