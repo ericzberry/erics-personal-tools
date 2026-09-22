@@ -26,7 +26,7 @@ test('cash in or out is its own row: a firm, a day and a signed amount',()=>{
   assert.equal(parseRef('f0-20260910'),null,'firm 0 names no firm');
   assert.equal(recordRef({row:'flow',firm:5,asOf:'2026-09-10'}),'f5-20260910');
   assert.deepEqual(normalizeFinance({row:'flow',firm:UBS,asOf:'2026-09-10',amount:'-250000.004'}),
-    {row:'flow',firm:UBS,asOf:'2026-09-10',amount:-250000});
+    {row:'flow',firm:UBS,asOf:'2026-09-10',amount:-250000,importId:null});
   assert.throws(()=>normalizeFinance({row:'flow',firm:UBS,asOf:'2026-09-10',amount:0}),/how much/);
   assert.throws(()=>normalizeFinance({row:'flow',firm:0,asOf:'2026-09-10',amount:5}),/institution/);
   assert.throws(()=>normalizeFinance({row:'flow',firm:UBS,asOf:'',amount:5}),/date/);

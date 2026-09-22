@@ -198,6 +198,32 @@ export const FIRMS={etrade:1,chase:2,'morgan-stanley':3,schwab:4,ubs:5,fidelity:
   'treasury-direct':35};
 export const firmCode=id=>FIRMS[String(id||'')]||0;
 export const firmId=code=>Object.keys(FIRMS).find(id=>FIRMS[id]===Number(code))||'';
+// How a figure got into the ledger. A dated row keeps one number pointing at the
+// import that last wrote it, and the import keeps the rest: what was read, a
+// fingerprint of it, and each figure it saved with the amount it was read as
+// and the amount it replaced. That is the whole trail from a statement to a
+// stored row, and it is what answers "where did this number come from", "have
+// I filed this statement before" and "what did this correction overwrite"
+// without a second history table.
+//
+// Every write is an import, including one typed by hand, because a correction
+// is exactly the write whose origin matters later. The codes are permanent.
+export const IMPORT_KINDS=[
+  {code:1,id:'page',label:'Account page'},
+  {code:2,id:'file',label:'Statement'},
+  {code:3,id:'image',label:'Image'},
+  {code:4,id:'typed',label:'Typed by hand'},
+  {code:5,id:'intake',label:'Intake'},
+  {code:6,id:'zestimate',label:'Zestimate'}
+];
+export const importKind=code=>IMPORT_KINDS.find(entry=>entry.code===Number(code))||null;
+export const importKindById=id=>IMPORT_KINDS.find(entry=>entry.id===id)||null;
+// Bounded like every dated row here. Imports that a stored row still points at
+// are never the ones dropped, so the bound only ever forgets history that has
+// already been written over.
+export const MAX_IMPORTS=600;
+export const MAX_TRAIL_LINES=80;
+const MAX_IMPORT_NUMBER=9999999999999;
 // The quarter a date falls in, as one number, for the same reason a date is
 // one: 2026-09-30 is 20263, which sorts and compares like the words for it.
 // The ledger's history starts in 2026 Q3, when it was first filled in. A figure
@@ -630,6 +656,10 @@ export const VALUATION_ID=/^r([1-9]\d{0,3})-(\d{8})$/;
 // answers is the firm's: how much of what UBS holds now did UBS earn, and how
 // much was simply handed to it. `f5-20260910` is UBS on 10 September.
 export const FLOW_ID=/^f([1-9]\d{0,1})-(\d{8})$/;
+// One accepted reading: what was read, and every figure it put in the ledger.
+// Numbered by the millisecond it was accepted, so the number is also when, and
+// a larger number is a later import on any device.
+export const IMPORT_ID=/^i([1-9]\d{0,12})$/;
 export const portfolioRef=number=>`p${number}`;
 export const markRef=mark=>`${mark.portfolio}-${mark.class}-${dateNumber(mark.asOf)}${mark.firm?`-${mark.firm}`:''}`;
 export const holdingRef=number=>`h${number}`;
@@ -637,7 +667,9 @@ export const capitalRef=entry=>`h${entry.holding}-${dateNumber(entry.asOf)}`;
 export const propertyRef=number=>`r${number}`;
 export const valuationRef=entry=>`r${entry.property}-${dateNumber(entry.asOf)}`;
 export const flowRef=entry=>`f${entry.firm}-${dateNumber(entry.asOf)}`;
+export const importRef=number=>`i${number}`;
 export const recordRef=record=>record.row==='portfolio'?portfolioRef(record.number)
+  :record.row==='import'?importRef(record.number)
   :record.row==='holding'?holdingRef(record.number)
   :record.row==='capital'?capitalRef(record)
   :record.row==='property'?propertyRef(record.number)
@@ -657,14 +689,68 @@ export function parseRef(ref){
   if(valuation)return {row:'valuation',property:Number(valuation[1]),asOf:dateText(valuation[2])};
   const flow=FLOW_ID.exec(ref||'');
   if(flow)return {row:'flow',firm:Number(flow[1]),asOf:dateText(flow[2])};
+  const imported=IMPORT_ID.exec(ref||'');
+  if(imported)return {row:'import',number:Number(imported[1])};
   const mark=MARK_ID.exec(ref||'');
   if(!mark)return null;
   return {row:'mark',portfolio:Number(mark[1]),class:Number(mark[2]),asOf:dateText(mark[3]),firm:Number(mark[4]||0)};
 }
 
+// Which import wrote a dated row. Read from what is being saved and never
+// carried over from the row being replaced: a figure retyped by hand did not
+// come from the statement the old one did, and a save that names no import —
+// an older client, a script — is honestly one nobody traced.
+const provenance=input=>{
+  const said=input.importId;
+  if(said===undefined||said===null||said==='')return null;
+  const number=Number(said);
+  if(!Number.isInteger(number)||number<1||number>MAX_IMPORT_NUMBER)fail('Name the import this figure came from.');
+  return number;
+};
+// One figure an import saved: which row, what it was saved as, and only what
+// is worth keeping beside that — the amount the reading proposed when the owner
+// changed it, the amount and the import it replaced when there was one, and the
+// lines of the source it was added up from. Absent rather than null, so a line
+// is as short as what happened.
+const TRAILED=['mark','capital','valuation','flow'];
+const trailFigure=(value,label)=>{
+  const number=Number(value);
+  if(!['number','string'].includes(typeof value)||value===''||!Number.isFinite(number)||Math.abs(number)>MAX_VALUE)fail(`Enter ${label}.`);
+  return Math.round(number*100)/100;
+};
+const given=value=>value!==null&&value!==undefined&&value!=='';
+function trailLine(line){
+  if(!line||typeof line!=='object'||!TRAILED.includes(parseRef(String(line.ref||''))?.row))fail('An import lists the figures it saved.');
+  const amount=trailFigure(line.amount,'the amount saved');
+  const read=given(line.read)?trailFigure(line.read,'the amount read'):amount;
+  const was=given(line.was)?trailFigure(line.was,'the amount replaced'):null;
+  const wasImport=given(line.wasImport)?provenance({importId:line.wasImport}):null;
+  const from=(Array.isArray(line.from)?line.from:[]).filter(item=>typeof item==='string'&&item.trim())
+    .slice(0,12).map(item=>item.trim().slice(0,120));
+  return {ref:String(line.ref),amount,...(read===amount?{}:{read}),...(was===null?{}:{was}),
+    ...(wasImport===null?{}:{wasImport}),...(from.length?{from}:{})};
+}
+
 export function normalizeFinance(input,previous={}){
   const get=key=>input[key]??previous[key];
   const row=text(get('row')??'mark',10,'a row type',true);
+  // An import is written once, after the figures it lists have been saved, and
+  // never edited: it is the record of what happened, so there is nothing about
+  // it to correct later.
+  if(row==='import'){
+    const kind=Number(get('kind'));
+    if(!importKind(kind))fail('Say what this import was read from.');
+    const said=get('firm'),firm=said===undefined||said===null||said===''?0:Number(said);
+    if(firm!==0&&!firmId(firm))fail('Choose which institution this was read at.');
+    const print=String(get('print')??'');
+    if(print&&!/^[0-9a-f]{16}$/.test(print))fail('A fingerprint is sixteen hexadecimal digits.');
+    const lines=get('lines'),made=get('made');
+    if(!Array.isArray(lines)||!lines.length||lines.length>MAX_TRAIL_LINES)fail(`An import records between one and ${MAX_TRAIL_LINES} figures.`);
+    return {row:'import',number:counting(get('number'),'an import number',MAX_IMPORT_NUMBER),kind,firm,print,
+      name:String(get('name')??'').trim().slice(0,160),note:String(get('note')??'').trim().slice(0,400),
+      lines:lines.map(trailLine),
+      made:(Array.isArray(made)?made:[]).map(String).filter(ref=>['portfolio','holding','property'].includes(parseRef(ref)?.row)).slice(0,20)};
+  }
   if(row==='portfolio'){
     const kind=Number(get('kind'));
     if(!registration(kind))fail('Choose how this portfolio is registered.');
@@ -717,7 +803,7 @@ export function normalizeFinance(input,previous={}){
       // to be worked out. Null is the ordinary case and means "work it out";
       // zero means the fund says there is nothing left, which is a different
       // answer and has to survive being saved.
-      unfunded:optional(get('unfunded'),'what is left to call')};
+      unfunded:optional(get('unfunded'),'what is left to call'),importId:provenance(input)};
   }
   // The property itself: which portfolio holds it, the address, and the page
   // its value is published on. No figure lives here — an address corrected
@@ -742,7 +828,7 @@ export function normalizeFinance(input,previous={}){
     return {row:'valuation',property:counting(get('property'),'a property number',MAX_PROPERTIES),
       asOf:date(get('asOf'),'as-of date',true),
       value:amount(get('value'),'the market value'),
-      debt:amount(get('debt')??0,'the amount still owed'),source};
+      debt:amount(get('debt')??0,'the amount still owed'),source,importId:provenance(input)};
   }
   // Cash put in or taken out: positive in, negative out, never nothing. One
   // amount per firm and day — a deposit and a withdrawal on the same day are
@@ -757,7 +843,7 @@ export function normalizeFinance(input,previous={}){
       fail('Enter how much was added or taken out.');
     const cents=Math.round(value*100)/100;
     if(!cents)fail('Enter how much was added or taken out.');
-    return {row:'flow',firm,asOf:date(get('asOf'),'date',true),amount:cents};
+    return {row:'flow',firm,asOf:date(get('asOf'),'date',true),amount:cents,importId:provenance(input)};
   }
   if(row!=='mark')fail('Unknown ledger row.');
   const cls=Number(get('class'));
@@ -770,7 +856,7 @@ export function normalizeFinance(input,previous={}){
   const said=get('firm'),firm=said===undefined||said===null||said===''?0:Number(said);
   if(firm!==0&&!firmId(firm))fail('Choose which institution this figure was read at.');
   return {row:'mark',portfolio:counting(get('portfolio'),'a portfolio number',MAX_PORTFOLIOS),
-    class:cls,firm,asOf:date(get('asOf'),'as-of date',true),amount:amount(get('amount'),'amount')};
+    class:cls,firm,asOf:date(get('asOf'),'as-of date',true),amount:amount(get('amount'),'amount'),importId:provenance(input)};
 }
 
 // Records still queued for deletion, or waiting on a conflict decision, are left
@@ -783,6 +869,62 @@ export const capitalOf=records=>counted(records).filter(record=>record.row==='ca
 export const propertiesOf=records=>counted(records).filter(record=>record.row==='property').sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true}));
 export const valuationsOf=records=>counted(records).filter(record=>record.row==='valuation');
 export const flowsOf=records=>counted(records).filter(record=>record.row==='flow').sort((a,b)=>a.asOf.localeCompare(b.asOf)||a.firm-b.firm);
+export const importsOf=records=>counted(records).filter(record=>record.row==='import').sort((a,b)=>b.number-a.number);
+export const importOf=(records,number)=>number?importsOf(records).find(entry=>entry.number===Number(number))||null:null;
+export const importName=entry=>entry?.name||importKind(entry?.kind)?.label||'';
+
+// What was read, reduced to sixteen hex digits: the same file, image or page
+// text reads to the same print on any device, and nothing about the document
+// can be recovered from it. It is how a statement dropped a second time is
+// recognized before its figures are filed again.
+export async function fingerprint(data){
+  const bytes=typeof data==='string'?new TextEncoder().encode(data):data instanceof ArrayBuffer?new Uint8Array(data):data;
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  return [...digest.slice(0,8)].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+// The newest import of exactly this source, if there is one.
+export const seenBefore=(records,print)=>print?importsOf(records).find(entry=>entry.print===print)||null:null;
+
+// The same money filed twice. A figure's key carries its firm because two firms
+// are two piles of money — and that is also how one pile read twice, off the
+// bank's page and then out of its statement dropped in with no firm, becomes two
+// figures that both count. Nothing proves it from the numbers alone, but the
+// same amount to the cent, in the same portfolio and class, within a few days,
+// filed from somewhere else, is worth saying before it is saved.
+export function sameMoney(mark,records,{days=7}={}){
+  const cents=toCents(mark.amount),when=Date.parse(mark.asOf);
+  if(!cents||!Number.isFinite(when))return null;
+  return marksOf(records).find(other=>other.portfolio===mark.portfolio&&other.class===mark.class
+    &&(other.firm||0)!==(mark.firm||0)&&toCents(other.amount)===cents
+    &&Math.abs(Date.parse(other.asOf)-when)<=days*86400000)||null;
+}
+
+// Every import, newest first, with what became of each figure it saved: still
+// the figure on file, written over since by a later import (named when it is
+// one), or gone. Derived rather than stored — the row's own pointer is the only
+// proof that a figure was accepted, so nothing here can disagree with it.
+export function importTrail(records){
+  const rows=new Map(counted(records).filter(record=>TRAILED.includes(record.row)).map(record=>[recordRef(record),record]));
+  const imports=importsOf(records),byNumber=new Map(imports.map(entry=>[entry.number,entry]));
+  return imports.map(entry=>({...entry,lines:entry.lines.map(line=>{
+    const row=rows.get(line.ref);
+    const state=!row?'removed':row.importId===entry.number?'current':'replaced';
+    return {...line,state,by:state==='replaced'?byNumber.get(row.importId)||null:null,
+      replaced:line.wasImport?byNumber.get(line.wasImport)||null:null};
+  })}));
+}
+// What a line of the trail is about, in the ledger's own words. The firm's name
+// lives with the sites rather than here, so a host that has it passes it in.
+export function trailSubject(ref,records,{firmName=firmId}={}){
+  const at=parseRef(ref);
+  if(!at)return {what:ref,asOf:''};
+  const named=(row,number)=>records.find(record=>record.row===row&&record.number===number)?.name;
+  if(at.row==='mark')return {what:`${named('portfolio',at.portfolio)||`Portfolio ${at.portfolio}`} · ${classLabel(at.class)}`,asOf:at.asOf};
+  if(at.row==='capital')return {what:named('holding',at.holding)||`Investment ${at.holding}`,asOf:at.asOf};
+  if(at.row==='valuation')return {what:named('property',at.property)||`Property ${at.property}`,asOf:at.asOf};
+  if(at.row==='flow')return {what:`Cash in or out · ${firmName(at.firm)||`Firm ${at.firm}`}`,asOf:at.asOf};
+  return {what:ref,asOf:''};
+}
 const sum=values=>Math.round(values.reduce((total,value)=>total+value,0)*100)/100;
 const byTotal=(a,b)=>Math.abs(b.total)-Math.abs(a.total)||a.label.localeCompare(b.label);
 

@@ -9,6 +9,7 @@
 // machine without a keychain, and says so.
 import {readFileSync, existsSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
+import {fingerprint, firmCode, importRef, importName} from '../chrome-sidebar/src/finance-data.js';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 
@@ -59,9 +60,57 @@ export const ledger = async () => {
   const {records} = await api('/v1/finance');
   const of = row => records.filter(record => record.row === row);
   return {
+    records,
     portfolios: of('portfolio').sort(byName),
     marks: of('mark'),
     properties: of('property').sort(byName),
-    valuations: of('valuation')
+    valuations: of('valuation'),
+    imports: of('import').sort((a, b) => b.number - a.number)
   };
 };
+
+// A figure file is the array of entries it always was, or the same array under
+// "figures" beside what it was read from: {"source": "Schwab Q2 2026.pdf",
+// "file": "/path/to/it.pdf", "firm": "schwab", "figures": [...]}. The source
+// names the import every figure is saved under; the file, when given, is
+// fingerprinted so the same statement filed twice is recognized; the firm is the
+// site id the statement is from, for a figure that should stand beside that
+// site's own page readings rather than as a typed one.
+export async function readFigureFile(file) {
+  let parsed;
+  try { parsed = JSON.parse(readFileSync(file, 'utf8')); } catch (error) { die(`Could not read ${file}: ${error.message}`); }
+  const wrapped = parsed && !Array.isArray(parsed) && typeof parsed === 'object';
+  const entries = wrapped ? parsed.figures : parsed;
+  if (!Array.isArray(entries) || !entries.length) die('The file must hold a non-empty JSON array of figures, or an object with one under "figures".');
+  const source = wrapped ? parsed : {};
+  let print = '';
+  if (source.file) {
+    if (!existsSync(source.file)) die(`"file" names ${source.file}, which is not there.`);
+    print = await fingerprint(readFileSync(source.file));
+  }
+  const firm = source.firm ? firmCode(source.firm) : 0;
+  if (source.firm && !firm) die(`"firm" must be a site id such as schwab or etrade; "${source.firm}" is not one.`);
+  return {entries, source: {name: String(source.source || '').slice(0, 160), print, firm}};
+}
+
+// The import a save leaves behind, written last so it lists only what landed.
+// Its number is the millisecond it was accepted, moved on past any number the
+// ledger already holds.
+export function importNumber(imports) {
+  const taken = new Set(imports.map(entry => entry.number));
+  let number = Date.now();
+  while (taken.has(number)) number++;
+  return number;
+}
+export async function fileImport(number, trail) {
+  if (!trail.lines.length) return null;
+  const {record} = await api(`/v1/finance/${importRef(number)}`, {method: 'PUT', body: {row: 'import', number, ...trail, revision: null}});
+  return record;
+}
+// Before a line is saved: what the row held until now, and which import put it there.
+export const traceLine = (ref, amount, before, extra = {}) => ({ref, amount, ...extra,
+  ...(before ? {was: before.amount ?? before.value, ...(before.importId ? {wasImport: before.importId} : {})} : {})});
+// "where did this come from", for a script: the import's own name or its kind,
+// and when it was accepted.
+export const describeImport = entry => entry
+  ? `${importName(entry)}, ${new Date(entry.number).toISOString().slice(0, 16).replace('T', ' ')} UTC` : 'untraced';

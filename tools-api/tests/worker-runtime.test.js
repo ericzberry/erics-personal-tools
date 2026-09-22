@@ -148,9 +148,9 @@ test('a backup read and restore round-trips the ledger through D1 in Cloudflare 
     assert.equal(response.status,200,await response.clone().text());
     const result=await response.json();
     const marks=result.saved.find(table=>table.name==='finance_marks');
-    assert.deepEqual(marks.columns,['portfolio','class','firm','as_of','cents']);
+    assert.deepEqual(marks.columns,['portfolio','class','firm','as_of','cents','import_id']);
     assert.equal(marks.rows.length,2);
-    assert.deepEqual(result.saved.find(table=>table.name==='finance_capital').rows,[[9,20260630,1,2,3,4,null]]);
+    assert.deepEqual(result.saved.find(table=>table.name==='finance_capital').rows,[[9,20260630,1,2,3,4,null,null]]);
     // D1 refuses to replace a table that changed after it was read, and the
     // refusal says so rather than looking like any other failure.
     assert.match(result.changed||'',/a table changed while its before-restore backup was being saved/);

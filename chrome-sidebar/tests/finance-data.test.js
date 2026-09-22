@@ -19,7 +19,9 @@ test('a stored row is a portfolio or five numbers, and nothing else gets in',()=
   // Five, not four: the firm this was read at is part of a figure, and 0 says
   // nobody read it off a page. A figure that could not say which firm it came
   // from was one two firms wrote over each other.
-  assert.deepEqual(figure,{row:'mark',portfolio:1,class:3,firm:0,asOf:'2026-01-01',amount:1000.01});
+  // The sixth says which import wrote it, and a figure that names none is
+  // untraced rather than given one.
+  assert.deepEqual(figure,{row:'mark',portfolio:1,class:3,firm:0,asOf:'2026-01-01',amount:1000.01,importId:null});
   assert.equal(normalizeFinance({row:'mark',portfolio:1,class:3,firm:5,asOf:'2026-01-01',amount:1}).firm,5);
   // Nothing that was carried on every record before survives: no name, no
   // institution spelled out, no type, no liquidity, no tags, no history blob.
@@ -839,7 +841,7 @@ test('an investment and its capital account are their own rows, addressed apart 
   for(const bad of [0,-1,10001,'abc'])
     assert.throws(()=>normalizeFinance({row:'holding',number:1,portfolio:3,name:'A fund',vehicle:1,class:4,share:bad}),undefined,String(bad));
   const statement=normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:'1100000.004',contributed:800000,distributed:250000,commitment:1000000});
-  assert.deepEqual(statement,{row:'capital',holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000,unfunded:null});
+  assert.deepEqual(statement,{row:'capital',holding:1,asOf:'2026-06-30',value:1100000,contributed:800000,distributed:250000,commitment:1000000,unfunded:null,importId:null});
   // A commitment signed with nothing called against it yet is a whole record.
   assert.equal(normalizeFinance({row:'capital',holding:1,asOf:'2026-06-30',value:0,commitment:1000000}).contributed,0);
   // What is left to call is null unless the statement stated it, and zero is a

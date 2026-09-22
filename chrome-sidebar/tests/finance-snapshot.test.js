@@ -167,7 +167,16 @@ test('reading a page folds it into figures, and saves nothing until Save',async(
   await settle(()=>document.getElementById('finance-snapshot-status').textContent.includes('Saved 2 figures.'));
   // The portfolio the IRA needed is made first, because a figure cannot be
   // filed into one that does not exist.
-  assert.deepEqual(writes.map(write=>write.row),['mark','portfolio','mark']);
+  assert.deepEqual(writes.map(write=>write.row),['mark','portfolio','mark','import']);
+  // One import for the reading, written last and listing only what landed: the
+  // page it came off, the firm, a print of what was read, and each figure with
+  // the account lines it was added up from.
+  const trail=writes.at(-1);
+  assert.deepEqual([trail.kind,trail.firm,trail.name,/^[0-9a-f]{16}$/.test(trail.print)],[1,1,'E*TRADE',true]);
+  assert.deepEqual(trail.lines.map(line=>[line.ref,line.amount,line.from]),
+    [['1-10-20260911-1',124500.5,['Net Account Value']],['2-10-20260911-1',88000,['Net Account Value']]]);
+  assert.deepEqual(trail.made,['p2']);
+  assert.deepEqual(writes.filter(write=>write.row==='mark').map(write=>write.importId),[trail.number,trail.number]);
   assert.deepEqual(writes.filter(write=>write.row==='mark').map(write=>[write.portfolio,write.class,write.amount,write.asOf]),
     [[1,10,124500.5,'2026-09-11'],[2,10,88000,'2026-09-11']]);
   // Where, what, when — and which firm, because a page reading knows which firm
@@ -550,7 +559,7 @@ test('a partial list of holdings does not replace the account total it sits unde
   // out beside them; the status line says how many were read and how many kept.
   assert.equal(/do not add up|Left out:/.test(panel.textContent),false);
   panel.querySelector('button').click();
-  await settle(()=>writes.length===1);
+  await settle(()=>writes.length===2);
   assert.deepEqual([writes[0].class,writes[0].amount],[classById('liquid').code,1668403]);
   tool.stop();restore();
 });

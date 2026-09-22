@@ -119,8 +119,10 @@ test('finance totals and readings stay behind the gate, and a saved figure goes 
   // Saving writes through the same validator and queue as a typed edit, and
   // the figure is addressed by where, what and when — nothing else.
   [...h.document.querySelectorAll('#finance-snapshot-body button')].find(button=>button.textContent==='Save').click();
-  await settle(()=>saved.length===1);
+  await settle(()=>saved.length===2);
   assert.equal(saved[0].id,'1-10-20260401','portfolio 1, Liquid securities, that date');
+  assert.equal(saved[1].row,'import','and the reading it came from is recorded after it');
+  assert.equal(saved[0].importId,saved[1].number);
   assert.equal(saved[0].revision,null,'a date this class has no figure for yet is an append');
   assert.deepEqual([saved[0].portfolio,saved[0].class,saved[0].amount],[1,10,1300]);
   assert.equal(saved[0].row,'mark');

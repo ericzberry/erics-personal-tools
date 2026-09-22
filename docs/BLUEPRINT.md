@@ -329,7 +329,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   reuse it for `card_records`, `personal_records`,
   `reminder_records`, `gift_records` and `size_records`.
   `src/finance.js` does not: the ledger is two relational tables, so it has its
-  own handler, its own `p3` / `3-1-20260919` / `h3` / `r3` addressing, and the
+  own handler, its own `p3` / `3-1-20260919` / `h3` / `r3` / `f5-…` / `i…` addressing, and the
   `/v1/finance/backfill` route that retrofits the record-per-account table.
   `src/capture.js` is not a store: it reads one typed note into a record one of
   them already accepts. `src/push.js` and `src/web-push.js` are the
@@ -380,7 +380,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
   (`travel_records`), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_portfolios`, `finance_marks`, `finance_holdings`, `finance_capital`,
-  `finance_properties`, `finance_valuations`, `finance_flows`), `personal-schema.sql` (`personal_records`),
+  `finance_properties`, `finance_valuations`, `finance_flows`, `finance_imports`), `personal-schema.sql` (`personal_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),
   `push-schema.sql` (`push_subscriptions`),
   `drive-schema.sql` (`drive_accounts`, `drive_tickets`),
@@ -395,6 +395,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   one-time, destructive rebuild of `finance_marks` for the primary-key change
   that added `firm`, run by hand and deliberately kept out of
   `finance-schema.sql` so no routine schema apply can repeat it.
+  `finance-imports.sql` is the one-time additive upgrade that gives the four
+  dated finance tables their `import_id` column on a database made before it
+  (with `finance-capital-unfunded.sql`, one of the two `ALTER` files).
 - `scripts/publish-release.js` — publishes a release version to D1 (required step of
   every app release). `scripts/backup.mjs` — the backup from a terminal: status,
   list, run one now, verify a downloaded file offline, and restore (preview
@@ -415,7 +418,7 @@ Not an app: a small operator directory Claude uses to file statements into the
 Finance ledger over `/v1/finance`, so figures reach the app without being typed
 in. `ledger.mjs` is dependency-free Node that lists portfolios with their
 figures and appends dated ones — it cannot delete, and previews every write
-until `--confirm`. `property.mjs` is its counterpart for the rows that are not
+until `--confirm` — and `ledger.mjs trail` prints the import trail. `property.mjs` is its counterpart for the rows that are not
 figures: it lists the properties with their value, debt and equity, and appends
 dated valuations, carrying a mortgage forward rather than erasing one the
 reading did not mention. `backfill.mjs` drives the one-time retrofit of the

@@ -1,6 +1,6 @@
 import {encryptSettings,decryptSettings} from './ai-settings.js';
 import {normalizeFinance,parseFinanceUpdates,parseRef,legacyLedger,
-  ASSET_CLASSES,REGISTRATIONS,VEHICLES,MAX_DATES,dateNumber,dateText,toCents,fromCents} from '../../chrome-sidebar/src/finance-data.js';
+  ASSET_CLASSES,REGISTRATIONS,VEHICLES,MAX_DATES,MAX_IMPORTS,dateNumber,dateText,toCents,fromCents} from '../../chrome-sidebar/src/finance-data.js';
 import {generate} from './providers.js';
 const fail=(status,message)=>{throw {status,message};};
 
@@ -15,6 +15,12 @@ const fail=(status,message)=>{throw {status,message};};
 const AAD=number=>`finance:p${number}`;
 const HOLDING_AAD=number=>`finance:h${number}`;
 const PROPERTY_AAD=number=>`finance:r${number}`;
+const IMPORT_AAD=number=>`finance:i${number}`;
+// Which import last wrote a dated row. Null for a row written before imports
+// existed, or by a client that does not send one: untraced, not unknown-because-
+// lost. It rides on every dated record so the device can walk from a figure back
+// to what it was read from.
+const traced=row=>row.import_id===undefined||row.import_id===null?null:row.import_id;
 const portfolioRecord=(row,value)=>({id:`p${row.id}`,row:'portfolio',revision:row.revision,number:row.id,...value});
 // The id is built here rather than through `markRef` because the Worker reads
 // rows, not records — but it is the same rule and must stay the same rule: the
@@ -26,7 +32,7 @@ const markRecord=row=>({id:`${row.portfolio}-${row.class}-${row.as_of}${row.firm
   // cost more space than the data it guards — while still catching exactly what
   // optimistic concurrency is for: the amount changed under me.
   revision:String(row.cents),portfolio:row.portfolio,class:row.class,firm:row.firm||0,
-  asOf:dateText(row.as_of),amount:fromCents(row.cents)});
+  asOf:dateText(row.as_of),amount:fromCents(row.cents),importId:traced(row)});
 
 const holdingRecord=(row,value)=>({id:`h${row.id}`,row:'holding',revision:row.revision,number:row.id,portfolio:row.portfolio,...value});
 const capitalRecord=row=>({id:`h${row.holding}-${row.as_of}`,row:'capital',
@@ -40,7 +46,7 @@ const capitalRecord=row=>({id:`h${row.holding}-${row.as_of}`,row:'capital',
     +(row.unfunded===null||row.unfunded===undefined?'':`:${row.unfunded}`),
   holding:row.holding,asOf:dateText(row.as_of),value:fromCents(row.cents),
   contributed:fromCents(row.contributed),distributed:fromCents(row.distributed),commitment:fromCents(row.commitment),
-  unfunded:row.unfunded===null||row.unfunded===undefined?null:fromCents(row.unfunded)});
+  unfunded:row.unfunded===null||row.unfunded===undefined?null:fromCents(row.unfunded),importId:traced(row)});
 
 // A property and its dated valuations, exactly like an investment and its
 // capital accounts: an address that can be corrected and sealed, and dated rows
@@ -49,28 +55,38 @@ const propertyRecord=(row,value)=>({id:`r${row.id}`,row:'property',revision:row.
 const valuationRecord=row=>({id:`r${row.property}-${row.as_of}`,row:'valuation',
   revision:`${row.cents}:${row.debt}:${row.source}`,
   property:row.property,asOf:dateText(row.as_of),value:fromCents(row.cents),
-  debt:fromCents(row.debt),source:row.source});
+  debt:fromCents(row.debt),source:row.source,importId:traced(row)});
 
 // Cash in or out at a firm: the same shape as a figure, and like a figure its
 // amount is its revision.
 const flowRecord=row=>({id:`f${row.firm}-${row.as_of}`,row:'flow',revision:String(row.cents),
-  firm:row.firm,asOf:dateText(row.as_of),amount:fromCents(row.cents)});
+  firm:row.firm,asOf:dateText(row.as_of),amount:fromCents(row.cents),importId:traced(row)});
+
+// An import: where it was read and what kind of thing it was, as codes in the
+// clear like a figure's firm, a fingerprint that says nothing about the
+// document, and everything that names anything — the file, the page, the
+// account lines, the portfolios — sealed like a portfolio's name. It is written
+// once and never changed, so its number is its revision.
+const importRecord=(row,value)=>({id:`i${row.id}`,row:'import',revision:String(row.id),number:row.id,
+  kind:row.kind,firm:row.firm,print:row.print,...value});
 
 export async function financeRecords(env){
-  const [portfolios,marks,holdings,capital,properties,valuations,flows]=await Promise.all([
+  const [portfolios,marks,holdings,capital,properties,valuations,flows,imports]=await Promise.all([
     env.DB.prepare('SELECT id, value, revision FROM finance_portfolios ORDER BY id').all(),
-    env.DB.prepare('SELECT portfolio, class, firm, as_of, cents FROM finance_marks ORDER BY portfolio, class, firm, as_of DESC').all(),
+    env.DB.prepare('SELECT portfolio, class, firm, as_of, cents, import_id FROM finance_marks ORDER BY portfolio, class, firm, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_holdings ORDER BY id').all(),
-    env.DB.prepare('SELECT holding, as_of, cents, contributed, distributed, commitment, unfunded FROM finance_capital ORDER BY holding, as_of DESC').all(),
+    env.DB.prepare('SELECT holding, as_of, cents, contributed, distributed, commitment, unfunded, import_id FROM finance_capital ORDER BY holding, as_of DESC').all(),
     env.DB.prepare('SELECT id, portfolio, value, revision FROM finance_properties ORDER BY id').all(),
-    env.DB.prepare('SELECT property, as_of, cents, debt, source FROM finance_valuations ORDER BY property, as_of DESC').all(),
-    env.DB.prepare('SELECT firm, as_of, cents FROM finance_flows ORDER BY firm, as_of DESC').all()
+    env.DB.prepare('SELECT property, as_of, cents, debt, source, import_id FROM finance_valuations ORDER BY property, as_of DESC').all(),
+    env.DB.prepare('SELECT firm, as_of, cents, import_id FROM finance_flows ORDER BY firm, as_of DESC').all(),
+    env.DB.prepare('SELECT id, kind, firm, print, value FROM finance_imports ORDER BY id DESC').all()
   ]);
   const named=await Promise.all(portfolios.results.map(async row=>portfolioRecord(row,await decryptSettings(row.value,AAD(row.id),env))));
   const invested=await Promise.all(holdings.results.map(async row=>holdingRecord(row,await decryptSettings(row.value,HOLDING_AAD(row.id),env))));
   const owned=await Promise.all(properties.results.map(async row=>propertyRecord(row,await decryptSettings(row.value,PROPERTY_AAD(row.id),env))));
+  const read=await Promise.all(imports.results.map(async row=>importRecord(row,await decryptSettings(row.value,IMPORT_AAD(row.id),env))));
   return [...named,...marks.results.map(markRecord),...invested,...capital.results.map(capitalRecord),
-    ...owned,...valuations.results.map(valuationRecord),...flows.results.map(flowRecord)];
+    ...owned,...valuations.results.map(valuationRecord),...flows.results.map(flowRecord),...read];
 }
 
 export async function finance(request,env,readValue,json){
@@ -94,6 +110,7 @@ export async function finance(request,env,readValue,json){
   if(ref.row==='property')return json(await propertyRoute(request,env,readValue,ref));
   if(ref.row==='valuation')return json(await valuationRoute(request,env,readValue,ref));
   if(ref.row==='flow')return json(await flowRoute(request,env,readValue,ref));
+  if(ref.row==='import')return json(await importRoute(request,env,readValue,ref));
   return json(await markRoute(request,env,readValue,ref));
 }
 
@@ -137,7 +154,7 @@ async function markRoute(request,env,readValue,ref){
   // firms' figures for one portfolio and class on one day are two rows, and a
   // statement that left the firm out would reach the wrong one of them.
   const where=[ref.portfolio,ref.class,ref.firm,as_of];
-  const previous=await env.DB.prepare('SELECT portfolio, class, firm, as_of, cents FROM finance_marks WHERE portfolio = ? AND class = ? AND firm = ? AND as_of = ?').bind(...where).first();
+  const previous=await env.DB.prepare('SELECT portfolio, class, firm, as_of, cents, import_id FROM finance_marks WHERE portfolio = ? AND class = ? AND firm = ? AND as_of = ?').bind(...where).first();
   if(request.method==='GET'){
     if(!previous)fail(404,'Figure not found. Refresh your records.');
     return {record:markRecord(previous)};
@@ -154,7 +171,9 @@ async function markRoute(request,env,readValue,ref){
   if(!owner)fail(400,'Save the portfolio before saving a figure for it.');
   const cents=toCents(value.amount);
   await env.DB.batch([
-    env.DB.prepare('INSERT INTO finance_marks (portfolio, class, firm, as_of, cents) VALUES (?, ?, ?, ?, ?) ON CONFLICT(portfolio, class, firm, as_of) DO UPDATE SET cents = excluded.cents').bind(ref.portfolio,ref.class,ref.firm,as_of,cents),
+    // The import is replaced with the amount, never kept from the row before:
+    // whatever wrote this amount is what it came from.
+    env.DB.prepare('INSERT INTO finance_marks (portfolio, class, firm, as_of, cents, import_id) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(portfolio, class, firm, as_of) DO UPDATE SET cents = excluded.cents, import_id = excluded.import_id').bind(ref.portfolio,ref.class,ref.firm,as_of,cents,value.importId),
     // A ledger kept forever is still a ledger with a bound. The oldest dates
     // for this one class at this one firm fall off past the limit; every other
     // class and every other firm keeps its own, and today's figure is never the
@@ -162,7 +181,7 @@ async function markRoute(request,env,readValue,ref){
     // would otherwise age out the yearly figures of the firm beside it.
     env.DB.prepare('DELETE FROM finance_marks WHERE portfolio = ? AND class = ? AND firm = ? AND as_of NOT IN (SELECT as_of FROM finance_marks WHERE portfolio = ? AND class = ? AND firm = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.portfolio,ref.class,ref.firm,ref.portfolio,ref.class,ref.firm,MAX_DATES)
   ]);
-  return {record:markRecord({portfolio:ref.portfolio,class:ref.class,firm:ref.firm,as_of,cents})};
+  return {record:markRecord({portfolio:ref.portfolio,class:ref.class,firm:ref.firm,as_of,cents,import_id:value.importId})};
 }
 
 // An investment is a portfolio's, and its capital accounts are its own, so both
@@ -201,7 +220,7 @@ async function holdingRoute(request,env,readValue,ref){
 async function capitalRoute(request,env,readValue,ref){
   const as_of=dateNumber(ref.asOf);
   const where=[ref.holding,as_of];
-  const columns='holding, as_of, cents, contributed, distributed, commitment, unfunded';
+  const columns='holding, as_of, cents, contributed, distributed, commitment, unfunded, import_id';
   const previous=await env.DB.prepare(`SELECT ${columns} FROM finance_capital WHERE holding = ? AND as_of = ?`).bind(...where).first();
   if(request.method==='GET'){
     if(!previous)fail(404,'Capital account not found. Refresh your records.');
@@ -221,12 +240,13 @@ async function capitalRoute(request,env,readValue,ref){
     distributed:toCents(value.distributed),commitment:toCents(value.commitment),
     // Null rather than zero: a statement stating nothing about what is left to
     // call is not a statement that nothing is.
-    unfunded:value.unfunded===null?null:toCents(value.unfunded)};
+    unfunded:value.unfunded===null?null:toCents(value.unfunded),import_id:value.importId};
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO finance_capital (${columns}) VALUES (?, ?, ?, ?, ?, ?, ?)
+    env.DB.prepare(`INSERT INTO finance_capital (${columns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(holding, as_of) DO UPDATE SET cents = excluded.cents, contributed = excluded.contributed,
-        distributed = excluded.distributed, commitment = excluded.commitment, unfunded = excluded.unfunded`)
-      .bind(row.holding,row.as_of,row.cents,row.contributed,row.distributed,row.commitment,row.unfunded),
+        distributed = excluded.distributed, commitment = excluded.commitment, unfunded = excluded.unfunded,
+        import_id = excluded.import_id`)
+      .bind(row.holding,row.as_of,row.cents,row.contributed,row.distributed,row.commitment,row.unfunded,row.import_id),
     // The same bound the figures keep, for the same reason, and today's
     // statement is never the one dropped.
     env.DB.prepare('DELETE FROM finance_capital WHERE holding = ? AND as_of NOT IN (SELECT as_of FROM finance_capital WHERE holding = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.holding,ref.holding,MAX_DATES)
@@ -270,7 +290,7 @@ async function propertyRoute(request,env,readValue,ref){
 async function valuationRoute(request,env,readValue,ref){
   const as_of=dateNumber(ref.asOf);
   const where=[ref.property,as_of];
-  const columns='property, as_of, cents, debt, source';
+  const columns='property, as_of, cents, debt, source, import_id';
   const previous=await env.DB.prepare(`SELECT ${columns} FROM finance_valuations WHERE property = ? AND as_of = ?`).bind(...where).first();
   if(request.method==='GET'){
     if(!previous)fail(404,'Valuation not found. Refresh your records.');
@@ -286,11 +306,12 @@ async function valuationRoute(request,env,readValue,ref){
   const value=normalizeFinance({...input,row:'valuation',property:ref.property,asOf:ref.asOf});
   const owner=await env.DB.prepare('SELECT id FROM finance_properties WHERE id = ?').bind(ref.property).first();
   if(!owner)fail(400,'Save the property before saving a valuation for it.');
-  const row={property:ref.property,as_of,cents:toCents(value.value),debt:toCents(value.debt),source:value.source};
+  const row={property:ref.property,as_of,cents:toCents(value.value),debt:toCents(value.debt),source:value.source,import_id:value.importId};
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO finance_valuations (${columns}) VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(property, as_of) DO UPDATE SET cents = excluded.cents, debt = excluded.debt, source = excluded.source`)
-      .bind(row.property,row.as_of,row.cents,row.debt,row.source),
+    env.DB.prepare(`INSERT INTO finance_valuations (${columns}) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(property, as_of) DO UPDATE SET cents = excluded.cents, debt = excluded.debt, source = excluded.source,
+        import_id = excluded.import_id`)
+      .bind(row.property,row.as_of,row.cents,row.debt,row.source,row.import_id),
     // The same bound the figures keep, for the same reason, and today's
     // valuation is never the one dropped.
     env.DB.prepare('DELETE FROM finance_valuations WHERE property = ? AND as_of NOT IN (SELECT as_of FROM finance_valuations WHERE property = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.property,ref.property,MAX_DATES)
@@ -303,7 +324,7 @@ async function valuationRoute(request,env,readValue,ref){
 // a portfolio's deletion has to reach.
 async function flowRoute(request,env,readValue,ref){
   const as_of=dateNumber(ref.asOf);
-  const previous=await env.DB.prepare('SELECT firm, as_of, cents FROM finance_flows WHERE firm = ? AND as_of = ?').bind(ref.firm,as_of).first();
+  const previous=await env.DB.prepare('SELECT firm, as_of, cents, import_id FROM finance_flows WHERE firm = ? AND as_of = ?').bind(ref.firm,as_of).first();
   if(request.method==='GET'){
     if(!previous)fail(404,'Cash movement not found. Refresh your records.');
     return {record:flowRecord(previous)};
@@ -318,11 +339,46 @@ async function flowRoute(request,env,readValue,ref){
   const value=normalizeFinance({...input,row:'flow',firm:ref.firm,asOf:ref.asOf});
   const cents=toCents(value.amount);
   await env.DB.batch([
-    env.DB.prepare('INSERT INTO finance_flows (firm, as_of, cents) VALUES (?, ?, ?) ON CONFLICT(firm, as_of) DO UPDATE SET cents = excluded.cents').bind(ref.firm,as_of,cents),
+    env.DB.prepare('INSERT INTO finance_flows (firm, as_of, cents, import_id) VALUES (?, ?, ?, ?) ON CONFLICT(firm, as_of) DO UPDATE SET cents = excluded.cents, import_id = excluded.import_id').bind(ref.firm,as_of,cents,value.importId),
     // The same bound every dated row here keeps, and today's is never dropped.
     env.DB.prepare('DELETE FROM finance_flows WHERE firm = ? AND as_of NOT IN (SELECT as_of FROM finance_flows WHERE firm = ? ORDER BY as_of DESC LIMIT ?)').bind(ref.firm,ref.firm,MAX_DATES)
   ]);
-  return {record:flowRecord({firm:ref.firm,as_of,cents})};
+  return {record:flowRecord({firm:ref.firm,as_of,cents,import_id:value.importId})};
+}
+
+// The trail. An import is appended once and then only read: it is what
+// happened, and a record of what happened that could be edited afterwards
+// would not settle anything. Writing it again with the same number is a replay
+// of a write whose answer was lost, and is answered with what is stored.
+async function importRoute(request,env,readValue,ref){
+  const previous=await env.DB.prepare('SELECT id, kind, firm, print, value FROM finance_imports WHERE id = ?').bind(ref.number).first();
+  if(request.method==='GET'){
+    if(!previous)fail(404,'Import not found. Refresh your records.');
+    return {record:importRecord(previous,await decryptSettings(previous.value,IMPORT_AAD(ref.number),env))};
+  }
+  if(request.method==='DELETE')fail(405,'An import is the record of what happened and is not deleted.');
+  const input=JSON.parse(await readValue(request));
+  if(previous){
+    if(input.revision!==String(previous.id))fail(409,'This import was already recorded. Refresh your records.');
+    return {record:importRecord(previous,await decryptSettings(previous.value,IMPORT_AAD(ref.number),env))};
+  }
+  if((input.revision??null)!==null)fail(409,'This import is not on file. Refresh your records.');
+  const value=normalizeFinance({...input,row:'import',number:ref.number});
+  const stored=await encryptSettings({name:value.name,note:value.note,lines:value.lines,made:value.made},IMPORT_AAD(ref.number),env);
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO finance_imports (id, kind, firm, print, value) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING')
+      .bind(ref.number,value.kind,value.firm,value.print,stored),
+    // Bounded, and only ever by forgetting imports no stored row points at any
+    // more — history already written over. The newest are kept whatever they
+    // point at, so the one just written is never the one dropped.
+    env.DB.prepare(`DELETE FROM finance_imports WHERE id NOT IN (SELECT id FROM finance_imports ORDER BY id DESC LIMIT ?)
+      AND id NOT IN (SELECT import_id FROM finance_marks WHERE import_id IS NOT NULL
+        UNION SELECT import_id FROM finance_capital WHERE import_id IS NOT NULL
+        UNION SELECT import_id FROM finance_valuations WHERE import_id IS NOT NULL
+        UNION SELECT import_id FROM finance_flows WHERE import_id IS NOT NULL)`).bind(MAX_IMPORTS)
+  ]);
+  return {record:importRecord({id:ref.number,kind:value.kind,firm:value.firm,print:value.print},
+    {name:value.name,note:value.note,lines:value.lines,made:value.made})};
 }
 
 // The upgrade path for data that already exists. It is re-runnable: every write

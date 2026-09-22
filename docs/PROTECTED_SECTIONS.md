@@ -706,8 +706,32 @@ revisions. Finance uses the same device adapter over six relational tables:
 `finance_marks` (portfolio, class, as_of as YYYYMMDD, cents — `WITHOUT ROWID`,
 keyed by the three that identify a figure), and the two pairs that do not reduce
 to a figure — `finance_holdings`/`finance_capital` and
-`finance_properties`/`finance_valuations`. All six travel as one record stream,
-so one offline queue and one set of conflict rules cover every row.
+`finance_properties`/`finance_valuations`, plus `finance_flows` for cash in and
+out. All of them travel as one record stream, so one offline queue and one set
+of conflict rules cover every row.
+
+How each figure got there is kept too, compactly. `finance_imports` holds one
+row per accepted reading — a page read, a statement dropped in, a figure typed
+by hand, a Zestimate, a statement filed by the intake scripts — written once,
+after the figures it lists have landed, and never edited. Its id is the
+millisecond it was accepted; its kind and firm are codes; `print` is sixteen
+hex digits of a SHA-256 of what was read; and the rest — the file or page name,
+the note on what the reading left out, and each figure it saved with the amount
+it was read as, the amount it replaced and the source lines it was added up
+from — is encrypted like a portfolio's name. Every dated row (`finance_marks`,
+`finance_capital`, `finance_valuations`, `finance_flows`) carries `import_id`,
+the import that last wrote it, so the trail runs statement → proposed figure →
+accepted row, and a row's pointer is the only proof a figure was accepted.
+A save that names no import (an older client) leaves it NULL rather than
+inheriting the old one. The Worker keeps the newest 600 imports plus any a row
+still points at.
+
+That trail is what answers three questions on the device: a reading of the same
+file or page as an earlier import says so before it is saved; a proposed figure
+equal to the cent to one already filed for that portfolio and class from another
+firm within a week is flagged as the same money read twice; and a figure that
+replaces a different amount says which, and from where. The page's **Imports**
+tab lists every import, newest first, with what became of each figure since.
 The amounts are plain integers rather than an encrypted blob: that is what makes
 the shape relational and small, and a table of integers with no names in it says
 little without the portfolio table beside it.
@@ -729,7 +753,10 @@ offline.
 `/v1/finance[/…]` is its own handler in `tools-api/src/finance.js`, because its
 rows are not records: a portfolio is addressed as `p3`, a figure as
 `3-1-20260919`, an investment as `h3` and its capital accounts as
-`h3-20260630`, a property as `r3` and its valuations as `r3-20260920`. `/v1/finance/backfill` plans the retrofit on `GET` and performs
+`h3-20260630`, a property as `r3` and its valuations as `r3-20260920`, cash in or
+out as `f5-20260910`, and an import as `i1758542400000`. An import accepts one
+`PUT` and answers a replay with what is on file; it has no `DELETE`.
+`/v1/finance/backfill` plans the retrofit on `GET` and performs
 it on `POST`. Apply `tools-api/finance-schema.sql` and
 `tools-api/personal-schema.sql` before deploying the code that depends on them;
 both are additive `CREATE TABLE IF NOT EXISTS` statements that leave existing

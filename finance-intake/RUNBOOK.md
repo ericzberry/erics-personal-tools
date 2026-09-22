@@ -67,15 +67,25 @@ forty holdings becomes the few class totals they add up to.
    portfolio: a near-duplicate splits a history in two, and consolidating is the
    point of the shape.
 5. **Write the figure file** to the scratchpad (not into the repo) — see
-   [README.md](README.md) for the format.
+   [README.md](README.md) for the format. Wrap the figures with what they were
+   read from — `"source"` (the file or page name), `"file"` (its path, so the
+   same statement filed twice is caught), and `"firm"` when the statement is
+   one site's — and give each figure `"from"`: the source lines you added up
+   into it. That is the trail the ledger keeps from the statement to the saved
+   figure; a figure with no trail is one nobody can check later.
 6. **Preview:** `node finance-intake/ledger.mjs save <file>`. Read the plan
    yourself before showing it. Investigate anything marked `CHECK` (a large move)
    or `AMEND` (a date that already has a figure) and re-read the source rather
-   than assuming the new number is right.
+   than assuming the new number is right. `ALREADY IMPORTED` means this exact
+   file was filed before; `DUPLICATE?` means the same amount is already filed
+   for that portfolio and class from another firm within a week — the same money
+   read twice would be counted twice. Stop and ask about either.
 7. **Show Eric** the plan, what you read it from, and how you folded it, and
    wait for a yes.
 8. **Save:** `node finance-intake/ledger.mjs save <file> --confirm`.
-9. **Append one line to `log.md`**: the date, the source, and what was saved.
+9. **Nothing to log by hand.** The save writes an import naming the source,
+   when it was filed and every figure it saved; `ledger.mjs trail` reads it back,
+   and the app's **Imports** tab shows it.
 
 ## Reporting back
 

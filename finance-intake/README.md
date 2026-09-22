@@ -82,7 +82,9 @@ re-entering it in the extension and on the phone.
 ```bash
 node finance-intake/ledger.mjs list                  # every portfolio and its figures
 node finance-intake/ledger.mjs list --json           # the same, machine-readable
-node finance-intake/ledger.mjs show "Estate"         # one portfolio, class by class, with history
+node finance-intake/ledger.mjs show "Estate"         # one portfolio, class by class, with history and each figure's source
+node finance-intake/ledger.mjs trail                 # every import, newest first, and what became of each figure
+node finance-intake/ledger.mjs trail "Estate"        # only the lines that touch one portfolio
 node finance-intake/ledger.mjs save figures.json     # preview — writes nothing
 node finance-intake/ledger.mjs save figures.json --confirm
 ```
@@ -108,6 +110,28 @@ resolved in one place for every script here.
    "class": "pe", "amount": 327400, "asOf": "2026-06-30"}
 ]
 ```
+
+…or, better, wrapped with what it was read from, so the ledger keeps the trail
+from the statement to each saved figure:
+
+```json
+{
+  "source": "Schwab Q2 2026 statement.pdf",
+  "file": "/path/to/Schwab Q2 2026 statement.pdf",
+  "firm": "schwab",
+  "figures": [
+    {"portfolio": "Estate", "class": "liquid", "amount": 1668402.54, "asOf": "2026-06-30",
+     "from": ["Brokerage ...1234 Total account value"]}
+  ]
+}
+```
+
+`source` names the import every figure is saved under. `file` is read only to
+fingerprint it, so the same statement filed twice is recognized. `firm` is the
+site id (as in `FIRMS` in `chrome-sidebar/src/finance-data.js`) for a statement
+that is one site's; leave it out and the figures are filed at firm 0, as a
+figure typed by hand is. `from` is the lines of the source a figure was added up
+from, as the source prints them.
 
 `portfolio` accepts its number (`p2` or `2`), an exact name, or a unique
 fragment of one. **A fragment matching two portfolios is an error, not a coin
@@ -240,6 +264,23 @@ has been looked at.
 - `CHECK` — the figure moves more than 40% from the last one for that class.
   Usually a misread decimal or a number taken from the wrong row. Worth a second
   look before confirming.
+- `ALREADY IMPORTED` — this exact file was filed before, and the line names the
+  import.
+- `DUPLICATE?` — the same amount, to the cent, is already filed for that
+  portfolio and class from another firm within a week. Two firms' figures both
+  count, so the same money read once off a page and once out of a statement
+  would be counted twice.
+
+## The trail
+
+Every save — here, in the app, typed by hand, a Zestimate — writes one
+**import**: what was read, when, a fingerprint of it, and each figure it saved
+with the amount it was read as, the amount it replaced and the source lines it
+came from. Every saved figure points back at the import that last wrote it.
+`show` prints that source beside each figure; `trail` prints the imports and
+what has become of each figure since (still current, replaced by a later
+import, or removed). The app shows the same under **Imports** on the Finance
+page.
 
 A backdated figure does not disturb today's total: each class shows whichever of
 its figures is newest by date.
@@ -265,5 +306,5 @@ its figures is newest by date.
 | `backfill.mjs` | The one-time retrofit of the record-per-account ledger. |
 | `api.mjs` | The token lookup and request wrapper both scripts share. |
 | `RUNBOOK.md` | The procedure Claude follows for each intake. |
-| `log.md` | One line per intake (created on the first save). |
+| `log.md` | The hand-kept read log from before the ledger kept its own trail; superseded by `ledger.mjs trail`. |
 | `credentials/api-token` | Fallback token file if the keychain is not used. Gitignored, never committed. |

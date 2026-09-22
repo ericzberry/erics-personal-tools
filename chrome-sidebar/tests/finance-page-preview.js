@@ -98,6 +98,25 @@ const STATES={
   sparse:[portfolio(1,'Eric and Ariana Berry Estate',1),mark(1,10,'2026-09-20',1668402.54),mark(1,3,'2026-09-20',248422.68)],
   empty:[portfolio(1,'Eric and Ariana Berry Estate',1)]
 };
+// ?state=imports — the Imports tab: a page read whose securities were
+// corrected by hand the next day, and a statement with a name long enough to
+// wrap, a note on what its reading left out, and one figure changed in review.
+const READ=Date.UTC(2026,8,19,14,32),DROPPED=Date.UTC(2026,8,20,13,5),TYPED=Date.UTC(2026,8,21,20,48);
+const traced=(record,importId)=>({...record,importId});
+const imported=(number,kind,firm,name,lines,note='')=>({id:`i${number}`,row:'import',revision:String(number),number,kind,firm,print:'',name,note,lines,made:[]});
+const SCHWAB_SECURITIES={portfolio:1,class:10,asOf:'2026-09-19',firm:4},SCHWAB_CASH={portfolio:1,class:3,asOf:'2026-09-19',firm:4};
+const IRA={portfolio:4,class:10,asOf:'2026-09-30',firm:0},PLAN={portfolio:4,class:12,asOf:'2026-09-30',firm:0};
+STATES.imports=[portfolio(1,'Eric and Ariana Berry Estate',1),portfolio(4,'Eric Berry',2),
+  traced(mark(1,10,'2026-09-13',1600000,4),READ-7*864e5),
+  traced(mark(1,10,'2026-09-19',1668000,4),TYPED),traced(mark(1,3,'2026-09-19',0.54,4),READ),
+  traced(mark(4,10,'2026-09-30',122666.62),DROPPED),traced(mark(4,12,'2026-09-30',248422.68),DROPPED),
+  imported(READ,1,4,'Schwab',[
+    {ref:markRef(SCHWAB_SECURITIES),amount:1668402.54,from:['Individual ...4411 Total value','Brokerage ...0923 Total value']},
+    {ref:markRef(SCHWAB_CASH),amount:0.54,from:['Schwab One ...4411 Cash & sweep']}],'Left out: a total across accounts.'),
+  imported(DROPPED,2,0,'E*TRADE Traditional IRA statement, quarter ended 30 September 2026.pdf',[
+    {ref:markRef(IRA),amount:122666.62,from:['Net Account Value']},
+    {ref:markRef(PLAN),amount:248422.68,read:248000,from:['Unvested restricted stock units']}]),
+  imported(TYPED,4,0,'',[{ref:markRef(SCHWAB_SECURITIES),amount:1668000,was:1668402.54,wasImport:READ}])];
 const state=new URLSearchParams(location.search).get('state')||'year';
 document.getElementById('preview-states').append(...Object.keys(STATES).flatMap(key=>{
   const link=Object.assign(document.createElement('a'),{href:`?state=${key}`,textContent:key});

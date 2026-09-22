@@ -14,10 +14,9 @@
 //  - It never guesses which house or whose. An ambiguous name is an error.
 //  - It writes nothing until asked twice. `save` previews by default; only
 //    `--confirm` sends a request.
-import {readFileSync} from 'node:fs';
-import {die, money, api, ledger} from './api.mjs';
+import {die, money, api, ledger, readFigureFile, importNumber, fileImport, traceLine, describeImport} from './api.mjs';
 import {VALUE_SOURCES,valueSourceById,valueSourceLabel,registrationLabel,
-  propertyRef,valuationRef,propertiesOn,matchKey,isDate}
+  propertyRef,valuationRef,propertiesOn,matchKey,isDate,importOf,importKindById}
   from '../chrome-sidebar/src/finance-data.js';
 
 // A Zestimate that moves this far in a month is a misread figure or the wrong
@@ -52,7 +51,7 @@ async function listCommand(flags) {
     console.log(`      ${portfolio ? `${portfolio.name} [${registrationLabel(portfolio.kind)}]` : 'no portfolio'}`);
     if (!entry.current) console.log('      not valued yet');
     else {
-      console.log(`      ${money(entry.value, currency)}  ${valueSourceLabel(entry.source)}  as of ${entry.current.asOf}  (${entry.history.length} reading${entry.history.length === 1 ? '' : 's'})`);
+      console.log(`      ${money(entry.value, currency)}  ${valueSourceLabel(entry.source)}  as of ${entry.current.asOf}  (${entry.history.length} reading${entry.history.length === 1 ? '' : 's'})  ← ${describeImport(importOf(current.records, entry.current.importId))}`);
       if (entry.debt) console.log(`      owed ${money(entry.debt, currency)}   equity ${money(entry.equity, currency)}`);
     }
     if (entry.property.link) console.log(`      ${entry.property.link}`);
@@ -106,9 +105,7 @@ function plan(entries, current) {
 
 async function saveCommand([file], flags) {
   if (!file) die('Usage: property.mjs save <file.json> [--confirm]');
-  let entries;
-  try { entries = JSON.parse(readFileSync(file, 'utf8')); } catch (error) { die(`Could not read ${file}: ${error.message}`); }
-  if (!Array.isArray(entries) || !entries.length) die('The file must hold a non-empty JSON array of valuations.');
+  const {entries, source} = await readFigureFile(file);
   const current = await ledger();
   let steps;
   try { steps = plan(entries, current); } catch (error) { die(error.message); }
@@ -124,18 +121,31 @@ async function saveCommand([file], flags) {
     if (step.jumped) console.log('        CHECK   this moves more than 25% from the last reading — make sure it is the same house before confirming.');
   }
   if (!flags.has('--confirm')) return console.log(`\n${steps.length} valuation${steps.length === 1 ? '' : 's'} planned. Nothing was written. Re-run with --confirm to save.`);
+  // One import for the run, written last so it lists only what landed. A run
+  // of Zestimates is traced as one; anything else read by the scripts is an
+  // intake, and the valuation's own source still says which kind of figure.
+  const number = importNumber(current.imports);
+  const kind = steps.every(step => step.source.id === 'zestimate') ? 'zestimate' : 'intake';
+  const trail = {kind: importKindById(kind).code, print: source.print, name: source.name, lines: [], made: []};
   const made = new Set();
-  for (const step of steps) {
-    if (step.property.isNew && !made.has(step.property.number)) {
-      await api(`/v1/finance/${propertyRef(step.property.number)}`, {method: 'PUT', body: {row: 'property',
-        number: step.property.number, portfolio: step.property.portfolio, name: step.property.name,
-        link: step.property.link, revision: null}});
-      made.add(step.property.number);
+  try {
+    for (const step of steps) {
+      if (step.property.isNew && !made.has(step.property.number)) {
+        await api(`/v1/finance/${propertyRef(step.property.number)}`, {method: 'PUT', body: {row: 'property',
+          number: step.property.number, portfolio: step.property.portfolio, name: step.property.name,
+          link: step.property.link, revision: null}});
+        made.add(step.property.number);trail.made.push(propertyRef(step.property.number));
+      }
+      const value = {row: 'valuation', property: step.property.number, asOf: step.entry.asOf,
+        value: step.value, debt: step.debt, source: step.source.code};
+      const line = traceLine(valuationRef(value), step.value, step.replaced);
+      await api(`/v1/finance/${valuationRef(value)}`, {method: 'PUT', body: {...value, importId: number, revision: step.replaced?.revision ?? null}});
+      trail.lines.push(line);
+      console.log(`saved   ${step.property.name} · ${step.entry.asOf}`);
     }
-    const value = {row: 'valuation', property: step.property.number, asOf: step.entry.asOf,
-      value: step.value, debt: step.debt, source: step.source.code};
-    await api(`/v1/finance/${valuationRef(value)}`, {method: 'PUT', body: {...value, revision: step.replaced?.revision ?? null}});
-    console.log(`saved   ${step.property.name} · ${step.entry.asOf}`);
+  } finally {
+    const filed = await fileImport(number, trail);
+    if (filed) console.log(`\ntraced  i${filed.number}`);
   }
   console.log(`\n${steps.length} valuation${steps.length === 1 ? '' : 's'} saved.`);
 }

@@ -248,11 +248,17 @@ function CapitalRow(row,{index,editing,portfolios,onField}){
 // shape of money held — beside the cash it is owed against, in the same column,
 // reading as $15,835 more rather than $15,835 less. The word rides beside it as
 // well, because a minus sign is a shape and some readers will not see it.
+// What saving this row would do that the figure alone cannot show: write over a
+// different amount already on file, or file money already filed from somewhere
+// else. The first is fine print; the second is something to decide, so it takes
+// the alert tone, and both are said only for the row that raises them.
+const consequences=row=>[row.replaces?Note(row.replaces):null,row.twin?Notice(row.twin,{tone:'alert'}):null];
 function FoldRow(row,{index,editing,dated,onAmount}){
   const owed=classSide(row.class)==='liability';
   const what=[classLabel(row.class),owed?'liability':'',dated?`as of ${row.asOf}`:''].filter(Boolean).join(' · ');
   if(!editing)return Stack([
-    Stack([Label(what),Amount(signed(row),row.currency)],{className:'snapshot-figure'})
+    Stack([Label(what),Amount(signed(row),row.currency)],{className:'snapshot-figure'}),
+    ...consequences(row)
   ],{className:'snapshot-row'});
   // The field holds the figure the way it is stored and saved: a positive
   // amount under a liability class. Its label is what says which that is, so
@@ -261,7 +267,7 @@ function FoldRow(row,{index,editing,dated,onAmount}){
   const input=field.querySelector('input');
   input.value=String(row.amount);
   input.addEventListener('input',()=>onAmount(index,input.value));
-  return Stack([field],{className:'snapshot-row'});
+  return Stack([field,...consequences(row)],{className:'snapshot-row'});
 }
 
 // The page in front of you, whatever it is. A recognized account site names
@@ -434,7 +440,14 @@ export function FinanceView({layout='page'}={}){
           // Closed until it is wanted. Getting to the figures is a way of putting
           // one in the ledger, which is the scope this tab already has.
           Disclosure('Open an account page',AccountPages(FINANCE_SITES),{id:'finance-account-pages'})
-        ]})}
+        ]})},
+      // How each figure got here: every accepted reading, newest first, and
+      // what became of what it saved. A view of its own, because "where did
+      // this number come from" is a different question from what the ledger
+      // comes to, and it is asked on the page, not in the panel. Shown once
+      // there is an import to show.
+      ...(layout==='page'?[{key:'imports',label:'Imports',hidden:true,content:
+        SettingsGroup({id:'finance-imports-block',children:[Stack([],{id:'finance-imports',className:'travel-list'})]})}]:[])
     ]})
   ],{className:`finance-ledger finance-ledger--${layout}`});
   return view;
@@ -521,6 +534,32 @@ function PageLedger(){
 // `share` is the part of the whole the entity holds, printed before its total
 // the way a breakdown line prints one, so seven totals are also read as seven
 // proportions without anyone dividing in their head.
+// One accepted reading and what it put in the ledger, closed to its heading the
+// way a portfolio is: what was read, what kind of thing it was, and when and how
+// much — including how much of it has since been written over, which is what a
+// reader needs before deciding to open it. Inside, one line per figure: where it
+// went, what it was saved as, and only what is worth knowing beside that — the
+// amount it was read as when the owner changed it, the amount it replaced, and
+// the source lines it was added up from. UI-28.
+export function ImportGroup({name,kind='',meta='',lines=[],note='',open=false,onToggle}){
+  const heading=Stack([
+    Stack([GroupTitle(name,{className:'record-group-title group-title--name'}),
+      kind?Badge(kind,{className:'pill portfolio-kind'}):null,
+      meta?Note(meta):null],{className:'group-name'})
+  ],{className:'breakdown-row group-line'});
+  const group=Disclosure(heading,[
+    // What qualifies a figure is fine print under it, one fact to a line. UI-39.
+    ...lines.map(line=>{
+      const [detail='',...more]=line.notes.filter(Boolean);
+      return UI.RecordRow({title:line.what,meta:line.meta,figure:Amount(line.amount,line.currency),detail,extra:more.map(text=>Note(text))});
+    }),
+    note?Note(note):null
+  ].filter(Boolean),{className:'record-group portfolio-group import-group'});
+  group.open=open;
+  group.addEventListener('toggle',()=>onToggle?.(group.open));
+  return group;
+}
+
 export function PortfolioGroup({name,kind='',meta,total,currency,rows,actions=[],open=false,onToggle,share=''}){
   // The heading is a name, a number and the portfolio's own two verbs, which
   // ride at its end exactly as a class figure's ride at the end of its line —

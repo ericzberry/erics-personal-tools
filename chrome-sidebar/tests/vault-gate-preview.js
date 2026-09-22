@@ -4,7 +4,7 @@
 // waiting for the sheet, a dismissed sheet, and the open section — can be
 // inspected at sidebar widths without a passkey provider.
 import {mountFinance} from '../src/finance.js';
-import {normalizeFinance,markRef,portfolioRef,holdingRef,capitalRef} from '../src/finance-data.js';
+import {normalizeFinance,markRef,portfolioRef,holdingRef,capitalRef,importRef,firmCode} from '../src/finance-data.js';
 import {ACCOUNT_SITES} from '../src/account-sites.js';
 // A ledger at the level of detail it actually keeps: a few portfolios, a figure
 // per asset class, and a long name to see wrap at 280px.
@@ -46,6 +46,19 @@ const records=[
   invested(3,'Synthetic Direct Holding, Inc.',2,3)
 ];
 const offline={request:async()=>({records}),resolve:async()=>({records})};
+// What a reading has to say before it is saved: the brokerage figure would write
+// over a different amount typed by hand for the same day, and the IRA's is the
+// same money, to the cent, already filed two days earlier from a Schwab
+// statement — the same pile read twice, which would count twice.
+const TYPED=Date.UTC(2026,8,1,15,0),DROPPED=Date.UTC(2026,8,2,9,30),SCHWAB=firmCode('schwab');
+const traced=(value,importId)=>{const entry=normalizeFinance({row:'mark',...value,importId});return {...entry,id:markRef(entry),revision:'first'};};
+const imported=(number,kind,firm,name,lines)=>({...normalizeFinance({row:'import',number,kind,firm,name,lines}),id:importRef(number),revision:String(number)});
+const filedBefore=[
+  traced({portfolio:1,class:10,asOf:'2026-08-31',amount:1280000},TYPED),
+  imported(TYPED,4,0,'',[{ref:'1-10-20260831',amount:1280000}]),
+  traced({portfolio:2,class:10,asOf:'2026-08-29',firm:SCHWAB,amount:412000},DROPPED),
+  imported(DROPPED,2,SCHWAB,'Synthetic IRA statement.pdf',[{ref:`2-10-20260829-${SCHWAB}`,amount:412000}])
+];
 // What a signed-in account page reads back as, so the reading prompt and the
 // figures it folds into can be inspected without an account or a model call.
 const reading={readings:[
@@ -132,10 +145,12 @@ const states=[
   ...ACCOUNT_SITES.map(site=>[`Open · beside a signed-in ${site.label} page`,'open',site,false]),
   ['Open · beside an E*TRADE page that named no account','open',ACCOUNT_SITES.find(site=>site.id==='etrade'),false,merged],
   ['Open · beside a Chase page holding a whole family structure','open',ACCOUNT_SITES.find(site=>site.id==='chase'),false,structure],
+  ['Open · beside a page whose figures are already on file','open',null,false,reading,filedBefore],
   ['Quiet · beside a signed-in Schwab page','open',ACCOUNT_SITES.find(site=>site.id==='schwab'),true],
   ['Quiet · beside a finance page with no reader','open',null,true]
 ];
-for(const [label,answer,site,quiet,read=reading] of states){
+for(const [label,answer,site,quiet,read=reading,saved=[]] of states){
+  const offline={request:async()=>({records:[...records,...saved]}),resolve:async()=>({records:[...records,...saved]})};
   const heading=document.createElement('h2');
   heading.textContent=`Synthetic state · ${label}`;
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:16px 0 8px;color:#666';

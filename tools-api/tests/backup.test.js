@@ -164,7 +164,7 @@ test('the daily trigger writes one verified backup of every table per quarter in
   assert.deepEqual(file.apps,{'chrome-sidebar':'0.6.261'});
   // The ledger's figures are there as numbers, exactly.
   const figures=file.tables.find(table=>table.name==='finance_marks');
-  assert.deepEqual(figures.columns,['portfolio','class','firm','as_of','cents']);
+  assert.deepEqual(figures.columns,['portfolio','class','firm','as_of','cents','import_id']);
   assert.ok(figures.rows.some(row=>row[4]===4300000000));
   // Sealed rows stay sealed, and still open with the Worker's key.
   const portfolios=file.tables.find(table=>table.name==='finance_portfolios');

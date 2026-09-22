@@ -150,8 +150,10 @@ test('a property can be recorded by hand, with or without a valuation behind it'
   set('finance-prop-asOf','2026-09-20');
   set('finance-prop-link','https://www.zillow.com/homedetails/123-Example-St/1234_zpid/');
   document.getElementById('finance-prop-form').dispatchEvent(new document.defaultView.Event('submit'));
-  await settle(()=>writes.length>=2);
-  assert.deepEqual(writes.map(write=>write.row),['property','valuation']);
+  await settle(()=>writes.length>=3);
+  assert.deepEqual(writes.map(write=>write.row),['property','valuation','import']);
+  assert.deepEqual([writes[2].kind,writes[2].lines,writes[2].made],[4,[{ref:'r1-20260920',amount:1240000}],['r1']],
+    'a value typed by hand is traced as typed, and says which house it made');
   assert.deepEqual([writes[0].name,writes[0].portfolio,writes[0].link],
     ['123 Example St, Town ST 00000',1,'https://www.zillow.com/homedetails/123-Example-St/1234_zpid/']);
   assert.deepEqual([writes[1].property,writes[1].value,writes[1].debt,writes[1].source],[1,1240000,0,1]);

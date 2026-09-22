@@ -1,4 +1,4 @@
-import {FinanceView,PortfolioGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,positionFigures,FigureList,propertyDetail,quarterPoints,quarterChange} from './components/finance.js';
+import {FinanceView,PortfolioGroup,ImportGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,positionFigures,FigureList,propertyDetail,quarterPoints,quarterChange} from './components/finance.js';
 import {NetWorthHero,NetWorthChart,Allocation,LiquiditySummary,PositionsTable,PropertiesTable,Institutions,allocationGroups,changeText} from './components/finance-overview.js';
 import {share} from './components/charts.js';
 import {RecordRow,AttachmentCard,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
@@ -7,11 +7,15 @@ import {staleText,staleNote,sourceLabel} from './components/finance-overview.js'
 import {figuresOn,explainBy} from './finance-data.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
-import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,valueSourceLabel,zillowHome,flowRef,FIRMS,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText} from './finance-data.js';
+import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,valueSourceLabel,zillowHome,flowRef,FIRMS,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText,
+  importRef,importsOf,importOf,importName,importKind,importKindById,fingerprint,seenBefore,sameMoney,importTrail,trailSubject,toCents} from './finance-data.js';
 import {firmLabel} from './account-sites.js';
 import {mountVaultGate,vaultReason} from './vault-gate.js';
 import {firmPerformance} from './firm-history.js';
 const today=()=>new Date().toISOString().slice(0,10);
+// When an import was accepted, in the device's own time: its number is the
+// millisecond it happened.
+const readAt=number=>{const when=new Date(number);return `${when.toLocaleDateString('en-CA')} ${when.toTimeString().slice(0,5)}`;};
 
 // `readPage` is the host's ability to read the tab the owner is looking at.
 // The sidebar sits beside that tab and supplies it; a full tab and the phone
@@ -79,7 +83,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // Text out of a dropped file is carried on the attachment and described by
   // its card. An open page is not copied anywhere: it is already in front of
   // the owner.
-  const openPortfolios=new Set();
+  const openPortfolios=new Set(),openImports=new Set();
   let attachment=null;
   const status=(text,target='status',tone='')=>setStatus($(target),text,tone);
   const action=(label,handler,variant='secondary')=>{
@@ -111,6 +115,60 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   const properties=()=>propertiesOf(records);
   const nextProperty=()=>Math.max(0,...properties().map(entry=>entry.number))+1;
   const portfolioChoices=()=>portfolios().map(entry=>({text:`${entry.name} · ${registrationLabel(entry.kind)}`,value:portfolioRef(entry.number)}));
+
+  // The trail every write leaves. A save begins an import, takes a line for
+  // each figure before writing it — so the line can say what the row held until
+  // now and which import put it there — and writes the import last, listing only
+  // the figures that actually landed. The row's own pointer is the proof it was
+  // accepted, so an import never claims a figure that failed to save, and a
+  // save that stops half-way leaves a truthful import for the half that landed.
+  let lastImport=0;
+  function beginImport(source={}){
+    const taken=new Set(importsOf(records).map(entry=>entry.number));
+    let number=Math.max(Date.now(),lastImport+1);
+    while(taken.has(number))number++;
+    lastImport=number;
+    return {number,kind:(importKindById(source.kind)||importKindById('typed')).code,firm:source.firm||0,
+      print:source.print||'',name:source.name||'',note:source.note||'',lines:[],made:[]};
+  }
+  function trace(ref,amount,{read,from}={}){
+    const before=records.find(record=>record.id===ref&&!record.deleting);
+    const was=before?before.amount??before.value:null;
+    return {ref,amount:Number(amount),...(read===undefined||read===null?{}:{read:Number(read)}),
+      ...(was===null||was===undefined?{}:{was}),...(before?.importId?{wasImport:before.importId}:{}),
+      ...(from?.length?{from}:{})};
+  }
+  function saveImport(trail,target){
+    if(!trail.lines.length)return Promise.resolve(true);
+    const id=importRef(trail.number);
+    return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',
+      value:{...normalizeFinance({row:'import',...trail}),id,revision:null}}),target);
+  }
+  // Where a stored figure came from, in as few words as say it — and the same
+  // said inside a sentence, where "from Typed by hand" would not read.
+  const cameFrom=number=>importName(importOf(records,number));
+  const typedByHand=entry=>entry?.kind===importKindById('typed').code&&!entry.name;
+  const origin=entry=>!entry?'':typedByHand(entry)?'typed by hand':`from ${importName(entry)}`;
+  // What a proposed figure would do that the review cannot otherwise show:
+  // write over a different amount already filed for that portfolio, class,
+  // firm and date, or file money already filed from somewhere else.
+  function annotate(rows){
+    return rows.map(row=>{
+      const at=records.find(record=>record.id===markRef(row)&&!record.deleting);
+      const twin=row.isNew?null:sameMoney(row,records);
+      const where=twin?[firmLabel(twin.firm),cameFrom(twin.importId)].filter(Boolean).join(' · '):'';
+      return {...row,read:row.amount,
+        replaces:at&&toCents(at.amount)!==toCents(row.amount)
+          ?`Replaces ${money(signed(at),row.currency)}${origin(importOf(records,at.importId))?` ${origin(importOf(records,at.importId))}`:''}.`:'',
+        twin:twin?`The same amount is already filed${where?` from ${where}`:''}, as of ${twin.asOf}.`:''};
+    });
+  }
+  // A reading of exactly what was saved before says so once, as the reason to
+  // look twice before saving it again.
+  const already=(print,what)=>{
+    const seen=seenBefore(records,print);
+    return seen?`Already saved from this ${what} on ${readAt(seen.number).slice(0,10)}.`:'';
+  };
 
   // The form does two jobs, because they are the same job at two sizes: name a
   // portfolio, or file a figure into one. Which fields are shown says which.
@@ -482,8 +540,12 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // reading starts at once. Only uneven text earns a line.
   async function receive(file){
     const result=await readStatement(file);
+    // The file's own bytes, so the same statement is recognized however its
+    // text happens to come out.
+    let print='';
+    try{print=await fingerprint(typeof file.arrayBuffer==='function'?await file.arrayBuffer():result.text||result.image?.dataUrl||'');}catch{}
     if(result.kind==='image'){
-      attachment={kind:'image',image:result.image,label:file.name,
+      attachment={kind:'image',image:result.image,label:file.name,print,
         detail:`Image · ${result.image.width}×${result.image.height} · ${Math.round(result.image.bytes/1000)} KB after downscaling on this device`,
         note:'',tone:'',state:'waiting'};
       renderAttachment();render();readOnArrival();
@@ -494,7 +556,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       throw Error(result.note||'Nothing readable came out of that file.');
     }
     const {text,trimmed}=trimForReading(result.text);
-    attachment={kind:'text',text,label:file.name,
+    attachment={kind:'text',text,label:file.name,print,
       detail:`Text pulled out on this device · ${text.length.toLocaleString('en-US')} characters${result.pages?` · ${result.pages} section${result.pages===1?'':'s'}`:''}`,
       note:[result.note,trimmed?`${trimmed.toLocaleString('en-US')} characters past the ${MAX_SEND.toLocaleString('en-US')}-character limit were left out.`:''].filter(Boolean).join(' '),
       tone:result.confidence==='good'?'':'warning',state:'waiting'};
@@ -585,13 +647,18 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   const found=result=>!!(result.marks.length||result.capital.rows.length);
   // Whichever block the reading happened in keeps the review: one statement is
   // under review at a time, and it belongs beside where it came from.
-  function showCapital(result,source){
-    capital=result.capital.rows.length?{rows:result.capital.rows,notes:result.capital.notes}:null;
+  function showCapital(result,source,from=null){
+    capital=result.capital.rows.length?{rows:result.capital.rows.map(row=>({...row,read:row.value})),notes:result.capital.notes,source:from}:null;
     capitalEditing=false;capitalSource=source;renderCapital();
   }
-  function showRead(result,target,{none,where='',extra=''}={}){
-    fold={rows:result.marks,notes:result.notes};foldEditing=false;renderFold();
-    showCapital(result,'file');
+  // What a reading was, for the import its figures will be saved under: what
+  // kind of thing, where, a print of it, and what the reading itself said it
+  // left out — the first thing worth knowing when a figure later disagrees.
+  const readingSource=(result,{kind,firm=0,print='',name=''})=>({kind,firm,print,name:String(name).slice(0,160),
+    note:[result.left,...result.notes,result.unread].filter(Boolean).join(' ').slice(0,400)});
+  function showRead(result,target,{none,where='',extra='',source=null}={}){
+    fold={rows:annotate(result.marks),notes:result.notes,source};foldEditing=false;renderFold();
+    showCapital(result,'file',source);
     const any=found(result);
     // Only what went wrong is said. What the reading could not read is a gap
     // the owner would otherwise not see; what the fold refused on purpose — a
@@ -611,7 +678,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     const done=await run(async token=>{
       status(images.length?'Reading the image…':'Reading…','intake-status','progress');
       const result=await readInto(token,{text,...(images.length?{images}:{})});
-      showRead(result,'intake-status',{none:'No figures were found.'});
+      showRead(result,'intake-status',{none:'No figures were found.',extra:already(reading.print,'file'),
+        source:readingSource(result,{kind:images.length?'image':'file',print:reading.print,name:reading.label})});
     },'intake-status');
     // Read once is read: a file whose figures are on the screen does not offer
     // to be read again. One that failed offers it, because trying again is
@@ -665,8 +733,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       const known=site?{institution:institutionName(site.institution)}:{};
       const result=await readInto(token,{text:page.text,live:true,...known},
         {...known,firm:firmCode(site?.id||''),siteKind:site?.kind||''});
-      snapshot={rows:result.marks,notes:result.notes};snapshotEditing=false;renderSnapshot();
-      showCapital(result,'page');
+      let print='';
+      try{print=await fingerprint(page.text);}catch{}
+      const source=readingSource(result,{kind:'page',firm:firmCode(site?.id||''),print,name:site?.label||page.host||''});
+      snapshot={rows:annotate(result.marks),notes:result.notes,source};snapshotEditing=false;renderSnapshot();
+      showCapital(result,'page',source);
       const any=found(result);
       // When a reading finds nothing, what the page gave it is the whole of the
       // diagnosis and the owner is the only one who can see both. A page that
@@ -677,7 +748,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // many lines — and it is said only then, because a reading that worked
       // has the figures on the screen to speak for it.
       const gave=any?'':`The page gave ${page.tables} account table${page.tables===1?'':'s'} and ${page.text.split('\n').filter(Boolean).length} lines.`;
-      const say=[any?'':`No account figures were found on ${page.host}.`,gave,
+      const say=[any?'':`No account figures were found on ${page.host}.`,gave,any?already(print,'page'):'',
         page.trimmed?`The page was longer than the ${MAX_PAGE_TEXT.toLocaleString('en-US')}-character limit, so the end of it was left out.`:'',
         any?'':result.left,...result.notes,result.unread].filter(Boolean).join(' ');
       status(say,'snapshot-status',say?'alert':'');
@@ -693,18 +764,21 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     const review=which==='snapshot'?snapshot:fold,target=which==='snapshot'?'snapshot-status':'intake-status';
     if(!review?.rows.length)return;
     const made=new Map();
+    const trail=beginImport(review.source||{kind:'file'});
     let saved=0;
     while(review.rows.length){
       const row=review.rows[0];
       if(row.isNew&&!made.has(row.portfolio)){
         const number=made.size?nextPortfolio():row.portfolio;
         if(!await savePortfolio({number,name:row.name,kind:row.kind??1,currency:row.currency||currency},target))break;
-        made.set(row.portfolio,number);
+        made.set(row.portfolio,number);trail.made.push(portfolioRef(number));
       }
       const portfolio=made.get(row.portfolio)??row.portfolio;
-      if(!await saveMark({...row,portfolio},target))break;
-      review.rows.shift();saved++;
+      const line=trace(markRef({...row,portfolio}),row.amount,{read:row.read,from:row.from});
+      if(!await saveMark({...row,portfolio,importId:trail.number},target))break;
+      trail.lines.push(line);review.rows.shift();saved++;
     }
+    await saveImport(trail,target);
     if(which==='snapshot'){snapshot=review.rows.length?review:null;renderSnapshot();}
     else{fold=review.rows.length?review:null;renderFold();settleAttachment();}
     if(!review.rows.length){
@@ -722,6 +796,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // Reported where the review is, not where capital reviews usually are.
     const target=capitalSource==='page'?'snapshot-status':'intake-status';
     const madePortfolios=new Map(),madeHoldings=new Map();
+    const trail=beginImport(capital.source||{kind:'file'});
     let saved=0;
     while(capital.rows.length){
       const row=capital.rows[0];
@@ -731,7 +806,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         else{
           portfolio=nextPortfolio();
           if(!await savePortfolio({number:portfolio,name:row.portfolioName,kind:row.portfolioKind??1,currency:row.currency||currency},target))break;
-          madePortfolios.set(row.portfolio,portfolio);
+          madePortfolios.set(row.portfolio,portfolio);trail.made.push(portfolioRef(portfolio));
         }
       }
       let holding=row.holding;
@@ -741,7 +816,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
           holding=nextHolding();
           if(!await saveHolding({number:holding,portfolio,name:row.name,vehicle:row.vehicle,class:row.class,
             stated:row.stated,share:row.share,follows:row.follows},target))break;
-          madeHoldings.set(row.holding,holding);
+          madeHoldings.set(row.holding,holding);trail.made.push(holdingRef(holding));
         }
       }
       else{
@@ -755,11 +830,14 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // One vehicle, one capital account: a statement for a position that
       // follows another is filed against the one that holds it, where every
       // holder of that vehicle reads it.
-      if(!await saveCapital({holding:row.follows||row.filed||holding,asOf:row.asOf,value:row.value,
+      const filed=row.follows||row.filed||holding;
+      const line=trace(capitalRef({holding:filed,asOf:row.asOf}),row.value,{read:row.read,from:[row.name].filter(Boolean)});
+      if(!await saveCapital({holding:filed,asOf:row.asOf,value:row.value,
         contributed:row.contributed,distributed:row.distributed,commitment:row.commitment,
-        unfunded:row.unfunded??null},target))break;
-      capital.rows.shift();saved++;
+        unfunded:row.unfunded??null,importId:trail.number},target))break;
+      trail.lines.push(line);capital.rows.shift();saved++;
     }
+    await saveImport(trail,target);
     if(!capital.rows.length){
       capital=null;capitalEditing=false;onChanged();
       status(`Saved ${saved} capital account${saved===1?'':'s'}.`,target,'success');
@@ -775,7 +853,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   }
   function saveCapital(entry,target='inv-status'){
     const value={row:'capital',holding:entry.holding,asOf:entry.asOf,value:entry.value,
-      contributed:entry.contributed,distributed:entry.distributed,commitment:entry.commitment,unfunded:entry.unfunded??null};
+      contributed:entry.contributed,distributed:entry.distributed,commitment:entry.commitment,unfunded:entry.unfunded??null,
+      importId:entry.importId??null};
     const id=capitalRef(value),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
   }
@@ -786,7 +865,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         name:property.name,link:property.link??''},id,existing)}),target);
   }
   function saveValuation(entry,target='prop-status'){
-    const value={row:'valuation',property:entry.property,asOf:entry.asOf,value:entry.value,debt:entry.debt,source:entry.source};
+    const value={row:'valuation',property:entry.property,asOf:entry.asOf,value:entry.value,debt:entry.debt,source:entry.source,
+      importId:entry.importId??null};
     const id=valuationRef(value),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
   }
@@ -812,9 +892,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     let reading;
     try{reading=await readZestimate(property.link,property.name);}
     catch(error){status(error.message,target,'alert');return false;}
+    const trail=beginImport({kind:'zestimate'});
+    const line=trace(valuationRef({property:property.number,asOf:today()}),reading.value);
     const saved=await saveValuation({property:property.number,asOf:today(),
-      value:reading.value,debt:entry.current?.debt||0,source:ZESTIMATE},target);
-    if(saved)onChanged();
+      value:reading.value,debt:entry.current?.debt||0,source:ZESTIMATE,importId:trail.number},target);
+    if(saved){trail.lines.push(line);await saveImport(trail,target);onChanged();}
     return saved;
   }
   async function readMissingValues(){
@@ -833,7 +915,8 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // The firm is part of what is saved and part of what addresses it. Dropping
     // it here would send every read figure to the id a hand-typed one occupies,
     // which is the collision this whole change exists to end.
-    const value={row:'mark',portfolio:mark.portfolio,class:mark.class,firm:mark.firm||0,asOf:mark.asOf,amount:mark.amount};
+    const value={row:'mark',portfolio:mark.portfolio,class:mark.class,firm:mark.firm||0,asOf:mark.asOf,amount:mark.amount,
+      importId:mark.importId??null};
     const id=markRef(value),existing=records.find(record=>record.id===id);
     return run(token=>offline.request(token,`/v1/finance/${id}`,{method:'PUT',value:normalizeAndStamp(value,id,existing)}),target);
   }
@@ -880,7 +963,10 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
         action('Delete from all devices',async()=>{if(await remove(mark))onChanged();},'danger'),
         action('Keep it',()=>{confirm.hidden=true;})
       ],{compact:true})],{hidden:true});
-      const past=Stack(row.history.slice(0,8).map(entry=>Note(`${entry.asOf} · ${money(signed(entry),portfolio.currency)}`)),{hidden:true});
+      // Each earlier figure names what it was read from, which is the first
+      // question a figure that moved raises.
+      const past=Stack(row.history.slice(0,8).map(entry=>Note([entry.asOf,money(signed(entry),portfolio.currency),cameFrom(entry.importId)]
+        .filter(Boolean).join(' · '))),{hidden:true});
       const named=`${spoken} in ${portfolio.name}`;
       const actions=[
         rowAction(EDIT_GLYPH,`Edit ${named}`,()=>fillFigure(mark)),
@@ -1191,6 +1277,48 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     $('currency-switch').hidden=true;$('stale').hidden=true;
     for(const id of ['firms-panel','breakdown-panel','positions-panel','properties-panel','sources-panel','change','details-actions'])if($(id))$(id).hidden=true;
   }
+  // The trail, as a list of accepted readings. Built only on a page that has the
+  // tab and only while the ledger may be shown: an import names amounts, so a
+  // quiet arrival builds none of it.
+  function renderImports(){
+    if(!$('imports'))return;
+    const trail=quiet||!loaded?[]:importTrail(records);
+    $('tabs').show('imports',trail.length>0);
+    const currencyOf=ref=>{
+      const at=records.find(record=>record.id===ref);
+      const portfolio=at?.row==='mark'?at.portfolio:at?.row==='capital'?holdingOf(at.holding)?.portfolio
+        :at?.row==='valuation'?properties().find(entry=>entry.number===at.property)?.portfolio:null;
+      return portfolioOf(portfolio)?.currency||currency;
+    };
+    const figure=(ref,amount)=>{const at=records.find(record=>record.id===ref);return at?.row==='mark'?signed({...at,amount}):amount;};
+    $('imports').replaceChildren(...trail.map(entry=>{
+      const later=entry.lines.filter(line=>line.state!=='current').length;
+      return ImportGroup({
+        name:importName(entry),
+        kind:entry.name?importKind(entry.kind)?.label||'':'',
+        // The firm is said unless the name already is it, as a page read's is.
+        meta:[firmLabel(entry.firm)!==importName(entry)?firmLabel(entry.firm):'',readAt(entry.number),
+          `${entry.lines.length} figure${entry.lines.length===1?'':'s'}`,
+          later?`${later} since changed`:''].filter(Boolean).join(' · '),
+        open:openImports.has(entry.id),
+        onToggle:isOpen=>{if(isOpen)openImports.add(entry.id);else openImports.delete(entry.id);},
+        note:entry.note,
+        lines:entry.lines.map(line=>{
+          const subject=trailSubject(line.ref,records,{firmName:firmLabel}),where=currencyOf(line.ref);
+          // The date is the caption beside the name, which never wraps; what
+          // became of the figure since is fine print under it, which does.
+          const since=line.state==='removed'?'Since removed'
+            :line.state==='replaced'?`Since replaced${line.by?` ${typedByHand(line.by)?'by hand':`by ${importName(line.by)}`}, ${readAt(line.by.number).slice(0,10)}`:''}`:'';
+          const replaced=line.was!==undefined&&toCents(line.was)!==toCents(line.amount)
+            ?`Replaced ${money(figure(line.ref,line.was),where)}${line.replaced?` ${origin(line.replaced)}`:''}`:'';
+          return {what:subject.what,meta:subject.asOf?`as of ${subject.asOf}`:'',
+            amount:figure(line.ref,line.amount),currency:where,
+            notes:[since,[line.read!==undefined?`Read as ${money(figure(line.ref,line.read),where)}`:'',replaced].filter(Boolean).join(' · '),
+              line.from?.length?`From ${line.from.join(' · ')}`:'']};
+        })
+      });
+    }));
+  }
   function render(){
     // What the ledger holds — the totals and the saved figures — waits to be
     // asked for. Putting a figure in does not: the site reading, the statement,
@@ -1203,6 +1331,7 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // because what that panel has to say is how to connect.
     $('tabs').show('ledger',!quiet&&(!loaded||records.length>0));
     if(quiet)sealLedger();else renderLedger();
+    renderImports();
     for(const key of ['portfolio','name','kind','currency','class','amount','asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['inv-portfolio','inv-name','inv-vehicle','inv-class','inv-commitment','inv-value','inv-funded','inv-returned','inv-unfunded','inv-asOf'])$(key).disabled=busy||!loaded;
     for(const key of ['prop-portfolio','prop-name','prop-link','prop-value','prop-source','prop-debt','prop-asOf'])$(key).disabled=busy||!loaded;
@@ -1328,12 +1457,16 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       }
       const fresh=$('portfolio').value==='new';
       const number=fresh?nextPortfolio():Number($('portfolio').value.slice(1));
+      const trail=beginImport({kind:'typed'});
       if(fresh&&!await savePortfolio({number,name:$('name').value,kind:Number($('kind').value),currency:$('currency').value}))return;
+      if(fresh)trail.made.push(portfolioRef(number));
       // A figure typed here belongs to no firm; one opened from the ledger
       // keeps the firm it was read at.
       const mark={portfolio:number,class:Number($('class').value),firm:editing?.row==='mark'?editing.firm||0:0,
         asOf:$('asOf').value,amount:$('amount').value};
-      if(!await saveMark(mark))return;
+      const line=trace(markRef(mark),mark.amount);
+      if(!await saveMark({...mark,importId:trail.number}))return;
+      trail.lines.push(line);await saveImport(trail,'form-status');
       // A figure moved to another portfolio, class or date is a different row.
       // The one it came from is removed, so an edit cannot leave two.
       const moved=editing&&editing.id!==markRef(normalizeFinance({row:'mark',...mark}));
@@ -1368,12 +1501,16 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // A box hidden by the kind still holds whatever was typed before the
       // kind changed, and a kind with no commitment saves none.
       const committed=vehicleFigures($('inv-vehicle').value).committed;
+      const trail=beginImport({kind:'typed'});
+      if(!investing)trail.made.push(holdingRef(number));
       if(!await saveHolding({number,portfolio,name:$('inv-name').value,vehicle:Number($('inv-vehicle').value),
         class:Number($('inv-class').value),stated:holdingOf(number)?.stated??0,
         share:typed===''?WHOLE_SHARE:Math.round(Number(typed)*100),follows}))return;
+      const line=asOf?trace(capitalRef({holding:number,asOf}),$('inv-value').value||0):null;
       if(asOf&&!await saveCapital({holding:number,asOf,value:$('inv-value').value||0,
         contributed:$('inv-funded').value||0,distributed:$('inv-returned').value||0,commitment:committed?$('inv-commitment').value||0:0,
-        unfunded:committed?$('inv-unfunded').value.trim()||null:null}))return;
+        unfunded:committed?$('inv-unfunded').value.trim()||null:null,importId:trail.number}))return;
+      if(line){trail.lines.push(line);await saveImport(trail,'inv-status');}
       // A statement moved to another date is a different row. The one it came
       // from is removed, so an edit cannot leave two.
       const moved=investing?.capitalId&&asOf&&investing.capitalId!==capitalRef({holding:number,asOf});
@@ -1406,7 +1543,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       const total=joins?Math.round((already.amount+amount)*100)/100:amount;
       if(joins&&!total){if(await remove(already,'flow-status')){clearFlowForm();$('entry').open=false;onChanged();
         status(`That cancels the ${money(Math.abs(already.amount),currency)} already recorded at ${firmLabel(firm)} on ${asOf}, so neither is kept.`,'status','success');}return;}
-      if(!await saveFlow({firm,asOf,amount:total}))return;
+      const trail=beginImport({kind:'typed'}),line=trace(id,total);
+      if(!await saveFlow({firm,asOf,amount:total,importId:trail.number}))return;
+      trail.lines.push(line);await saveImport(trail,'flow-status');
       // A movement moved to another firm or day is a different row. The one it
       // came from is removed, so an edit cannot leave two.
       if(flowing&&flowing.id!==id)await remove(records.find(record=>record.id===flowing.id)||{id:flowing.id,revision:flowing.revision},'flow-status');
@@ -1438,21 +1577,25 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       // is the owner overriding the Zestimate, which is the whole reason the
       // source is a choice, so nothing is read over it.
       const link=$('prop-link').value,name=$('prop-name').value;
-      let value=$('prop-value').value||0,source=Number($('prop-source').value),unread='';
+      let value=$('prop-value').value||0,source=Number($('prop-source').value),unread='',published=false;
       if(readZestimate&&zillowHome(link)&&!Number(value)){
         status(`Reading the Zestimate for ${name.trim()}…`,'prop-status','progress');
         try{
           const reading=await readZestimate(link,name);
-          value=reading.value;source=ZESTIMATE;asOf||=today();looked.add(number);
+          value=reading.value;source=ZESTIMATE;asOf||=today();looked.add(number);published=true;
         }catch(error){
           // Said where the ledger's own status is, because the drawer this was
           // typed in closes behind the save.
           unread=error.message;
         }
       }
+      const trail=beginImport({kind:published?'zestimate':'typed'});
+      if(!housing)trail.made.push(propertyRef(number));
       if(!await saveProperty({number,portfolio,name,link}))return;
+      const line=asOf?trace(valuationRef({property:number,asOf}),value):null;
       if(asOf&&!await saveValuation({property:number,asOf,value,
-        debt:$('prop-debt').value||0,source}))return;
+        debt:$('prop-debt').value||0,source,importId:trail.number}))return;
+      if(line){trail.lines.push(line);await saveImport(trail,'prop-status');}
       // A valuation moved to another date is a different row. The one it came
       // from is removed, so an edit cannot leave two.
       const moved=housing?.valuationId&&asOf&&housing.valuationId!==valuationRef({property:number,asOf});

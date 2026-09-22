@@ -187,6 +187,13 @@
   .finance-ledger .record-line>.record-figure>.action-group:empty,
   .finance-ledger .group-line>.group-figure>.action-group:empty{display:flex}
 }
+/* The Imports list has no verbs on any line — an import is a record of what
+   happened and is not edited — so there is no column of verbs for its money to
+   line up with, and the empty slot would only hold every figure short of the
+   edge. It out-specifies the rule above rather than following it. UI-27, UI-31. */
+@media(hover:none){
+  .finance-ledger .import-group .record-line>.record-figure>.action-group:empty{display:none}
+}
 .finance-ledger .estate-detail{--verbs:4}
 .finance-ledger .position-detail{--verbs:3}
 /* The houses behind a Real estate line, shown only when they are asked for.

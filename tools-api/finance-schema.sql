@@ -46,6 +46,11 @@ CREATE TABLE IF NOT EXISTS finance_marks (
   firm INTEGER NOT NULL DEFAULT 0,
   as_of INTEGER NOT NULL,
   cents INTEGER NOT NULL,
+  -- The import that last wrote this amount (finance_imports.id), NULL for one
+  -- written before imports existed or by a client that names none. No
+  -- REFERENCES: the figure is saved before the import that lists it, so the
+  -- import can list only what actually landed.
+  import_id INTEGER,
   PRIMARY KEY (portfolio, class, firm, as_of)
 ) WITHOUT ROWID;
 
@@ -94,6 +99,7 @@ CREATE TABLE IF NOT EXISTS finance_capital (
   distributed INTEGER NOT NULL,
   commitment INTEGER NOT NULL,
   unfunded INTEGER,
+  import_id INTEGER,
   PRIMARY KEY (holding, as_of)
 ) WITHOUT ROWID;
 
@@ -128,6 +134,7 @@ CREATE TABLE IF NOT EXISTS finance_valuations (
   cents INTEGER NOT NULL,
   debt INTEGER NOT NULL,
   source INTEGER NOT NULL,
+  import_id INTEGER,
   PRIMARY KEY (property, as_of)
 ) WITHOUT ROWID;
 
@@ -148,5 +155,37 @@ CREATE TABLE IF NOT EXISTS finance_flows (
   firm INTEGER NOT NULL,
   as_of INTEGER NOT NULL,
   cents INTEGER NOT NULL,
+  import_id INTEGER,
   PRIMARY KEY (firm, as_of)
 ) WITHOUT ROWID;
+
+-- How a figure got here. One row per accepted reading — a page read, a
+-- statement dropped in, a figure typed by hand, a Zestimate, a statement filed
+-- by the intake scripts — written once, after the rows it lists have been
+-- saved, and never changed. Every dated row above points back at the import
+-- that last wrote it, so the trail runs statement → what was proposed → what
+-- was accepted without a history table: the import holds what was read and
+-- proposed, and the row's pointer is the proof it was accepted.
+--
+-- `id` is the millisecond the reading was accepted, allocated on the device so
+-- an import made offline has its number before it reaches here; a later import
+-- is a larger number. `kind` and `firm` are codes, as a figure's firm is.
+-- `print` is sixteen hex digits of a SHA-256 of what was read — the file, the
+-- image or the page's text — which recognizes a statement dropped twice and
+-- says nothing about it. Everything that names anything (the file name, the
+-- source lines each figure was added up from, the amounts it replaced) is in
+-- `value`, encrypted like a portfolio's name.
+--
+-- Bounded by the Worker to the newest imports plus any a stored row still
+-- points at, so what is forgotten is only history already written over.
+--
+-- Additive: CREATE TABLE IF NOT EXISTS adds it empty to an existing database.
+-- The import_id columns above need finance-imports.sql, once, on a database
+-- made before them.
+CREATE TABLE IF NOT EXISTS finance_imports (
+  id INTEGER PRIMARY KEY,
+  kind INTEGER NOT NULL,
+  firm INTEGER NOT NULL DEFAULT 0,
+  print TEXT NOT NULL DEFAULT '',
+  value TEXT NOT NULL
+);

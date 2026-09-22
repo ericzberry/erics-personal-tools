@@ -17,9 +17,9 @@
 //
 // The token and the request wrapper are `api.mjs`, shared with the other
 // scripts here so the credential is resolved in one place.
-import {readFileSync} from 'node:fs';
-import {die, money, api, ledger} from './api.mjs';
-import {ASSET_CLASSES,REGISTRATIONS,classById,classLabel,registrationLabel,markRef,heldOn,matchKey,isDate}
+import {die, money, api, ledger, readFigureFile, importNumber, fileImport, traceLine, describeImport} from './api.mjs';
+import {ASSET_CLASSES,REGISTRATIONS,classById,classLabel,registrationLabel,markRef,portfolioRef,heldOn,matchKey,isDate,
+  sameMoney,seenBefore,importOf,importTrail,importKindById,trailSubject,firmId}
   from '../chrome-sidebar/src/finance-data.js';
 
 // A figure that moves this far in one step is usually a misread decimal or a
@@ -49,6 +49,7 @@ const classOf = (value, where) => {
 const historyOf = (marks, portfolio, code) => marks
   .filter(mark => mark.portfolio === portfolio.number && mark.class === code)
   .sort((a, b) => b.asOf.localeCompare(a.asOf));
+const firmed = mark => mark.firm ? ` @${firmId(mark.firm)}` : '';
 
 async function listCommand(flags) {
   const {portfolios, marks} = await ledger();
@@ -68,18 +69,46 @@ async function listCommand(flags) {
   console.log(`${portfolios.length} portfolio${portfolios.length === 1 ? '' : 's'}, ${marks.length} figure${marks.length === 1 ? '' : 's'}.`);
 }
 
+// Each figure with where it came from: the import that last wrote it.
 async function showCommand([reference]) {
   if (!reference) die('Usage: ledger.mjs show <portfolio number or name>');
-  const {portfolios, marks} = await ledger();
+  const {records, portfolios, marks} = await ledger();
   const portfolio = resolve(reference, portfolios);
   console.log(`p${portfolio.number}  ${portfolio.name}  [${registrationLabel(portfolio.kind)} · ${portfolio.currency}]\n`);
   for (const code of [...new Set(marks.filter(mark => mark.portfolio === portfolio.number).map(mark => mark.class))].sort((a, b) => a - b)) {
     console.log(classLabel(code));
-    for (const mark of historyOf(marks, portfolio, code)) console.log(`  ${mark.asOf}  ${money(mark.amount, portfolio.currency)}`);
+    for (const mark of historyOf(marks, portfolio, code))
+      console.log(`  ${mark.asOf}  ${money(mark.amount, portfolio.currency).padStart(16)}${firmed(mark).padEnd(12)}  ← ${describeImport(importOf(records, mark.importId))}`);
   }
 }
 
-function plan(entries, {portfolios, marks}) {
+// The imports, newest first, and what became of each figure they saved. With a
+// portfolio, only the lines that touch it — the answer to "how did this
+// portfolio's figures get here, and what did each correction overwrite".
+async function trailCommand([reference], flags) {
+  const {records, portfolios} = await ledger();
+  const portfolio = reference ? resolve(reference, portfolios) : null;
+  const touches = line => !portfolio || (/^\d/.test(line.ref) && line.ref.split('-')[0] === String(portfolio.number));
+  const trail = importTrail(records).map(entry => ({...entry, lines: entry.lines.filter(touches)})).filter(entry => entry.lines.length);
+  if (flags.has('--json')) return console.log(JSON.stringify(trail, null, 2));
+  if (!trail.length) return console.log(portfolio ? `Nothing traced for ${portfolio.name}.` : 'No imports yet.');
+  for (const entry of trail) {
+    console.log(`${`i${entry.number}`.padEnd(15)} ${describeImport(entry)}${entry.firm ? ` @${firmId(entry.firm)}` : ''}${entry.print ? `  print ${entry.print}` : ''}`);
+    for (const line of entry.lines) {
+      const subject = trailSubject(line.ref, records, {firmName: firmId});
+      const state = line.state === 'current' ? '' : line.state === 'removed' ? '  (since removed)'
+        : `  (since replaced by ${line.by ? `i${line.by.number}` : 'an untraced write'})`;
+      console.log(`    ${subject.asOf}  ${subject.what}  ${money(line.amount)}${state}`);
+      if (line.read !== undefined) console.log(`        read as ${money(line.read)}`);
+      if (line.was !== undefined) console.log(`        replaced ${money(line.was)}${line.wasImport ? ` from i${line.wasImport}` : ''}`);
+      if (line.from?.length) console.log(`        from: ${line.from.join(' · ')}`);
+    }
+    if (entry.note) console.log(`    note: ${entry.note}`);
+    console.log('');
+  }
+}
+
+function plan(entries, {portfolios, marks, records}, {firm = 0} = {}) {
   const made = [];
   return entries.map((entry, index) => {
     const where = `entry ${index + 1}${entry.portfolio ? ` (${entry.portfolio})` : ''}`;
@@ -98,39 +127,55 @@ function plan(entries, {portfolios, marks}) {
       if (!made.includes(portfolio)) made.push(portfolio);
     } else portfolio = resolve(entry.portfolio, portfolios);
     const history = portfolio.isNew ? [] : historyOf(marks, portfolio, code);
-    const replaced = history.find(mark => mark.asOf === entry.asOf) || null;
+    // Only a figure at the same firm is the one this would write over: another
+    // firm's figure for the same date is another pile of money, and its own row.
+    const replaced = history.find(mark => mark.asOf === entry.asOf && (mark.firm || 0) === firm) || null;
     const previous = history[0] || null;
     const jump = previous && previous.amount > 0 ? Math.abs(amount - previous.amount) / previous.amount : 0;
-    return {entry, amount, code, portfolio, replaced, previous, jumped: jump > JUMP};
+    const twin = portfolio.isNew ? null : sameMoney({portfolio: portfolio.number, class: code, firm, asOf: entry.asOf, amount}, records);
+    const from = (Array.isArray(entry.from) ? entry.from : []).filter(item => typeof item === 'string');
+    return {entry, amount, code, portfolio, replaced, previous, twin, from, jumped: jump > JUMP};
   });
 }
 
 async function saveCommand([file], flags) {
   if (!file) die('Usage: ledger.mjs save <file.json> [--confirm]');
-  let entries;
-  try { entries = JSON.parse(readFileSync(file, 'utf8')); } catch (error) { die(`Could not read ${file}: ${error.message}`); }
-  if (!Array.isArray(entries) || !entries.length) die('The file must hold a non-empty JSON array of figures.');
+  const {entries, source} = await readFigureFile(file);
   const current = await ledger();
   let steps;
-  try { steps = plan(entries, current); } catch (error) { die(error.message); }
+  try { steps = plan(entries, current, {firm: source.firm}); } catch (error) { die(error.message); }
+  const seen = seenBefore(current.records, source.print);
+  if (seen) console.log(`ALREADY IMPORTED  this file was filed as i${seen.number} (${describeImport(seen)}). Confirming files it again.\n`);
   for (const step of steps) {
     const currency = step.portfolio.currency;
     const mark = `${step.portfolio.isNew ? 'NEW PORTFOLIO' : `p${step.portfolio.number}`}  ${step.portfolio.name} · ${classLabel(step.code)}`;
     const verb = step.replaced ? 'AMEND' : 'APPEND';
     console.log(`${verb.padEnd(7)} ${mark}\n        ${step.entry.asOf}  ${money(step.amount, currency)}${step.replaced ? `   (replaces ${money(step.replaced.amount, currency)})` : ''}${step.previous ? `   last: ${step.previous.asOf} ${money(step.previous.amount, currency)}` : ''}`);
     if (step.jumped) console.log('        CHECK   this moves more than 40% from the last figure — re-read the source before confirming.');
+    if (step.twin) console.log(`        DUPLICATE?  the same amount is already filed${step.twin.firm ? ` @${firmId(step.twin.firm)}` : ''} as of ${step.twin.asOf}, from ${describeImport(importOf(current.records, step.twin.importId))} — the same money read twice is counted twice.`);
   }
   if (!flags.has('--confirm')) return console.log(`\n${steps.length} figure${steps.length === 1 ? '' : 's'} planned. Nothing was written. Re-run with --confirm to save.`);
+  // Every figure is saved under one import, written last so it lists only
+  // what landed — including a run that stops half-way on an error.
+  const number = importNumber(current.imports);
+  const trail = {kind: importKindById('intake').code, firm: source.firm, print: source.print, name: source.name, lines: [], made: []};
   const made = new Set();
-  for (const step of steps) {
-    if (step.portfolio.isNew && !made.has(step.portfolio.number)) {
-      await api(`/v1/finance/p${step.portfolio.number}`, {method: 'PUT', body: {row: 'portfolio', number: step.portfolio.number,
-        name: step.portfolio.name, kind: step.portfolio.kind, currency: step.portfolio.currency, revision: null}});
-      made.add(step.portfolio.number);
+  try {
+    for (const step of steps) {
+      if (step.portfolio.isNew && !made.has(step.portfolio.number)) {
+        await api(`/v1/finance/p${step.portfolio.number}`, {method: 'PUT', body: {row: 'portfolio', number: step.portfolio.number,
+          name: step.portfolio.name, kind: step.portfolio.kind, currency: step.portfolio.currency, revision: null}});
+        made.add(step.portfolio.number);trail.made.push(portfolioRef(step.portfolio.number));
+      }
+      const value = {row: 'mark', portfolio: step.portfolio.number, class: step.code, firm: source.firm, asOf: step.entry.asOf, amount: step.amount};
+      const line = traceLine(markRef(value), step.amount, step.replaced, step.from.length ? {from: step.from} : {});
+      await api(`/v1/finance/${markRef(value)}`, {method: 'PUT', body: {...value, importId: number, revision: step.replaced ? String(Math.round(step.replaced.amount * 100)) : null}});
+      trail.lines.push(line);
+      console.log(`saved   ${step.portfolio.name} · ${classLabel(step.code)} · ${step.entry.asOf}`);
     }
-    const value = {row: 'mark', portfolio: step.portfolio.number, class: step.code, asOf: step.entry.asOf, amount: step.amount};
-    await api(`/v1/finance/${markRef(value)}`, {method: 'PUT', body: {...value, revision: step.replaced ? String(Math.round(step.replaced.amount * 100)) : null}});
-    console.log(`saved   ${step.portfolio.name} · ${classLabel(step.code)} · ${step.entry.asOf}`);
+  } finally {
+    const filed = await fileImport(number, trail);
+    if (filed) console.log(`\ntraced  i${filed.number}${source.name ? ` — ${source.name}` : ''}`);
   }
   console.log(`\n${steps.length} figure${steps.length === 1 ? '' : 's'} saved.`);
 }
@@ -138,7 +183,7 @@ async function saveCommand([file], flags) {
 const [command, ...rest] = process.argv.slice(2);
 const flags = new Set(rest.filter(argument => argument.startsWith('--')));
 const args = rest.filter(argument => !argument.startsWith('--'));
-const commands = {list: listCommand, show: showCommand, save: saveCommand};
-if (!commands[command]) die('Usage: ledger.mjs <list|show|save> [arguments] [--json] [--confirm]');
+const commands = {list: listCommand, show: showCommand, save: saveCommand, trail: trailCommand};
+if (!commands[command]) die('Usage: ledger.mjs <list|show|trail|save> [arguments] [--json] [--confirm]');
 try { await (command === 'list' ? listCommand(flags) : commands[command](args, flags)); }
 catch (error) { die(error.message); }

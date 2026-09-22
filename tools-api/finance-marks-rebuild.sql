@@ -32,5 +32,7 @@ CREATE TABLE IF NOT EXISTS finance_marks (
   firm INTEGER NOT NULL DEFAULT 0,
   as_of INTEGER NOT NULL,
   cents INTEGER NOT NULL,
+  -- Which import wrote it; see finance-schema.sql.
+  import_id INTEGER,
   PRIMARY KEY (portfolio, class, firm, as_of)
 ) WITHOUT ROWID;

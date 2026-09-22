@@ -44,8 +44,9 @@ test('the ledger authenticates, keeps only numbers in its figures, and rejects s
   // Five integers and nothing else: no name, no institution spelled out, no
   // type, no history blob, and the date is the date. The firm is a code, so the
   // database still cannot say who banks where; 0 is a figure nobody read off a
-  // page.
-  assert.deepEqual(sql.prepare('SELECT * FROM finance_marks').all().map(row=>({...row})),[{portfolio:1,class:3,firm:0,as_of:20260101,cents:100050}]);
+  // page. The sixth is the import that wrote it, and a save naming none is
+  // honestly untraced.
+  assert.deepEqual(sql.prepare('SELECT * FROM finance_marks').all().map(row=>({...row})),[{portfolio:1,class:3,firm:0,as_of:20260101,cents:100050,import_id:null}]);
   // A figure's revision is the figure itself, which costs no stored bytes and
   // still catches the only thing that can change underneath a write.
   assert.equal(first.revision,'100050');
@@ -133,7 +134,7 @@ test('an investment keeps its own identity, its capital accounts are four intege
   // blob — and a fifth that is null because this statement said nothing about
   // what is left to call.
   assert.deepEqual(sql.prepare('SELECT * FROM finance_capital').all().map(row=>({...row})),
-    [{holding:1,as_of:20260630,cents:110000000,contributed:80000000,distributed:25000000,commitment:100000000,unfunded:null}]);
+    [{holding:1,as_of:20260630,cents:110000000,contributed:80000000,distributed:25000000,commitment:100000000,unfunded:null,import_id:null}]);
   // Its revision is its own content, so no revision column is stored and the
   // one thing optimistic concurrency is for is still caught. A row that states
   // nothing extra keeps exactly the revision it had before the column existed,
@@ -393,7 +394,7 @@ test('a property keeps its address encrypted, its valuations in integers, and di
   const first=(await (await request(env,'/v1/finance/r1-20260920','PUT',{row:'valuation',value:610000,debt:320000,source:1,revision:null})).json()).record;
   assert.deepEqual([first.property,first.asOf,first.value,first.debt,first.source],[1,'2026-09-20',610000,320000,1]);
   assert.deepEqual(sql.prepare('SELECT * FROM finance_valuations').all().map(row=>({...row})),
-    [{property:1,as_of:20260920,cents:61000000,debt:32000000,source:1}]);
+    [{property:1,as_of:20260920,cents:61000000,debt:32000000,source:1,import_id:null}]);
   // The row's own content is its revision, so no revision column is stored.
   assert.equal(first.revision,'61000000:32000000:1');
 
@@ -477,14 +478,100 @@ test('cash in or out is kept per firm and day, signed, and read back with the le
   assert.equal((await put('f5-20260910',{amount:0,revision:null})).status,400,'nothing moved is not a movement');
   assert.equal((await put('f0-20260910',{amount:5,revision:null})).status,404,'firm 0 names no firm');
   const saved=(await (await put('f5-20260910',{amount:500000,revision:null})).json()).record;
-  assert.deepEqual(saved,{id:'f5-20260910',row:'flow',revision:'50000000',firm:5,asOf:'2026-09-10',amount:500000});
+  assert.deepEqual(saved,{id:'f5-20260910',row:'flow',revision:'50000000',firm:5,asOf:'2026-09-10',amount:500000,importId:null});
   assert.equal((await put('f5-20260910',{amount:250000,revision:null})).status,409,'a stale replay is refused');
   await put('f5-20260910',{amount:250000,revision:'50000000'});
   await put('f3-20261002',{amount:-100000.5,revision:null});
   assert.deepEqual(sql.prepare('SELECT * FROM finance_flows ORDER BY firm').all().map(row=>({...row})),
-    [{firm:3,as_of:20261002,cents:-10000050},{firm:5,as_of:20260910,cents:25000000}],'one row per firm and day, in cents');
+    [{firm:3,as_of:20261002,cents:-10000050,import_id:null},{firm:5,as_of:20260910,cents:25000000,import_id:null}],'one row per firm and day, in cents');
   const records=(await (await request(env,'/v1/finance')).json()).records.filter(record=>record.row==='flow');
   assert.deepEqual(records.map(record=>[record.id,record.amount]),[['f3-20261002',-100000.5],['f5-20260910',250000]]);
   assert.equal((await request(env,'/v1/finance/f3-20261002','DELETE',{revision:'-10000050'})).status,200);
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_flows').get().n,1);
+});
+
+// The trail from a statement to a stored figure. A figure points at the import
+// that last wrote it; the import says what was read and what each figure it
+// saved replaced. Written once, never edited, and nothing in it is readable in
+// the database but codes and a fingerprint.
+test('an import is written once, sealed, and every dated row points back at it',async()=>{
+  const {sql,env}=environment('finance-schema.sql');
+  await request(env,'/v1/finance/p1','PUT',{row:'portfolio',name:'Eric and Ariana Berry Estate',kind:1,currency:'USD',revision:null});
+  const first=1758542400000,second=1758628800000;
+  const figure=(await (await request(env,'/v1/finance/1-10-20260920-4','PUT',{row:'mark',amount:1668402.54,importId:first,revision:null})).json()).record;
+  assert.equal(figure.importId,first);
+  const line={ref:'1-10-20260920-4',amount:1668402.54,from:['Brokerage ...1234 Total value']};
+  const trail={row:'import',kind:1,firm:4,print:'0123456789abcdef',name:'client.schwab.com',note:'Left out: a total across accounts.',lines:[line],revision:null};
+  for(const change of [{kind:99},{print:'not-a-print'},{lines:[]},{lines:[{ref:'p1',amount:1}]},{firm:999}])
+    assert.equal((await request(env,`/v1/finance/i${first}`,'PUT',{...trail,...change})).status,400,JSON.stringify(change));
+  const saved=(await (await request(env,`/v1/finance/i${first}`,'PUT',trail)).json()).record;
+  assert.deepEqual([saved.id,saved.number,saved.kind,saved.firm,saved.print,saved.name,saved.revision],
+    [`i${first}`,first,1,4,'0123456789abcdef','client.schwab.com',String(first)]);
+  assert.deepEqual(saved.lines,[line]);
+  // Codes and a fingerprint in the clear; the page, the account and the source
+  // line only inside the sealed value.
+  const stored=sql.prepare('SELECT * FROM finance_imports').get();
+  assert.deepEqual([stored.id,stored.kind,stored.firm,stored.print],[first,1,4,'0123456789abcdef']);
+  for(const word of ['schwab','Brokerage','1234','Left out'])assert.equal(stored.value.includes(word),false,word);
+
+  // A replay of a write that landed is answered with what is on file; a
+  // different import under the same number is refused; nothing deletes one.
+  assert.equal((await request(env,`/v1/finance/i${first}`,'PUT',{...trail,revision:null})).status,409);
+  const replay=(await (await request(env,`/v1/finance/i${first}`,'PUT',{...trail,name:'rewritten',revision:String(first)})).json()).record;
+  assert.equal(replay.name,'client.schwab.com','an import is never rewritten');
+  assert.equal((await request(env,`/v1/finance/i${first}`,'DELETE',{revision:String(first)})).status,405);
+
+  // A correction typed by hand is an import of its own, and the figure now
+  // points at it; the first import stays on file with what it saved.
+  await request(env,`/v1/finance/1-10-20260920-4`,'PUT',{row:'mark',amount:1668000,importId:second,revision:'166840254'});
+  await request(env,`/v1/finance/i${second}`,'PUT',{row:'import',kind:4,lines:[{ref:'1-10-20260920-4',amount:1668000,was:1668402.54,wasImport:first}],revision:null});
+  const records=(await (await request(env,'/v1/finance')).json()).records;
+  assert.equal(records.find(record=>record.row==='mark').importId,second);
+  assert.deepEqual(records.filter(record=>record.row==='import').map(record=>record.number),[second,first],'newest first');
+  assert.deepEqual(records.find(record=>record.number===second&&record.row==='import').lines,
+    [{ref:'1-10-20260920-4',amount:1668000,was:1668402.54,wasImport:first}]);
+  // A save that names no import is untraced, not carried over from the row it
+  // replaced: the old import did not produce the new amount.
+  await request(env,`/v1/finance/1-10-20260920-4`,'PUT',{row:'mark',amount:1,revision:'166800000'});
+  assert.equal(sql.prepare('SELECT import_id FROM finance_marks').get().import_id,null);
+});
+
+test('the trail is bounded by forgetting only imports no stored row points at',async()=>{
+  const {sql,env}=environment('finance-schema.sql');
+  await request(env,'/v1/finance/p1','PUT',{row:'portfolio',name:'Estate',kind:1,currency:'USD',revision:null});
+  // The oldest import still backs a figure; the rest were written over.
+  await request(env,'/v1/finance/1-3-20260101','PUT',{row:'mark',amount:5,importId:1,revision:null});
+  for(let number=1;number<=603;number++)
+    sql.prepare('INSERT INTO finance_imports (id, kind, firm, print, value) VALUES (?, 4, 0, ?, ?)').run(number,'','sealed');
+  await request(env,'/v1/finance/1-3-20260201','PUT',{row:'mark',amount:6,importId:604,revision:null});
+  assert.equal((await request(env,'/v1/finance/i604','PUT',{row:'import',kind:4,lines:[{ref:'1-3-20260201',amount:6}],revision:null})).status,200);
+  const kept=sql.prepare('SELECT id FROM finance_imports ORDER BY id').all().map(row=>row.id);
+  assert.equal(kept.length,601,'the newest 600, plus one a figure still points at');
+  assert.equal(kept[0],1,'an import a stored row points at is never forgotten');
+  assert.equal(kept.includes(604),true,'nor is the one just written');
+});
+
+// The upgrade path: a database made before any of this keeps every row, gains
+// the pointer as NULL and an empty trail, and reads back exactly as it did.
+test('finance-imports.sql upgrades a populated ledger without touching a figure',async()=>{
+  const sql=new DatabaseSync(':memory:');
+  sql.exec(`CREATE TABLE finance_portfolios (id INTEGER PRIMARY KEY, value TEXT NOT NULL, revision TEXT NOT NULL);
+    CREATE TABLE finance_marks (portfolio INTEGER NOT NULL, class INTEGER NOT NULL, firm INTEGER NOT NULL DEFAULT 0, as_of INTEGER NOT NULL, cents INTEGER NOT NULL, PRIMARY KEY (portfolio, class, firm, as_of)) WITHOUT ROWID;
+    CREATE TABLE finance_capital (holding INTEGER NOT NULL, as_of INTEGER NOT NULL, cents INTEGER NOT NULL, contributed INTEGER NOT NULL, distributed INTEGER NOT NULL, commitment INTEGER NOT NULL, unfunded INTEGER, PRIMARY KEY (holding, as_of)) WITHOUT ROWID;
+    CREATE TABLE finance_valuations (property INTEGER NOT NULL, as_of INTEGER NOT NULL, cents INTEGER NOT NULL, debt INTEGER NOT NULL, source INTEGER NOT NULL, PRIMARY KEY (property, as_of)) WITHOUT ROWID;
+    CREATE TABLE finance_flows (firm INTEGER NOT NULL, as_of INTEGER NOT NULL, cents INTEGER NOT NULL, PRIMARY KEY (firm, as_of)) WITHOUT ROWID;
+    INSERT INTO finance_marks VALUES (1, 10, 4, 20260920, 166840254);
+    INSERT INTO finance_capital VALUES (1, 20260630, 110000000, 80000000, 25000000, 100000000, NULL);
+    INSERT INTO finance_valuations VALUES (1, 20260920, 61000000, 32000000, 1);
+    INSERT INTO finance_flows VALUES (5, 20260910, 50000000);`);
+  sql.exec(readFileSync(new URL('../finance-schema.sql',import.meta.url),'utf8'));
+  sql.exec(readFileSync(new URL('../finance-imports.sql',import.meta.url),'utf8'));
+  assert.deepEqual({...sql.prepare('SELECT * FROM finance_marks').get()},{portfolio:1,class:10,firm:4,as_of:20260920,cents:166840254,import_id:null});
+  assert.deepEqual({...sql.prepare('SELECT * FROM finance_flows').get()},{firm:5,as_of:20260910,cents:50000000,import_id:null});
+  for(const table of ['finance_capital','finance_valuations'])
+    assert.equal(sql.prepare(`SELECT import_id FROM ${table}`).get().import_id,null,table);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_imports').get().n,0);
+  // Run twice, it stops at the first ALTER and has changed nothing.
+  assert.throws(()=>sql.exec(readFileSync(new URL('../finance-imports.sql',import.meta.url),'utf8')),/duplicate column/);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM finance_marks').get().n,1);
 });

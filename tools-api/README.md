@@ -71,7 +71,7 @@ Cloud setup are in [docs/TAXES.md](../docs/TAXES.md).
 
 Apply `npx wrangler d1 execute erics-personal-tools --remote --file travel-schema.sql` before deploying the travel endpoints. `GET /v1/travel` returns only record metadata; authenticated `GET /v1/travel/:id` retrieves a number and notes. Authenticated `GET /v1/travel/snapshot` returns full records for encrypted offline synchronization. `PUT` and `DELETE` require the current revision (null for new records). A `PUT` may also send `operation`, a lowercase UUID naming that write: it becomes the new revision, and repeating the same write after it landed returns the record instead of 409. An operation equal to the base revision, or one that is not a UUID, is ignored and a revision is minted as before. Records use the existing AES-GCM encryption key with travel-specific authenticated context. The phone and extension use the same authenticated endpoints. Service-worker caching excludes all API responses.
 
-Apply `npx wrangler d1 execute erics-personal-tools --remote --file reminders-schema.sql` before deploying `/v1/reminders`, which is the same generic record store over `reminder_records`. It validates a reminder's anchor date and repeat interval and never computes a due date; the device works out what today means. `POST /v1/ai-connections/:id/capture` reads one short typed note into a record one of the record routes already accepts, and returns 422 with its own explanation when the note names nothing datable. `/v1/gifts` is the same again over `gift_records` (apply `gifts-schema.sql`), and `/v1/sizes` once more over `size_records` (apply `sizes-schema.sql`). See [reminders](../docs/REMINDERS.md), [gifts](../docs/GIFTS.md), [clothing sizes](../docs/SIZES.md) and [quick add](../docs/QUICK_ADD.md).
+Apply `npx wrangler d1 execute erics-personal-tools --remote --file reminders-schema.sql` before deploying `/v1/reminders`, which is the same generic record store over `reminder_records`. It validates a reminder's anchor date and repeat interval and never computes a due date; the device works out what today means. `POST /v1/ai-connections/:id/capture` reads one short typed note into a record one of the record routes already accepts, and returns 422 with its own explanation when the note names nothing datable. `/v1/gifts` is the same again over `gift_records` (apply `gifts-schema.sql`), `/v1/sizes` once more over `size_records` (apply `sizes-schema.sql`), and `/v1/replacements` over `replacement_records` (apply `replacements-schema.sql`). See [reminders](../docs/REMINDERS.md), [gifts](../docs/GIFTS.md), [clothing sizes](../docs/SIZES.md), [the replacement drawer](../docs/REPLACEMENTS.md) and [quick add](../docs/QUICK_ADD.md).
 
 `/v1/calendar/birthdays` reports whether the Google connection can read a
 calendar and what the last birthday sweep did; `POST /v1/calendar/birthdays/scan`
@@ -132,6 +132,18 @@ Portfolios, investments, capital accounts, properties and valuations are
 untouched, and the re-read figures land back into the portfolios that survived.
 It is deliberately not part of `finance-schema.sql`, which is `CREATE TABLE IF
 NOT EXISTS` throughout and is applied routinely.
+
+Every dated finance row (`finance_marks`, `finance_capital`,
+`finance_valuations`, `finance_flows`) carries `import_id`, the import that last
+wrote it, and `finance_imports` holds one row per accepted reading at
+`/v1/finance/i<ms>`: kind and firm as codes, a sixteen-hex-digit `print` of what
+was read, and everything that names anything encrypted. An import takes one
+`PUT` (a replay with its number as the revision is answered with what is on
+file), has no `DELETE`, and is bounded to the newest 600 plus any a row still
+points at. On a database made before it, apply `finance-schema.sql` and then,
+once, `npx wrangler d1 execute erics-personal-tools --remote --file
+finance-imports.sql`; run twice it stops at the first `ALTER` having changed
+nothing. Apply it before deploying the Worker, whose reads name the column.
 
 `finance_flows` holds the cash the owner put into a firm or took out of it:
 firm, date and signed cents, one row per firm and day, at `/v1/finance/f<firm>-<date>`.

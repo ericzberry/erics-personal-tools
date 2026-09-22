@@ -229,8 +229,11 @@ test('cash is recorded against a firm, one way or the other, and a second moveme
   document.getElementById('finance-flow-asOf').value='2026-09-12';
   [...document.querySelectorAll('#finance-flow-direction button')].find(button=>button.textContent==='Taken out').click();
   submit();
-  await settle(()=>writes.length===1);
-  assert.deepEqual({...writes[0],id:writes[0].id},{row:'flow',firm:2,asOf:'2026-09-12',amount:-250000,id:'f2-20260912',revision:null});
+  await settle(()=>writes.length===2);
+  assert.deepEqual({...writes[0],id:writes[0].id},{row:'flow',firm:2,asOf:'2026-09-12',amount:-250000,importId:writes[1].number,id:'f2-20260912',revision:null});
+  // Typed by hand is an import too: the trail of a correction is the one that
+  // matters later.
+  assert.deepEqual([writes[1].row,writes[1].kind,writes[1].lines],['import',4,[{ref:'f2-20260912',amount:-250000}]]);
   await settle(()=>/Recorded/.test(document.getElementById('finance-status').textContent));
   assert.equal(document.getElementById('finance-status').textContent,'Recorded $250,000 taken out of Chase on 2026-09-12.');
 
@@ -248,9 +251,10 @@ test('cash is recorded against a firm, one way or the other, and a second moveme
   document.getElementById('finance-flow-amount').value='100000';
   document.getElementById('finance-flow-asOf').value='2026-09-10';
   submit();
-  await settle(()=>writes.length===2);
-  assert.equal(writes[1].amount,600000,'added to the $500,000 already recorded that day');
-  assert.equal(writes[1].revision,'50000000','and saved over it, knowingly');
+  await settle(()=>writes.length===4);
+  assert.equal(writes[2].amount,600000,'added to the $500,000 already recorded that day');
+  assert.equal(writes[2].revision,'50000000','and saved over it, knowingly');
+  assert.deepEqual(writes[3].lines,[{ref:'f5-20260910',amount:600000,was:500000}],'and the trail says what it replaced');
   await settle(()=>/now comes to/.test(document.getElementById('finance-status').textContent));
   tool.stop();
 });

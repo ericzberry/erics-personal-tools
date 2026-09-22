@@ -84,10 +84,13 @@ test('a capital account statement is read into an investment, reviewed, and save
   assert.equal(writes.length,0,'nothing is written by reading');
 
   buttonNamed(review,'Save').dispatchEvent(new document.defaultView.Event('click'));
-  await settle(()=>writes.length>=2);
+  await settle(()=>writes.length>=3);
   // The investment is saved before the statement, because a capital account
-  // cannot be filed into something that does not exist yet.
-  assert.deepEqual(writes.map(write=>write.row),['holding','capital']);
+  // cannot be filed into something that does not exist yet — and the import
+  // last, listing what landed and the investment it had to make.
+  assert.deepEqual(writes.map(write=>write.row),['holding','capital','import']);
+  assert.equal(writes[1].importId,writes[2].number,'the statement points at the import that filed it');
+  assert.deepEqual([writes[2].lines,writes[2].made],[[{ref:'h1-20260630',amount:1100000,from:['Acme Ventures Fund III, L.P.']}],['h1']]);
   assert.deepEqual([writes[0].id,writes[0].name,writes[0].portfolio,writes[0].vehicle,writes[0].stated],
     ['h1','Acme Ventures Fund III, L.P.',1,1,1]);
   assert.deepEqual([writes[1].id,writes[1].value,writes[1].contributed,writes[1].distributed,writes[1].commitment],
@@ -199,8 +202,8 @@ test('a statement for an unknown holder proposes the portfolio, and saves it fir
   assert.match(document.getElementById('finance-capital-page').textContent,/Maisie Ava Berry 2021 Irrevocable Trust · new portfolio/);
 
   buttonNamed(document.getElementById('finance-capital-page'),'Save').dispatchEvent(new document.defaultView.Event('click'));
-  await settle(()=>writes.length>=3);
-  assert.deepEqual(writes.map(write=>write.row),['portfolio','holding','capital']);
+  await settle(()=>writes.length>=4);
+  assert.deepEqual(writes.map(write=>write.row),['portfolio','holding','capital','import']);
   // Its name said it was a trust, so it was proposed as one.
   assert.deepEqual([writes[0].name,writes[0].kind],['Maisie Ava Berry 2021 Irrevocable Trust',5]);
   assert.equal(writes[1].portfolio,writes[0].number);

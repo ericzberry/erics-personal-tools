@@ -64,9 +64,9 @@ test('the finance screen leads with its title, status and one action, and has no
   assert.deepEqual(headings,[]);
   const tabs=[...doc.querySelectorAll('#finance-tabs [role=tab]')];
   // Every label names a view. A verb among them reads as a button.
-  assert.deepEqual(tabs.map(node=>node.textContent),['This page','Net worth','Figures']);
-  assert.deepEqual(tabs.map(node=>node.hidden),[true,false,false],'a page to read is a tab only where there is one');
-  assert.deepEqual(tabs.map(node=>node.getAttribute('aria-selected')),['false','true','false']);
+  assert.deepEqual(tabs.map(node=>node.textContent),['This page','Net worth','Figures','Imports']);
+  assert.deepEqual(tabs.map(node=>node.hidden),[true,false,false,true],'a page to read, or a trail to follow, is a tab only where there is one');
+  assert.deepEqual(tabs.map(node=>node.getAttribute('aria-selected')),['false','true','false','false']);
   assert.equal(doc.querySelectorAll('#finance-tabs [role=tabpanel]:not([hidden])').length,1,'one panel at a time');
   assert.equal(headings.includes('Position'),false,'the NET and ASSETS labels already say that');
   const title=doc.querySelector('.tool-title-block');
