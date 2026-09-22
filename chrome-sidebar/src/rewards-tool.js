@@ -156,7 +156,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // empty wallet offers them rather than describing where they are.
   function emptyState(){
     if(!loaded)return [Note('Connect in Settings to load your saved rewards.')];
-    if(entries.length)return [Note('No matching rewards. Clear the search to see all entries.')];
+    if(entries.length)return [Note('No matching rewards.')];
     // The actions say what belongs here; a sentence listing the four kinds of
     // reward said it again in longer form, above the two buttons that offer it.
     return [ActionGroup([...(remote?[action('Add a card',startCard,'primary')]:[]),
@@ -233,7 +233,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
             detail:`${group.offers.length} offer${group.offers.length===1?'':'s'}`,
             open:group.open,
             children:group.offers.map(offer=>offerRow(catalog,offer,group.label))})])
-    ].filter(Boolean)):[Note('No matching offers. Clear the search to see all of them.')]));
+    ].filter(Boolean)):[Note('No matching offers.')]));
   }
   // Offered only where all three hold: a program's own page beside the panel, a
   // host that can read it, and a connection that can be asked to. Anywhere else

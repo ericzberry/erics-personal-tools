@@ -36,12 +36,11 @@ function controls() {
   for(const node of $('playground-form').querySelectorAll('input,textarea,select,button'))node.disabled=!canRun;
   $('connection-models').disabled=!canRun;
   $('playground-copy').disabled=working||!$('playground-output').textContent;
-  $('playground-context').textContent=dirty?'Save or cancel your changes first.':!selected?'Choose a connection under Connections.':!selected.hasApiKey?'Save an API key to try it.':`Using ${selected.name} · billed to that provider.`;
+  $('playground-context').textContent=dirty?'Save or cancel your changes first.':!selected?'Choose a connection under Connections.':!selected.hasApiKey?'Save an API key to try it.':`Using ${selected.name}`;
 }
 function endpointHint(){
   const provider=providerFor($('ai-provider').value);
   $('ai-base-url').placeholder=provider?.baseUrl||'https://your-provider.example/v1';
-  $('ai-endpoint-help').textContent=provider?.baseUrl?`Leave blank to use ${provider.baseUrl}`:'Enter the service’s API base URL and choose its API format.';
   $('ai-format-field').hidden=provider?.id!=='custom';
 }
 function renderList() {
@@ -64,7 +63,6 @@ function edit(connection=null) {
   $('ai-key').value='';$('ai-clear-key').checked=false;
   $('ai-clear-key').closest('label').hidden=!connection?.hasApiKey;
   $('ai-key').placeholder=connection?.hasApiKey?'Saved — leave blank to keep':'Paste your provider’s key';
-  $('ai-key-help').textContent=connection?.hasApiKey?'Leave blank to keep your saved key. Changing provider or API URL clears it unless you enter a new key.':'Keys are stored encrypted. Saved keys are never displayed.';
   $('connection-remove').hidden=!connection;
   $('connection-remove-confirm').hidden=true;
   $('playground-model').value='';

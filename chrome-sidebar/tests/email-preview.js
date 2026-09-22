@@ -65,10 +65,10 @@ const voice=mountWritingVoice({
 function show({open=false,drafting=false,drafted=false,summarized=false,learned=false,connected=true,mail=true,refused='',intent=''}){
   $('email-subject').textContent=open?email.subject:'Open an email in Gmail';
   $('email-from').textContent=open?`${email.name} · ${email.from}`:'';
-  $('email-read-status').textContent=open?'Latest expanded message':'Open a message, then expand it.';
+  $('email-read-status').textContent='';
   $('reply-intent').value=intent;
   for(const id of ['reply-email','summarize-email'])$(id).disabled=!open||drafting;
-  $('reply-status').textContent=drafting?'Drafting in your voice…':drafted?'Review and edit before using.':'';
+  $('reply-status').textContent=drafting?'Drafting in your voice…':'';
   $('summary-status').textContent='';
   for(const [shown,result,output,copy,text] of [
     [drafted,'reply-result','reply-output','copy-reply',reply],

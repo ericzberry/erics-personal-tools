@@ -7,22 +7,19 @@ export function DraftView() {
   const draft=Section([
     Notice('',{id:'advice-status',className:'notice notice-subtle'}),
     Notice('',{id:'coverage',hidden:true}),
-    Notice('',{id:'manual-feedback',hidden:true}),Stack([],{id:'spreadsheet-players'}),
-    Note('Saved on this device · Keep ESPN open.')
+    Notice('',{id:'manual-feedback',hidden:true}),Stack([],{id:'spreadsheet-players'})
   ],{id:'draft-view'});
   return Section([UI.StickyGroup([ToolHeading('Bedford Bridges','10 teams · Half-PPR'),Stack([],{id:'roster-counts','aria-live':'polite'}),Note('',{id:'advice-context',className:'footnote context-note'})]),Main([draft,Notice('',{id:'error',role:'alert',hidden:true})])],{id:'football-tool'});
 }
 export function DraftReset() {
   return Disclosure('Reset draft data',[
-    Note('Clears this board’s picks and turns capture off.'),
     Button('Reset this draft',{id:'reset-draft',variant:'danger'}),Notice('',{id:'reset-draft-status',hidden:true})
   ],{className:'settings-panel'});
 }
 export function DraftSettings() {
   return Disclosure('Draft capture',[
     Button('Download ESPN diagnostics',{id:'download-espn-diagnostics'}),
-    UI.Toggle({id:'capture-picks',label:'ESPN is capturing picks',checked:true,descriptionId:'capture-help'}),
-    Note('On: use ESPN picks. Off: mark players on the board.',{id:'capture-help'}),
+    UI.Toggle({id:'capture-picks',label:'ESPN is capturing picks',checked:true}),
     Stack([
       ...Field({id:'manual-clock',label:'Current overall pick',kind:'number',placeholder:'Unknown'}),
       ...Field({id:'manual-slot',label:'Your draft position',kind:'select',options:[{text:'Unknown',value:''},...Array.from({length:10},(_,i)=>({text:String(i+1),value:String(i+1)}))]}),
@@ -70,8 +67,8 @@ export const VoiceLines=(voices=[])=>voices.map(voice=>Stack([
 // The quiet screen, and the things it is worth interrupting for: whose birthday
 // it is, and the money on a card that the close of the quarter takes back.
 // Nothing coming leaves it exactly as it was.
-export const HomeView=()=>Section([UI.PageHeader({title:'Ready when you are.'}),
-  Main([Note('Open a tool, or a site a tool knows.'),Stack([],{id:'home-birthdays'})])],{id:'home-tool',className:'tool-page',hidden:true});
+export const HomeView=()=>Section([UI.PageHeader({title:'Home'}),
+  Main([Stack([],{id:'home-birthdays'})])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     UI.SettingsList([
@@ -121,8 +118,7 @@ export function AISettingsView() {
   const field=UI.FormField;
   return Stack([
     Section([Stack([UI.Strong('eb',{className:'settings-monogram'}),UI.Strong('ericberry')],{className:'settings-brand'}),
-      Note('Personal settings'),CapabilityPicker(),Text('AI connections',{className:'settings-nav-current'}),
-      Note('ericberry → Tab → Enter',{className:'settings-shortcut'})
+      Note('Personal settings'),CapabilityPicker(),Text('AI connections',{className:'settings-nav-current'})
     ],{className:'settings-rail'}),
     Main([
       Stack([Stack([Heading('AI connections',1)]),
@@ -165,9 +161,7 @@ export function AISettingsView() {
             field({id:'ai-provider',label:'Provider',kind:'select',options:AI_PROVIDERS.map(provider=>({text:provider.name,value:provider.id}))}),
             Stack([field({id:'ai-format',label:'API format',kind:'select',options:[{text:'OpenAI Chat Completions',value:'chat'},{text:'OpenAI Responses',value:'responses'},{text:'Anthropic Messages',value:'anthropic'}]})],{id:'ai-format-field',hidden:true}),
             field({id:'ai-base-url',label:'API base URL (optional)',kind:'url',placeholder:'https://…'}),
-            Note('',{id:'ai-endpoint-help'}),
             field({id:'ai-key',label:'API key',kind:'password',placeholder:'Paste your provider’s key'}),
-            Note('Stored encrypted, never shown again.',{id:'ai-key-help'}),
             UI.Toggle({id:'ai-clear-key',label:'Remove the saved API key',checked:false}),
             ActionGroup([Button('Save connection',{id:'connection-save',variant:'primary',type:'submit'}),Button('Cancel',{id:'connection-cancel',variant:'secondary'})]),
             Button('Remove connection',{id:'connection-remove',variant:'danger-subtle',hidden:true}),

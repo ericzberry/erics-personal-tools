@@ -299,8 +299,7 @@ export function InstitutionCard(firm,{currency='USD'}={}){
         total.flow?Label(`${money(Math.abs(total.flow),currency)} ${total.flow<0?'taken out':'added'}`):null
       ],{className:'firm-split'})
     ],{className:'firm-performance'})
-      // One reading is a balance, not a return; the second one starts the line.
-      :firm.asOf?Note('A return starts with the next reading.'):null,
+      :null,
     drawn.length>1?LineChart({label:`${firm.label}, return since ${firm.from}`,height:84,marks:'last',axis:'ends',zero:true,
       points:drawn.map(point=>({label:point.asOf,value:(point.index-1)*100,x:Date.parse(point.asOf)/DAY})),
       format:value=>returnText(value/100),
@@ -324,7 +323,6 @@ export function InstitutionCard(firm,{currency='USD'}={}){
         // The caption stays short — it never wraps — so where the movement
         // stands against the readings is a line of its own under it.
         meta:[entry.flow.amount<0?'taken out':'added',entry.flow.pending?'waiting to sync':''].filter(Boolean).join(' · '),
-        notes:[entry.before?'Before the first full reading, so not counted.':entry.waiting?'Counts from the next reading.':''],
         actions:entry.actions||[],extra:entry.extra||[]}))
     ],{className:'record-group firm-cash'}):null
   ],{className:'firm-card','aria-label':firm.label});

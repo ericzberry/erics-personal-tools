@@ -36,7 +36,7 @@ export function AdviceConditions(cards,purchase,today=new Date().toISOString().s
     const control=FormField({id:`advisor-confirm-${card.id}-${index}`,label:`${card.name}: ${rule.condition}`,kind:'checkbox'});
     control.querySelector('input').setAttribute('data-confirm',`${card.id}:${index}`);return [control];
   }));
-  return fields.length?[Note('Confirm only what this purchase meets.'),...fields]:[];
+  return fields;
 }
 const percent=value=>`${Number(value.toFixed(2))}%`;
 const near=(a,b)=>Math.abs(a-b)<0.000001;
@@ -88,7 +88,6 @@ export function Advice(advice){
     Section([
       Strong(tied.length?`Pay with ${best.name} or ${tied.map(row=>row.name).join(' or ')}`:`Pay with ${best.name}`),
       Heading(estimated?`${money(best.total)} back`:`${percent(best.rate)} back`,3),
-      Note(estimated?'From your saved terms, credits and offers. No interest, fees or signup bonuses.':'From your saved terms. Add an amount for dollar estimates.'),
       benefitLines(best,estimated),
       ...conditions(best.conditions),
       ...(runnerUp?[Note(`${runnerUp.name} is next: ${gap(runnerUp).replace(/\.$/,'')} here.`,{className:'footnote'})]:[]),

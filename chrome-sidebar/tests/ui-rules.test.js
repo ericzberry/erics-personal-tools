@@ -141,6 +141,37 @@ test('nothing explains itself: a capability entry carries a name, a way in and a
   }
 });
 
+// UI-17, the other half, from the Gmail panel's "Open a message, then expand
+// it." — "Get rid of the explanatory text here (and really everywhere). This
+// app is just for me. No UX cues are needed." A literal Note in a component
+// that tells him how to use the screen — what a control does, what to press
+// next, what will be kept safe, what a figure rests on — is removed, not
+// shortened. What a static Note may still say is that there is nothing to
+// show, or what one record is asking to have decided. Those are listed here
+// by name, so a new sentence has to argue its way in. Text computed from data
+// is a reading, not a cue, and is not counted.
+const PROSE_ALLOWED={
+  'finance.js':['No dated figures yet.'],
+  'travel.js':['Changed on another device. Choose which version to use.']
+};
+// restaurant-views.js is left for the next pass because another session is
+// rewriting it as this rule lands; at HEAD it still carries eight cues ("Up to
+// 7 dates.", "For example: 2 Michelin stars…"). When that work is in, drop the
+// exemption, allow only its "No booking page was verified" result line, and
+// remove what is left.
+const PROSE_LATER=new Set(['restaurant-views.js']);
+test('nothing explains itself: no component carries a note telling him how to use it',()=>{
+  for(const name of readdirSync(COMPONENTS).filter(n=>n.endsWith('.js')&&!PROSE_LATER.has(n)).sort()){
+    const code=readFileSync(new URL(name,COMPONENTS),'utf8').replace(/\/\/.*$/gm,'');
+    const allowed=new Set(PROSE_ALLOWED[name]||[]);
+    for(const [,text] of code.matchAll(/\bNote\('([^']*)'/g)){
+      if(text.split(/\s+/).length<4||!text.endsWith('.')||allowed.has(text))continue;
+      assert.fail(`${name}: Note('${text}') explains the screen — remove it; the labels and controls say what it does. See UI-17 in docs/UI_RULES.md.`);
+    }
+    assert.ok(!/\bhelp:/.test(code),`${name}: a help line under a field is a UX cue. See UI-17 in docs/UI_RULES.md.`);
+  }
+});
+
 // UI-21. Keyboard focus is the one state a reader cannot discover by pointing,
 // so it has to look the same everywhere. It did not: the extension's global
 // ring was brass and the segmented control's matched it, the Tools navigation

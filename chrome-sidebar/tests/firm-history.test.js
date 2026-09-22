@@ -143,7 +143,7 @@ test('the card says what the firm returned, what it earned against what it was h
   const quarter=card.querySelector('.firm-quarter:not(.firm-quarter--head)');
   assert.match(quarter.textContent,/^2026 Q42026-11-20/,'a quarter last read before its closing month says the day');
   assert.deepEqual([...card.querySelectorAll('.firm-cash .record-meta')].map(node=>node.textContent),['taken out','added']);
-  assert.deepEqual([...card.querySelectorAll('.firm-cash .record-row > p')].map(node=>node.textContent),['Counts from the next reading.']);
+  assert.equal(card.querySelectorAll('.firm-cash .record-row > p').length,0,'a flow that is not yet counted says nothing about it');
   assert.ok(card.querySelector('.firm-cash .amount--negative'),'cash out reads as money out');
   assert.equal(card.querySelectorAll('.line-chart').length,1,'two readings draw a line');
   // One reading is a balance, not yet a return.
@@ -151,7 +151,7 @@ test('the card says what the firm returned, what it earned against what it was h
   const lone=InstitutionCard(once,{currency:'USD'});
   assert.equal(lone.querySelector('.firm-return'),null);
   assert.equal(lone.querySelector('.line-chart'),null);
-  assert.match(lone.textContent,/A return starts with the next reading\./);
+  assert.doesNotMatch(lone.textContent,/next reading/,'one reading draws no return and explains nothing');
   assert.deepEqual([returnText(0.0712),returnText(-0.004),returnText(null)],['+7.1%','−0.4%','—']);
 });
 

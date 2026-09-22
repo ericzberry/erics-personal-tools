@@ -111,7 +111,7 @@ $('download-espn-diagnostics').addEventListener('click',async()=>{
 $('draft-settings').addEventListener('toggle',()=>{if($('draft-settings').open)renderManual(true);});
 $('capture-picks').addEventListener('change',async()=>{
   const active=!$('capture-picks').checked;$('capture-picks').disabled=true;
-  try{await changeManual(r=>({...r,active}),active?'Manual picks enabled. Mark players on the board.':'Using ESPN picks. Manual buttons hidden.');}
+  try{await changeManual(r=>({...r,active}));}
   finally{$('capture-picks').disabled=false;renderManual();}
 });
 function useCatalog(next){catalog=next;rankings=reconcileRankings(sourceRankings,catalog);catalogPlayers=correctionPlayers(rankings,catalog);}

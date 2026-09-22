@@ -14,7 +14,6 @@ body.settings-site {max-width:none;border:0;margin:0;font-size:16px;min-height:1
 .settings-monogram {display:grid;place-items:center;width:40px;height:40px;border:1px solid #789189;border-radius:12px;font:24px Georgia,serif;}
 .settings-rail .footnote {color:#c2d1c9;font-size:14px;margin:22px 0;}
 .settings-nav-current {background:#ffffff12;border-left:3px solid #bece9c;padding:12px 14px;font-size:15px;margin-top:36px;border-radius:0 8px 8px 0;}
-.settings-shortcut {margin-top:auto;padding-top:70px;color:#c2d1c9;font-size:13px;line-height:1.8;}
 .settings-shell > main {width:100%;max-width:1160px;padding:42px 48px 28px;margin:0 auto;}
 .settings-heading {display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px;}
 .settings-heading h1 {font-size:34px;letter-spacing:-.8px;}
@@ -49,7 +48,7 @@ body.settings-site {max-width:none;border:0;margin:0;font-size:16px;min-height:1
 .settings-site .editable-output {font-size:15px;min-height:80px;}
 .ai-output {white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.7 var(--sans);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:20px;margin-top:18px;max-height:650px;overflow:auto;}
 @media(max-width:1000px) {.settings-shell {grid-template-columns:180px minmax(0,1fr);}.settings-shell > main {padding:30px 24px;}.settings-columns {gap:18px;}.settings-card {padding:20px;}}
-@media(max-width:800px) {.settings-shell {display:block;}.settings-rail {padding:16px 24px;}.settings-rail > .footnote,.settings-nav-current,.settings-shortcut {display:none;}.settings-brand h1 {font-size:23px;}.settings-monogram {width:32px;height:32px;font-size:20px;}.settings-columns {grid-template-columns:1fr;}.settings-heading {align-items:flex-start;}.settings-heading h1 {font-size:29px;}}
+@media(max-width:800px) {.settings-shell {display:block;}.settings-rail {padding:16px 24px;}.settings-rail > .footnote,.settings-nav-current {display:none;}.settings-brand h1 {font-size:23px;}.settings-monogram {width:32px;height:32px;font-size:20px;}.settings-columns {grid-template-columns:1fr;}.settings-heading {align-items:flex-start;}.settings-heading h1 {font-size:29px;}}
 @media(max-width:400px) {.settings-shell > main {padding:24px 16px;}.settings-heading {flex-wrap:wrap;}.settings-card {padding:18px;}}
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 280px; }

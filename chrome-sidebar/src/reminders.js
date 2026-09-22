@@ -95,7 +95,7 @@ export function mountReminders(root,{credentials,offline,remote=cloudRequest,
     const heading=$('now').closest('section').querySelector('.settings-group-title');
     if(heading)heading.hidden=!records.length;
     if(!records.length&&loaded){
-      $('now').replaceChildren(Note('No reminders yet. Add one above.'));
+      $('now').replaceChildren(Note('No reminders yet.'));
       $('now').closest('section').hidden=false;
     }
     for(const key of fields)$(key).disabled=busy||!loaded;

@@ -14,9 +14,7 @@ export function TravelView({connection=true,mode='inline',editId=null}={}) {
         FormField({id:'travel-category',label:'Category',kind:'select',options:TRAVEL_CATEGORIES.map(text=>({text,value:text}))}),
         FormField({id:'travel-name',label:'Program or document name',kind:'text',placeholder:'e.g. Delta SkyMiles'}),
         FormField({id:'travel-number',label:'Number',kind:'password'}),
-        Note(mode==='editor'?'Numbers stay masked while you edit.':'Tap a program to see its number, or use Copy in the list.',{id:'travel-number-help'}),
         FormField({id:'travel-notes',label:'Notes (optional)',kind:'password'}),
-        Note('Blank keeps the saved value.'),
         ActionGroup([Button('Save record',{id:'travel-save',type:'submit',variant:'primary'}),Button('Cancel edits',{id:'travel-cancel',variant:'secondary'})],{compact:true}),
         Note('',{id:'travel-form-status',role:'status'})
       ],{id:'travel-form',className:'form-stack'})
@@ -77,8 +75,7 @@ export function TravelConnection(){return Stack([Disclosure('Connection settings
         Note('',{id:'travel-connection',role:'status'}),
         Stack([FormField({id:'travel-token',label:'Private access token',kind:'password'}),ActionGroup([Button('Connect',{id:'travel-connect',variant:'primary'})])],{id:'travel-setup',className:'connection-setup'}),
         Stack([
-          ActionGroup([Button('Refresh records',{id:'travel-refresh',variant:'secondary',size:'compact'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger',size:'compact'})],{compact:true}),
-          Note('Removes this device’s offline copies. Cloud records stay.')
+          ActionGroup([Button('Refresh records',{id:'travel-refresh',variant:'secondary',size:'compact'}),Button('Disconnect this device',{id:'travel-disconnect',variant:'danger',size:'compact'})],{compact:true})
         ],{id:'travel-maintenance',className:'connection-maintenance',hidden:true}),
         Note('',{id:'travel-connection-status',role:'status'})
       ],{className:'connection-content'})

@@ -35,8 +35,7 @@ export function CardsView(){
           field('name','Full card name and country'),
           field('unit','Reward type','select',[{value:'cash',text:'Cash back (%)'},{value:'points',text:'Points or miles per dollar'}]),
           field('base','Base reward rate','number'),field('cpp','Redemption value (cents per point)','number'),
-          Note('Cash back uses 1.'),
-          Heading('Bonus categories',3),Note('Total rates. For a cap, enter the spend left; blank is unlimited.'),
+          Heading('Bonus categories',3),
           Stack([],{id:'cards-rules'}),ActionGroup([button('Add bonus category','add-rule','secondary',{size:'compact'})]),
           field('source','Issuer terms URL'),field('checked','Terms reviewed on','date'),
           field('notes','Limits, exclusions, and shared caps','textarea')
@@ -126,7 +125,7 @@ export function PurchaseConditions(cards,purchase){
     const control=FormField({id:`cards-confirm-${card.id}-${index}`,label:`${card.name}: ${rule.condition}`,kind:'checkbox'});
     control.querySelector('input').setAttribute('data-confirm',`${card.id}:${index}`);return [control];
   }));
-  return fields.length?[Note('Confirm only what this purchase meets.'),...fields]:[];
+  return fields;
 }
 
 const percent=value=>`${value.toFixed(2)}%`;
@@ -138,8 +137,7 @@ export function PurchaseReading(reading){
   return [Section([
     Strong(detail),
     ...(reading.reason?[Note(reading.reason)]:[]),
-    ...(reading.confidence==='low'?[Note('Low confidence. Check the category.',{className:'footnote purchase-reading-warning'})]:[]),
-    Note(reading.manual?'You set these values.':'Read from your description. Adjust below to change it.')
+    ...(reading.confidence==='low'?[Note('Low confidence.',{className:'footnote purchase-reading-warning'})]:[])
   ],{className:'purchase-reading'})];
 }
 const near=(a,b)=>Math.abs(a-b)<0.000001;
@@ -164,7 +162,6 @@ export function ComparisonResults(rows,{unrated=0,perks=new Map()}={}){
     return `Beats ${runnerUp.name} by ${percent(row.rate-runnerUp.rate)}${estimated?` · ${money(row.dollars-runnerUp.dollars)} more`:''}.`;
   };
   return [Heading('Recommended card',2),
-    Note(estimated?'From your saved terms. No interest, fees, signup bonuses or caps.':'From your saved terms. Add an amount for dollar estimates.'),
     ...(missing?[Note(missing)]:[]),
     ...rows.map(row=>Section([
       Strong(`${near(row.dollars,top)?(tied?'Tied best · ':'Best return · '):''}${row.name}`),

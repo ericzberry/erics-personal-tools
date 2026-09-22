@@ -45,7 +45,7 @@ here.
 | **UI-8** | One system font stack, held in the `--sans` token. Nineteen inlined copies of `-apple-system, BlinkMacSystemFont, …` were nineteen places to forget when the stack changes, and two of them had already lost `"Segoe UI"`. Reached zero in 0.6.207 and moved up from ratcheting. | `tests/ui-rules.test.js` |
 | **UI-9** | Corners come from the radius set: `0`, 4, 6, 7, 8, 12 and 14px, `50%`, `999px`, and the `--radius` and `--control-radius` tokens. 7px is the inner curve of an 8px box with a 1px border, and nothing else. Reached zero in 0.6.207 and moved up from ratcheting. | `tests/ui-rules.test.js` |
 | **UI-16** | One action row per state; the actions that do not apply are hidden, not disabled. No component builds two action groups as siblings. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
-| **UI-17** | A registry entry carries a name, a way in and an icon, and no prose. The rest of "nothing on screen explains itself" is read on the screen; stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
+| **UI-17** | A registry entry carries a name, a way in and an icon, and no prose, and no component carries a note telling him how to use a screen: a static Note says only that there is nothing to show or what one record is asking to have decided, by an allowlist in the test. The rest of "nothing on screen explains itself" is read on the screen; stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-21** | One focus ring: 2px, in the forest token, in every sheet either host loads. Offsets may differ — inside a tile, outside a control — but the width and the colour may not. The one exception is the gear on the forest header, which rings in `currentColor` because forest on forest is no ring at all. | `tests/ui-rules.test.js` |
 | **UI-22** | Everything that expands opens the same way: one inset block with a banded head, and no sheet carries a list of disclosures exempt from it. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
 | **UI-26** | One currency formatter, in `ui.js`, and it writes a negative in parentheses. No other module builds a currency format. Stated in full under [From a complaint](#from-a-complaint). | `tests/ui-rules.test.js` |
@@ -132,15 +132,22 @@ build them as adjacent siblings. *From Settings → Credentials, where a dead
 Refresh/Disconnect row sat under Connect while disconnected; he said it was
 something "the app keeps doing".* Checked in `tests/ui-rules.test.js`.
 
-**UI-17 — nothing on screen explains itself.** *Enforced for registries, by eye
-elsewhere.* No menu-entry descriptions, no section intros, no capability
-blurbs, no caveat footnotes. Ship headings, labels, controls and values. Text
-earns its place only by doing work: live status, an error and what to do about
-it, an empty state, a consequence that is not visible before it is
-irreversible, and a rule that decides what a value must contain. A registry
-entry carries no prose field at all. *From the Tools menu's "Follow Gmail and
-ESPN automatically", which he then generalised to every screen.* The registry
-half is checked in `tests/ui-rules.test.js`; the rest is read on the screen.
+**UI-17 — nothing on screen explains itself.** *Enforced for registries and
+for the static notes in components, by eye elsewhere.* No menu-entry
+descriptions, no section intros, no capability blurbs, no caveat footnotes, no
+line under a field saying what to type or what will be kept safe, no sentence
+after a result saying what it rests on, no hint at what to press next. Ship
+headings, labels, controls and values. Text earns its place only by doing
+work: live status, an error and what to do about it, an empty state, a
+question one record is asking to have decided, and a consequence that is not
+visible before it is irreversible. A registry entry carries no prose field at
+all, and `ProtectedField` takes no help line. *From the Tools menu's "Follow
+Gmail and ESPN automatically", which he then generalised to every screen; and
+again from the Gmail panel's "Open a message, then expand it." — "Get rid of
+the explanatory text here (and really everywhere). This app is just for me. No
+UX cues are needed."* The registry half and the notes in components are checked
+in `tests/ui-rules.test.js` (a static Note of four words or more ending in a
+full stop must be on the test's allowlist); the rest is read on the screen.
 
 **UI-18 — never announce a state the screen is already showing.** *By eye; the
 mechanical half is enforced.* An open section shows its records; it does not

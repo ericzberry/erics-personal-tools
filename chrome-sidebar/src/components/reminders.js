@@ -12,7 +12,6 @@ export function RemindersView(){
     // read at all: this is where birthdays come from, not what the tool is for,
     // and an empty section explaining a connection nobody has made is noise.
     SettingsGroup({title:'From your calendar',level:2,children:[
-      Note('Checked once a month. Birthdays already here are left alone.'),
       Notice('',{id:'reminders-calendar-status',role:'status'}),
       Stack([],{id:'reminders-calendar-actions',className:'action-group'})
     ],id:'reminders-calendar',hidden:true}),

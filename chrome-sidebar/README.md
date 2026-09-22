@@ -4179,3 +4179,18 @@ it. **Home** now leads the sidebar's Tools menu, above the tools, and choosing
 it keeps the home screen open as tabs change, like any selected tool. It is
 `HOME_CAPABILITY` in `capabilities.js`, the same entry the mobile launcher's
 Home tile draws from. Archive: `release/erics-sidebar-0.6.276.zip`.
+
+## No UX cues (0.6.277 / mobile 0.1.226)
+
+The Gmail panel said *Open a message, then expand it.* under its heading, and
+the owner asked for that and every line like it to go: the app is his alone, and
+a screen that tells him how to use it is clutter. Gone are the notes under
+fields saying what to type or that a key is stored encrypted, the sentences
+under a recommendation saying what it rests on, the settings-page keyboard
+shortcut, the draft board's "keep ESPN open", the toggle's on/off legend, the
+reminder calendar's "checked once a month", the wallet's masking and disconnect
+explanations, and the finance card's "a return starts with the next reading".
+Empty states keep their first sentence and lose the instruction after it. The
+rule is UI-17 in [UI_RULES.md](../docs/UI_RULES.md), now checked for every
+static note in a component: `tests/ui-rules.test.js` holds the allowlist of
+the three that remain. Archive: `release/erics-sidebar-0.6.277.zip`.

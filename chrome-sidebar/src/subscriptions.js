@@ -65,7 +65,7 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
         extra:[r.notes?Note(r.notes):null,decisions.length?ActionGroup(decisions,{compact:true}):null,outcome,
           SubscriptionDetails(r,{find,open:open.has(r.id),onToggle:shown=>shown?open.add(r.id):open.delete(r.id)}),confirm]});
     });
-    $('records').replaceChildren(...(rows.length?rows:loaded?[Note('No subscriptions saved yet. Read a statement or add one below.')]:[]));
+    $('records').replaceChildren(...(rows.length?rows:loaded?[Note('No subscriptions yet.')]:[]));
     for(const key of [...subscriptionFields,'file','read','save','cancel','drop'])$(key).disabled=busy||!loaded;
     // With nothing saved, reading a statement is what the screen is for, so it
     // starts open — once, so a drawer the owner closed stays closed. UI-35.

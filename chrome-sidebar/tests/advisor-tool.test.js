@@ -99,7 +99,7 @@ test('with no model to read the purchase, the controls open and a category by ha
   await settle(()=>$('advisor-result').children.length>0);
   assert.equal(h.document.querySelector('.advice-best strong').textContent,'Pay with Synthetic Everyday Card');
   assert.equal(h.document.querySelector('.advice-best h3').textContent,'2% back');
-  assert.match($('advisor-reading').textContent,/You set these values/);
+  assert.doesNotMatch($('advisor-reading').textContent,/You set these values|Read from your description/);
   h.restore();
 });
 

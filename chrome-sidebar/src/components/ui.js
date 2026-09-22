@@ -477,7 +477,7 @@ export function Toggle({id,label,checked=false,descriptionId}) {
 }
 
 export function RosterCounts(counts,{known=true,alerts=[]}={}) {
-  return Section([Label('YOUR ROSTER',{className:'eyebrow'}),Stack(Object.entries(counts).map(([position,count])=>Stack([Strong(known?count:'—'),Label(position)],{'aria-label':`${position}: ${known?count:'unknown'}`,className:alerts.some(a=>a.position===position)?'roster-count--scarce':undefined})),{className:'roster-count-grid'}),...alerts.map(alert=>Notice(alert.message,{className:'scarcity-notice',title:'ADP estimate. Quality means ranked above starter replacement; short boards use current-or-better tiers. Alerts start when a starter is due: RB rounds 2/4, WR rounds 3/5.'}))],{className:'roster-count-card','aria-label':'Your roster by position'});
+  return Section([Label('YOUR ROSTER',{className:'eyebrow'}),Stack(Object.entries(counts).map(([position,count])=>Stack([Strong(known?count:'—'),Label(position)],{'aria-label':`${position}: ${known?count:'unknown'}`,className:alerts.some(a=>a.position===position)?'roster-count--scarce':undefined})),{className:'roster-count-grid'}),...alerts.map(alert=>Notice(alert.message,{className:'scarcity-notice'}))],{className:'roster-count-card','aria-label':'Your roster by position'});
 }
 
 export const StickyGroup=children=>Stack(children,{className:'sticky-group'});
@@ -638,7 +638,7 @@ export const MaskedValue=(text,props={})=>Label(text,{className:'masked-value',.
 // Editor group for a value encrypted on the device before it is saved. The
 // inputs are left empty when a value already exists: an empty input means
 // "keep what is stored", never "erase it".
-export function ProtectedField({id,label,help,numberLabel='Card number',expiryLabel='Expiration (MM/YY, optional)'}) {
+export function ProtectedField({id,label,numberLabel='Card number',expiryLabel='Expiration (MM/YY, optional)'}) {
   const number=FormField({id:`${id}-number`,label:numberLabel,kind:'password'});
   const expiry=FormField({id:`${id}-expiry`,label:expiryLabel,kind:'text'});
   for(const [field,mode,pattern] of [[number,'numeric','[0-9 ]*'],[expiry,'numeric','[0-9/]*']]) {
@@ -651,7 +651,6 @@ export function ProtectedField({id,label,help,numberLabel='Card number',expiryLa
     Stack([Label(label,{className:'protected-title'}),Badge('Encrypted on device')],{className:'protected-heading'}),
     Text('',{id:`${id}-state`,className:'protected-state',role:'status',hidden:true}),
     ActionGroup([],{id:`${id}-actions`,compact:true}),
-    number,expiry,
-    Note(help,{id:`${id}-help`})
+    number,expiry
   ],{id,className:'protected-field'});
 }
