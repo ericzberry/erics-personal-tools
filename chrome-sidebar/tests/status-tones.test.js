@@ -24,6 +24,22 @@ test('a status line wears one tone at a time and loses it when it is cleared',()
   assert.throws(()=>setStatus(line,'Something','warning'),/Unknown status tone/);
 });
 
+// A sentence can carry a link, and stays one sentence: the line is a grid of
+// mark and text, so its parts share one cell rather than taking one each.
+test('a status sentence with a link in it is one cell, and clears like any other',()=>{
+  const document=setup();
+  const line=Notice('',{id:'x'});
+  const link=document.createElement('a');link.href='https://example.com/folder';link.textContent='2025';
+  setStatus(line,['Filed ',link,' / K-1.pdf.'],'success');
+  assert.equal(line.children.length,1);
+  assert.equal(line.textContent,'Filed 2025 / K-1.pdf.');
+  assert.equal(line.querySelector('a').getAttribute('href'),'https://example.com/folder');
+  assert.ok(line.classList.contains('notice--success'));
+  setStatus(line,[],'success');
+  assert.equal(line.textContent,'');
+  assert.equal(line.classList.contains('notice--success'),false);
+});
+
 // An error has to interrupt; the rest can wait for a pause in the reading.
 test('what failed is announced assertively and keeps the element role it was built with',()=>{
   setup();

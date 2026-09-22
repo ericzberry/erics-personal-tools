@@ -41,6 +41,9 @@ const api=({connected=true,filed=FILED,groups=[],existing=null}={})=>async(_toke
   return {};
 };
 const upload=async()=>({filed:{name:'Form 1099 - Schwab.pdf',year:'2025',id:'x',webViewLink:'#',size:184000,modifiedTime:'2026-09-11T00:00:00.000Z'},replaced:false});
+// A divided year, so the folder the status line links is the longest it gets.
+const uploadDivided=async()=>({filed:{name:'Return - Federal - Berry 2020 Irrevocable Family Trust.pdf',year:'2026',
+  path:['2026','Berry 2020 Irrevocable Family Trust','Filings'],id:'x',webViewLink:'#',size:184000,modifiedTime:'2026-09-11T00:00:00.000Z'},replaced:false});
 // A dropped document, built here so the drop zone can be exercised without a
 // file picker. Text rather than PDF, so the on-device extraction succeeds and
 // the states after it can be seen.
@@ -58,6 +61,7 @@ const states=[
   ['Document read, ready to file',{},'drop'],
   ['That name is already filed',{existing:{name:'Form 1099 - Schwab.pdf',modifiedTime:'2026-02-14T00:00:00.000Z',size:184000}},'conflict'],
   ['A return, named from who filed it and where',{},'return'],
+  ['Filed, and its folder opens from the line that says so',{upload:uploadDivided},'filed'],
   ['The document needs a password',{},'locked'],
   ['A year divided by taxpayer and by what a document is for',{filed:[],groups:GROUPS}]
 ];
@@ -67,7 +71,7 @@ for(const [label,options,step] of states){
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:20px 0 8px;color:#666';
   const host=document.createElement('div');
   root.append(heading,host);
-  const tool=mountTaxes(host,{credentials,remote:api(options),upload,openExternal:()=>true});
+  const tool=mountTaxes(host,{credentials,remote:api(options),upload:options.upload||upload,openExternal:()=>true});
   if(step){
     await tool.refresh();
     // Drive the drop the way a person would, through the shared file-drop path.
@@ -75,7 +79,7 @@ for(const [label,options,step] of states){
     const dropped=step==='locked'?lockedDocument():syntheticDocument();
     zone.dispatchEvent(Object.assign(new Event('drop',{bubbles:true,cancelable:true}),{dataTransfer:{files:[dropped]}}));
     await new Promise(resolve=>setTimeout(resolve,300));
-    if(step==='conflict')host.querySelector('#taxes-file-actions button')?.click();
+    if(step==='conflict'||step==='filed')host.querySelector('#taxes-file-actions button')?.click();
     if(step==='return'){
       const type=host.querySelector('#taxes-type');
       type.value='return';type.dispatchEvent(new Event('change',{bubbles:true}));

@@ -8,7 +8,8 @@
 // one on first use. It lives here rather than in a record because it is the one
 // fixed destination this capability exists to reach.
 export const TAX_ROOT_FOLDER_ID='16kSurMc_G_wTBH-hUnoNFYPBUwkKROZN';
-export const TAX_ROOT_FOLDER_URL=`https://drive.google.com/drive/folders/${TAX_ROOT_FOLDER_ID}`;
+export const driveFolderUrl=id=>`https://drive.google.com/drive/folders/${encodeURIComponent(id)}`;
+export const TAX_ROOT_FOLDER_URL=driveFolderUrl(TAX_ROOT_FOLDER_ID);
 
 // `prefix` is what the filed name starts with. "Other document" has none: its
 // name is whatever the owner calls it, because the point of that entry is a

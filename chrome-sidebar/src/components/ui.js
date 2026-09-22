@@ -66,11 +66,17 @@ export function Notice(text='',{tone='',...props}={}) {
 // Says one thing about one operation. Clearing the text clears the tone, so a
 // finished operation never leaves its old colour behind, and a new tone
 // replaces the last one rather than stacking on it.
+// `text` is a string, or the parts of one sentence when a part of it opens
+// something — where a document was just filed. The parts share one span: the
+// line is a grid of mark and sentence, and loose nodes would each take a cell.
 export function setStatus(node,text='',tone='') {
   if(!node)return node;
   if(tone&&!STATUS_TONES.includes(tone))throw Error(`Unknown status tone: ${tone}`);
-  const active=text?tone:'';
-  node.textContent=text||'';
+  const parts=Array.isArray(text)?text.filter(Boolean):null;
+  const said=parts?parts.length>0:!!text;
+  const active=said?tone:'';
+  if(parts)node.replaceChildren(...(said?[element('span',{},parts)]:[]));
+  else node.textContent=text||'';
   for(const name of STATUS_TONES)node.classList.toggle(`notice--${name}`,name===active);
   // The element keeps whatever role it was built with — controllers find their
   // status lines by it — so urgency is carried by the live region instead.

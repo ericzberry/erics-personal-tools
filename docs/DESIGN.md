@@ -82,7 +82,9 @@ assertively; progress and success wait for a pause.
 
 `setStatus(node, text, tone)` in `chrome-sidebar/src/components/ui.js` is the
 only way to write a status line, with `Spinner` and `ProgressBar` for an
-indicator placed beside the thing being worked on. The implementation lives in
+indicator placed beside the thing being worked on. `text` may be the parts of
+one sentence — strings and a `Link` — when part of what just happened can be
+opened, such as the folder a document was filed into. The implementation lives in
 `chrome-sidebar/src/components/status.css`, which every host imports through
 `tokens.css`. Review the four tones together at
 `chrome-sidebar/tests/status-tones-preview.html`.

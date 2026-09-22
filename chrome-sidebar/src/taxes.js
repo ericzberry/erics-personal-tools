@@ -1,9 +1,9 @@
 import {TaxesView,Destination,ConflictPanel,PasswordPanel,FiledList,ConnectionPanel,fileSize} from './components/taxes.js';
-import {AttachmentCard,Button,setStatus} from './components/ui.js';
+import {AttachmentCard,Button,Link,setStatus} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {readStatement,trimForReading,ACCEPTED} from './statement-text.js';
 import {taxFileName,taxFolderPath,taxYears,defaultTaxYear,normalizeTaxFiling,parseTaxReading,filesIntoSubfolder,
-  needsIssuer,needsJurisdiction,needsQuarter,defaultCategoryFor,DEFAULT_TAXPAYER,MAX_DOCUMENT_BYTES,extensionOf} from './tax-data.js';
+  needsIssuer,needsJurisdiction,needsQuarter,defaultCategoryFor,DEFAULT_TAXPAYER,MAX_DOCUMENT_BYTES,extensionOf,driveFolderUrl} from './tax-data.js';
 
 const today=()=>new Date().toISOString().slice(0,10);
 // Google's consent page is a round trip through another tab, so the tool waits
@@ -220,10 +220,14 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     status(mode==='replace'?'Replacing…':'Filing…','file-form-status','progress');
     const result=await upload(token,`/v1/drive/upload?ticket=${encodeURIComponent(plan.ticket)}&mode=${mode}`,{file:dropped});
     const {name,year,path=[year]}=result.filed;
+    // The plan resolved the folder the file went into, so the path it names
+    // opens that folder.
+    const folderId=plan.folder?.id,where=path.join(' / ');
     clearFiling({keepFields:false});
     $('year').value=year;
     await loadFiled(token);
-    status(`${result.replaced?'Replaced':'Filed'} ${[...path,name].join(' / ')}.`,'file-form-status','success');
+    status([`${result.replaced?'Replaced':'Filed'} `,folderId?Link(where,driveFolderUrl(folderId)):where,` / ${name}.`],
+      'file-form-status','success');
   }
   const resolveConflict=mode=>run(token=>send(token,mode),'file-form-status');
 

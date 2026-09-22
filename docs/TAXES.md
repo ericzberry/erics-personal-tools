@@ -91,6 +91,10 @@ shown to you is the destination the file reaches, and no firm or fund name ever
 travels in a URL that request logs would keep. A ticket is good once and for
 fifteen minutes.
 
+**Once it is filed, the line that says where opens it.** The status names the
+folder path and the filed name; the folder path is a link to that Drive folder,
+using the folder id the plan resolved.
+
 **A name already in the folder stops the upload.** You are shown what is there
 and offered *Keep both* — which files as `… (2).pdf` — or *Replace it*, which
 writes a new version over the existing file. Nothing is overwritten without

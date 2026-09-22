@@ -132,6 +132,28 @@ test('what is already filed is one line per document, under the taxpayer it belo
   restore();
 });
 
+// Where a document went is said once it is there, and the folder it names is
+// the one it opens.
+test('a filed document names the folder it went into, and that folder opens',async()=>{
+  const {document,window,restore}=setup();
+  const root=document.querySelector('main');
+  mountTaxes(root,{credentials:{get:async()=>'token'},remote:worker().remote,
+    upload:async()=>({filed:{name:'Form 1099 - Schwab.txt',year:'2025',path:['2025']}})});
+  await settle(()=>root.querySelectorAll('.tax-filed-row').length===1);
+  document.getElementById('taxes-drop').dispatchEvent(Object.assign(new window.Event('drop',{bubbles:true,cancelable:true}),{dataTransfer:{files:[document1099()]}}));
+  await settle(()=>document.getElementById('taxes-destination').hidden===false);
+  document.getElementById('taxes-file-actions').querySelector('button').click();
+  const line=document.getElementById('taxes-file-form-status');
+  await settle(()=>line.classList.contains('notice--success'));
+
+  assert.equal(line.textContent,'Filed 2025 / Form 1099 - Schwab.txt.');
+  const folder=line.querySelector('a');
+  assert.equal(folder.textContent,'2025');
+  assert.equal(folder.getAttribute('href'),'https://drive.google.com/drive/folders/f');
+  assert.equal(folder.getAttribute('target'),'_blank');
+  restore();
+});
+
 // A year before 2026 has no folders to say what a document is for, so the list
 // says it: under Supporting Documents, Payments and Filings, and by type within.
 test('an undivided year is listed under what each document is for',async()=>{
