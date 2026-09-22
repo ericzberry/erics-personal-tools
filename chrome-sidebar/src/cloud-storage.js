@@ -54,3 +54,23 @@ export async function cloudUpload(token, path, {file, fetcher = globalThis.fetch
   if (!response.ok) throw Object.assign(Error(result.error || `The upload did not complete (${response.status}).`),{status:response.status});
   return result;
 }
+
+// A document coming back as itself. Its name is the one the Worker sends with
+// it, which can differ from the one asked for: a Google Sheet arrives as a PDF.
+export async function cloudDownload(token, path, {name = 'document', fetcher = globalThis.fetch, timeoutMs = 120000} = {}) {
+  if (!token || token.length < 32) throw Error('Enter your private access token (at least 32 characters).');
+  const response = await fetcher(`${CLOUD_URL}${path}`, {
+    headers: {Authorization: `Bearer ${token}`}, credentials: 'omit', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(timeoutMs)
+  });
+  if (response.status === 401) throw Object.assign(Error('Access token was rejected. Check the Worker’s API_TOKEN secret.'),{status:401});
+  if (!response.ok) {
+    let result = {};
+    try {result = await response.json();} catch {}
+    throw Object.assign(Error(result.error || `That document could not be read (${response.status}).`),{status:response.status});
+  }
+  const sent = /filename\*=UTF-8''([^;]+)/i.exec(response.headers.get('Content-Disposition') || '')?.[1];
+  let filename = name;
+  try {if (sent) filename = decodeURIComponent(sent);} catch {}
+  const blob = await response.blob();
+  return new File([blob], filename, {type: blob.type || response.headers.get('Content-Type') || 'application/octet-stream'});
+}

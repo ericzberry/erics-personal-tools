@@ -14,7 +14,10 @@ const CONNECT_POLL_MS=3000,CONNECT_POLL_LIMIT=40;
 // `openExternal` is the host's ability to put a page in front of the owner.
 // The side panel has tabs to open; the phone has a new window; a host with
 // neither gets a link instead of a dead button.
-export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>globalThis.open(url,'_blank','noopener'),onSettings=()=>{}}={}){
+// `handOff` is the side panel's ability to give a filed document to the page
+// beside it (drag-out.js), with `download` to fetch it. A host with no page
+// beside it passes neither, and its filed rows are only links.
+export function mountTaxes(root,{credentials,remote,upload,download=null,handOff=null,openExternal=url=>globalThis.open(url,'_blank','noopener'),onSettings=()=>{}}={}){
   root.replaceChildren(TaxesView({today:new Date()}));
   const $=id=>root.querySelector(`#taxes-${id}`);
   let busy=false,generation=0,activeToken='';
@@ -198,6 +201,25 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     },'file-form-status');
   }
 
+  // --- Handing a filed document to the page beside the panel
+  // Nothing is said when it lands: the page shows the file arriving. Only a
+  // document that did not go, or a spot on the page that would not take it,
+  // earns a line.
+  const offer=handOff&&download?(file,event)=>{
+    status('','filed-status');
+    handOff(event,{
+      read:async()=>{
+        const token=await credentials.get();
+        if(!token)throw Error('Open Settings to connect this device.');
+        return download(token,`/v1/drive/file?id=${encodeURIComponent(file.id)}`,{name:file.name});
+      },
+      onResult:({accepted,error})=>{
+        if(error)status(`Couldn’t hand over ${file.name}. ${error}`,'filed-status','error');
+        else if(!accepted)status('That spot doesn’t take files. Drop it on the page’s upload box.','filed-status','alert');
+      }
+    });
+  }:null;
+
   // --- Filing
   function currentFiling(){
     return normalizeTaxFiling({type:$('type').value,issuer:$('issuer').value,taxpayer:$('taxpayer').value,
@@ -294,7 +316,7 @@ export function mountTaxes(root,{credentials,remote,upload,openExternal=url=>glo
     // Connecting Drive goes through this device's cloud connection, so without
     // one the button would only repeat what the status line already says.
     for(const node of $('connection').querySelectorAll('button'))node.disabled=busy||!drive.configured||!activeToken;
-    $('filed').replaceChildren(FiledList(filed.year||$('year').value,filed.files,filed.groups));
+    $('filed').replaceChildren(FiledList(filed.year||$('year').value,filed.files,filed.groups,{onDrag:offer}));
     // Only what applies. The type, the taxpayer and the name describe a
     // document, so they appear once there is one, and a document that is still
     // locked is not being named yet. Which government and which instalment are

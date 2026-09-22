@@ -95,6 +95,33 @@ fifteen minutes.
 folder path and the filed name; the folder path is a link to that Drive folder,
 using the folder id the plan resolved.
 
+**A filed document can be dragged out onto the page beside the panel.** An
+accountant's portal asks for the K-1 that was filed last week: open **Already
+filed**, drag the row onto the portal's upload box, and the document arrives
+there as a file, the way one dragged from the desktop would. Only in the side
+panel — the phone and the Taxes tab have no page beside them — and only a row
+Drive gave an id to.
+
+Chrome cannot carry a file that exists only in memory from one page to
+another, so the drag carries a one-time id instead. `drag-out.js` fetches the
+document from `GET /v1/drive/file` the moment the drag starts, and injects
+`drag-out-relay.js` into the tab beside the panel (and any tab the drag is
+carried to over the tab strip). The relay lets that page accept the drag,
+catches the drop before the page sees it, asks the panel for the document, and
+dispatches the drop again at the same spot with the real file in it. A page
+whose drop handler takes it has it; a spot with no handler but an upload field
+near it gets the file through the field. The page shows the file arriving, so
+the panel says nothing when it lands; a document that could not be read, a
+spot that would not take it, or a page the extension cannot script (the Web
+Store, a browser page) gets one line under **Already filed**.
+
+`/v1/drive/file` streams the bytes without holding them, reads only what sits
+inside the tax folder — it walks a file's parents up to `TAX_ROOT_FOLDER_ID`
+and answers anything else as not there — and sends a Google Doc or Sheet as a
+PDF. The bytes reach the page through extension messaging, which carries text,
+so a document handed over is capped at 40 MB. It is handed over once and then
+forgotten.
+
 **A name already in the folder stops the upload.** You are shown what is there
 and offered *Keep both* — which files as `… (2).pdf` — or *Replace it*, which
 writes a new version over the existing file. Nothing is overwritten without
@@ -130,7 +157,8 @@ Google account, one refresh token, one thing to renew; `GOOGLE_SCOPES` in
 token, encrypted at rest with `SETTINGS_ENCRYPTION_KEY` in `drive_accounts`;
 no page ever receives a Drive credential, and the only writes the code can make
 are creating a folder in the path a filing needs, adding a file, and replacing
-one you asked to replace. There is no delete path.
+one you asked to replace. It reads a file back only from inside the tax
+folder, to hand it to a page. There is no delete path.
 
 `GET /v1/drive/callback` is the one route outside the bearer check, because
 Google's redirect arrives without one. A single-use `state` this Worker issued,
@@ -241,6 +269,7 @@ a year of dozens of names is there when asked for rather than under every drop.
 | Mobile mounting | `mobile-app/public/app/capabilities.js` |
 | Drive access and the routes | `tools-api/src/drive.js`, `tools-api/drive-schema.sql` |
 | The reading | `tools-api/src/taxes.js` (`/v1/ai-connections/:id/tax-intake`) |
+| Dragging a filed document onto the page beside the panel | `chrome-sidebar/src/drag-out.js`, `chrome-sidebar/src/drag-out-relay.js` |
 | Opening a locked document | `chrome-sidebar/src/pdf-crypt.js` |
 | Writing the unlocked copy | `chrome-sidebar/src/pdf-unlock.js` |
 | Synthetic states to look at | `chrome-sidebar/tests/taxes-preview.html` |

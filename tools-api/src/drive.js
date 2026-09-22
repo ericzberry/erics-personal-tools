@@ -114,10 +114,11 @@ export async function accessToken(env,request,fetcher){
 // renewal is where a revoked connection is actually noticed.
 // `notFound` names the folder the caller was reaching for, because a 404 here
 // means that folder is out of this account's sight, and which one matters.
-export async function driveFetch(env,request,fetcher,path,init={},{retried=false,notFound='That tax folder is not reachable with the connected Google account.'}={}){
+// `raw` hands back the response itself, for a file's bytes rather than JSON.
+export async function driveFetch(env,request,fetcher,path,init={},{retried=false,raw=false,notFound='That tax folder is not reachable with the connected Google account.'}={}){
   const token=await accessToken(env,request,fetcher);
   const response=await fetcher(path.startsWith('http')?path:`${API}${path}`,{...init,headers:{Authorization:`Bearer ${token}`,...init.headers}});
-  if(response.status===401&&!retried){cached=null;return driveFetch(env,request,fetcher,path,init,{retried:true,notFound});}
+  if(response.status===401&&!retried){cached=null;return driveFetch(env,request,fetcher,path,init,{retried:true,raw,notFound});}
   if(response.status===401||response.status===403){
     cached=null;
     const detail=await response.json().catch(()=>({}));
@@ -125,6 +126,7 @@ export async function driveFetch(env,request,fetcher,path,init={},{retried=false
   }
   if(response.status===404)fail(404,notFound);
   if(!response.ok)fail(502,`Google Drive is unavailable (${response.status}).`);
+  if(raw)return response;
   // A delete is answered with nothing, and nothing is what it means.
   if(response.status===204)return {};
   return response.json();
@@ -172,10 +174,32 @@ const folderContents=(env,request,fetcher,folderId)=>childrenOf(env,request,fetc
 const isFolder=file=>file.mimeType===FOLDER_TYPE;
 const parentOf=file=>file.parents?.[0]||'';
 const documentsIn=contents=>(contents.files||[]).filter(file=>!isFolder(file)).map(file=>({
-  name:file.name,modifiedTime:file.modifiedTime,size:Number(file.size)||0,webViewLink:file.webViewLink
+  id:file.id,name:file.name,modifiedTime:file.modifiedTime,size:Number(file.size)||0,webViewLink:file.webViewLink
 }));
 const documentsUnder=(files,folderId)=>documentsIn({files:files.filter(file=>parentOf(file)===folderId)});
 const foldersUnder=(files,folderId,limit)=>files.filter(file=>isFolder(file)&&parentOf(file)===folderId).slice(0,limit);
+// A filed document is read back only from inside the tax folder: its parents
+// are walked up to the root, and anything that does not reach it is refused as
+// if it were not there. Root, year, taxpayer, category — six levels is more
+// than any filing sits under, and bounds the walk.
+const MAX_DEPTH=6;
+async function insideTaxFolder(env,request,fetcher,file){
+  let parents=file.parents||[];
+  for(let depth=0;depth<MAX_DEPTH&&parents.length;depth++){
+    if(parents.includes(TAX_ROOT_FOLDER_ID))return true;
+    const parent=await driveFetch(env,request,fetcher,`/files/${encodeURIComponent(parents[0])}?supportsAllDrives=true&fields=parents`,{},
+      {notFound:'That document is not in the tax folder.'});
+    parents=parent.parents||[];
+  }
+  return false;
+}
+// What a document handed to another page may weigh. The side panel passes it
+// on through extension messaging, which carries it as text, so this stays well
+// inside that channel's limit.
+export const MAX_HANDOFF_BYTES=40*1000*1000;
+// A Google Doc or Sheet has no bytes of its own; it travels as a PDF.
+const NATIVE_PREFIX='application/vnd.google-apps.';
+
 // Five taxpayers, three things a document can be for. The caps are what keep
 // one listing from turning into an unbounded run of requests.
 const MAX_GROUPS=12;
@@ -263,6 +287,28 @@ export async function drive(request,env,readValue,json,fetcher=fetch){
     });
     return json({filed:{name:file.name,year:plan.year,path:plan.path||[plan.year],id:file.id,webViewLink:file.webViewLink,
       size:Number(file.size)||bytes.byteLength,modifiedTime:file.modifiedTime},replaced:mode==='replace'});
+  }
+
+  // One filed document's bytes, streamed rather than held, so the side panel
+  // can hand it to the page beside it — an accountant's upload box — without a
+  // trip through the Downloads folder. The id is Drive's own, so nothing
+  // identifying rides in the URL.
+  if(path==='/v1/drive/file'&&method==='GET'){
+    const id=url.searchParams.get('id')||'';
+    if(!/^[A-Za-z0-9_-]{10,200}$/.test(id))fail(400,'Choose a filed document.');
+    const gone='That document is no longer in the tax folder.';
+    const file=await driveFetch(env,request,fetcher,`/files/${encodeURIComponent(id)}?supportsAllDrives=true&fields=id,name,mimeType,size,parents,trashed`,{},{notFound:gone});
+    if(file.trashed||isFolder(file)||!await insideTaxFolder(env,request,fetcher,file))fail(404,gone);
+    const native=String(file.mimeType||'').startsWith(NATIVE_PREFIX);
+    if(Number(file.size)>MAX_HANDOFF_BYTES)fail(413,`That document is ${(Number(file.size)/1000000).toFixed(1)} MB. Documents up to ${MAX_HANDOFF_BYTES/1000000} MB can be handed over.`);
+    const name=native?`${file.name}.pdf`:file.name,type=native?'application/pdf':file.mimeType||'application/octet-stream';
+    const media=await driveFetch(env,request,fetcher,native
+      ?`/files/${encodeURIComponent(id)}/export?mimeType=application%2Fpdf`
+      :`/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`,{},{raw:true,notFound:gone});
+    const length=media.headers.get('Content-Length');
+    return new Response(media.body,{headers:{'Content-Type':type,...(length?{'Content-Length':length}:{}),
+      'Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(name)}`,
+      'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
   }
 
   // What is already filed for a year, so a document is not filed twice under

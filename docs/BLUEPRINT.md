@@ -121,7 +121,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 - **Offline + sync** — `offline-resource.js` (the generic offline-first adapter),
   `offline-storage.js` (encrypted IndexedDB), `cloud-storage.js` (`CLOUD_URL`,
   `cloudRequest`, `cloudUpload` for a file too big to travel as JSON,
-  `CONNECTION_KEY`), `travel-changes.js` (cross-window change notification —
+  `cloudDownload` for one coming back as itself, `CONNECTION_KEY`), `travel-changes.js` (cross-window change notification —
   one resource name per tool, and the marker it hands back lets a view tell its
   own save from another's; the Finance panel and its page use it as `finance`),
   `private-resources.js` (the registry of every private copy a device keeps —
@@ -247,6 +247,10 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   password says so rather than being guessed at), `pdf-unlock.js` (writes the
   unlocked copy Taxes files, rebuilding the document without its lock and
   checking the copy reads back before offering it),
+  `drag-out.js` with `drag-out-relay.js` (a document dragged out of the side
+  panel onto the page beside it: the panel half fetches it and answers for it,
+  and the relay, injected into that page as the drag starts, turns the drop into
+  a real file there — see [TAXES.md](TAXES.md)),
   `finance-page-read.js` (one
   text snapshot of the tab the owner is looking at, taken one of two ways: a
   balance page is narrowed to the lines that carry a figure and the lines that
@@ -401,7 +405,8 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   is stored on every write), `src/wallet.js` (the wallet's records about
   itself over `wallet_records` through the generic store, plus
   `/v1/wallet/capabilities`), `src/releases.js`, `src/ai-settings.js`. `src/drive.js` is not a record store: it holds the
-  owner's Google Drive connection and files tax documents through it, and
+  owner's Google Drive connection, files tax documents through it and reads
+  one back from inside the tax folder (`/v1/drive/file`), and
   `src/taxes.js` is the reading that names one.
   `src/voice.js` is the other thing that Google connection is for: it reads a
   page of sent mail at a time, keeps the study's place between calls, and turns

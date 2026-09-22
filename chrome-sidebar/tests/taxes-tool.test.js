@@ -27,7 +27,7 @@ function setup(){
   globalThis.document=document;globalThis.window=window;
   return {document,window,restore:selectValues(window)};
 }
-const FILED=[{name:'K-1 - Averin Capital LLC.pdf',modifiedTime:'2026-03-02T00:00:00.000Z',size:2240000,webViewLink:'https://drive.example/k1'}];
+const FILED=[{id:'k1-averin-document',name:'K-1 - Averin Capital LLC.pdf',modifiedTime:'2026-03-02T00:00:00.000Z',size:2240000,webViewLink:'https://drive.example/k1'}];
 const GROUPS=[{name:'Berry EA 2024 Family Trust',folderId:'trust',files:[],groups:[
   {name:'Filings',folderId:'filings',
     files:[{name:'Return - Federal - Berry EA 2024 Family Trust.pdf',modifiedTime:'2026-04-10T00:00:00.000Z',size:4100000,webViewLink:'https://drive.example/return'}]},
@@ -151,6 +151,50 @@ test('a filed document names the folder it went into, and that folder opens',asy
   assert.equal(folder.textContent,'2025');
   assert.equal(folder.getAttribute('href'),'https://drive.google.com/drive/folders/f');
   assert.equal(folder.getAttribute('target'),'_blank');
+  restore();
+});
+
+// In the side panel a filed row can be dragged onto the page beside it. The
+// tool's part is which document, fetched how, and what to say when it did not
+// go; drag-out.js carries it across.
+test('a filed row hands its own document to the page beside the panel, and says when it did not go',async()=>{
+  const {document,window,restore}=setup();
+  const root=document.querySelector('main');
+  const offered=[],fetched=[];
+  mountTaxes(root,{credentials:{get:async()=>'token'},remote:worker().remote,upload:async()=>({}),
+    download:async(token,path,options)=>{fetched.push({token,path,options});return new File(['%PDF'],options.name,{type:'application/pdf'});},
+    handOff:(event,offer)=>offered.push({event,offer})});
+  await settle(()=>root.querySelectorAll('.tax-filed-row').length===1);
+  const row=root.querySelector('.tax-filed-row');
+  assert.equal(row.draggable,true);
+  row.dispatchEvent(new window.Event('dragstart',{bubbles:true}));
+  assert.equal(offered.length,1);
+  const file=await offered[0].offer.read();
+  assert.deepEqual(fetched,[{token:'token',path:'/v1/drive/file?id=k1-averin-document',options:{name:'K-1 - Averin Capital LLC.pdf'}}]);
+  assert.equal(file.name,'K-1 - Averin Capital LLC.pdf');
+
+  // Landing somewhere is shown by the page; not landing is said here, in the section it came from.
+  const line=document.getElementById('taxes-filed-status');
+  offered[0].offer.onResult({accepted:true,error:''});
+  assert.equal(line.textContent,'');
+  offered[0].offer.onResult({accepted:false,error:''});
+  assert.ok(line.classList.contains('notice--alert'));
+  assert.match(line.textContent,/upload box/);
+  offered[0].offer.onResult({accepted:false,error:'That document is no longer in the tax folder.'});
+  assert.ok(line.classList.contains('notice--error'));
+  assert.match(line.textContent,/Couldn’t hand over K-1 - Averin Capital LLC\.pdf\. That document is no longer/);
+  // A new drag starts with a clean line.
+  row.dispatchEvent(new window.Event('dragstart',{bubbles:true}));
+  assert.equal(line.textContent,'');
+  restore();
+});
+
+test('without a page beside it, a filed row is only a link',async()=>{
+  const {document,restore}=setup();
+  const root=document.querySelector('main');
+  mountTaxes(root,{credentials:{get:async()=>'token'},remote:worker().remote,upload:async()=>({})});
+  await settle(()=>root.querySelectorAll('.tax-filed-row').length===1);
+  assert.equal(root.querySelector('.tax-filed-row').draggable,false);
   restore();
 });
 

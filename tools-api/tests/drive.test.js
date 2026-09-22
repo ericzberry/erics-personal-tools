@@ -40,6 +40,16 @@ function fakeGoogle({refreshToken='synthetic-refresh-token',email='owner@example
       return reply({access_token:'synthetic-access',expires_in:3600});
     }
     if(init.headers?.Authorization!=='Bearer synthetic-access')return reply({error:{message:'bad token'}},401);
+    // One file: what it is and where it sits, or with alt=media its bytes.
+    const single=/^\/drive\/v3\/files\/([^/]+)(\/export)?$/.exec(url.pathname);
+    if(single&&(init.method||'GET')==='GET'){
+      const id=decodeURIComponent(single[1]);
+      const file=files.get(id)||(id===ROOT?{id,name:'Taxes',parent:'my-drive',folder:true}:null);
+      if(!file)return reply({error:{message:'File not found'}},404);
+      if(single[2]||url.searchParams.get('alt')==='media')return new Response(file.content??'',{headers:{'Content-Type':file.mimeType||'application/pdf'}});
+      return reply({id:file.id,name:file.name,parents:[file.parent],trashed:false,
+        mimeType:file.folder?'application/vnd.google-apps.folder':file.mimeType||'application/pdf',size:String(file.content?.length??file.bytes??0)});
+    }
     // List.
     if(url.pathname==='/drive/v3/files'&&(init.method||'GET')==='GET'){
       const q=url.searchParams.get('q')||'';
@@ -332,5 +342,44 @@ test('what is already filed for a year covers the taxpayer folders inside it',as
     const before=fake.calls.length;
     await call(env,'/v1/drive/filed?year=2026');
     assert.equal(fake.calls.length-before,4);
+  });
+});
+
+// A filed document goes back out as itself, so the side panel can hand it to
+// the page beside it — and only what the tax folder holds can go.
+test('a filed document is read back as itself, and only from inside the tax folder',async()=>{
+  const {env}=environment();
+  const fake=fakeGoogle();
+  await withGoogle(fake,async()=>{
+    await connect(env);
+    fake.files.set('year-folder-2025',{id:'year-folder-2025',name:'2025',parent:ROOT,folder:true});
+    fake.files.set('k1-document-vista',{id:'k1-document-vista',name:'K-1 - Vista.pdf',parent:'year-folder-2025',folder:false,content:'%PDF-1.7 synthetic'});
+    fake.files.set('sheet-document-1',{id:'sheet-document-1',name:'Estimates',parent:'year-folder-2025',folder:false,
+      mimeType:'application/vnd.google-apps.spreadsheet',content:'%PDF exported'});
+    fake.files.set('outside-document',{id:'outside-document',name:'Other.pdf',parent:'someone-elses-folder',folder:false,content:'private'});
+
+    const read=await call(env,'/v1/drive/file?id=k1-document-vista');
+    assert.equal(read.status,200);
+    assert.equal(await read.text(),'%PDF-1.7 synthetic');
+    assert.equal(read.headers.get('Content-Type'),'application/pdf');
+    assert.match(read.headers.get('Content-Disposition'),/K-1%20-%20Vista\.pdf/);
+    assert.equal(read.headers.get('Cache-Control'),'no-store');
+    // A Google Sheet has no bytes of its own, so it travels as a PDF.
+    const sheet=await call(env,'/v1/drive/file?id=sheet-document-1');
+    assert.equal(sheet.status,200);
+    assert.match(sheet.headers.get('Content-Disposition'),/Estimates\.pdf/);
+    assert.ok(fake.calls.some(one=>one.url.includes('/files/sheet-document-1/export?mimeType=application%2Fpdf')));
+
+    // Outside the tax folder, a folder, or no id worth asking about: not there.
+    const outside=await call(env,'/v1/drive/file?id=outside-document');
+    assert.equal(outside.status,404);
+    assert.equal(fake.calls.some(one=>one.url.includes('outside-document')&&one.url.includes('alt=media')),false);
+    assert.equal((await call(env,'/v1/drive/file?id=year-folder-2025')).status,404);
+    assert.equal((await call(env,'/v1/drive/file?id=../x')).status,400);
+    assert.equal((await call(env,'/v1/drive/file?id=k1-document-vista','GET',undefined,'wrong-token')).status,401);
+
+    // The listing gives each document the id it is read back by.
+    const filed=await (await call(env,'/v1/drive/filed?year=2025')).json();
+    assert.deepEqual(filed.files.map(file=>file.id).sort(),['k1-document-vista','sheet-document-1']);
   });
 });

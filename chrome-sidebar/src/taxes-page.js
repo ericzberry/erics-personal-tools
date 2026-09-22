@@ -1,5 +1,6 @@
 import {mountTaxes} from './taxes.js';
-import {cloudRequest,cloudUpload,CONNECTION_KEY} from './cloud-storage.js';
+import {cloudRequest,cloudUpload,cloudDownload,CONNECTION_KEY} from './cloud-storage.js';
+import {dragOut} from './drag-out.js';
 import {CapabilityPicker} from './components/capabilities.js';
 const storage=globalThis.chrome?.storage?.local;
 const credentials={
@@ -13,8 +14,10 @@ const openExternal=url=>{
   if(globalThis.chrome?.tabs?.create){chrome.tabs.create({url});return true;}
   return !!globalThis.open(url,'_blank','noopener');
 };
-export function mountExtensionTaxes(root,options={}){
-  return mountTaxes(root,{remote:cloudRequest,upload:cloudUpload,credentials,openExternal,...options});
+// Only the side panel has a page beside it to hand a filed document to.
+export function mountExtensionTaxes(root,{beside=false,...options}={}){
+  return mountTaxes(root,{remote:cloudRequest,upload:cloudUpload,download:cloudDownload,credentials,openExternal,
+    handOff:beside?dragOut():null,...options});
 }
 const root=document.getElementById('taxes-root');
 if(root){

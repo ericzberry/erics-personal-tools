@@ -8,8 +8,8 @@ import {rc4Locked} from './fixtures/locked-pdf.js';
 const token='synthetic-preview-token-at-least-32-characters';
 const credentials={get:async()=>token};
 const FILED=[
-  {name:'Form 1099 - Schwab.pdf',modifiedTime:'2026-02-14T00:00:00.000Z',size:184000,webViewLink:'#'},
-  {name:'K-1 - Averin Capital Fund I, LP.pdf',modifiedTime:'2026-03-02T00:00:00.000Z',size:2240000,webViewLink:'#'}
+  {id:'synthetic-1099',name:'Form 1099 - Schwab.pdf',modifiedTime:'2026-02-14T00:00:00.000Z',size:184000,webViewLink:'#'},
+  {id:'synthetic-k1',name:'K-1 - Averin Capital Fund I, LP.pdf',modifiedTime:'2026-03-02T00:00:00.000Z',size:2240000,webViewLink:'#'}
 ];
 // From 2026 a year is divided by taxpayer, so the list is a run of rows under
 // the name they belong to.
@@ -63,7 +63,8 @@ const states=[
   ['A return, named from who filed it and where',{},'return'],
   ['Filed, and its folder opens from the line that says so',{upload:uploadDivided},'filed'],
   ['The document needs a password',{},'locked'],
-  ['A year divided by taxpayer and by what a document is for',{filed:[],groups:GROUPS}]
+  ['A year divided by taxpayer and by what a document is for',{filed:[],groups:GROUPS}],
+  ['A filed row dragged to the page beside the panel, and not handed over',{handOff:true},'handoff']
 ];
 for(const [label,options,step] of states){
   const heading=document.createElement('h2');
@@ -71,8 +72,15 @@ for(const [label,options,step] of states){
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:20px 0 8px;color:#666';
   const host=document.createElement('div');
   root.append(heading,host);
-  const tool=mountTaxes(host,{credentials,remote:api(options),upload:options.upload||upload,openExternal:()=>true});
-  if(step){
+  // The side panel's hand-off, answered at once with the failure it can report.
+  const handOff=options.handOff?(_event,offer)=>offer.onResult({accepted:false,error:'That document is no longer in the tax folder.'}):null;
+  const tool=mountTaxes(host,{credentials,remote:api(options),upload:options.upload||upload,openExternal:()=>true,
+    download:async()=>new File(['%PDF'],'synthetic.pdf',{type:'application/pdf'}),handOff});
+  if(step==='handoff'){
+    await tool.refresh();
+    host.querySelector('#taxes-filed-panel').open=true;
+    host.querySelector('.tax-filed-row').dispatchEvent(new Event('dragstart',{bubbles:true}));
+  }else if(step){
     await tool.refresh();
     // Drive the drop the way a person would, through the shared file-drop path.
     const zone=host.querySelector('#taxes-drop');

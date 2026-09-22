@@ -35,13 +35,14 @@ export const mountedFinanceTool=()=>finance;
 document.getElementById('navigate-finance')?.addEventListener('click',()=>openFinanceTool());
 
 // Taxes opens in the panel beside the mail a document arrives in, so a K-1 can
-// go from the message straight into the drop zone without a tab in between.
+// go from the message straight into the drop zone without a tab in between —
+// and a filed one can go back out onto the page beside it the same way.
 let taxes=null;
 export function openTaxesTool(){
   const root=document.getElementById('taxes-tool');
   if(!root)return null;
   taxes??=import('./taxes-page.js').then(({mountExtensionTaxes})=>
-    mountExtensionTaxes(root,{onSettings:()=>document.getElementById('open-settings')?.click()}));
+    mountExtensionTaxes(root,{beside:true,onSettings:()=>document.getElementById('open-settings')?.click()}));
   return taxes;
 }
 document.getElementById('navigate-taxes')?.addEventListener('click',openTaxesTool);

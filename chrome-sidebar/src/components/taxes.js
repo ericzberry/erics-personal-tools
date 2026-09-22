@@ -55,6 +55,7 @@ export function TaxesView({today=new Date()}={}){
       Stack([],{id:'taxes-file-actions',className:'action-group action-group--compact'})
     ],{open:true}),
     Stack([Part('Already filed',[
+      Notice('',{id:'taxes-filed-status',role:'status'}),
       Stack([],{id:'taxes-filed'}),
       Link('Open the tax folder',TAX_ROOT_FOLDER_URL,{className:'footnote tax-folder-link'})
     ],{id:'taxes-filed-panel'})],{id:'taxes-drive-contents',hidden:true})
@@ -124,15 +125,24 @@ export function ConflictPanel({existing,keepBothName,onKeepBoth,onReplace,onCanc
 // again by what a document is for. Loose documents come before the folders at
 // whichever level they sit at, which is where every document of 2025 and
 // earlier is.
+//
+// `onDrag` is how a row leaves: a host with a page beside it hands the
+// document to that page when the row is dragged there. A row Drive gave no id
+// to cannot be fetched again, so it stays where it is.
 const countIn=group=>group.files.length+(group.groups||[]).reduce((count,inner)=>count+countIn(inner),0);
-export function FiledList(year,files,groups=[]){
+export function FiledList(year,files,groups=[],{onDrag=null}={}){
   const total=files.length+groups.reduce((count,group)=>count+countIn(group),0);
   if(!total)return Stack([GroupTitle(year,{className:'record-group-title'}),Note('Nothing filed yet.')],{className:'record-group'});
   // The list is one flat run of lines, so how deep a row sits is carried on the
   // row itself rather than inferred from what precedes it.
   const row=depth=>file=>{
     const props={className:`tax-filed-row tax-filed-row--${depth}`};
-    return file.webViewLink?Link(file.name,file.webViewLink,props):Strong(file.name,props);
+    const node=file.webViewLink?Link(file.name,file.webViewLink,props):Strong(file.name,props);
+    if(onDrag&&file.id){
+      node.draggable=true;
+      node.addEventListener('dragstart',event=>onDrag(file,event));
+    }
+    return node;
   };
   const heading=(name,depth)=>Strong(name,{className:`tax-filed-group tax-filed-group--${depth}`});
   const under=(group,depth)=>[
