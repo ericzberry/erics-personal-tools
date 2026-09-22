@@ -92,10 +92,11 @@ export const openSizesTool=panelTool('sizes',(root,options)=>import('./sizes-pag
 export const openReplacementsTool=panelTool('replacements',(root,options)=>import('./replacements-page.js').then(({mountExtensionReplacements})=>mountExtensionReplacements(root,options)));
 export const openRemindersTool=panelTool('reminders',(root,options)=>import('./reminders-page.js').then(({mountExtensionReminders})=>mountExtensionReminders(root,options)));
 export const openCardsTool=panelTool('cards',(root,options)=>import('./cards-page.js').then(({mountExtensionCards})=>mountExtensionCards(root,options)));
+export const openAdvisorTool=panelTool('advisor',(root,options)=>import('./advisor-page.js').then(({mountExtensionAdvisor})=>mountExtensionAdvisor(root,options)));
 export const openPersonalTool=panelTool('personal',(root,options)=>import('./personal-page.js').then(({mountExtensionPersonal})=>mountExtensionPersonal(root,options)));
 
 const PANEL_TOOLS={attention:openAttentionTool,subscriptions:openSubscriptionsTool,travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,
-  gifts:openGiftsTool,sizes:openSizesTool,replacements:openReplacementsTool,reminders:openRemindersTool,cards:openCardsTool,personal:openPersonalTool};
+  gifts:openGiftsTool,sizes:openSizesTool,replacements:openReplacementsTool,reminders:openRemindersTool,cards:openCardsTool,advisor:openAdvisorTool,personal:openPersonalTool};
 export const openPanelTool=id=>PANEL_TOOLS[id]?.()??null;
 
 // Standalone settings/data pages use the same data registry in the shared formatted picker.

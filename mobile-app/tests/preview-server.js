@@ -18,7 +18,15 @@ let rewards={entries:[
   {id:'61111111-1111-4111-8111-111111111111',kind:'benefit',name:'Dining credit',source:'Synthetic Gold',value:'$100 dining credit',remaining:'$62.50',cadence:'quarterly',state:'available',due:'',url:'',notes:'',secret:'',secretHint:'',card:'',updatedAt:new Date().toISOString()},
   {id:'61111111-1111-4111-8111-111111111112',kind:'benefit',name:'Hotel credit',source:'Synthetic Platinum',value:'$300 prepaid hotel credit',remaining:'',cadence:'',state:'activation',due:'2026-09-25',url:'',notes:'',secret:'',secretHint:'',card:'',updatedAt:new Date().toISOString()},
   {id:'61111111-1111-4111-8111-111111111113',kind:'benefit',name:'Ride credit',source:'Synthetic Platinum',value:'$15 ride credit',remaining:'',cadence:'monthly',state:'available',due:'',url:'',notes:'',secret:'',secretHint:'',card:'',updatedAt:new Date().toISOString()}
-],revision:null};let cards=[];
+  ,{id:'61111111-1111-4111-8111-111111111114',kind:'card',name:'Synthetic Platinum',source:'Synthetic Bank',value:'5x flights',state:'available',due:'',url:'',notes:'',secret:'',secretHint:'',card:'',cadence:'',remaining:'',updatedAt:new Date().toISOString()},
+  {id:'61111111-1111-4111-8111-111111111115',kind:'benefit',name:'Dell credit',source:'Synthetic Platinum',value:'$200 per year',remaining:'$150',cadence:'annual',state:'available',due:'',url:'',notes:'',secret:'',secretHint:'',card:'61111111-1111-4111-8111-111111111114',updatedAt:new Date().toISOString()}
+],revision:null};
+// Best card's cards, so the purchase advisor has rates to rank.
+let cards=[
+  {id:'71111111-1111-4111-8111-111111111111',name:'Synthetic Platinum',unit:'points',base:1,cpp:1.5,checked:'2026-09-20',source:'',notes:'',revision:'first',updatedAt:new Date().toISOString(),
+    rules:JSON.stringify([{category:'Online shopping',channel:'Any',merchant:'',rate:3,remaining:null,active:true,end:'',condition:''}])},
+  {id:'71111111-1111-4111-8111-111111111112',name:'Synthetic Everyday',unit:'cash',base:2,cpp:1,checked:'2026-06-01',source:'',notes:'',revision:'first',updatedAt:new Date().toISOString(),rules:'[]'}
+];
 const programOffers=[
   {key:'/offer/sixt',name:'SIXT',category:'Automotive',badge:'Limited-Time Offer',dates:'',summary:'For a limited time, save up to 20% off SIXT car rentals. Offer expires on 9/30/2026.',firstSeenAt:new Date().toISOString()},
   {key:'/offer/music_city_festival',name:'Music City Festival',category:'Events',badge:'New',dates:'November 16-18, 2026',summary:'An exclusive three-day, invite-only experience featuring curated showcases and behind-the-scenes access to a lineup of country artists in Nashville, Tennessee.',firstSeenAt:new Date().toISOString()},
@@ -27,6 +35,12 @@ const programOffers=[
 const programCatalog={id:'ms-reserved',programId:'ms-reserved',label:'Morgan Stanley Reserved',source:'Morgan Stanley Reserved Living & Giving',
   complete:true,offers:programOffers,readAt:new Date().toISOString(),listedAt:new Date().toISOString(),
   revision:'synthetic-catalog',updatedAt:new Date().toISOString()};
+// An issuer's offers are per card: one on the card with the lower rate, so the
+// advisor has something to weigh against the rate.
+const issuerCatalog={id:'amex-offers',programId:'amex-offers',label:'Amex Offers',source:'American Express',complete:false,
+  offers:[{key:'synthetic-everyday-dell',name:'Dell',category:'Electronics',badge:'',dates:'Expires 10/31/2026',card:'Synthetic Everyday (-72005)',path:'/offers/eligible?account_key=synthetic',
+    summary:'Spend $1,500 or more, get $300 back.',firstSeenAt:new Date().toISOString()}],
+  readAt:new Date().toISOString(),listedAt:'',revision:'synthetic-issuer',updatedAt:new Date().toISOString()};
 let finance=[];let personal=[];let subscriptions=[];
 // Dated commitments, as the phone receives them: one overdue service, one
 // birthday inside its notice, one renewal with months of warning.
@@ -142,6 +156,14 @@ createServer(async (req, res) => {
     if (url.pathname === '/v1/weather') {res.end(JSON.stringify({date:new Date().toISOString().slice(0,10),place:'Synthetic Heights',hour:8,low:52,high:64,
       hours:Array.from({length:24},(unused,hour)=>({hour,temperature:52+Math.round(12*Math.sin(Math.PI*Math.max(0,hour-6)/18)),feelsLike:50+Math.round(12*Math.sin(Math.PI*Math.max(0,hour-6)/18)),chance:hour>=14&&hour<17?70:10,snow:false,code:hour>=14&&hour<17?61:hour<12?3:2}))}));return;}
     if (url.pathname === '/v1/ai-connections') {res.end(JSON.stringify({connections:[{id,name:'Synthetic research connection',provider:'openai',hasApiKey:true}]}));return;}
+    // A purchase description read the way the Worker reads one, without a
+    // model: the merchant it names, an amount if it states one.
+    if (url.pathname === `/v1/ai-connections/${id}/card-category`) {
+      let text='';for await(const data of req)text+=data;const purchase=String(JSON.parse(text||'{}').purchase||'');
+      const amount=/\$\s?([\d,]+(?:\.\d{1,2})?)/.exec(purchase);const merchant=/\b(dell|uber|saks|amazon)\b/i.exec(purchase);
+      res.end(JSON.stringify({merchant:merchant?merchant[1][0].toUpperCase()+merchant[1].slice(1).toLowerCase():'',category:/uber|ride/i.test(purchase)?'Transit':'Online shopping',
+        channel:'Online',amount:amount?Number(amount[1].replace(/,/g,'')):null,confidence:'high',reason:'Synthetic reading of the description.'}));return;
+    }
     if (url.pathname === `/v1/ai-connections/${id}/restaurants`) {
       let text='';for await(const data of req)text+=data;const {search}=JSON.parse(text);
       if(search.query==='failure'){res.statusCode=502;res.end('{"error":"Synthetic research failure"}');return;}
@@ -150,7 +172,7 @@ createServer(async (req, res) => {
     // A program's published offers, as the phone receives them. Nothing on the
     // phone writes one: the reading needs the browser that is on the program's
     // site, so this answers reads only.
-    if(url.pathname==='/v1/rewards/programs'||url.pathname==='/v1/rewards/programs/snapshot'){res.end(JSON.stringify({records:[programCatalog]}));return;}
+    if(url.pathname==='/v1/rewards/programs'||url.pathname==='/v1/rewards/programs/snapshot'){res.end(JSON.stringify({records:[programCatalog,issuerCatalog]}));return;}
     if(url.pathname==='/v1/rewards'){
       if(req.method==='PUT'){let text='';for await(const data of req)text+=data;const value=JSON.parse(text);if(value.revision!==rewards.revision){res.statusCode=409;res.end('{}');return;}rewards={entries:value.entries,revision:crypto.randomUUID()};}
       res.end(JSON.stringify(rewards));return;

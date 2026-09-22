@@ -5,6 +5,7 @@ import {mountToolNavigation,SETTINGS_SCREEN} from './tool-navigation.js';
 import {CapabilitiesView} from './shared/components/capabilities.js';
 import {CAPABILITIES} from './shared/capabilities.js';
 import {mountCards} from './shared/cards.js';
+import {mountPurchaseAdvisor} from './shared/purchase-advisor.js';
 import {mountFinance} from './shared/finance.js';
 import {mountPersonal} from './shared/personal.js';
 import {mountReminders} from './shared/reminders.js';
@@ -46,12 +47,15 @@ const credentials={
   async beforeDisconnect(){const token=await this.get();if(token)await assertNothingPending(deviceCopies,token);},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();cardTool.clear();advisorTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 // Best card reads the same wallet Rewards keeps, for the cards it already
 // knows the owner holds but has no rates for.
 const cardTool=mountCards(document.getElementById('capability-cards'),{credentials,offline:cardStore,wallet:rewardStore,remote:cloudRequest});
 const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
+// Purchase advisor reads Best card's cards, the wallet and the offer
+// catalogues, and writes to none of them.
+const advisorTool=mountPurchaseAdvisor(document.getElementById('capability-advisor'),{credentials,cards:cardStore,wallet:rewardStore,programs:programStore,remote:cloudRequest,onSettings:openSettings});
 const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,programs:programStore,remote:cloudRequest,onSettings:openSettings});
 const financeTool=mountFinance(document.getElementById('capability-finance'),{credentials,offline:financeStore,remote:cloudRequest,onSettings:openSettings});
 const personalTool=mountPersonal(document.getElementById('capability-personal'),{credentials,offline:personalStore,onSettings:openSettings});
@@ -84,7 +88,7 @@ const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai'
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
-async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();cardTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
+async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();cardTool.clear();advisorTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
 mountTravel(document.getElementById('capability-travel'),{credentials,offline:travelStore,showNumbers:true,request:travelStore.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
 const subscriptionTool=mountSubscriptions(document.getElementById('capability-subscriptions'),{credentials,offline:subscriptionStore,remote:cloudRequest,onSettings:openSettings});
 const attentionTool=mountAttention(document.getElementById('capability-attention'),{credentials,stores:{reminders:reminderStore,rewards:rewardStore,travel:travelStore,personal:personalStore,finance:financeStore,subscriptions:subscriptionStore},onSettings:openSettings,onOpen:(id)=>navigation.show(id,{focus:true})});
@@ -116,6 +120,8 @@ function showScreen(screen){
   if(selectedTool==='subscriptions')subscriptionTool.refresh();
   if(selectedTool==='restaurants')restaurants.open();
   if(selectedTool==='rewards')rewardTool.refresh({quiet:true});
+  // A card, a credit or an offer saved since the last look changes the answer.
+  if(selectedTool==='advisor')advisorTool.refresh();
   parent.postMessage({type:'mobile-screen',screen:settings?SETTINGS_SCREEN:selectedTool||'home'},location.origin);
 }
 mountPushBridge();

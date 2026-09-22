@@ -38,6 +38,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
 | `rewards.html` | `src/rewards.js` | Rewards & benefits |
 | `cards.html` | `src/cards-page.js` | Best card |
+| `advisor.html` | `src/advisor-page.js` | Purchase advisor: one purchase, and what to pay with once Best card's rates, the wallet's credits and the programs' offers are put together |
 | `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation, entities, private positions, houses, institutions, and the sources every total rests on — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
@@ -74,7 +75,7 @@ progress indicators, imported by `tokens.css` so every host has them) ·
 `select.js`/`select.css` (the shared formatted `Select`/combobox — required for
 every dropdown) · `file-drop.js`/`upload.css` (all uploads; a reader returns
 `{message, tone}` when what it got was not a success) · plus per-feature component
-modules: `capabilities.*`, `cards.*`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
+modules: `capabilities.*`, `cards.*`, `purchase-advisor.js`/`advisor.css`, `travel.*`, `rewards.js`, `finance.*`, `personal.js`,
 `vault.*` (the shared lock screen), `taxes.*`, `reminders.*`, `gifts.*`, `sizes.*`, `replacements.*`, `capture.*`
 (the one-line note field, used on its own wherever a record can be typed),
 `restaurant-views.js`,
@@ -248,7 +249,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   in-page reader that lifts the published offer catalogue off the program's own
   pages, and the watcher `background.js` registers, so a visit updates the
   catalogue whether or not the panel is open.
-- **Capability controllers** — `travel.js`, `cards.js`, `rewards-tool.js`,
+- **Capability controllers** — `travel.js`, `cards.js`, `purchase-advisor.js`
+  (reads the cards, rewards and programs stores and writes to none; its
+  arithmetic is `purchase-data.js`, shared with mobile), `rewards-tool.js`,
   `finance.js`, `personal.js`, `reminders.js`, `gifts.js`, `sizes.js`, `replacements.js`, `capture.js`, `taxes.js`, `data-library.js`,
   `restaurant-search.js`, `reservation-*.js`.
 - **AI** — `ai-providers.js` (public provider metadata, shared with the Worker),
@@ -511,7 +514,7 @@ release) · `docs/DESIGN.md`, `docs/UI_RULES.md` (the numbered register and its
 checks, held by `chrome-sidebar/tests/ui-rules.test.js` and the
 `ui-consistency` agent), `docs/UI_COMPONENTS.md` (+ `_EXTENSION`, `_MOBILE`,
 `_PAGES`), `docs/VISUAL_QA.md` · `docs/CLOUDFLARE.md` · `tools-api/MODEL_ROUTING.md`,
-`tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/REWARDS.md`,
+`tools-api/PROVIDERS.md` · `docs/GMAIL.md`, `docs/BEST_CARD.md`, `docs/PURCHASE_ADVISOR.md`, `docs/REWARDS.md`,
 `docs/PROTECTED_SECTIONS.md`, `docs/TAXES.md`, `docs/BACKUPS.md`, `docs/REWARD_PROGRAMS.md`,
 `docs/REMINDERS.md`, `docs/GIFTS.md`, `docs/REPLACEMENTS.md`, `docs/QUICK_ADD.md`, `docs/NOTIFICATIONS.md`, `docs/WEATHER.md`,
 `chrome-sidebar/RESTAURANTS.md`.

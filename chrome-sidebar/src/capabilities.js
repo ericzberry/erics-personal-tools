@@ -17,6 +17,7 @@ export const CAPABILITIES = [
   {id:'reminders',label:'Reminders',href:'reminders.html',icon:'M12 4a5 5 0 0 0-5 5v3.4L5.5 16h13L17 12.4V9a5 5 0 0 0-5-5Z M10 19a2 2 0 0 0 4 0'},
   {id:'rewards',label:'Rewards & benefits',href:'rewards.html',icon:'M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.3-4.8-2.5-4.8 2.5.9-5.3L4.2 9.7l5.4-.8L12 4Z'},
   {id:'cards',label:'Best card',href:'cards.html',icon:'M3 7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z M3 10.5h18'},
+  {id:'advisor',label:'Purchase advisor',href:'advisor.html',icon:'M6 3h12v18l-3-2-3 2-3-2-3 2V3Z M9 8h6 M9 12h6 M9 16h3'},
   {id:'finance',label:'Finance',href:'finance.html',icon:'M4 20V10 M9.5 20V5 M15 20v-7 M20.5 20V8 M3 20h18'},
   {id:'personal',label:'Personal information',href:'personal.html',icon:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M5 20a7 7 0 0 1 14 0'},
   {id:'taxes',label:'Taxes',href:'taxes.html',icon:'M6 3h7l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z M13 3v5h5 M9 13h6 M9 17h4'},
@@ -38,7 +39,7 @@ export function capabilitySections(items=CAPABILITIES){
   return [...groups].filter(([,list])=>list.length).map(([title,list])=>({title,icon:title?SECTION_ICONS.get(title):null,items:list}));
 }
 // The capabilities that mount inside the side panel rather than opening a tab.
-export const PANEL_CAPABILITIES=['travel','rewards','finance','taxes','attention','subscriptions','gifts','sizes','replacements','reminders','cards','personal'];
+export const PANEL_CAPABILITIES=['travel','rewards','finance','taxes','attention','subscriptions','gifts','sizes','replacements','reminders','cards','advisor','personal'];
 // Gmail is not listed: it appears on its own when the active tab is Gmail.
 // Automatic mode has no menu row: it is the state the sidebar starts in, and
 // the toggle names it, so listing it again would be a row for "no tool chosen".

@@ -4145,3 +4145,28 @@ said in a line. Offline and on the phone like every record tool; the Worker's
 `/v1/replacements` needs `replacements-schema.sql` applied before it deploys.
 See [REPLACEMENTS.md](../docs/REPLACEMENTS.md).
 Archive: `release/erics-sidebar-0.6.274.zip`.
+
+## Purchase advisor: one purchase, one answer (0.6.275 / mobile 0.1.224)
+
+Three tools each knew one thing about a purchase — Best card the rate, the
+wallet the credit and what was left of it, the reward programs the offer — and
+answering "what do I pay with" meant reading all three. **Purchase advisor**,
+a new tool in both hosts, takes one description (*I'm buying a laptop from
+Dell for $2,000*), reads it the way Best card does, and answers in one block:
+**Pay with** the card, the figure it comes to, one line per thing that makes
+it up with its money down the right edge — the rate, each credit filed under
+that card at this merchant with what is left of it, each offer on that card in
+the program's own words — and **Conditions** under it: an offer still to be
+added, a credit still to activate, a minimum spend and whether the purchase
+meets it, the rule's own requirement, its date. The next card is named with
+how far behind it is; **Other cards** opens to the rest. A program's offer that
+names no card is listed **With any card**, and an issuer's offer on a card with
+no rates here is named rather than ranked. What an offer is worth is read from
+its own sentence (`Spend $599 or more, get $100 back`, `10% off`, `up to
+$50`), and a sentence with no figure is listed and added to nothing.
+`purchase-data.js` does the arithmetic and ships to mobile; AI reads the
+description and chooses nothing. The tool writes to no store: it reads the
+cards, the wallet and the catalogues as this device keeps them, and a refresh
+that finds them changed works the answer out again. See
+[PURCHASE_ADVISOR.md](../docs/PURCHASE_ADVISOR.md). Archive:
+`release/erics-sidebar-0.6.275.zip`.
