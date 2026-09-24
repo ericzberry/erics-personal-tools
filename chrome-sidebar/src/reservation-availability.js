@@ -4,7 +4,7 @@
 // check — inside the page's reservation region, enabled, with a time in the
 // window, under the selected date and exact party. Nothing here reads a page
 // itself; it reads the snapshot `reservation-reader.js` took.
-import {normalizeName,timeMinutes,SCHEMA_VERSION,LIMITS,FRESHNESS,outingCombinations} from './restaurant-data.js';
+import {normalizeName,timeMinutes,displayTime,SCHEMA_VERSION,LIMITS,FRESHNESS,outingCombinations} from './restaurant-data.js';
 import {parseJSON,bookingProvider,providerSearchURL} from './restaurant-search.js';
 export const ADAPTER_VERSION='2026-09-22.1';
 export const OUTCOMES=['not_checked','checking','available','none_in_checked_window','not_released','login_required','challenge_required','choose_experience','unsupported','failed','cancelled','stale'];
@@ -131,7 +131,7 @@ export function structuralObservation(snapshot,raw,venue){
   // Times outside the window are a real observation of "none in window" only
   // when the page confirms it showed the whole day.
   const outside=slotCandidates(snapshot,job);
-  if(outside.length&&adapter.coverage==='all-day')return observation(job,{status:'none_in_checked_window',checkedWindow:window,coverage,detail:`Times shown only outside ${job.startTime}–${job.endTime}: ${outside.slice(0,4).map(s=>s.time).join(', ')}.`,reasonCode:'outside_window'});
+  if(outside.length&&adapter.coverage==='all-day')return observation(job,{status:'none_in_checked_window',checkedWindow:window,coverage,detail:`Times shown only outside ${displayTime(job.startTime)}–${displayTime(job.endTime)}: ${outside.slice(0,4).map(s=>displayTime(s.time)).join(', ')}.`,reasonCode:'outside_window'});
   return null;
 }
 

@@ -12,10 +12,17 @@ test('mobile restaurant search posts the intent, keeps one handoff per provider,
   const {document,window}=parseHTML('<html><body><main id="app"></main></body></html>');
   globalThis.document=document;globalThis.window=window;
   const descriptor=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value');
-  Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,get:descriptor.get,set(value){for(const option of this.options)option.selected=option.value===String(value);}});
-  let network=true,fail=false,resolveResearch,calls=0;const clock={now:Date.parse('2030-09-15T03:00:00Z')};
+  Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,
+    get(){return [...this.options].find(option=>option.hasAttribute('selected'))?.getAttribute('value')??'';},
+    set(value){for(const option of this.options)option.removeAttribute('selected');[...this.options].find(option=>option.getAttribute('value')===String(value))?.setAttribute('selected','');}});
+  let network=true,fail=false,resolveResearch,calls=0;const clock={now:Date.parse('2030-09-15T03:00:00Z')},readings=[];
   const store=memory(),history=restaurantHistory({store,locks:null,now:()=>clock.now});
   const options={credentials:{get:async()=>'synthetic-token'},history,online:()=>network,loadConnections:async()=>[{id:'test',name:'Test connection',provider:'openai',hasApiKey:true}],request:async(token,path,options)=>{
+    // The words are read first, on their own route and with their own short budget.
+    if(path.endsWith('/restaurant-intent')){
+      assert.equal(options.timeoutMs,40000);readings.push(options.value);
+      return {reading:{mode:'discovery',name:'',request:options.value.text,city:'',date:'',endDate:'',people:null,maxPeople:null,time:'',window:null}};
+    }
     calls++;assert.equal(options.timeoutMs,170000);assert.equal(options.value.intent.city.name,'New York City');assert.equal(options.value.intent.schemaVersion,2);
     if(fail)throw Error('Synthetic failure');return new Promise(resolve=>{resolveResearch=resolve;});
   }};
@@ -29,6 +36,7 @@ test('mobile restaurant search posts the intent, keeps one handoff per provider,
     const tool=mountRestaurants(root,options);await tool.open();
     type('text','Italian');type('date','2030-09-20');type('people','4');
     submit();await settle();assert.equal($('find').disabled,true);submit();assert.equal(calls,1);
+    assert.deepEqual(readings.map(words=>[words.text,words.city,/^\d{4}-\d{2}-\d{2}$/.test(words.today),/^\d{2}:\d{2}$/.test(words.now)]),[['Italian','New York City',true,true]]);
     resolveResearch(research);await settle(20);
     const links=[...root.querySelectorAll('#restaurant-result-a a')].filter(a=>/Check on/.test(a.textContent));
     assert.deepEqual(links.map(a=>a.textContent),['Check on Resy','Check on OpenTable']);

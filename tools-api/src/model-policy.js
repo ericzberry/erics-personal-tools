@@ -96,7 +96,14 @@ export const TASK_POLICIES = {
   // so the Worker can read that source itself; the quotes are what the
   // output budget pays for. An editorial requirement is read at the tier
   // above, where the edition and the exact figure are held apart reliably.
-  'restaurant.discovery':{label:'Restaurant discovery',level:2,outputTokens:6000,web:true,maxCost:0.15}
+  'restaurant.discovery':{label:'Restaurant discovery',level:2,outputTokens:6000,web:true,maxCost:0.15},
+  // Reads one typed request into the outing it describes — the day, the hour,
+  // the window either side and the party — and hands the rest of the words
+  // back for the search. It sets the date and party every provider check then
+  // runs against, so a misread weekday costs a whole research and
+  // availability pass on the wrong day: level 2, which selects a current
+  // model that answers without reasoning first, for about a tenth of a cent.
+  'restaurant.intent':{label:'Restaurant request reading',level:2,outputTokens:600,web:false,maxCost:0.01}
 };
 // Counts the text a request carries, whether a message is a plain string or a
 // list of parts, and how many images ride along with it.

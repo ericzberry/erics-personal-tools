@@ -153,7 +153,7 @@ export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>el
   ...children]);
 export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list,min,max,step}) {
   const caption=element('label',{for:id,id:kind==='select'?`${id}-label`:undefined,text:label,className:hiddenLabel?'sr-only':undefined});
-  const control=kind==='select'?Select({id,label,disabled,options}):kind==='textarea'?element('textarea',{id,rows,className:'editable-output'})
+  const control=kind==='select'?Select({id,label,disabled,options}):kind==='textarea'?element('textarea',{id,rows,placeholder,className:'editable-output'})
     :kind==='money'?MoneyInput(element('input',{id,type:'text',inputmode:'decimal',autocomplete:'off',placeholder,disabled,'data-money':''}))
     :element('input',{id,type:kind,placeholder,disabled,list,min,max,step,...(kind==='password'?{autocomplete:'off',spellcheck:'false'}:{})});
   if(kind==='select'){const trigger=control.querySelector('button');trigger.setAttribute('aria-labelledby',`${id}-label`);caption.addEventListener('click',()=>trigger.focus());}

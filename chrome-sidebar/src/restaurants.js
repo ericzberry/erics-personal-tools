@@ -1,24 +1,35 @@
-import {RestaurantWorkspace,MobileRestaurantWorkspace,summaryChips,LocationChoice,RestaurantResult,ResultGroup,FoldedResult} from './components/restaurant-views.js';
+import {RestaurantWorkspace,MobileRestaurantWorkspace,summaryChips,LocationChoice,RestaurantResult,ResultGroup,FoldedResult,timeChoices,windowChoices,Choices} from './components/restaurant-views.js';
 import {setStatus,setProgress,Note} from './components/ui.js';
-import {buildIntent,summarizeIntent,intentFromJSON,LIMITS,dateIn,displayDate,venue as venueRecord,SCHEMA_VERSION} from './restaurant-data.js';
+import {buildIntent,interpretRequest,summarizeIntent,intentFromJSON,LIMITS,dateIn,timeIn,displayDate,displayTime,windowLabel,resolveCity,DEFAULT_WINDOW,venue as venueRecord,SCHEMA_VERSION} from './restaurant-data.js';
 import {rankVenues,groupResults,sortSlots} from './restaurant-ranking.js';
 import {planChecks,runBounded,analyzeAvailability,observation,combineObservations,isStale,adapterFor} from './reservation-availability.js';
 import {providerSearchURL} from './restaurant-search.js';
 // The restaurant search, shared by the extension page and the phone
 // (docs/RESTAURANT_SEARCH_SPEC.md §3, §4, §11). The host supplies what differs:
-// how research is requested, whether booking pages can be inspected, how a
-// page is opened, and where the device keeps its history. Everything about
-// what a search means, what repeats after an edit, and what a result says is
-// decided here once.
+// how the words are read and research requested, whether booking pages can be
+// inspected, how a page is opened, and where the device keeps its history.
+// Everything about what a search means, what repeats after an edit, and what a
+// result says is decided here once.
 const fields=['text','city','date','people','time','window','flex-dates','through','flex-party','max','neighborhood','spend','dietary','format','travel'];
-export function mountRestaurants(root,{host='chrome',credentials,research,browser=null,openTab=null,generate=null,history,defaults={},online=()=>globalThis.navigator?.onLine!==false,connectionNote=async()=>'',now=()=>Date.now()}){
+// The controls the words can set, and what each is called when a hand-set
+// value is kept over what the words said.
+const WORDED={city:'City',date:'Date',through:'Last date','flex-dates':'',people:'People',max:'Largest party','flex-party':'',time:'Time',window:'Window'};
+const clean=text=>String(text||'').replace(/\s+/g,' ').trim();
+export function mountRestaurants(root,{host='chrome',credentials,read=null,research,browser=null,openTab=null,generate=null,history,defaults={},online=()=>globalThis.navigator?.onLine!==false,connectionNote=async()=>'',now=()=>Date.now()}){
   root.replaceChildren(host==='mobile'?MobileRestaurantWorkspace():RestaurantWorkspace());
   const $=name=>root.querySelector(`#restaurant-${name}`);
   const mobile=host==='mobile',inspects=!!browser;
-  let search=null,ranked=null,busy=false,generation=0,abort=null,modeOverride='',visits=0,fallbacks={total:0,venues:{}},userTabs={},pendingJobs=[],loaded=false,token='';
-  const status=(text,tone='')=>{setStatus($('status'),text,tone);$('status').hidden=!text;};
-  const error=text=>{setStatus($('error'),text,'error');$('error').hidden=!text;};
-  const note=text=>{setStatus($('connection-status'),text,'');$('connection-status').hidden=!text;};
+  let search=null,pending=null,ranked=null,busy=false,generation=0,abort=null,visits=0,fallbacks={total:0,venues:{}},userTabs={},pendingJobs=[],loaded=false,token='';
+  // The last words read, what they said about each control, and the controls
+  // the owner has set by hand since. Words already read are not read again;
+  // `unread` is words whose reading failed, which go ahead as typed.
+  let reading=null,unread='',override={text:'',mode:''};
+  const handSet=new Set();
+  const status=(text,tone='')=>{setStatus($('status'),text,tone);$('status').hidden=!text;actionsRow();};
+  const error=text=>{setStatus($('error'),text,'error');$('error').hidden=!text;actionsRow();};
+  const note=text=>{setStatus($('connection-status'),text,'');$('connection-status').hidden=!text;actionsRow();};
+  const wordsFor=text=>reading&&reading.text===clean(text)?reading:null;
+  const overrideFor=text=>override.text===clean(text)?override.mode:'';
 
   // The form
   function visibility(){
@@ -27,36 +38,125 @@ export function mountRestaurants(root,{host='chrome',credentials,research,browse
     $('through-field').hidden=!dated||!$('flex-dates').checked;
     $('max-field').hidden=!dated||!$('flex-party').checked;
     $('nyc').hidden=!/new york|nyc|manhattan|^ny$/i.test($('city').value.trim());
-    if(!busy)$('find').textContent=search?.candidates?.length&&sameIdentity(formValue())?(dated?'Check availability':'Update results'):dated?'Find a table':'Find restaurants';
+    // Until new words are read, the controls still hold the last reading, so
+    // whether this finds a table is not known yet.
+    const form=formValue();
+    if(!busy)$('find').textContent=search?.candidates?.length&&sameIdentity(form)?(dated?'Check availability':'Update results'):dated&&(!read||wordsFor(form.text))?'Find a table':'Find restaurants';
+    actionsRow();
   }
   function formValue(){
-    return {text:$('text').value,city:$('city').value,date:$('date').value,endDate:$('through').value,flexibleDates:$('flex-dates').checked,people:$('people').value,maxPeople:$('max').value,flexibleParty:$('flex-party').checked,time:$('time').value,window:$('window').value,
+    const words=wordsFor($('text').value);
+    return {text:$('text').value,...(words?{request:words.request,name:words.name}:{}),city:$('city').value,date:$('date').value,endDate:$('through').value,flexibleDates:$('flex-dates').checked,people:$('people').value,maxPeople:$('max').value,flexibleParty:$('flex-party').checked,time:$('time').value,window:$('window').value,
       neighborhood:$('neighborhood').value,maxSpend:$('spend').value,dietary:$('dietary').value,format:$('format').value,includeLongTravel:$('travel').checked};
   }
+  // A time or a window the words asked for is offered as a choice even when
+  // it is not one of the usual ones, so the control shows exactly what will
+  // be checked.
+  function setControl(id,value){
+    const control=$(id);
+    if(control.type==='checkbox'){control.checked=!!value;return;}
+    if(id==='time')control.replaceChildren(...Choices(timeChoices(value)));
+    if(id==='window')control.replaceChildren(...Choices(windowChoices(value)));
+    control.value=String(value);
+  }
   function fill(value={}){
-    const v={text:'',city:defaults.city||'New York City',date:'',endDate:'',flexibleDates:false,people:2,maxPeople:'',flexibleParty:false,time:'19:30',window:'60',neighborhood:defaults.neighborhood||'',maxSpend:'',dietary:'',format:'',includeLongTravel:!!defaults.includeLongTravel,...value};
+    const v={text:'',city:defaults.city||'New York City',date:'',endDate:'',flexibleDates:false,people:2,maxPeople:'',flexibleParty:false,time:'19:30',window:String(DEFAULT_WINDOW),neighborhood:defaults.neighborhood||'',maxSpend:'',dietary:'',format:'',includeLongTravel:!!defaults.includeLongTravel,...value};
     $('text').value=v.text;$('city').value=v.city;$('date').value=v.date;$('through').value=v.endDate;$('flex-dates').checked=!!v.flexibleDates;$('people').value=v.people;$('max').value=v.maxPeople;$('flex-party').checked=!!v.flexibleParty;
-    $('time').value=v.time;$('window').value=String(v.window);$('neighborhood').value=v.neighborhood;$('spend').value=v.maxSpend;$('dietary').value=v.dietary;$('format').value=v.format;$('travel').checked=!!v.includeLongTravel;
+    setControl('time',v.time);setControl('window',v.window);$('neighborhood').value=v.neighborhood;$('spend').value=v.maxSpend;$('dietary').value=v.dietary;$('format').value=v.format;$('travel').checked=!!v.includeLongTravel;
     for(const id of ['date','through'])$(id).min=dateIn('',new Date(now()));
-    $('text').required=true;$('city').required=true;
+    $('text').required=true;
     visibility();
   }
-  const fromIntent=intent=>({text:intent.text,city:intent.city.name,date:intent.outing?.preferredDate||'',endDate:intent.outing?.dates.at(-1)||'',flexibleDates:!!intent.outing&&intent.outing.dates.length>1,people:intent.outing?.preferredParty||2,maxPeople:intent.outing?.partySizes.at(-1)||'',flexibleParty:!!intent.outing&&intent.outing.partySizes.length>1,time:intent.outing?.preferredTime||'19:30',
-    window:intent.outing?String(Math.max(30,Math.min(120,Math.abs(minutes(intent.outing.endTime)-minutes(intent.outing.preferredTime))))):'60',includeLongTravel:!!intent.includeLongTravel});
   const minutes=t=>{const [h,m]=t.split(':').map(Number);return h*60+m;};
-  // The research identity: the words, the city and the mode. Anything else
-  // that changes reuses what was already found (§3.5).
-  const identityOf=(form,mode='')=>JSON.stringify([form.text.trim().toLowerCase(),form.city.trim().toLowerCase(),mode||modeOverride]);
+  const fromIntent=intent=>({text:intent.text,city:intent.city.name,date:intent.outing?.preferredDate||'',endDate:intent.outing?.dates.at(-1)||'',flexibleDates:!!intent.outing&&intent.outing.dates.length>1,people:intent.outing?.preferredParty||2,maxPeople:intent.outing?.partySizes.at(-1)||'',flexibleParty:!!intent.outing&&intent.outing.partySizes.length>1,time:intent.outing?.preferredTime||'19:30',
+    // The wider side, because a window that runs into midnight is cut short on one side only.
+    window:intent.outing?String(Math.min(180,Math.max(minutes(intent.outing.endTime)-minutes(intent.outing.preferredTime),minutes(intent.outing.preferredTime)-minutes(intent.outing.startTime)))):String(DEFAULT_WINDOW),
+    // Only a switch the owner threw comes back on: an area the words named set
+    // the standing exclusions aside for that search, not for the next one.
+    includeLongTravel:!!intent.includeLongTravel&&!interpretRequest(intent.request||intent.text,{city:intent.city.name}).includeLongTravel});
+
+  // The words, read (§3.2). What they say about the day, the hour, the window,
+  // the party and the city goes into those controls, and a control they say
+  // nothing about goes back to its default, because the words are what it
+  // follows. A control the owner set by hand stands over the words until the
+  // words about it change: then the newer statement wins.
+  function controlsFrom(r){
+    const values={date:r.date||'',through:r.endDate||'','flex-dates':!!r.endDate,people:String(r.people||2),max:r.maxPeople?String(r.maxPeople):'','flex-party':!!r.maxPeople,time:r.time||'19:30',window:r.time&&r.window!==null&&r.window!==undefined?String(r.window):String(DEFAULT_WINDOW)};
+    if(r.city)values.city=resolveCity(r.city).name;
+    return values;
+  }
+  const saidOf=r=>({city:!!r.city,date:!!r.date,through:!!r.endDate,'flex-dates':!!r.endDate,people:!!r.people,max:!!r.maxPeople,'flex-party':!!r.maxPeople,time:!!r.time,window:!!r.time&&r.window!==null&&r.window!==undefined});
+  function applyReading(text,r){
+    const next=controlsFrom(r),before=reading?.controls||null;
+    for(const [id,value] of Object.entries(next)){
+      if(handSet.has(id)&&(!before||String(before[id])===String(value)))continue;
+      setControl(id,value);handSet.delete(id);
+    }
+    reading={text,request:r.request,mode:r.mode,name:r.name||'',controls:next,said:saidOf(r)};
+    unread='';
+    visibility();
+  }
+  const describeControl=(id,value)=>id==='date'||id==='through'?displayDate(value):id==='time'?displayTime(value):id==='window'?windowLabel(value):String(value);
+  // Where a hand-set control kept its value over what the words said, the
+  // summary says so rather than choosing silently (§3.2).
+  function resolved(form){
+    const words=wordsFor(form.text);
+    if(!words?.controls)return [];
+    return Object.entries(WORDED).filter(([id,label])=>label&&handSet.has(id)&&words.said[id]).flatMap(([id,label])=>{
+      const stated=words.controls[id],current=$(id).value;
+      return String(stated)===String(current)?[]:[`${label} taken from the form (the words said ${describeControl(id,stated)}).`];
+    });
+  }
+  // New words are read before anything else, and words already read are not
+  // read again. Words whose reading failed go ahead as typed on the next press,
+  // with the controls as they stand: the manual path when no reading can be
+  // had (UI-20).
+  async function understand(){
+    const text=clean($('text').value);
+    if(!read||!text||wordsFor(text)||unread===text)return true;
+    if(!online()){error('Reconnect to find restaurants. Saved results stay available.');return false;}
+    // Research needs the same connection, so its absence is said as itself
+    // rather than as a reading that failed.
+    try{const missing=await connectionNote();if(missing){error(missing);return false;}}catch(e){error(e.message);return false;}
+    const current=++generation;abort=new AbortController();error('');setBusy(true);status('Reading the request…','progress');
+    try{
+      const place=resolveCity($('city').value),at=new Date(now());
+      const r=await read({text,city:place.name,today:dateIn(place.timezone,at),now:timeIn(place.timezone,at)},{signal:abort.signal});
+      if(current!==generation)return false;
+      applyReading(text,r);status('');
+      return true;
+    }catch(e){
+      if(current!==generation)return false;
+      unread=text;$('details').open=true;
+      status('');error(`${e.message} Set the date, people and time under Details, then search again.`);
+      return false;
+    }finally{if(current===generation)setBusy(false);}
+  }
+  // The research identity: the words about the place, the city and the mode.
+  // The day, the hour and the party are not part of it, so saying Sunday
+  // instead of Saturday rechecks the same restaurants (§3.5).
+  const identityOf=(form,mode='')=>JSON.stringify([clean(wordsFor(form.text)?.request??form.text).toLowerCase(),form.city.trim().toLowerCase(),mode||overrideFor(form.text)]);
   const sameIdentity=form=>!!search&&search.identity===identityOf(form,search.intent.mode);
+  // The action row stands while the form is open, and while work runs so it
+  // can be stopped; once results are in and nothing runs, the summary's Edit
+  // search is the way back in, and the folded search takes no room at all
+  // unless it has something to say.
+  function actionsRow(){
+    const folded=$('form').classList.contains('is-collapsed')&&!busy;
+    $('actions').hidden=folded;
+    $('search-section').hidden=folded&&['status','error','connection-status'].every(id=>$(id).hidden);
+  }
   function setBusy(value){
     busy=value;
     for(const id of fields)$(id).disabled=value;
     $('find').disabled=value||(!online()&&!sameIdentity(formValue()));
     $('stop').hidden=!value;
     $('more').disabled=value;$('continue').disabled=value;$('retry').disabled=value;
+    $('edit').hidden=value;
     if(value)$('find').textContent='Working…';else visibility();
+    actionsRow();
   }
-  function collapse(value){$('form').classList.toggle('is-collapsed',value);$('summary').hidden=!value;}
+  function collapse(value){$('form').classList.toggle('is-collapsed',value);$('summary').hidden=!value;actionsRow();}
 
   // What the screen shows
   const outing=()=>search?.intent.outing||null;
@@ -80,12 +180,24 @@ export function mountRestaurants(root,{host='chrome',credentials,research,browse
   // The outing as the form has it now, so a phone's handoff links follow a
   // date change with no research and no submit (§10).
   function liveOuting(){try{return buildIntent(formValue(),{now:new Date(now())}).outing;}catch{return null;}}
+  // What was understood is shown as soon as it is known: while research for
+  // new words runs, the summary is theirs and the previous results are put
+  // away, to come back if the research fails or is stopped (§3.2).
+  function summarize(intent,clarification=''){
+    $('summary-chips').replaceChildren(...summaryChips(summarizeIntent(intent)));
+    $('summary-notes').textContent=[...intent.notes,clarification].filter(Boolean).join(' ');
+  }
   function render(){
+    const sw=$('mode-switch');
+    if(pending){
+      summarize(pending);sw.hidden=true;
+      $('choice').hidden=true;$('results').hidden=true;collapse(true);
+      return;
+    }
     if(!search){$('results').hidden=true;collapse(false);return;}
     const intent=search.intent;
-    $('summary-chips').replaceChildren(...summaryChips(summarizeIntent(intent)));
-    $('summary-notes').textContent=[...intent.notes,search.clarification].filter(Boolean).join(' ');
-    const sw=$('mode-switch');sw.hidden=!intent.text||search.choosing;sw.textContent=intent.mode==='named'?'Search as a description instead':'Search as a name instead';
+    summarize(intent,search.clarification);
+    sw.hidden=busy||!intent.text||search.choosing;sw.textContent=intent.mode==='named'?'Search as a description instead':'Search as a name instead';
     $('choice').hidden=!search.choosing;
     if(search.choosing)$('choices').replaceChildren(...LocationChoice(search.candidates.slice(0,3).map(v=>({id:v.id,name:v.name,address:v.address,neighborhood:v.neighborhood})),choose));
     $('results').hidden=search.choosing;
@@ -124,16 +236,19 @@ export function mountRestaurants(root,{host='chrome',credentials,research,browse
   // Research
   async function find(event){
     event?.preventDefault();if(busy)return;
+    if(!await understand())return;
     let intent;
     const form=formValue();
+    const words=wordsFor(form.text);
     try{
       const reuse=sameIdentity(form);
-      intent=buildIntent(form,{now:new Date(now()),id:reuse?search.id:crypto.randomUUID(),revision:reuse?search.intent.revision+1:1,mode:modeOverride||(reuse?search.intent.mode:'')});
+      intent=buildIntent(form,{now:new Date(now()),id:reuse?search.id:crypto.randomUUID(),revision:reuse?search.intent.revision+1:1,mode:overrideFor(form.text)||words?.mode||(reuse?search.intent.mode:''),notes:resolved(form)});
       if(!reuse){if(!online())throw Error('Reconnect to find restaurants. Saved results stay available.');const missing=await connectionNote();if(missing)throw Error(missing);}
       token=await credentials.get()||'';
       if(reuse){await edit(intent);return;}
     }catch(e){error(e.message);return;}
     const current=++generation;abort=new AbortController();error('');setBusy(true);status('Researching restaurants and their sources…','progress');
+    pending=intent;render();
     const started={id:intent.id,identity:identityOf(form,intent.mode)};
     try{
       const data=await research(intent,{signal:abort.signal});
@@ -146,16 +261,17 @@ export function mountRestaurants(root,{host='chrome',credentials,research,browse
         if(history&&token&&(await history.read(token).catch(()=>({searches:[]}))).searches.some(s=>s.id===record.id))await history.write(token,record).catch(()=>{});
         return;
       }
-      search=record;visits=0;fallbacks={total:0,venues:{}};userTabs={};pendingJobs=[];
+      search=record;pending=null;visits=0;fallbacks={total:0,venues:{}};userTabs={};pendingJobs=[];
       if(intent.mode==='named')namedOutcome();
       status('');render();await persist();
       if(!search.choosing&&intent.outing&&inspects)await runChecks({initial:true});
     }catch(e){
       if(current!==generation)return;
+      pending=null;
       if(search)search.stage='failed';
       error(e.message);status('Research could not finish. Your search is preserved.','error');
       if(search)render();
-    }finally{if(current===generation){setBusy(false);render();}}
+    }finally{if(current===generation){pending=null;setBusy(false);render();}}
   }
   // A named search resolves to one place or asks which (§3.3).
   function namedOutcome(){
@@ -261,7 +377,7 @@ export function mountRestaurants(root,{host='chrome',credentials,research,browse
     finally{if(current===generation){setBusy(false);render();await persist();}}
   }
   function stop(){
-    generation++;abort?.abort();
+    generation++;abort?.abort();pending=null;
     if(search){search.observations=search.observations.map(o=>o.status==='checking'?{...o,status:'cancelled',detail:'Stopped before this check completed.'}:o);}
     $('progress-row').hidden=true;setBusy(false);
     status('Stopped. Completed checks are kept. A research request already sent may still finish and be billed.','alert');
@@ -269,13 +385,24 @@ export function mountRestaurants(root,{host='chrome',credentials,research,browse
   }
 
   // Wiring
+  // The words are checked by buildIntent, which says what is wrong in words
+  // beside the form; a browser's own bubble cannot point into a closed Details.
+  $('form').noValidate=true;
+  $('text').enterKeyHint='search';
   $('form').addEventListener('submit',find);
+  // Enter searches, as in any search box; Shift+Enter starts a new line.
+  $('text').addEventListener('keydown',event=>{
+    if(event.key!=='Enter'||event.shiftKey||event.isComposing)return;
+    event.preventDefault();
+    if($('form').requestSubmit)$('form').requestSubmit();else find();
+  });
   $('stop').addEventListener('click',stop);
   $('edit').addEventListener('click',()=>{collapse(false);$('text').focus();});
-  $('mode-switch').addEventListener('click',()=>{if(!search)return;modeOverride=search.intent.mode==='named'?'discovery':'named';search=null;find();});
+  $('mode-switch').addEventListener('click',()=>{if(!search)return;override={text:clean(search.intent.text),mode:search.intent.mode==='named'?'discovery':'named'};search=null;find();});
   $('more').addEventListener('click',()=>runChecks({initial:false}));
   $('continue').addEventListener('click',()=>runChecks({venues:[...new Set(pendingJobs.map(j=>j.venueId))].map(byId).filter(Boolean)}));
   $('retry').addEventListener('click',()=>{if(search){search=null;find();}});
+  for(const id of Object.keys(WORDED))$(id).addEventListener('input',()=>handSet.add(id));
   for(const id of ['date','city','flex-dates','flex-party'])$(id).addEventListener('input',visibility);
   // New words or a new city need the network; a change to the outing or the
   // preferences of a search already here does not.
@@ -287,7 +414,7 @@ export function mountRestaurants(root,{host='chrome',credentials,research,browse
   fill();
   return {
     // Reopening restores the last search as it was, observations and their
-    // ages included, and starts nothing (§3.6).
+    // ages included, and starts nothing (§3.6). Its words count as read.
     async open(){
       if(loaded)return;loaded=true;
       try{
@@ -296,13 +423,15 @@ export function mountRestaurants(root,{host='chrome',credentials,research,browse
         if(last){
           const intent=intentFromJSON(last.intent,{now:new Date(now())});
           search={...last,intent,candidates:last.candidates.map(v=>venueRecord(v)).map((v,i)=>({...v,reason:last.candidates[i].reason||''})),observations:last.observations||[],checked:last.checked||[],choosing:false,stage:last.stage||'complete'};
-          fill(fromIntent(intent));render();
+          fill(fromIntent(intent));
+          reading={text:clean(intent.text),request:intent.request||intent.text,mode:intent.mode,name:intent.name||'',controls:null,said:{}};
+          render();
         }else if(defaults.city)fill();
       }catch(e){error(e.message);}
       try{note(await connectionNote());}catch(e){note(e.message);}
       setBusy(false);
     },
     stop,
-    clear(){search=null;ranked=null;token='';render();fill();}
+    clear(){search=null;pending=null;ranked=null;token='';reading=null;unread='';override={text:'',mode:''};handSet.clear();render();fill();}
   };
 }

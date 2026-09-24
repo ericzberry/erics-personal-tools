@@ -22,7 +22,7 @@ import {rewardsSettings,researchCardBenefits,readLoyaltyBalances} from './reward
 import {wallet} from './wallet.js';
 import {aiSettings,savedConnection} from './ai-settings.js';
 import {generate,listModels} from './providers.js';
-import {discoverRestaurants} from './restaurants.js';
+import {discoverRestaurants,readRestaurantRequest} from './restaurants.js';
 import {weather} from './weather.js';
 const MAX_BYTES = 64 * 1024;
 // A record write stays at 64 KB. Only the AI-connection family may be larger,
@@ -147,7 +147,7 @@ export default {
         await env.DB.prepare('SELECT id FROM ai_connections LIMIT 1').all();
         return json({ok: true, service: 'erics-tools-api', version: 2});
       }
-      const operation=/^\/v1\/ai-connections\/([a-f0-9-]{36})\/(models|test|generate|restaurants|card-category|card-research|card-benefits|balance-intake|finance-intake|tax-intake|capture|subscription-intake|subscription-research)$/.exec(path);
+      const operation=/^\/v1\/ai-connections\/([a-f0-9-]{36})\/(models|test|generate|restaurants|restaurant-intent|card-category|card-research|card-benefits|balance-intake|finance-intake|tax-intake|capture|subscription-intake|subscription-research)$/.exec(path);
       if(operation){
         const [,id,action]=operation;
         if(request.method!==(action==='models'?'GET':'POST'))return json({error:'Method not allowed.'},405);
@@ -164,6 +164,7 @@ export default {
         if(action==='capture')return json(await readCapture(connection,input));
         if(action==='tax-intake')return json(await readTaxDocument(connection,input));
         if(action==='restaurants')return json(await discoverRestaurants(connection,input));
+        if(action==='restaurant-intent')return json(await readRestaurantRequest(connection,input));
         return json(await generate(connection,action==='test'?{model:input.model,messages:[{role:'user',content:'Reply with just OK.'}],maxTokens:256}:input));
       }
       if(path==='/v1/storage')return await storageUsage(request,env,json);

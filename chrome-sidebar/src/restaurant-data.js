@@ -5,7 +5,7 @@
 // it holds no DOM and no network.
 import {safePublicURL} from './public-url.js';
 export const SCHEMA_VERSION=2;
-export const INTERPRETATION_VERSION='2026-09-22.1';
+export const INTERPRETATION_VERSION='2026-09-24.1';
 const DAY=86400000;
 // Work limits and freshness are product policy, kept in one place (§3.4, §5.4,
 // §7.3). They are adjusted here, never exposed as form controls.
@@ -67,6 +67,12 @@ export function dateIn(timezone='',now=new Date()){
   try{return new Intl.DateTimeFormat('en-CA',{timeZone:timezone||undefined,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
   catch{return new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 }
+// The time of day where the outing is, as HH:MM, so "tonight" and "in an hour"
+// are read on the destination's clock.
+export function timeIn(timezone='',now=new Date()){
+  const format=zone=>new Intl.DateTimeFormat('en-GB',{timeZone:zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now);
+  try{return format(timezone||undefined);}catch{return format(undefined);}
+}
 export const calendarDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value))&&new Date(`${value}T00:00:00Z`).toISOString().slice(0,10)===value;
 export const clockTime=value=>/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(value));
 export const timeMinutes=time=>{const [h,m]=String(time).split(':').map(Number);return h*60+m;};
@@ -82,6 +88,24 @@ export function displayDate(date,{weekday=true}={}){
   return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US',{timeZone:'UTC',...(weekday?{weekday:'short'}:{}),month:'short',day:'numeric'});
 }
 export const dayCount=(from,to)=>Math.round((Date.parse(`${to}T00:00:00Z`)-Date.parse(`${from}T00:00:00Z`))/DAY)+1;
+// Minutes either side of the preferred time. The form offers the usual ones,
+// and the words can ask for any whole number up to three hours: "within 15
+// minutes of 12:15" is fifteen, "exactly 7:30" is none. Unset is an hour.
+export const WINDOW_CHOICES=[0,15,30,45,60,90,120,180];
+export const DEFAULT_WINDOW=60;
+export function windowMinutes(value){
+  if(value===''||value===null||value===undefined)return DEFAULT_WINDOW;
+  const minutes=Number(value);
+  return Number.isInteger(minutes)&&minutes>=0&&minutes<=180?minutes:DEFAULT_WINDOW;
+}
+export function windowLabel(value){
+  const minutes=windowMinutes(value);
+  if(minutes===0)return 'Exactly';
+  const hours=Math.floor(minutes/60),rest=minutes%60;
+  if(!hours)return `± ${rest} min`;
+  if(!rest)return `± ${hours} hour${hours===1?'':'s'}`;
+  return rest===30?`± ${hours}½ hours`:`± ${hours} h ${rest} min`;
+}
 export function dateRange(from,to){
   const dates=[];
   for(let day=Date.parse(`${from}T00:00:00Z`);dates.length<LIMITS.dates;day+=DAY){
@@ -245,8 +269,10 @@ export function interpretRequest(text,{city='New York City'}={}){
   const nytStars=/\b(one|two|three|four|1|2|3|4)\s+(?:nyt|times|new york times)\s+stars?\b/i.exec(raw)||/\b(?:nyt|times|new york times)\s+(one|two|three|four|1|2|3|4)\s+stars?\b/i.exec(raw);
   if(nytStars){recognized=true;add(requirements,'editorial','gte',numberOf(nytStars[1]),{publisher:'The New York Times',system:'stars'});}
   // Money is a requirement when it is a ceiling and a preference when it is a
-  // feeling. "All-in" makes tax, tip and fees part of the figure (§3.2).
-  const price=/\b(under|below|less than|no more than|at most|max(?:imum)?|up to|around|about|roughly|~)\s*\$?\s*(\d{2,4})\s*(?:\$|dollars|usd|bucks)?\s*(pp|per person|a head|per head|each|a person|all[- ]in)?/i.exec(raw);
+  // feeling. "All-in" makes tax, tip and fees part of the figure (§3.2). A
+  // clock, a length of time or a head count is not money: "around 12:15",
+  // "under 30 minutes away" and "up to 12 people" set no budget.
+  const price=/\b(under|below|less than|no more than|at most|max(?:imum)?|up to|around|about|roughly|~)\s*\$?\s*(\d{2,4})(?![\d:]|\s*(?:am|pm|a\.m|p\.m|o['’]?clock|min(?:ute)?s?|hours?|hrs?|people|persons|guests|of us)\b)\s*(?:\$|dollars|usd|bucks)?\s*(pp|per person|a head|per head|each|a person|all[- ]in)?/i.exec(raw);
   if(price){
     recognized=true;
     const amount=Number(price[2]),vague=/around|about|roughly|~/.test(price[1].toLowerCase());
@@ -328,14 +354,22 @@ export function standingConstraints(city,{includeLongTravel=false}={}){
 // The form, understood: one SearchIntent (§8). Controls the owner set win over
 // words in the text, and every resolution of a conflict is written into `notes`
 // so the summary can show it rather than choose silently (§3.2).
-export function buildIntent(form={},{now=new Date(),id=crypto.randomUUID(),revision=1,mode=''}={}){
+export function buildIntent(form={},{now=new Date(),id=crypto.randomUUID(),revision=1,mode='',notes:resolved=[]}={}){
   const text=String(form.text||'').trim().slice(0,LIMITS.text);
   const city=resolveCity(form.city);
   if(!text)throw Error('Describe the dinner or name the restaurant.');
   if(!city.name)throw Error('Enter a city.');
-  const read=interpretRequest(text,{city:city.name});
+  // What the research is for: the words about the place, once a reading has
+  // taken the day, the hour, the window and the party out of them (§3.2).
+  // Without a reading it is the whole text, read as it always was.
+  const request=String(form.request??text).replace(/\s+/g,' ').trim().slice(0,LIMITS.text);
+  if(!request)throw Error('Say what kind of place you want, or which restaurant.');
+  const read=interpretRequest(request,{city:city.name});
   const finalModeOf=()=>['named','discovery'].includes(mode)?mode:read.mode;
-  const notes=[...read.notes];
+  // A named venue carries no criteria of its own however it came to be read
+  // as one — by the words, by a reading or by the owner's correction (§3.3).
+  const named=finalModeOf()==='named';
+  const notes=[...resolved,...(named?[]:read.notes)];
   if(!city.timezone)notes.push(`${city.name} is read on this device’s clock.`);
   const today=dateIn(city.timezone,now);
   const date=String(form.date||'').trim();
@@ -353,14 +387,14 @@ export function buildIntent(form={},{now=new Date(),id=crypto.randomUUID(),revis
     if(maxPeople-people+1>LIMITS.partySizes)throw Error(`Check at most ${LIMITS.partySizes} party sizes in one search. Narrow the range before checking availability.`);
     const preferredTime=String(form.time||'19:30');
     if(!clockTime(preferredTime))throw Error('Choose a time.');
-    const window=[30,60,90,120,180].includes(Number(form.window))?Number(form.window):60;
+    const window=windowMinutes(form.window);
     const minutes=timeMinutes(preferredTime);
     const start=Math.max(0,minutes-window),end=Math.min(23*60+59,minutes+window);
     if(minutes+window>23*60+59)notes.push('The time window stops at midnight; the next day is a separate date.');
     if(minutes-window<0)notes.push('The time window starts at midnight.');
     outing={dates:dateRange(date,endDate),preferredDate:date,partySizes:Array.from({length:maxPeople-people+1},(_,i)=>people+i),preferredParty:people,preferredTime,startTime:minutesTime(start),endTime:minutesTime(end)};
   }
-  const requirements=[...read.requirements],preferences=[...read.preferences];
+  const requirements=named?[]:[...read.requirements],preferences=named?[]:[...read.preferences];
   const control=(list,kind,operator,value,qualifiers={})=>{
     const item=constraint({kind,operator,value,qualifiers,origin:'explicit_control'});
     for(const target of [requirements,preferences]){
@@ -397,7 +431,7 @@ export function buildIntent(form={},{now=new Date(),id=crypto.randomUUID(),revis
   for(const item of standing.preferences)if(![...requirements,...preferences].some(existing=>existing.kind==='geography'&&existing.operator==='in'))preferences.push(item);
   if(requirements.length>LIMITS.requirements||preferences.length>LIMITS.preferences)throw Error('That is more than the search can hold. Say less at once.');
   const finalMode=finalModeOf();
-  return {schemaVersion:SCHEMA_VERSION,id,revision,text,mode:finalMode,name:finalMode==='named'?(read.name||text.slice(0,150)):'',city,venueId:null,outing,requirements,preferences,includeLongTravel,notes,interpretationVersion:INTERPRETATION_VERSION};
+  return {schemaVersion:SCHEMA_VERSION,id,revision,text,request,mode:finalMode,name:finalMode==='named'?(String(form.name||'').trim()||read.name||request).slice(0,150):'',city,venueId:null,outing,requirements,preferences,includeLongTravel,notes,interpretationVersion:INTERPRETATION_VERSION};
 }
 export const kindLabel=kind=>({cuisine:'Cuisine',geography:'Area',price:'Budget',editorial:'Rating',dining_format:'Menu',dietary:'Dietary',atmosphere:'Atmosphere',occasion:'Occasion'}[kind]||kind);
 const titleCase=text=>String(text).replace(/\b[a-z]/g,ch=>ch.toUpperCase());
@@ -425,7 +459,8 @@ export function describeOuting(outing){
   if(!outing)return '';
   const dates=outing.dates.length>1?`${displayDate(outing.dates[0])} – ${displayDate(outing.dates.at(-1))}`:displayDate(outing.preferredDate);
   const sizes=outing.partySizes.length>1?`${outing.partySizes[0]}–${outing.partySizes.at(-1)} people`:`${outing.preferredParty} ${outing.preferredParty===1?'person':'people'}`;
-  return `${dates} · ${sizes} · ${displayTime(outing.startTime)}–${displayTime(outing.endTime)}`;
+  const times=outing.startTime===outing.endTime?displayTime(outing.startTime):`${displayTime(outing.startTime)}–${displayTime(outing.endTime)}`;
+  return `${dates} · ${sizes} · ${times}`;
 }
 export function summarizeIntent(intent){
   const parts=[];
@@ -454,7 +489,7 @@ export function outingCombinations(outing){
 export function legacySearch(intent,today=dateIn(intent.city.timezone)){
   const named=intent.mode==='named',outing=intent.outing;
   const area=[...intent.requirements,...intent.preferences].find(item=>item.kind==='geography'&&item.operator==='in'&&item.origin!=='saved_preference');
-  const search={mode:named?'restaurant':'category',query:named?intent.name:intent.text,city:intent.city.name,neighborhood:area?areaLabel(area.value[0]):'',
+  const search={mode:named?'restaurant':'category',query:named?intent.name:(intent.request||intent.text),city:intent.city.name,neighborhood:area?areaLabel(area.value[0]):'',
     date:outing?.preferredDate||today,endDate:outing?outing.dates.at(-1):today,flexibleDates:!!outing&&outing.dates.length>1,flexible:!!outing&&outing.partySizes.length>1,
     minParty:outing?.partySizes[0]||2,maxParty:outing?outing.partySizes.at(-1):2,startTime:outing?.startTime||'17:00',endTime:outing?.endTime||'22:00',includeLongTravel:!!intent.includeLongTravel,limit:LIMITS.candidates};
   if(!search.flexible)search.partySize=search.minParty;
@@ -528,8 +563,8 @@ export function checkConstraint(item,venue,{now=Date.now(),city='New York City'}
     if(!labels.length)return result('unknown','Cuisine not verified.');
     const wanted=Array.isArray(item.value)?item.value:[item.value];
     const hit=wanted.some(id=>labels.includes(id));
-    if(item.operator==='exclude')return result(hit?'fail':'pass',`Cuisine: ${labels.join(', ')}`);
-    return result(hit?'pass':'fail',`Cuisine: ${labels.join(', ')}`);
+    if(item.operator==='exclude')return result(hit?'fail':'pass',`Cuisine: ${titleCase(labels.join(', '))}`);
+    return result(hit?'pass':'fail',`Cuisine: ${titleCase(labels.join(', '))}`);
   }
   if(item.kind==='geography'){
     const area=venueArea(venue,city);
@@ -655,7 +690,7 @@ export function intentFromJSON(value,{now=new Date()}={}){
     outing={dates:[...dates].sort(),preferredDate:o.preferredDate,partySizes:[...sizes].sort((a,b)=>a-b),preferredParty:o.preferredParty,preferredTime:o.preferredTime,startTime:o.startTime,endTime:o.endTime};
   }
   const list=(items,max)=>{if(!Array.isArray(items)||items.length>max)throw Error('That is more than the search can hold.');return items.map(item=>constraint(item));};
-  return {schemaVersion:SCHEMA_VERSION,id:/^[0-9a-f-]{36}$/.test(String(value.id))?value.id:crypto.randomUUID(),revision:Number.isInteger(value.revision)&&value.revision>0?value.revision:1,text,mode:value.mode,name:value.mode==='named'?String(value.name||text).slice(0,150):'',city,venueId:typeof value.venueId==='string'?value.venueId.slice(0,80):null,outing,
+  return {schemaVersion:SCHEMA_VERSION,id:/^[0-9a-f-]{36}$/.test(String(value.id))?value.id:crypto.randomUUID(),revision:Number.isInteger(value.revision)&&value.revision>0?value.revision:1,text,request:typeof value.request==='string'?value.request.replace(/\s+/g,' ').trim().slice(0,LIMITS.text):'',mode:value.mode,name:value.mode==='named'?String(value.name||text).slice(0,150):'',city,venueId:typeof value.venueId==='string'?value.venueId.slice(0,80):null,outing,
     requirements:list(value.requirements||[],LIMITS.requirements),preferences:list(value.preferences||[],LIMITS.preferences),includeLongTravel:value.includeLongTravel===true,notes:(Array.isArray(value.notes)?value.notes:[]).map(n=>String(n).slice(0,200)).slice(0,8),interpretationVersion:String(value.interpretationVersion||'').slice(0,40)};
 }
 // A search saved by the previous generation of the tool, carried forward as a
@@ -666,6 +701,64 @@ export function legacyIntent(search){
   return {schemaVersion:SCHEMA_VERSION,id:crypto.randomUUID(),revision:1,text:String(search.query||''),mode:search.mode==='restaurant'?'named':'discovery',name:search.mode==='restaurant'?String(search.query||''):'',city:resolveCity(search.city),venueId:null,
     outing:dates.length?{dates,preferredDate:dates[0],partySizes:sizes,preferredParty:sizes[0],preferredTime:search.startTime||'19:00',startTime:search.startTime||'17:00',endTime:search.endTime||'22:00'}:null,
     requirements:[],preferences:[],includeLongTravel:!!search.includeLongTravel,notes:['Saved by an earlier version of the search.'],interpretationVersion:'legacy'};
+}
+
+// The words of a request, read (`restaurant.intent`, §3.2, §9.3). A model
+// separates the words about the outing from the words about the place: it
+// resolves the day, the hour, the window either side and the party, and hands
+// back the rest of the words untouched, which interpretRequest above then
+// turns into requirements exactly as it always has. The model never decides a
+// requirement, so the tested rules about stars, budgets and neighborhoods stay
+// the only ones. The field descriptions it is asked to fill live here, beside
+// the check its answer has to pass, so the two cannot drift apart; the Worker
+// owns only the framing.
+export const READING_FIELDS=`- mode: "named" when the words name one particular restaurant (Le Bernardin, Via Carota, Sushi Nakazawa); "discovery" when they describe a kind of place or meal.
+- name: for "named", the restaurant's name as written; otherwise "".
+- request: the words with only the day, the hour, the time window and the party size taken out, and everything else kept exactly as written: the food, the neighborhood, the budget, the mood, the occasion, what to avoid. "sushi restaurant for 3 in the LES that's available within 15 minutes of 12:15 this Saturday" becomes "sushi restaurant in the LES". Never add a word.
+- city: the city the words name ("in Paris", "Tokyo"); otherwise "". A neighborhood is not a city.
+- date: the day asked for, as YYYY-MM-DD, looked up in the list of days: "today" and "tonight" are today, "tomorrow" is tomorrow, a weekday alone or with "this" ("Saturday", "this Sat") is the first such day in the list, today included, and "next Saturday" is the one seven days after that. A month and day ("October 3") is this year's, or next year's once this year's has passed. "" when no day is named.
+- endDate: the last day, as YYYY-MM-DD, when the words allow several days in a row ("Friday or Saturday", "this weekend", "any night this week"); otherwise "". At most six days after date.
+- people: how many are eating, as a whole number: "for 3" is 3, "party of four" is 4, "me and my wife" is 2, "just me" is 1. null when the words do not say.
+- maxPeople: the larger number when the party is a range ("4 or 5" is people 4 and maxPeople 5); otherwise null.
+- time: the hour asked for, as 24-hour HH:MM, read the way a restaurant booking means it: "12:15" is 12:15, "noon" is 12:00, "7" or "7:30" for dinner is 19:00 or 19:30. A meal named with no hour takes its usual one: brunch 11:30, lunch 12:30, dinner 19:30. "" when the words give neither.
+- window: how many minutes either side of time are acceptable, as a whole number from 0 to 180: "within 15 minutes of 12:15" is 15; "between 7 and 9" is time 20:00 with window 60; "7 to 8:30" is time 19:45 with window 45; "after 8" is time 20:30 with window 30; "exactly 7:30" or "7:30 sharp" is 0. null when the words give an hour and no leeway.`;
+// The days a weekday is looked up in, today first. "This Saturday" is read off
+// a list rather than counted, which is where a reading goes wrong.
+export function readingCalendar(today,days=15){
+  if(!calendarDate(today))return '';
+  return Array.from({length:days},(_,i)=>{
+    const date=new Date(Date.parse(`${today}T00:00:00Z`)+i*DAY).toISOString().slice(0,10);
+    const weekday=new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long'});
+    return `${weekday} ${date}${i===0?' (today)':i===1?' (tomorrow)':''}`;
+  }).join('\n');
+}
+const wholeNumber=value=>typeof value==='number'?value:typeof value==='string'&&/^\s*\d{1,3}\s*$/.test(value)?Number(value):NaN;
+const clockOf=value=>{
+  const match=/^\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*$/.exec(String(value??''));
+  const time=match?`${match[1].padStart(2,'0')}:${match[2]}`:'';
+  return clockTime(time)?time:'';
+};
+// A reading checked field by field before any control is set from it. A field
+// that fails is dropped rather than guessed at, so the form keeps its own
+// value; one the words could not place at all comes back as the model's own
+// sentence, at 422, for the owner to say another way.
+export function readingFromJSON(value){
+  if(typeof value?.error==='string'&&value.error.trim())throw Object.assign(Error(value.error.trim().slice(0,300)),{status:422});
+  if(!value||typeof value!=='object'||Array.isArray(value))throw Object.assign(Error('The request did not come back as a reading.'),{status:502});
+  const words=(item,max)=>typeof item==='string'?item.replace(/\s+/g,' ').trim().slice(0,max):'';
+  const name=words(value.name,150);
+  const mode=value.mode==='named'&&name?'named':'discovery';
+  const request=words(value.request,LIMITS.text)||(mode==='named'?name:'');
+  const date=calendarDate(value.date)?value.date:'';
+  const endDate=date&&calendarDate(value.endDate)&&value.endDate>date&&dayCount(date,value.endDate)<=LIMITS.dates?value.endDate:'';
+  const size=n=>Number.isInteger(n)&&n>=1&&n<=LIMITS.people;
+  const people=size(wholeNumber(value.people))?wholeNumber(value.people):null;
+  const most=wholeNumber(value.maxPeople);
+  const maxPeople=people&&size(most)&&most>people&&most-people<LIMITS.partySizes?most:null;
+  const time=clockOf(value.time);
+  const spread=wholeNumber(value.window);
+  const window=time&&Number.isInteger(spread)&&spread>=0&&spread<=180?spread:null;
+  return {mode,name:mode==='named'?name:'',request,city:words(value.city,120),date,endDate,people,maxPeople,time,window};
 }
 
 // What a research reply establishes (§5.1). The model proposes candidates and

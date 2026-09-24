@@ -38,6 +38,9 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
    has to out-specify it rather than sit beside it — a field whose label began
    on the panel's own edge read as clipped. */
 .workspace-shell .research-settings > :not(summary) {margin:0 14px 14px;}
+/* Nor does the first line sit on the open head's band: it starts one group's
+   gap below it (UI-30). */
+.workspace-shell .research-settings > summary + :not(summary) {margin-top:12px;}
 .slot-list {display:flex;flex-wrap:wrap;gap:8px;}
 .workspace-shell button {cursor:pointer;white-space:normal;}
 .workspace-shell button:disabled {cursor:default;}
@@ -78,6 +81,11 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .workspace-shell--mobile button{margin:0;border-radius:6px;font:500 13px/1.4 var(--sans);min-height:44px;padding:8px 12px}
 .workspace-shell--mobile .button-primary{background:var(--forest);color:#fffefa;border:1px solid var(--forest)}
 .workspace-shell--mobile .button-secondary{background:var(--surface);color:var(--forest);border:1px solid var(--line)}
+/* The phone does not load the sheet that draws a quiet action, so without this
+   one fell through to the shell's own filled button and "Search as a name
+   instead" became the loudest thing on the screen. It reads as the phone's
+   links do, and keeps its touch height. */
+.workspace-shell--mobile .quiet{background:transparent;color:var(--forest);border:1px solid transparent;text-decoration:underline;text-underline-offset:3px}
 .workspace-shell--mobile a{color:var(--forest);text-underline-offset:3px;overflow-wrap:anywhere}
 .workspace-shell--mobile .booking-links{display:grid;gap:4px;margin:12px 0}
 .workspace-shell--mobile .booking-links a{display:block;padding:10px 0;min-height:44px}
@@ -90,7 +98,10 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .outing-flex {display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}
 .outing-flex .form-field {min-width:150px;}
 .workspace-shell .toggle-field {display:inline-flex;align-items:center;gap:8px;margin:0;}
-/* Once results are in, the request folds to its summary and only the outing stays open (§4.3). */
+/* The request is a sentence, so its box grows with it — two lines to start,
+   six at most — rather than scrolling what was typed out of sight. */
+.workspace-shell .request-field > textarea {field-sizing:content;min-height:calc(2lh + 18px);max-height:calc(6lh + 18px);resize:none;}
+/* Once results are in, the request folds to its summary (§4.3). */
 .form-stack.is-collapsed > .collapsible {display:none;}
 .query-summary-line {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;}
 .query-summary {display:flex;flex-wrap:wrap;gap:6px;}

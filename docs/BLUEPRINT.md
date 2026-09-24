@@ -298,7 +298,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   research, ranking, the bounded availability run, revisions, stop and reopen;
   the hosts inject research, the browser and history), `restaurant-data.js`
   (the v2 contracts: intent, constraints, claims, venue identity, the
-  deterministic request parser, claim comparison; imported by the Worker),
+  deterministic request parser, the reading's field contract and check
+  (`READING_FIELDS`, `readingFromJSON`), claim comparison; imported by the
+  Worker),
   `restaurant-ranking.js` (eligibility, fit, explanations, slot order, groups),
   `reservation-availability.js` (provider adapters, positive slot validation,
   observations, the check planner, bounded concurrency), `reservation-reader.js`
@@ -360,8 +362,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   (`#capability-capture`) — both hidden as soon as a tool is open; `tool-navigation.js`/`.css` render the home-screen
   icon grid and, once a tool or Settings is open, the same grid behind the
   hamburger menu.
-- `restaurants.js` — thin wiring of the shared restaurant controller: research
-  through the Worker, no browser, history from the shared `restaurants` store.
+- `restaurants.js` — thin wiring of the shared restaurant controller: the
+  reading and research through the Worker, no browser, history from the shared
+  `restaurants` store.
 - `push.js` (in the shell) and `push-bridge.js` (in the frame) — notifications:
   the browser half where the page is, the authenticated half where the token is.
 - `sw.js` — offline shell cache; its cache name carries the version, plus the
@@ -371,8 +374,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 ## tools-api/
 
 - `src/index.js` — the router. Serves `/app/*` (mobile assets, with CSP),
-  `/health`, `/v1/releases/latest`, `/v1/ai-tasks[/:task]`, `/v1/ai-connections/:id/{models,test,generate,restaurants,card-category,card-research,card-benefits,balance-intake,capture}`
-  (`restaurants` takes a legacy `{search}` or a v2 `{intent}`; the v2 path runs
+  `/health`, `/v1/releases/latest`, `/v1/ai-tasks[/:task]`, `/v1/ai-connections/:id/{models,test,generate,restaurants,restaurant-intent,card-category,card-research,card-benefits,balance-intake,capture}`
+  (`restaurant-intent` reads a typed request's day, hour, window, party and city
+  in `src/restaurants.js`; `restaurants` takes a legacy `{search}` or a v2 `{intent}`; the v2 path runs
   `src/restaurants.js` discovery and then `src/source-fetch.js`, which reads each
   cited source and marks claims supported only where the page says so),
   `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/wallet[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`,

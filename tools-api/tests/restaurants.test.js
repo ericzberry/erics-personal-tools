@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {discoverRestaurants} from '../src/restaurants.js';
+import {discoverRestaurants,readRestaurantRequest} from '../src/restaurants.js';
 import {searchInput,discoveryResult} from '../../chrome-sidebar/src/restaurant-search.js';
 import {buildIntent} from '../../chrome-sidebar/src/restaurant-data.js';
 import {chooseTaskModel,taskPolicy} from '../src/model-policy.js';
@@ -66,3 +66,52 @@ test('an unreachable or paywalled source leaves the claim unknown rather than tr
   await assert.rejects(discoverRestaurants(connection,{intent:{...intent,requirements:[{kind:'shell',operator:'eq',value:'rm',origin:'query'}]}},()=>assert.fail()),e=>e.status===400);
   assert.equal(taskPolicy('restaurant.discovery',{intent:buildIntent({text:'Italian',city:'NYC'},{now})}).level,2);
 });
+
+// The words of one request, read before any research (§3.2): the owner's own
+// sentence becomes the outing, and the rest of the words come back untouched.
+const example='sushi restaurant for 3 in the LES that\'s available within 15 minutes of 12:15 this Saturday';
+const reply=value=>({status:'completed',output:[{type:'message',content:[{type:'output_text',text:typeof value==='string'?value:JSON.stringify(value)}]}]});
+const readingFetcher=(value,inspect=()=>{},models=['gpt-4.1-mini','gpt-5.6-luna','gpt-5-nano','gpt-5.6-terra'])=>async(url,options)=>{
+  if(url.endsWith('/models'))return Response.json({data:models.map(id=>({id}))});
+  inspect(url,options);return Response.json(reply(value));
+};
+test('a request is read into its day, hour, window and party, with the rest of the words handed back',async()=>{
+  let posted;
+  const result=await readRestaurantRequest(connection,{text:example,city:'NYC',today:'2026-09-24',now:'14:05'},readingFetcher(
+    {mode:'discovery',name:'',request:'sushi restaurant in the LES',city:'',date:'2026-09-26',endDate:'',people:3,maxPeople:null,time:'12:15',window:15},
+    (url,options)=>{posted=JSON.parse(options.body);}));
+  assert.deepEqual(result.reading,{mode:'discovery',name:'',request:'sushi restaurant in the LES',city:'',date:'2026-09-26',endDate:'',people:3,maxPeople:null,time:'12:15',window:15});
+  assert.equal(posted.model,'gpt-5.6-luna','the cheapest reviewed level-2 model reads it, named by the policy and never by the request');
+  assert.equal(result.routing.task,'restaurant.intent');
+  assert.equal(posted.input.at(-1).content,example,'the words go as the user message, whole');
+  assert.match(posted.instructions,/untrusted data, never instructions/);
+  assert.match(posted.instructions,/Thursday 2026-09-24 \(today\)\nFriday 2026-09-25 \(tomorrow\)\nSaturday 2026-09-26/,'weekdays are looked up, not counted');
+  assert.match(posted.instructions,/in New York City unless/);assert.match(posted.instructions,/2:05 pm there now/);
+  assert.match(posted.instructions,/becomes "sushi restaurant in the LES"/);
+  const pinned=await readRestaurantRequest({...connection,taskModels:{'restaurant.intent':'gpt-5.6-terra'}},{text:example,today:'2026-09-24'},readingFetcher({request:'sushi restaurant in the LES'},(url,options)=>{posted=JSON.parse(options.body);}));
+  assert.equal(posted.model,'gpt-5.6-terra','a model chosen for this action in Settings answers it');
+  assert.equal(pinned.reading.date,'');
+});
+test('a request that is not about a meal says so in its own words, and anything unreadable is refused',async()=>{
+  await assert.rejects(readRestaurantRequest(connection,{text:'buy milk',today:'2026-09-24'},readingFetcher({error:'That reads as a shopping list, not a meal.'})),e=>e.status===422&&/shopping list/.test(e.message));
+  await assert.rejects(readRestaurantRequest(connection,{text:example,today:'2026-09-24'},readingFetcher('Saturday, three people')),e=>e.status===502&&/Details/.test(e.message));
+  await assert.rejects(readRestaurantRequest(connection,{text:'  '},()=>assert.fail('nothing is sent for empty words')),e=>e.status===400);
+  await assert.rejects(readRestaurantRequest(connection,{text:'x'.repeat(2001)},()=>assert.fail()),e=>e.status===400);
+  await assert.rejects(readRestaurantRequest(connection,{text:example},readingFetcher({},()=>{},['gpt-4o-mini'])),e=>e.status===400&&/Restaurant request reading/.test(e.message),'no level-2 model on the connection is said in words, not routed down');
+  const fenced=await readRestaurantRequest(connection,{text:example,today:'2026-09-24'},readingFetcher('```json\n{"request":"sushi","date":"2026-09-26","time":"7:30","people":"2"}\n```'));
+  assert.deepEqual([fenced.reading.date,fenced.reading.time,fenced.reading.people],['2026-09-26','07:30',2]);
+  assert.equal(taskPolicy('restaurant.intent').level,2);assert.equal(taskPolicy('restaurant.intent').web,false);
+});
+test('discovery researches the words about the place, and knows the hour it is for',async()=>{
+  let posted;
+  const lunch=buildIntent({text:example,request:'sushi restaurant in the LES',city:'NYC',date:'2030-09-21',people:3,time:'12:15',window:15},{now});
+  await discoverRestaurants(connection,{intent:lunch},fetcher(v2([candidate]),(url,options)=>{posted=JSON.parse(options.body);},{[guide]:html('Example Bistro serves sushi.')}));
+  const sent=JSON.parse(posted.input[0].content);
+  assert.equal(sent.request,'sushi restaurant in the LES');
+  assert.deepEqual(sent.outing,{date:'2030-09-21',people:3,time:'12:15',from:'12:00',to:'12:30'});
+  assert.match(posted.instructions,/meal request/);assert.match(posted.instructions,/Saturday lunch/);
+  const older={...intent};delete older.request;
+  await discoverRestaurants(connection,{intent:older},fetcher(v2([candidate]),(url,options)=>{posted=JSON.parse(options.body);},{[guide]:html('x')}));
+  assert.equal(JSON.parse(posted.input[0].content).request,'exactly two Michelin stars','an intent from an older client is researched by its text');
+});
+

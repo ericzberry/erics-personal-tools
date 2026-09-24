@@ -164,8 +164,30 @@ createServer(async (req, res) => {
       res.end(JSON.stringify({merchant:merchant?merchant[1][0].toUpperCase()+merchant[1].slice(1).toLowerCase():'',category:/uber|ride/i.test(purchase)?'Transit':'Online shopping',
         channel:'Online',amount:amount?Number(amount[1].replace(/,/g,'')):null,confidence:'high',reason:'Synthetic reading of the description.'}));return;
     }
+    // A request read the way the Worker reads one, without a model: enough of
+    // the owner's own phrasing ("sushi for 3 in the LES within 15 minutes of
+    // 12:15 this Saturday") to operate the screen.
+    if (url.pathname === `/v1/ai-connections/${id}/restaurant-intent`) {
+      let text='';for await(const data of req)text+=data;const words=JSON.parse(text||'{}'),lower=String(words.text||'').toLowerCase();
+      const days=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'],weekday=days.findIndex(day=>lower.includes(day)),start=Date.parse(`${words.today}T00:00:00Z`);
+      const date=weekday>=0&&start?new Date(start+((weekday-new Date(start).getUTCDay()+7)%7)*86400000).toISOString().slice(0,10):'';
+      const clock=/\b(\d{1,2}):(\d{2})\b/.exec(lower),hour=clock?Number(clock[1])+(Number(clock[1])<11?12:0):0,window=Number(/within (\d+) min/.exec(lower)?.[1]);
+      const request=String(words.text||'').replace(/\bfor \d+\b/i,'').replace(/\bthat'?s available\b/i,'').replace(/\bwithin \d+ minutes of \d{1,2}:\d{2}\b/i,'').replace(/\b(?:this |next )?(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday|tomorrow|tonight|today)\b/i,'').replace(/\s+/g,' ').trim();
+      res.end(JSON.stringify({reading:{mode:'discovery',name:'',request,city:'',date,endDate:'',people:Number(/\bfor (\d+)\b/.exec(lower)?.[1])||null,maxPeople:null,time:clock?`${String(hour).padStart(2,'0')}:${clock[2]}`:'',window:window>0?window:null}}));return;
+    }
     if (url.pathname === `/v1/ai-connections/${id}/restaurants`) {
-      let text='';for await(const data of req)text+=data;const {search}=JSON.parse(text);
+      let text='';for await(const data of req)text+=data;const {search,intent}=JSON.parse(text);
+      // The current client sends an intent and is answered with venues and
+      // their claims, as the Worker answers it.
+      if(intent){
+        const now=new Date().toISOString(),week=new Date(Date.now()+7*86400000).toISOString();
+        const claimOf=(field,value)=>({id:crypto.randomUUID(),field,value,status:'supported',source:{url:`https://example.com/${field}`,title:`Synthetic ${field} source`,publisher:'Synthetic'},excerpt:'synthetic passage · fictional test data',retrievedAt:now,expiresAt:week});
+        const venue=(slug,name,extra)=>({schemaVersion:2,id:crypto.randomUUID(),name,aliases:[],address:`${slug.length} Example Street, New York, NY`,city:'New York City',borough:'Manhattan',country:'US',timezone:'America/New_York',officialURL:'',identity:'verified',providers:[{provider:'Resy',id:'',url:`https://resy.com/cities/new-york-ny/venues/${slug}`},{provider:'OpenTable',id:'',url:`https://www.opentable.com/r/${slug}`}],createdAt:now,updatedAt:now,...extra});
+        const sushi=/sushi/i.test(intent.request||intent.text);
+        const candidates=sushi?[venue('synthetic-sushi-counter','Synthetic Sushi Counter',{neighborhood:'Lower East Side',cuisine:['Sushi'],claims:[claimOf('price_per_person',{minorUnits:9500,currency:'USD',basis:'food'})]}),venue('example-hand-roll','Example Hand Roll Bar with a deliberately long name',{neighborhood:'Lower East Side',cuisine:['Sushi'],claims:[]})]
+          :[venue('example-bistro','Example Bistro with a deliberately long restaurant name',{neighborhood:'Upper West Side',cuisine:['Italian'],claims:[claimOf('atmosphere',['quiet'])]})];
+        res.end(JSON.stringify({schemaVersion:2,searchId:intent.id,revision:intent.revision,candidates,clarification:'',locations:[],unverified:0,researchedAt:now}));return;
+      }
       if(search.query==='failure'){res.statusCode=502;res.end('{"error":"Synthetic research failure"}');return;}
       res.end(JSON.stringify({summary:'Synthetic source-backed matches for the selected criteria.',clarification:'Review the restaurant address before booking.',researchedAt:new Date().toISOString(),restaurants:[{id:'1',name:'Example Bistro with a deliberately long restaurant name',address:'100 Example Avenue',city:'New York City',neighborhood:'Upper West Side',borough:'Manhattan',travel:'included',reason:'Synthetic candidate for layout and offline testing.',evidence:[{url:'https://example.com/review',title:'Synthetic restaurant review',detail:'Two stars in the synthetic guide.',published:'2026'}],booking:[{url:'https://resy.com/cities/new-york-ny/venues/example-bistro',provider:'Resy'},{url:'https://www.opentable.com/r/example-bistro',provider:'OpenTable'}]}]}));return;
     }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {interpretRequest,buildIntent,intentFromJSON,checkConstraint,closureCheck,claim,venue,sameVenue,venueKey,evidenceKey,legacySearch,legacyIntent,summarizeIntent,outingCombinations,candidatesFromResearch,canonicalArea,venueArea,dateIn,constraint,STANDING_EXCLUSIONS,mergeVenues} from '../src/restaurant-data.js';
+import {interpretRequest,buildIntent,intentFromJSON,checkConstraint,closureCheck,claim,venue,sameVenue,venueKey,evidenceKey,legacySearch,legacyIntent,summarizeIntent,outingCombinations,candidatesFromResearch,canonicalArea,venueArea,dateIn,timeIn,constraint,STANDING_EXCLUSIONS,mergeVenues,readingFromJSON,readingCalendar,windowLabel,describeOuting} from '../src/restaurant-data.js';
 const now=new Date('2030-09-15T03:00:00Z');
 const ids=list=>list.map(item=>item.id);
 test('words become requirements or preferences by how they are said',()=>{
@@ -154,3 +154,58 @@ test('research replies keep only claims and bookings whose pages were actually o
   assert.deepEqual(c.providers.map(p=>p.provider),['Resy']);
   assert.throws(()=>candidatesFromResearch({},sources,intent),/restaurant list/);
 });
+
+// The words of a request, read (§3.2): the owner's own example, and what a
+// reading may and may not set.
+test('a reading is checked field by field, and a field that fails is dropped rather than guessed',()=>{
+  const reading=readingFromJSON({mode:'discovery',name:'',request:'  sushi restaurant   in the LES ',city:'',date:'2030-09-21',endDate:'',people:3,maxPeople:null,time:'12:15',window:15});
+  assert.deepEqual(reading,{mode:'discovery',name:'',request:'sushi restaurant in the LES',city:'',date:'2030-09-21',endDate:'',people:3,maxPeople:null,time:'12:15',window:15});
+  const loose=readingFromJSON({mode:'named',name:'Le Bernardin',request:'',date:'2030-02-30',endDate:'2030-09-30',people:'2',maxPeople:9,time:'8:00',window:'30'});
+  assert.equal(loose.mode,'named');assert.equal(loose.request,'Le Bernardin','a named reading with no other words searches for the name');
+  assert.equal(loose.date,'','an impossible date is dropped');assert.equal(loose.endDate,'','a last date needs a first');
+  assert.equal(loose.people,2,'a count written as a string is still a count');assert.equal(loose.maxPeople,null,'a range wider than four sizes is dropped');
+  assert.equal(loose.time,'08:00');assert.equal(loose.window,30);
+  const odd=readingFromJSON({mode:'named',name:'',request:'x',date:'2030-09-20',endDate:'2030-09-29',people:0,time:'25:00',window:15});
+  assert.equal(odd.mode,'discovery','"named" with no name is a description');assert.equal(odd.endDate,'','more than seven dates is dropped');
+  assert.equal(odd.people,null);assert.equal(odd.time,'');assert.equal(odd.window,null,'no leeway without an hour');
+  assert.equal(readingFromJSON({date:'2030-09-20',time:'19:30',window:200}).window,null,'more than three hours is dropped');
+  assert.throws(()=>readingFromJSON({error:'That is a grocery list.'}),e=>e.status===422&&/grocery/.test(e.message));
+  assert.throws(()=>readingFromJSON([]),e=>e.status===502);
+  assert.equal(readingCalendar('2026-09-24').split('\n').slice(0,3).join(' | '),'Thursday 2026-09-24 (today) | Friday 2026-09-25 (tomorrow) | Saturday 2026-09-26');
+  assert.equal(readingCalendar('2026-09-24').split('\n').length,15,'"next Saturday" is on the list too');
+  assert.match(timeIn('America/New_York',now),/^23:00$/);
+});
+test('the words about the place are what is interpreted, and a named venue carries no criteria however it was named',()=>{
+  const form={text:'sushi restaurant for 3 in the LES within 15 minutes of 12:15 this Saturday',request:'sushi restaurant in the LES',city:'New York City',date:'2030-09-21',people:'3',time:'12:15',window:'15'};
+  const intent=buildIntent(form,{now});
+  assert.equal(intent.text,form.text);assert.equal(intent.request,'sushi restaurant in the LES');
+  assert.deepEqual(intent.outing,{dates:['2030-09-21'],preferredDate:'2030-09-21',partySizes:[3],preferredParty:3,preferredTime:'12:15',startTime:'12:00',endTime:'12:30'});
+  assert.ok(intent.requirements.some(item=>item.kind==='cuisine'&&item.value==='sushi'));
+  assert.ok(intent.requirements.some(item=>item.kind==='geography'&&item.operator==='in'&&item.value.includes('les')));
+  assert.equal(intent.includeLongTravel,true,'naming the LES sets the standing exclusion aside');
+  assert.ok(!intent.requirements.some(item=>item.kind==='price'),'12:15 is not a budget');
+  assert.deepEqual(summarizeIntent(intent),['Sushi','Lower East Side','Longer travel included','Sat, Sep 21 · 3 people · 12:00 pm–12:30 pm']);
+  assert.deepEqual(intentFromJSON(JSON.parse(JSON.stringify(intent)),{now}),intent,'the request survives the trip to the Worker and back');
+  const named=buildIntent({text:'Le Bernardin Friday for 2 at 8',request:'Le Bernardin',name:'Le Bernardin',city:'NYC',date:'2030-09-20',people:2,time:'20:00'},{now,mode:'named'});
+  assert.equal(named.name,'Le Bernardin');assert.deepEqual(named.requirements,[]);assert.deepEqual(named.preferences,[]);
+  const corrected=buildIntent({text:'quiet Italian',city:'NYC'},{now,mode:'named'});
+  assert.deepEqual([corrected.requirements,corrected.preferences],[[],[]],'"Search as a name instead" searches for the name alone');
+  assert.throws(()=>buildIntent({text:'Saturday at 8 for 2',request:'',city:'NYC'},{now}),/what kind of place/);
+  assert.deepEqual(buildIntent({text:'Italian',city:'NYC'},{now,notes:['People taken from the form (the words said 3).']}).notes.slice(0,1),['People taken from the form (the words said 3).']);
+});
+test('a time, a length of time or a head count is never read as a budget',()=>{
+  for(const words of ['sushi around 12:15','somewhere under 30 minutes away','up to 12 people','ramen about 10pm','dinner around 11 o’clock'])
+    assert.ok(!interpretRequest(words).requirements.concat(interpretRequest(words).preferences).some(item=>item.kind==='price'),words);
+  assert.equal(interpretRequest('Italian under $100').requirements.find(item=>item.kind==='price').value,100);
+  assert.equal(interpretRequest('around 150 a head').preferences.find(item=>item.kind==='price').value,150);
+});
+test('the window is any whole number of minutes up to three hours, and none means that time exactly',()=>{
+  const at=(window,time='12:15')=>buildIntent({text:'sushi',city:'NYC',date:'2030-09-20',people:2,time,window},{now}).outing;
+  assert.deepEqual([at('15').startTime,at('15').endTime],['12:00','12:30']);
+  assert.deepEqual([at(20).startTime,at(20).endTime],['11:55','12:35']);
+  assert.deepEqual([at('0').startTime,at('0').endTime],['12:15','12:15']);
+  assert.equal(describeOuting(at('0')),'Fri, Sep 20 · 2 people · 12:15 pm');
+  assert.deepEqual([at('').startTime,at(undefined).endTime,at('500').startTime],['11:15','13:15','11:15'],'unset or out of range is an hour');
+  assert.deepEqual([0,15,45,60,90,120,75,180].map(windowLabel),['Exactly','± 15 min','± 45 min','± 1 hour','± 1½ hours','± 2 hours','± 1 h 15 min','± 3 hours']);
+});
+

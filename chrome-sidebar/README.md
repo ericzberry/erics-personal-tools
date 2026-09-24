@@ -4256,3 +4256,22 @@ R27 of the spec's regression table. Reviewed in `tests/restaurant-preview.html`
 at 1440px, 390px and 280px and in the phone shell at 375px; live OpenAI
 discovery and live provider pages were not exercised.
 Archive: `release/erics-sidebar-0.6.278.zip`.
+
+## Say it in one sentence (0.6.284 / mobile 0.1.233)
+
+Restaurants takes the whole request in one box: *Sushi for 3 in the LES within
+15 minutes of 12:15 this Saturday*. A new `restaurant.intent` reading
+(`POST /v1/ai-connections/:id/restaurant-intent`) takes the day, the hour, the
+window either side, the party and any city out of the words and into the
+controls, now behind **Details**; the rest of the words are what the research
+looks for and are still read deterministically, so no model decides a
+requirement. A hand-set control stands over the words until the words about it
+change, and the summary says when it did. Saying Sunday instead of Saturday is
+read again and rechecks the same restaurants without new research. Time takes
+any quarter hour and Window runs from exactly to ± 3 hours, plus any other
+value the words named; discovery is told the hour, so a lunch search favours
+places that serve lunch that day. What was understood shows as soon as it is
+read, above the research. Also: times outside the window read in 12-hour
+time, cuisines are capitalised, a quiet action on the phone no longer draws
+as the loudest button, a clock time is never read as a budget, and a text area
+shows the placeholder it is given (the purchase advisor's was dropped too).

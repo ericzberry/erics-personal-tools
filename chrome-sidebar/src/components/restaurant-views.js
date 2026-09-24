@@ -1,46 +1,64 @@
 import * as UI from './ui.js';
-import {displayTime,displayDate,kindLabel,describeValue,areaLabel,CLAIM_FIELDS} from '../restaurant-data.js';
-const {Workspace,WorkspaceFlow,FieldGrid,FormField:F,Form,Section,Heading,Note,Notice,Button,Link,Stack,Toggle,ActionGroup,Disclosure,RecordGroup,Text,Strong,Label,ProgressBar,RowLink,OPEN_GLYPH}=UI;
-const TIMES=Array.from({length:23},(_,i)=>{const minutes=11*60+30+i*30;const value=`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;return {text:displayTime(value),value};});
-const WINDOWS=[{text:'± 30 min',value:'30'},{text:'± 1 hour',value:'60'},{text:'± 1½ hours',value:'90'},{text:'± 2 hours',value:'120'}];
+import {displayTime,displayDate,kindLabel,describeValue,areaLabel,CLAIM_FIELDS,WINDOW_CHOICES,windowLabel,clockTime} from '../restaurant-data.js';
+const {Workspace,WorkspaceFlow,FieldGrid,FormField:F,Form,Section,Heading,Note,Notice,Button,Link,Stack,Toggle,ActionGroup,Disclosure,RecordGroup,Text,Strong,Label,ProgressBar,RowLink,Option,OPEN_GLYPH}=UI;
+const clock=minutes=>`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
+// Every quarter hour from breakfast to late dinner. A time read from the words
+// that falls between two of them — 12:10 — is offered as a choice of its own
+// rather than moved to the nearest one.
+export function timeChoices(value=''){
+  const times=Array.from({length:64},(_,i)=>clock(8*60+i*15));
+  if(clockTime(value)&&!times.includes(value))times.push(value);
+  return times.sort().map(time=>({text:displayTime(time),value:time}));
+}
+// Minutes either side of the time, and any other whole number the words asked
+// for — "within 20 minutes" is ± 20 min, not the nearest preset.
+export function windowChoices(value=''){
+  const minutes=[...WINDOW_CHOICES],asked=Number(value);
+  if(value!==''&&Number.isInteger(asked)&&asked>=0&&asked<=180&&!minutes.includes(asked))minutes.push(asked);
+  return minutes.sort((a,b)=>a-b).map(n=>({text:windowLabel(n),value:String(n)}));
+}
+export const Choices=list=>list.map(choice=>Option(choice.text,choice.value));
 // One page: the request, then what was understood, then one result per
-// restaurant (docs/RESTAURANT_SEARCH_SPEC.md §3.1, §4). Nothing here decides;
-// it lays out what the controller hands it.
+// restaurant (docs/RESTAURANT_SEARCH_SPEC.md §3.1, §4). The request is one box
+// of words and one press (UI-20): the day, the hour, the party and the city are
+// read out of it, and the fields they land in stay behind Details, as what was
+// understood and as the way to set it by hand. Nothing here decides; it lays
+// out what the controller hands it.
 export function RestaurantWorkspace({mobile=false}={}) {
   return Workspace([
     Stack([Stack([mobile?null:Note('ERIC’S PERSONAL TOOLS'),Heading('Find a table',1)]),mobile?null:Link('AI settings','settings.html')],{className:'workspace-heading'}),
     WorkspaceFlow([
+      // What was understood leads once there is a search; the form folds away
+      // under it (§4.3).
+      Section([
+        Stack([Stack([],{id:'restaurant-summary-chips',className:'query-summary'}),ActionGroup([Button('Edit search',{id:'restaurant-edit',variant:'secondary',size:'compact'}),Button('',{id:'restaurant-mode-switch',variant:'quiet',size:'compact',hidden:true})],{compact:true})],{className:'query-summary-line'}),
+        Note('',{id:'restaurant-summary-notes'})
+      ],{id:'restaurant-summary',hidden:true,'aria-label':'What was understood'}),
       Section([
         Form([
-          Stack([
-            F({id:'restaurant-text',label:'Restaurant or dinner idea',kind:'text',placeholder:'Quiet Italian near the UWS, no tasting menu'}),
-            F({id:'restaurant-city',label:'City',kind:'text'})
-          ],{className:'form-stack collapsible',id:'restaurant-request'}),
-          Stack([
-            F({id:'restaurant-date',label:'Date',kind:'date'}),
-            F({id:'restaurant-people',label:'People',kind:'number',min:1,max:20,step:1}),
-            F({id:'restaurant-time',label:'Time',kind:'select',options:TIMES}),
-            F({id:'restaurant-window',label:'Window',kind:'select',options:WINDOWS})
-          ],{className:'outing-row'}),
-          Stack([
-            Stack([Toggle({id:'restaurant-flex-dates',label:'More dates'}),Stack([F({id:'restaurant-through',label:'Last date',kind:'date'})],{id:'restaurant-through-field',hidden:true})],{className:'outing-flex'}),
-            Stack([Toggle({id:'restaurant-flex-party',label:'More sizes'}),Stack([F({id:'restaurant-max',label:'Up to',kind:'number',min:1,max:20,step:1})],{id:'restaurant-max-field',hidden:true})],{className:'outing-flex'})
-          ],{className:'outing-flex-row',id:'restaurant-flex-row'}),
-          Disclosure('Preferences',[
+          F({id:'restaurant-text',label:'What are you looking for?',kind:'textarea',rows:2,placeholder:'Sushi for 3 in the LES within 15 minutes of 12:15 this Saturday',className:'request-field collapsible'}),
+          Disclosure('Details',[
+            F({id:'restaurant-city',label:'City',kind:'text'}),
+            Stack([
+              F({id:'restaurant-date',label:'Date',kind:'date'}),
+              F({id:'restaurant-people',label:'People',kind:'number',min:1,max:20,step:1}),
+              F({id:'restaurant-time',label:'Time',kind:'select',options:timeChoices()}),
+              F({id:'restaurant-window',label:'Window',kind:'select',options:windowChoices()})
+            ],{className:'outing-row'}),
+            Stack([
+              Stack([Toggle({id:'restaurant-flex-dates',label:'More dates'}),Stack([F({id:'restaurant-through',label:'Last date',kind:'date'})],{id:'restaurant-through-field',hidden:true})],{className:'outing-flex'}),
+              Stack([Toggle({id:'restaurant-flex-party',label:'More sizes'}),Stack([F({id:'restaurant-max',label:'Up to',kind:'number',min:1,max:20,step:1})],{id:'restaurant-max-field',hidden:true})],{className:'outing-flex'})
+            ],{className:'outing-flex-row',id:'restaurant-flex-row'}),
             FieldGrid([F({id:'restaurant-neighborhood',label:'Neighborhood',kind:'text',placeholder:'Any'}),F({id:'restaurant-spend',label:'Most per person',kind:'money',placeholder:'Any'})]),
             FieldGrid([F({id:'restaurant-dietary',label:'Dietary',kind:'text',placeholder:'None'}),F({id:'restaurant-format',label:'Menu',kind:'select',options:[{text:'Any',value:''},{text:'No tasting menu',value:'no-tasting'},{text:'Tasting menu',value:'tasting'}]})]),
             Stack([Toggle({id:'restaurant-travel',label:'Include longer travel'})],{id:'restaurant-nyc'})
-          ],{id:'restaurant-preferences',className:'research-settings collapsible'}),
-          ActionGroup([Button('Find restaurants',{id:'restaurant-find',variant:'primary',type:'submit'}),Button('Stop',{id:'restaurant-stop',variant:'secondary',hidden:true})],{compact:true}),
+          ],{id:'restaurant-details',className:'research-settings collapsible'}),
+          ActionGroup([Button('Find restaurants',{id:'restaurant-find',variant:'primary',type:'submit'}),Button('Stop',{id:'restaurant-stop',variant:'secondary',hidden:true})],{id:'restaurant-actions',compact:true}),
           Notice('',{id:'restaurant-connection-status',role:'status',hidden:true}),
           Notice('',{id:'restaurant-status','aria-live':'polite',hidden:true}),
           Notice('',{id:'restaurant-error',role:'alert',hidden:true})
         ],{id:'restaurant-form',className:'form-stack'})
       ],{id:'restaurant-search-section','aria-label':'Restaurant search'}),
-      Section([
-        Stack([Stack([],{id:'restaurant-summary-chips',className:'query-summary'}),ActionGroup([Button('Edit search',{id:'restaurant-edit',variant:'secondary',size:'compact'}),Button('',{id:'restaurant-mode-switch',variant:'quiet',size:'compact',hidden:true})],{compact:true})],{className:'query-summary-line'}),
-        Note('',{id:'restaurant-summary-notes'})
-      ],{id:'restaurant-summary',hidden:true,'aria-label':'What was understood'}),
       Section([Heading('Which location?',2),Stack([],{id:'restaurant-choices',className:'choice-list'})],{id:'restaurant-choice',hidden:true,'aria-label':'Choose the restaurant'}),
       Section([
         Stack([ProgressBar({id:'restaurant-progress',label:'Checking availability'})],{id:'restaurant-progress-row',hidden:true}),

@@ -22,6 +22,7 @@ const legacy=api?(await api.storage.local.get('restaurantSearchPreferences').cat
 const credentials=api?deviceCredentials():{get:async()=>''};
 const tool=mountRestaurants(document.getElementById('app'),{
   host:'chrome',credentials,
+  read:async words=>(await request('restaurant-intent',{id:await connections.id(),...words})).reading,
   research:async intent=>request('restaurants',{id:await connections.id(),intent}),
   browser:api?reservationBrowser(api):null,
   openTab:api?async url=>(await api.tabs.create({url,active:true})).id:null,

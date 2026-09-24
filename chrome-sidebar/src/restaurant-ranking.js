@@ -23,7 +23,7 @@ function cuisineFit(venue,items,now){
   if(!labels.length)return {score:0,unknown:true,detail:'Cuisine not established'};
   const wanted=items.flatMap(item=>Array.isArray(item.value)?item.value:[item.value]);
   const hit=wanted.filter(id=>labels.includes(id));
-  return {score:match(hit.length>0),detail:hit.length?`${hit.map(label=>label.replace(/\b[a-z]/g,ch=>ch.toUpperCase())).join(', ')}`:`${labels.slice(0,2).join(', ')} rather than ${wanted.join(' or ')}`};
+  return {score:match(hit.length>0),detail:hit.length?`${hit.map(label=>label.replace(/\b[a-z]/g,ch=>ch.toUpperCase())).join(', ')}`:`${labels.slice(0,2).map(label=>label.replace(/\b[a-z]/g,ch=>ch.toUpperCase())).join(', ')} rather than ${wanted.join(' or ').replace(/\b[a-z]/g,ch=>ch.toUpperCase())}`};
 }
 function atmosphereFit(venue,items,now){
   const claims=(venue.claims||[]).filter(c=>c.field==='atmosphere'&&c.status==='supported');

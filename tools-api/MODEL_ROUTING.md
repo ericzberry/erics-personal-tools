@@ -14,6 +14,7 @@ Current policies:
 | `restaurant.availability` | Level 2: structured extraction from booking pages | No automatic downgrade |
 | `restaurant.research` | Level 2 plus native web search (legacy `{search}` requests) | Level 3 for category searches above 12 candidates |
 | `restaurant.discovery` | Level 2 plus native web search; candidates with quoted claims for the Worker to read against their sources | Level 3 when the request carries an editorial requirement; a model chosen for `restaurant.research` carries over until discovery has its own |
+| `restaurant.intent` | Level 2, no web tool, 600 output tokens, $0.01 ceiling; reads a typed request's day, hour, window, party and city and hands the rest of the words back untouched | No automatic downgrade. Level 2 rather than 1 because the date and party it reads are what every provider check then runs against: a misread weekday costs a whole research and availability pass on the wrong day, and the level-2 model answers without reasoning first |
 
 The initial catalog covers the OpenAI connections used by these features. Other providers remain available for explicit playground requests; automatic cross-provider routing is not yet implemented. Selecting a different provider must never silently send content to another account or endpoint. Add reviewed provider candidates to the same catalog when integrating another automatic task.
 

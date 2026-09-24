@@ -11,12 +11,16 @@ function memory(){
 const supported=(field,value)=>claim({field,value,status:'supported',source:{url:'https://example.com/'+field,title:field},retrievedAt:'2030-09-14T12:00:00Z',expiresAt:'2030-09-30T00:00:00Z'});
 const place=(id,name,extra={})=>venue({id,name,address:`${name} St, New York, NY`,city:'New York City',neighborhood:'Upper West Side',borough:'Manhattan',cuisine:['Italian'],providers:[{provider:'Resy',url:`https://resy.com/cities/new-york-ny/venues/${id}`}],claims:[supported('atmosphere',['quiet'])],...extra});
 const candidates=['a','b','c','d'].map((id,i)=>place(id,`Place ${id.toUpperCase()}`,i===3?{claims:[]}:{}));
-function harness({research=null,browser=true,host='chrome',store=memory(),clock={now:Date.parse('2030-09-15T03:00:00Z')}}={}){
+function harness({research=null,read=null,browser=true,host='chrome',store=memory(),clock={now:Date.parse('2030-09-15T03:00:00Z')}}={}){
   const {document,window}=parseHTML('<html><body><div id="app"></div></body></html>');
   globalThis.document=document;
   const value=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value');
-  Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,get:value.get,set(v){for(const o of this.options)o.selected=o.value===String(v);}});
-  const calls={research:[],opened:[],tabs:[],generate:0};
+  // linkedom's option.selected setter clears the chosen option whenever a
+  // sibling is set false, so the value is kept in the attribute instead.
+  Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,
+    get(){return [...this.options].find(option=>option.hasAttribute('selected'))?.getAttribute('value')??'';},
+    set(v){for(const option of this.options)option.removeAttribute('selected');[...this.options].find(option=>option.getAttribute('value')===String(v))?.setAttribute('selected','');}});
+  const calls={research:[],opened:[],tabs:[],generate:0,read:[]};
   let resolveResearch,rejectResearch;
   const opened=new Map();let counter=0;
   const fakeBrowser=browser?{
@@ -28,7 +32,7 @@ function harness({research=null,browser=true,host='chrome',store=memory(),clock=
     async focus(){},async close(id){opened.delete(id);},async closeAll(){},owns:id=>opened.has(id)
   }:null;
   const history=restaurantHistory({store,locks:null,now:()=>clock.now});
-  const tool=mountRestaurants(document.getElementById('app'),{host,credentials:{get:async()=>'synthetic-token'},
+  const tool=mountRestaurants(document.getElementById('app'),{host,credentials:{get:async()=>'synthetic-token'},read:read?async words=>{calls.read.push(words);return read(words);}:null,
     research:research||(intent=>{calls.research.push(intent);return new Promise((resolve,reject)=>{resolveResearch=resolve;rejectResearch=reject;});}),
     browser:fakeBrowser,openTab:async url=>{calls.tabs.push(url);return 100+calls.tabs.length;},generate:async()=>{calls.generate++;return JSON.stringify({status:'unsupported',detail:'x'});},history,now:()=>clock.now,connectionNote:async()=>''});
   const $=id=>document.getElementById(`restaurant-${id}`);
@@ -141,3 +145,81 @@ test('without a browser each result is one handoff per provider, rebuilt as the 
     assert.equal(h.document.querySelector('.slot-action'),null);
   }finally{h.restore();}
 });
+
+// The owner's own sentence (§3.2): one box of words, read into the controls,
+// with what was understood on screen before the research comes back.
+const sentence=day=>`sushi restaurant for 3 in the LES that's available within 15 minutes of 12:15 this ${day}`;
+const lesSushi=(overrides={})=>place('s1','Synthetic Sushi Counter',{neighborhood:'Lower East Side',cuisine:['Sushi'],...overrides});
+function reader(){
+  const said={Saturday:'2030-09-21',Sunday:'2030-09-22'};
+  return words=>{
+    if(/fail/.test(words.text))throw Error('The reading timed out.');
+    const day=Object.keys(said).find(name=>words.text.includes(name));
+    const people=Number(/for (\d+)/.exec(words.text)?.[1])||null;
+    return {mode:'discovery',name:'',request:'sushi restaurant in the LES',city:'',date:day?said[day]:'',endDate:'',people,maxPeople:null,time:'12:15',window:15};
+  };
+}
+test('the words fill the date, party, time and window, and what was understood shows before the research returns',async()=>{
+  const h=harness({read:reader()});
+  try{
+    await h.tool.open();
+    assert.equal(h.$('text').tagName,'TEXTAREA');assert.equal(h.$('details').hasAttribute('open'),false,'the fields stay behind Details');
+    h.type('text',sentence('Saturday'));
+    h.$('text').dispatchEvent(Object.assign(new h.window.Event('keydown',{bubbles:true,cancelable:true}),{key:'Enter'}));
+    await h.settle();
+    assert.equal(h.calls.read.length,1);
+    assert.deepEqual(h.calls.read[0],{text:sentence('Saturday'),city:'New York City',today:'2030-09-14',now:'23:00'},'today and the time are the city’s own');
+    assert.equal(h.$('date').value,'2030-09-21');assert.equal(h.$('people').value,'3');assert.equal(h.$('time').value,'12:15');assert.equal(h.$('window').value,'15');
+    assert.equal(h.calls.research.length,1);
+    const intent=h.calls.research[0];
+    assert.equal(intent.text,sentence('Saturday'));assert.equal(intent.request,'sushi restaurant in the LES');
+    assert.deepEqual([intent.outing.startTime,intent.outing.endTime,intent.outing.preferredParty],['12:00','12:30',3]);
+    assert.ok(intent.requirements.some(item=>item.kind==='cuisine'&&item.value==='sushi'));
+    // Research is still running, and the summary is already the new request's.
+    assert.equal(h.$('summary').hidden,false);assert.equal(h.$('results').hidden,true);
+    assert.match(h.$('summary-chips').textContent,/Sushi.*Lower East Side.*Sat, Sep 21 · 3 people · 12:00 pm–12:30 pm/);
+    assert.match(h.$('summary-notes').textContent,/Lower East Side asked for/);
+    assert.equal(h.$('edit').hidden,true,'Stop comes first while it works');assert.equal(h.$('stop').hidden,false);
+    h.resolve(reply([lesSushi()]));await h.settle(40);
+    assert.equal(h.$('results').hidden,false);
+    assert.ok(h.calls.opened.length>0&&h.calls.opened.every(id=>id.includes('2030-09-21')&&id.endsWith('|3')));
+    assert.equal(h.$('actions').hidden,true,'with the results in and nothing running, Edit search is the way back');
+    // Saying Sunday instead is read again and rechecks the same restaurants.
+    const opened=h.calls.opened.length;
+    h.$('edit').click();assert.equal(h.$('actions').hidden,false);
+    h.type('text',sentence('Sunday'));h.submit();await h.settle(40);
+    assert.equal(h.calls.read.length,2);assert.equal(h.calls.research.length,1,'a different day is not a different search');
+    assert.ok(h.calls.opened.slice(opened).every(id=>id.includes('2030-09-22')));
+    // A party set by hand stands over the words until the words about it change.
+    h.$('edit').click();h.type('people','4');h.submit();await h.settle(40);
+    assert.equal(h.calls.read.length,2,'the same words are not read twice');
+    assert.match(h.$('summary-chips').textContent,/4 people/);
+    assert.match(h.$('summary-notes').textContent,/People taken from the form \(the words said 3\)\./);
+    h.$('edit').click();h.type('text',sentence('Sunday').replace('for 3','for 5'));h.submit();await h.settle(40);
+    assert.equal(h.$('people').value,'5','the newer statement wins');
+    assert.doesNotMatch(h.$('summary-notes').textContent,/taken from the form/);
+    assert.equal(h.calls.research.length,1);
+  }finally{h.restore();}
+});
+test('a reading that fails opens Details, and the same words then go ahead as typed',async()=>{
+  const h=harness({read:reader()});
+  try{
+    await h.tool.open();
+    h.type('text','fail: sushi on Saturday');h.submit();await h.settle();
+    assert.match(h.$('error').textContent,/The reading timed out\. Set the date, people and time under Details, then search again\./);
+    assert.equal(h.$('details').open,true);assert.equal(h.calls.research.length,0);assert.equal(h.$('text').value,'fail: sushi on Saturday');
+    h.type('date','2030-09-21');h.submit();await h.settle();
+    assert.equal(h.calls.read.length,1,'words whose reading failed are not read again');
+    assert.equal(h.calls.research.length,1);assert.equal(h.calls.research[0].outing.preferredDate,'2030-09-21');
+    // Stop during the reading leaves the words and starts nothing.
+    h.$('stop').click();
+    let release;const slow=harness({read:words=>new Promise(resolve=>{release=()=>resolve(reader()(words));})});
+    try{
+      await slow.tool.open();slow.type('text',sentence('Saturday'));slow.submit();await slow.settle();
+      assert.match(slow.$('status').textContent,/Reading the request/);
+      slow.$('stop').click();release();await slow.settle(20);
+      assert.equal(slow.calls.research.length,0);assert.equal(slow.$('date').value,'','a reading that arrives after Stop sets nothing');
+    }finally{slow.restore();}
+  }finally{h.restore();}
+});
+
