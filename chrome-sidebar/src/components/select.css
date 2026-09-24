@@ -135,6 +135,14 @@
 .formatted-select-option[aria-disabled=true] { opacity: .5; cursor: default; }
 .formatted-select-list[hidden] { display: none; }
 .form-field [aria-invalid=true] { border-color: #a34b3e; }
+/* The find-record field above a record list is a filter, not the page's main
+   control: the family at the Filter density, on the quiet line (DESIGN.md,
+   Record layout). `FindField` draws every one, and this is the one rule that
+   sizes it, for every tool on both hosts. It sets the family's tokens rather
+   than repainting the box, so its hover, focus and disabled looks stay the
+   family's; its 16px line is what holds it to 34px inside the family's inset.
+   Under a finger it takes the touch size below with every other field (UI-55). */
+.form-field.find-field { --control-height: 34px; --control-font: 13px/16px var(--sans); --control-border: var(--line); }
 /* The switch `Toggle` draws: a track, and a knob that crosses it when on. It
    is here because this is the sheet both hosts load; drawn in styles.css
    alone, the phone showed the same Toggle as a bare square checkbox beside
@@ -154,9 +162,11 @@
 /* A finger gets the touch size, and so does every field it could touch. The
    size is set on the field as well as on the root, because a sheet that pins
    these tokens for its own buttons — the wallet does — otherwise left its text
-   boxes 40px tall under 44px dropdowns (UI-55). */
+   boxes 40px tall under 44px dropdowns (UI-55). The find field is named too:
+   its Filter density would otherwise hold it at 13px, and iOS Safari zooms the
+   page into any box set below 16px the moment it is touched. */
 @media (pointer: coarse) {
-  :root, .form-field, .formatted-select { --control-height: 44px; --control-font: 16px/1.4 var(--sans); }
+  :root, .form-field, .formatted-select, .form-field.find-field { --control-height: 44px; --control-font: 16px/1.4 var(--sans); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .formatted-select-trigger { transition: background-color .15s, border-color .15s; }
@@ -168,5 +178,6 @@
 }
 
 /* The phone gives its fields the touch size whatever the pointer reports — the
-   text boxes with the dropdowns, not the dropdowns alone (UI-55). */
-.unlocked-tools .form-field,.unlocked-tools .formatted-select{--control-height:44px;--control-font:16px/1.4 var(--sans);}
+   text boxes with the dropdowns, not the dropdowns alone, and the find field
+   with them (UI-55). */
+.unlocked-tools .form-field,.unlocked-tools .formatted-select,.unlocked-tools .form-field.find-field{--control-height:44px;--control-font:16px/1.4 var(--sans);}

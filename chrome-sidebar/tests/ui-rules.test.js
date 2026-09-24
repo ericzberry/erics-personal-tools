@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,readdirSync} from 'node:fs';
+import {readFileSync,readdirSync,existsSync} from 'node:fs';
 
 // The register these enforce is docs/UI_RULES.md. Rules UI-2 to UI-5 are
 // checked in components.test.js and status-tones.test.js, where the code they
@@ -289,30 +289,47 @@ test('an override out-specifies, and a harness loads what its host loads',()=>{
   // carries `pill` beside `portfolio-kind`, and `.pill` is in travel.css.
   assert.match(css,/\.travel-wallet \.portfolio-kind\{/,
     'a bare `.portfolio-kind` weighs what `.pill` weighs and loses to it. See UI-31.');
-  const links=markup=>[...markup.matchAll(/<link rel="stylesheet" href="[^"]*components\/([^"]+)"/g)].map(m=>m[1]);
+  // Where a page's links really lead, read the way a browser reads them: a
+  // <base> moves every one. The draft preview linked panel-cascade.css under a
+  // base of ../, which reached the server root and loaded nothing at all, while
+  // a check that read the words of the link passed it.
+  const sheetsOf=url=>{
+    const markup=readFileSync(url,'utf8'),base=new URL(/<base href="([^"]*)"/.exec(markup)?.[1]??'',url);
+    return [...markup.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(([,href])=>new URL(href,base));
+  };
+  const components=new URL('../src/components/',import.meta.url).href;
+  const names=urls=>urls.filter(url=>url.href.startsWith(components)).map(url=>url.href.slice(components.length));
+  const hostSheets=page=>names(sheetsOf(new URL(`../${page}`,import.meta.url)));
   const imports=css=>[...css.matchAll(/@import url\('\.\.\/src\/components\/([^']+)'\)/g)].map(m=>m[1]);
-  const read=name=>readFileSync(new URL(name,import.meta.url),'utf8');
-  const panel=links(readFileSync(new URL('../sidepanel.html',import.meta.url),'utf8'));
+  const cascade=new URL('panel-cascade.css',import.meta.url);
+  const panel=hostSheets('sidepanel.html');
   assert.ok(panel.length>3,'the side panel stopped linking its sheets');
   // One list, shared by every harness that previews a panel screen.
-  assert.deepEqual(imports(read('panel-cascade.css')),panel,
+  assert.deepEqual(imports(readFileSync(cascade,'utf8')),panel,
     'panel-cascade.css has drifted from the side panel. See UI-32 in docs/UI_RULES.md.');
-  // A harness previews one host and loads that host's sheets. The three that
-  // are not panel screens say which host they are, and why.
-  const elsewhere={'ai-models':'settings.html','storage-preview':'settings.html',
-    'restaurant':'restaurants.html','finance-page':'finance.html','espn-page':null};
-  for(const file of readdirSync(new URL('.',import.meta.url)).filter(name=>name.endsWith('-preview.html'))){
-    const markup=read(file),own=links(markup),host=Object.entries(elsewhere).find(([key])=>file.startsWith(key));
+  // A harness previews one host and loads that host's sheets. The ones that
+  // are not panel screens say which host they are, and why. Every page here is
+  // a harness, whatever it is called: the whole side panel's harness and the
+  // Settings layout were never named -preview, and each loaded one to three
+  // of the panel's fourteen sheets.
+  const elsewhere={'ai-models':'settings.html','storage-preview':'settings.html','restaurant':'restaurants.html',
+    'finance-page':'finance.html','connection-preview':'travel.html','espn-page':null};
+  const harnesses=readdirSync(new URL('.',import.meta.url),{recursive:true})
+    .filter(name=>name.endsWith('.html')&&!name.startsWith('fixtures'));
+  assert.ok(harnesses.length>20,`only ${harnesses.length} harnesses found — the check stopped matching`);
+  for(const file of harnesses){
+    const own=sheetsOf(new URL(file,import.meta.url)),host=Object.entries(elsewhere).find(([key])=>file.startsWith(key));
+    for(const url of own)assert.ok(existsSync(url),
+      `${file} links ${url.pathname}, which is not there, so it previews with no styles at all. See UI-32 in docs/UI_RULES.md.`);
     if(host&&host[1]===null){assert.deepEqual(own,[],`${file} links sheets but claims to need none`);continue;}
     if(host){
-      assert.deepEqual(own,links(readFileSync(new URL('../'+host[1],import.meta.url),'utf8')),
+      assert.deepEqual(names(own),hostSheets(host[1]),
         `${file} previews ${host[1]} and loads different sheets. See UI-32 in docs/UI_RULES.md.`);
       continue;
     }
-    assert.match(markup,/href="panel-cascade\.css"/,
-      `${file} previews a side-panel screen with its own short list of sheets, so it shows a cascade `+
-      'the owner never sees. Link panel-cascade.css. See UI-32 in docs/UI_RULES.md.');
-    assert.deepEqual(own,[],`${file} links a component sheet beside panel-cascade.css`);
+    assert.deepEqual(own.map(url=>url.href),[cascade.href],
+      `${file} previews a side-panel screen without the panel's cascade, so it shows one the owner never sees. `+
+      'Link tests/panel-cascade.css, and nothing beside it. See UI-32 in docs/UI_RULES.md.');
   }
 });
 
@@ -518,6 +535,22 @@ test('fields side by side are one family: a dropdown matches the boxes beside it
   assert.ok(found>=3,`only ${found} disabled field rules found — the check stopped matching`);
 });
 
+// Reading a sheet rule by rule, for the checks from here down. A selector
+// list splits only at its own commas, never inside :is() or :not().
+const split=selector=>{const out=[];let depth=0,part='';for(const c of selector){
+  if('(['.includes(c))depth++;else if(')]'.includes(c))depth--;
+  if(c===','&&!depth){out.push(part.trim());part='';}else part+=c;}out.push(part.trim());return out;};
+const parse=text=>[...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([,selector,body])=>({parts:split(selector),
+  props:[...body.matchAll(/(?:^|;)\s*(-{0,2}[a-z][a-z-]*)\s*:\s*([^;]+)/g)].map(([,name,value])=>[name,value.trim()])}));
+// What a selector draws: its last compound, outside any brackets.
+const subject=part=>{let depth=0,start=0;for(let i=0;i<part.length;i++){const c=part[i];
+  if('(['.includes(c))depth++;else if(')]'.includes(c))depth--;else if(!depth&&/[\s>+~]/.test(c))start=i+1;}return part.slice(start);};
+const value=(entry,prop)=>entry?.props.find(([name])=>name===prop)?.[1];
+const PAINT=/^(?:font(?:-[a-z]+)?|line-height|padding(?:-[a-z]+)?|border(?:-(?:top|right|bottom|left))?(?:-(?:color|width|style))?|border-radius|background(?:-color)?|color|appearance)$/;
+// The phone's own shell sheets, beside the shared ones it loads.
+const mobile=['styles.css','tool-navigation.css'].map(name=>[`mobile-app/public/app/${name}`,
+  readFileSync(new URL(`../../mobile-app/public/app/${name}`,import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'')]);
+
 // UI-55, the rest of the family. The dropdown was not the only field drawn
 // apart. Rewards' Notes, the purchase box on Best card and Pay, and the
 // settings playground each had a text area repainted by a feature sheet — a
@@ -529,19 +562,6 @@ test('fields side by side are one family: a dropdown matches the boxes beside it
 // draft panel's boxes were never fields at all, and the switch was drawn only
 // for the extension, so the phone showed a bare checkbox.
 test('fields side by side are one family in every state, in every sheet of both hosts',()=>{
-  // A selector list splits only at its own commas, never inside :is() or :not().
-  const split=selector=>{const out=[];let depth=0,part='';for(const c of selector){
-    if('(['.includes(c))depth++;else if(')]'.includes(c))depth--;
-    if(c===','&&!depth){out.push(part.trim());part='';}else part+=c;}out.push(part.trim());return out;};
-  const parse=text=>[...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([,selector,body])=>({parts:split(selector),
-    props:[...body.matchAll(/(?:^|;)\s*(-{0,2}[a-z][a-z-]*)\s*:\s*([^;]+)/g)].map(([,name,value])=>[name,value.trim()])}));
-  // What a selector draws: its last compound, outside any brackets.
-  const subject=part=>{let depth=0,start=0;for(let i=0;i<part.length;i++){const c=part[i];
-    if('(['.includes(c))depth++;else if(')]'.includes(c))depth--;else if(!depth&&/[\s>+~]/.test(c))start=i+1;}return part.slice(start);};
-  const value=(entry,prop)=>entry?.props.find(([name])=>name===prop)?.[1];
-  const PAINT=/^(?:font(?:-[a-z]+)?|line-height|padding(?:-[a-z]+)?|border(?:-(?:top|right|bottom|left))?(?:-(?:color|width|style))?|border-radius|background(?:-color)?|color|appearance)$/;
-  const mobile=['styles.css','tool-navigation.css'].map(name=>[`mobile-app/public/app/${name}`,
-    readFileSync(new URL(`../../mobile-app/public/app/${name}`,import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'')]);
   const others=[...sheets().filter(name=>name!=='select.css').map(name=>[name,parse(sheet(name))]),...mobile.map(([name,text])=>[name,parse(text)])];
   const family=parse(sheet('select.css'));
   const find=part=>family.find(entry=>entry.parts.includes(part));
@@ -584,14 +604,10 @@ test('fields side by side are one family in every state, in every sheet of both 
     assert.ok(family.some(entry=>parts.every(part=>entry.parts.includes(part))&&value(entry,'--control-height')==='44px'),
       `the touch size is not set on ${parts.join(', ')} together. See UI-55 in docs/UI_RULES.md.`);
   for(const [name,rules] of others)for(const entry of rules)for(const part of entry.parts)
-    if(/^(?:\.form-field|\.formatted-select|input|textarea)(?![\w-])/.test(subject(part)))
-      assert.ok(!entry.props.some(([prop])=>/^--control-(?:height|font)$/.test(prop)),`${name}: ${part} sizes a field apart from the rest of its family. See UI-55 in docs/UI_RULES.md.`);
-  // The find field's Filter density is a named difference as well, and it
-  // out-specifies the field rule rather than tying with it: the tie went to
-  // sheet order, and every full-tab page that loads capabilities.css after
-  // travel.css drew the find field as a plain field.
-  assert.match(sheet('travel.css'),/\.travel-wallet \.record-search \.form-field>input\[type=search\]\{[^}]*min-height:34px/,
-    'the find field ties with the shared field rule and is left to sheet order. See UI-55 and UI-31 in docs/UI_RULES.md.');
+    if(/^(?:\.form-field|\.formatted-select|\.find-field|input|textarea)(?![\w-])/.test(subject(part)))
+      assert.ok(!entry.props.some(([prop])=>/^--control-(?:height|font|border)$/.test(prop)),`${name}: ${part} sizes a field apart from the rest of its family. See UI-55 in docs/UI_RULES.md.`);
+  // The find field's Filter density is the one other named difference; the
+  // test after this one holds it.
   // The switch is drawn once, in the sheet both hosts load.
   assert.ok(find('.toggle-field > input[type=checkbox]'),'the switch left select.css, the sheet both hosts load. See UI-55 in docs/UI_RULES.md.');
   for(const [name,rules] of others)for(const entry of rules)for(const part of entry.parts)
@@ -602,4 +618,166 @@ test('fields side by side are one family in every state, in every sheet of both 
   for(const name of readdirSync(COMPONENTS).filter(file=>file.endsWith('.js')&&file!=='ui.js'))
     assert.doesNotMatch(readFileSync(new URL(name,COMPONENTS),'utf8'),/(?:^|[^\w.]|\.\.\.)(?:UI\.)?Field\(/,
       `${name} builds a field outside FormField, where no family rule draws it. See UI-55 in docs/UI_RULES.md.`);
+});
+
+// Specificity as the cascade weighs it: ids, classes, types. :is(), :not() and
+// :has() weigh what their heaviest argument weighs, and :where() nothing.
+const heavier=(a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2];
+const specificity=selector=>{
+  const weight=[0,0,0];
+  for(let i=0;i<selector.length;){
+    const c=selector[i];
+    if(c==='#'||c==='.'){weight[c==='#'?0:1]++;i++;while(i<selector.length&&/[\w-]/.test(selector[i]))i++;}
+    else if(c==='['){weight[1]++;while(i<selector.length&&selector[i]!==']')i++;i++;}
+    else if(c===':'){
+      const pseudoElement=selector[i+1]===':';i+=pseudoElement?2:1;
+      let name='';while(i<selector.length&&/[\w-]/.test(selector[i]))name+=selector[i++];
+      if(selector[i]==='('){
+        let depth=1,end=i+1;
+        for(;end<selector.length&&depth;end++)depth+=selector[end]==='('?1:selector[end]===')'?-1:0;
+        const inside=selector.slice(i+1,end-1);i=end;
+        if(name==='where')continue;
+        if(['is','not','has'].includes(name)){split(inside).map(specificity).sort(heavier).pop().forEach((n,at)=>weight[at]+=n);continue;}
+      }
+      weight[pseudoElement||['before','after'].includes(name)?2:1]++;
+    }
+    else if(/[a-z]/i.test(c)){weight[2]++;while(i<selector.length&&/[\w-]/.test(selector[i]))i++;}
+    else i++;
+  }
+  return weight;
+};
+
+// UI-55, the find field. DESIGN.md holds the find-record field above a record
+// list to the Filter density — 34px, 13px, the quiet line — and only Travel and
+// Taxes drew it that way, from a copy of their own in travel.css that still set
+// 13px under a finger, so iOS Safari zoomed the page whenever it was touched;
+// Gifts, Sizes, Replacements, Rewards, Health and Personal drew theirs at the
+// size of the fields it filters. One component draws it and one rule, in the
+// sheet both hosts load, sizes it; a finger gets the family's touch size; and no
+// other sheet in either host out-weighs the family on a text box, which is the
+// weight a tool's own copy needs before it can take effect.
+test('a find field is a filter: one component draws it, one rule sizes it, and a finger gets 16px',async()=>{
+  // Nothing but FindField asks for a search box, and nothing named or labelled
+  // for finding is built as an ordinary field, in either host.
+  const walk=(root,dir='')=>readdirSync(new URL(dir,root),{withFileTypes:true}).flatMap(entry=>
+    entry.isDirectory()?walk(root,`${dir}${entry.name}/`):entry.name.endsWith('.js')?[[new URL(dir+entry.name,root),dir+entry.name]]:[]);
+  const code=[...walk(new URL('../src/',import.meta.url)),...walk(new URL('../../mobile-app/public/app/',import.meta.url))];
+  assert.ok(code.length>50,'the sources moved; point this check at them');
+  for(const [url,file] of code){
+    const text=readFileSync(url,'utf8');
+    if(file!=='components/ui.js')assert.doesNotMatch(text,/\b(?:kind|type)\s*:\s*['"`]search['"`]/,
+      `${file} asks for a search box outside FindField. See UI-55 in docs/UI_RULES.md.`);
+    for(const call of text.matchAll(/\b(?:FormField|Field)\(\{/g)){
+      let depth=0,end=call.index+call[0].length-1;
+      for(;end<text.length;end++)if('{(['.includes(text[end]))depth++;else if('})]'.includes(text[end])&&--depth===0)break;
+      assert.doesNotMatch(text.slice(call.index,end),/\bid:\s*[`'"][^`'"]*-search[`'"]|\blabel:\s*[`'"](?:Find|Search)\b/,
+        `${file} builds a find field as an ordinary field, at the size of the fields it filters. Use FindField. See UI-55 in docs/UI_RULES.md.`);
+    }
+  }
+  const {parseHTML}=await import('linkedom');
+  const {document}=parseHTML('<html><body></body></html>');
+  const before=globalThis.document;globalThis.document=document;
+  try{
+    const {FormField}=await import('../src/components/ui.js');
+    assert.equal(FormField({id:'plain',label:'Plain'}).querySelector('input').getAttribute('type'),'text',
+      'a field with no kind is a search box, and would be drawn as a filter. See UI-55 in docs/UI_RULES.md.');
+    // Every search box a tool's view draws is a FindField.
+    const drawn=[];
+    for(const name of readdirSync(COMPONENTS).filter(file=>file.endsWith('.js'))){
+      for(const [key,build] of Object.entries(await import(new URL(name,COMPONENTS).href))){
+        if(typeof build!=='function'||!/(?:View|Library)$/.test(key))continue;
+        let view;try{view=build({});}catch{continue;}
+        for(const node of [view].flat())for(const input of node?.querySelectorAll?.('input[type=search]')??[]){
+          drawn.push(input.id);
+          assert.ok(input.closest('.form-field.find-field'),
+            `${name}: ${key} draws #${input.id} as a search box of its own rather than a FindField. See UI-55 in docs/UI_RULES.md.`);
+        }
+      }
+    }
+    for(const id of ['travel-search','taxes-search','gifts-search','sizes-search','replacements-search',
+      'rewards-search','programs-search','health-search','personal-search','manual-search'])
+      assert.ok(drawn.includes(id),`#${id} was not drawn — the check stopped reaching the tools' views`);
+  }finally{globalThis.document=before;}
+  // One rule sizes it: the family's tokens at the Filter density on the quiet
+  // line, and after it the family's touch size, under a finger and on the phone.
+  const family=parse(sheet('select.css'));
+  const [filter,touch]=family.filter(entry=>entry.parts.includes('.form-field.find-field'));
+  const phone=family.find(entry=>entry.parts.includes('.unlocked-tools .form-field.find-field'));
+  assert.ok(filter,'select.css, the sheet both hosts load, no longer sizes the find field. See UI-55 in docs/UI_RULES.md.');
+  assert.ok(touch&&phone,'under a finger the find field keeps the Filter density\'s 13px, and iOS Safari zooms the page into it. See UI-55 in docs/UI_RULES.md.');
+  assert.equal(value(filter,'--control-height'),'34px','the find field is not at the Filter density\'s 34px. See DESIGN.md and UI-55.');
+  assert.match(value(filter,'--control-font')??'',/^13px\//,'the find field is not set at the Filter density\'s 13px. See DESIGN.md and UI-55.');
+  assert.equal(value(filter,'--control-border'),'var(--line)','the find field has left the quiet line. See DESIGN.md and UI-55.');
+  for(const entry of [touch,phone]){
+    assert.equal(value(entry,'--control-height'),'44px','under a finger the find field is shorter than a touch field. See UI-13 and UI-55.');
+    assert.match(value(entry,'--control-font')??'',/^16px\//,
+      'under a finger the find field is set below 16px, and iOS Safari zooms the page into it. See UI-55 in docs/UI_RULES.md.');
+  }
+  // Nothing else reaches into it, and no sheet out-weighs the family on a text
+  // box: the travel.css copy had to, which is how it tied with the family and
+  // was drawn by whichever sheet came last.
+  const box=family.flatMap(entry=>entry.parts).find(part=>part.startsWith('.form-field > input:not('));
+  assert.ok(box,'the family\'s text box rule moved; point this check at it. See UI-55 in docs/UI_RULES.md.');
+  const SIZE=/^(?:min-height|height|max-height)$/;
+  let boxes=0;
+  for(const [name,rules] of [...sheets().filter(name=>name!=='select.css').map(name=>[name,parse(sheet(name))]),...mobile.map(([name,text])=>[name,parse(text)])])
+    for(const entry of rules)for(const part of entry.parts){
+      assert.doesNotMatch(part,/\.find-field(?![\w-])/,`${name}: ${part} reaches into the find field, which select.css draws for both hosts. See UI-55 in docs/UI_RULES.md.`);
+      const drawn=subject(part);
+      if(!/^input(?![\w-])/.test(drawn)||/type=(?:checkbox|radio)\]/.test(drawn.replace(/:not\([^)]*\)/g,'')))continue;
+      if(!entry.props.some(([prop])=>PAINT.test(prop)||SIZE.test(prop)))continue;
+      boxes++;
+      assert.ok(heavier(specificity(part),specificity(box))<0,
+        `${name}: ${part} sizes or paints a text box with the family's weight or more, so it is drawn by sheet order rather than by select.css. See UI-55 and UI-31 in docs/UI_RULES.md.`);
+    }
+  assert.ok(boxes>=5,`only ${boxes} text box rules found outside select.css — the check stopped matching`);
+});
+
+// UI-56. Disabled is half, wherever it shows. Every disabled control in both
+// hosts was dimmed to .5 with the ordinary cursor, except a row's verbs: .4 on a
+// finger, on an opened record's number line and on the ledger's page — and
+// under a pointer a paused verb stood at full ink, because the rule revealing
+// it out-weighed the plain disabled one. A verb that waits unseen for the
+// pointer may wait at 0 while it is paused; wherever a rule reveals a control,
+// a disabled twin of that rule dims it to half.
+test('a disabled control is dimmed to half wherever it shows, in every sheet of both hosts',()=>{
+  // Each rule with the @media it sits in, so what a finger sees is told from
+  // what a pointer sees.
+  const withMedia=text=>{
+    const inside=[];let rest='';
+    for(let at=0;at<text.length;){
+      const start=text.indexOf('@media',at);
+      if(start<0){rest+=text.slice(at);break;}
+      rest+=text.slice(at,start);
+      const open=text.indexOf('{',start);let depth=1,end=open+1;
+      for(;end<text.length&&depth;end++)depth+=text[end]==='{'?1:text[end]==='}'?-1:0;
+      const media=text.slice(start+'@media'.length,open).replace(/\s+/g,'');
+      inside.push(...parse(text.slice(open+1,end-1)).map(entry=>({...entry,media})));
+      at=end;
+    }
+    return [...parse(rest).map(entry=>({...entry,media:''})),...inside];
+  };
+  const all=[...sheets().map(name=>[name,withMedia(sheet(name))]),...mobile.map(([name,text])=>[name,withMedia(text)])];
+  const rules=all.flatMap(([,entries])=>entries);
+  const DISABLED=/:disabled|\[aria-disabled=true\]|\[disabled\]/,HALF=/^0?\.5$/;
+  let dimmed=0,revealed=0;
+  for(const [name,entries] of all)for(const entry of entries){
+    const opacity=value(entry,'opacity');
+    for(const part of entry.parts){
+      if(DISABLED.test(part.replace(/:not\([^)]*\)/g,''))){
+        const cursor=value(entry,'cursor');
+        assert.ok(cursor===undefined||cursor==='default',`${name}: ${part} gives a disabled control a cursor of its own. See UI-56 in docs/UI_RULES.md.`);
+        if(opacity===undefined)continue;
+        dimmed++;
+        const waiting=opacity==='0'&&/\.row-action/.test(subject(part))&&!/:hover|:focus-within/.test(part)&&!/hover:none/.test(entry.media);
+        assert.ok(HALF.test(opacity)||waiting,`${name}: ${part} dims a disabled control to ${opacity} rather than half. See UI-56 in docs/UI_RULES.md.`);
+      }else if(opacity==='1'&&/\.row-action|button/.test(subject(part))&&!/:focus-visible/.test(part)){
+        revealed++;
+        const twin=rules.find(rule=>rule.media===entry.media&&rule.parts.includes(`${part}:disabled`));
+        assert.ok(twin&&HALF.test(value(twin,'opacity')??''),
+          `${name}: ${part} shows a control with no disabled twin that dims it to half, so a paused one stands at full ink or near it. See UI-56 in docs/UI_RULES.md.`);
+      }
+    }
+  }
+  assert.ok(dimmed>=12&&revealed>=6,`only ${dimmed} disabled and ${revealed} revealing rules found — the check stopped matching`);
 });

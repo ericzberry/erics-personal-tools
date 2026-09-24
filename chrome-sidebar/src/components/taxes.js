@@ -1,7 +1,7 @@
 import * as UI from './ui.js';
 import {TAX_DOCUMENT_TYPES,TAX_TAXPAYERS,TAX_CATEGORIES,TAX_JURISDICTIONS,TAX_QUARTERS,taxYears,defaultTaxYear,TAX_ROOT_FOLDER_URL,MAX_DOCUMENT_BYTES,groupFiled,sortFiled} from '../tax-data.js';
 import {ACCEPTED} from '../statement-text.js';
-const {Stack,Section,Note,Notice,Button,ActionGroup,Disclosure,FormField,Strong,Label,Text,Link,ToolTitle,GroupTitle}=UI;
+const {Stack,Section,Note,Notice,Button,ActionGroup,Disclosure,FormField,FindField,Strong,Label,Text,Link,ToolTitle,GroupTitle}=UI;
 
 export const fileSize=bytes=>bytes>=1000000?`${(bytes/1000000).toFixed(1)} MB`:`${Math.max(1,Math.round(bytes/1000))} KB`;
 const filedOn=stamp=>{
@@ -58,7 +58,7 @@ export function TaxesView({today=new Date()}={}){
     // chosen above.
     Stack([Part('Already filed',[
       Stack([
-        FormField({id:'taxes-search',label:'Find a document',kind:'search'}),
+        FindField({id:'taxes-search',label:'Find a document'}),
         Notice('',{id:'taxes-filed-status',role:'status'}),
         Stack([],{id:'taxes-filed',className:'tax-filed'})
       ],{className:'record-search'}),

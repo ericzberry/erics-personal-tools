@@ -1,11 +1,11 @@
 import * as UI from './ui.js';
-const {Stack,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,GroupTitle,Section,ToolTitle,Strong,Label}=UI;
+const {Stack,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,FindField,Form,GroupTitle,Section,ToolTitle,Strong,Label}=UI;
 export function SizesView(){
   return Stack([
     ToolTitle('Clothing sizes',{actionsId:'sizes-actions',statusId:'sizes-status'}),
     Stack([],{id:'sizes-capture'}),
     SettingsGroup({title:'Sizes',level:2,children:[
-      FormField({id:'sizes-search',label:'Find a size',kind:'search',placeholder:'Brand, garment or measurement…'}),
+      FindField({id:'sizes-search',label:'Find a size',placeholder:'Brand, garment or measurement…'}),
       Stack([],{id:'sizes-list',className:'travel-list'})
     ]}),
     Disclosure('Add or edit a size',[

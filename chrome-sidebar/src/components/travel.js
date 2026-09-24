@@ -1,11 +1,11 @@
-import {Section,Heading,GroupTitle,Note,FormField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord,RowAction,EDIT_GLYPH,COPY_GLYPH,NOTES_GLYPH,DELETE_GLYPH} from './ui.js';
+import {Section,Heading,GroupTitle,Note,FormField,FindField,Form,Disclosure,SettingsGroup,ActionGroup,Button,Stack,Strong,ExpandableRecord,RowAction,EDIT_GLYPH,COPY_GLYPH,NOTES_GLYPH,DELETE_GLYPH} from './ui.js';
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
 export function TravelView({connection=true,mode='inline',editId=null}={}) {
   return Section([
     ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',size:'compact',hidden:mode!=='browse'})],{compact:true}),
     Note('',{id:'travel-status',role:'status','aria-live':'polite'}),
     Stack([
-      FormField({id:'travel-search',label:'Find record',hiddenLabel:true,kind:'search',placeholder:'find record'}),
+      FindField({id:'travel-search',label:'Find record',hiddenLabel:true,placeholder:'find record'}),
       Stack([],{id:'travel-list',className:'travel-list'})
     ],{hidden:mode==='editor',className:'record-search'}),
     (mode==='editor'?(_title,children,props)=>Section(children,props):Disclosure)('Add or edit a record',[

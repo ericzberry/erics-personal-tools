@@ -71,7 +71,8 @@ here.
 | **UI-48** | What is not known is left off the line. A record's line prints what is known; an unknown billing cycle or price is omitted, not spelled out as "Not established" or "Amount unknown", and the ordinary state is not said at all. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/subscriptions-tool.test.js` |
 | **UI-50** | Money is typed the way it reads. Every box a dollar figure is typed into is the shared `money` field: it groups thousands as they are typed and when a figure is filled in, and reads back as the plain number. No money box is a bare text or number input. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
 | **UI-51** | A total shows what it rests on. Any total the ledger draws can be opened down to the dated figures it adds up, each with what stated it, and says in money how much of it rests on figures more than 90 days old — and says nothing about age when none of it does. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-explain.test.js` |
-| **UI-55** | Fields side by side are one family, in every state. A dropdown shows a value, so it is drawn as a field — a text box's weight, inset and height, not a button's — a date or a number stands level with it, and every state is one look for every kind: disabled dimmed to half on its own fill with the ordinary cursor, focus the ring alone, hover the edge alone, touch 44px. Only `select.css`, which both hosts load, paints a field or draws the switch. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
+| **UI-55** | Fields side by side are one family, in every state. A dropdown shows a value, so it is drawn as a field — a text box's weight, inset and height, not a button's — a date or a number stands level with it, and every state is one look for every kind: disabled dimmed to half on its own fill with the ordinary cursor, focus the ring alone, hover the edge alone, touch 44px and 16px. The find field above a record list is the family at the Filter density, drawn by `FindField` in every tool and 16px under a finger like the rest. Only `select.css`, which both hosts load, paints a field or draws the switch. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
+| **UI-56** | Disabled is half, wherever it shows. Every disabled control in either host is dimmed to half with the ordinary cursor, a row's verb paused while its tool saves included — under the pointer, to a finger, on an opened record's line. It is dimmed, not hidden, because it applies again the moment the save lands; only a verb still waiting unseen for the pointer stays at 0. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
 
 ## Ratcheting
 
@@ -107,7 +108,7 @@ fails the suite for everyone at HEAD.
 
 | | Rule | Where to look |
 | --- | --- | --- |
-| **UI-10** | One state vocabulary, and no two states alike. Hover only where a pointer aims, and lighter than open or selected; disabled at half opacity with the default cursor; a toggle's open state visible without hovering it. The focus ring half is now UI-21 and checked. | Every changed control, in all of its states |
+| **UI-10** | One state vocabulary, and no two states alike. Hover only where a pointer aims, and lighter than open or selected; a toggle's open state visible without hovering it. The focus ring half is now UI-21 and the disabled half UI-56, both checked. | Every changed control, in all of its states |
 | **UI-11** | A heading is never smaller or paler than what it heads. A category over a run of records carries at least the size and the ink of the rows inside it, told apart by weight, a rule, or space. | Any screen with a run of records |
 | **UI-12** | One spacing scale per screen: 2–4px inside a record, 8–12px between groups. Gaps within a group are always smaller than gaps between them. | The full scroll, not a cropped component |
 | **UI-13** | Hit targets hold: 44px for touch form controls, 32px for the actions inside an expanded record. A row of glyphs is drawn to its line only where a pointer does the aiming; a finger keeps the touch size. | Sidebar and phone, hover and touch |
@@ -283,9 +284,17 @@ links three of the side panel's eleven sheets is showing a cascade the owner
 never sees, which is exactly how UI-31's tie reached him twice. Every harness
 for a side-panel screen links `tests/panel-cascade.css`, one file holding the
 panel's sheets in the panel's order; the check compares that file to
-`sidepanel.html` and then requires every harness to use it. The three that
-preview another host — the settings site, the restaurant workspace — name that
-host in the check and are compared against it instead.
+`sidepanel.html` and then requires every harness to use it. The ones that
+preview another host — the settings site, the restaurant workspace, the
+ledger's page, the travel page — name that host in the check and are compared
+against it instead. The check reads each link where the browser does, from
+the page's `<base>`, and requires the file to be there: the draft preview
+linked `panel-cascade.css` under a base of `../`, which names a file at the
+server root that does not exist, and previewed with no styles at all while a
+check reading the words of the link passed it. Every page under `tests/` is
+held, whatever it is called — the whole panel's harness and the Settings layout
+were never named `-preview`, and loaded one and three of the panel's fourteen
+sheets.
 
 **UI-33 — verbs ride on the line of the thing they act on.** *Enforced.* A
 record's two glyphs sit at the end of its own line, and a group's at the end of
@@ -715,14 +724,49 @@ were bare inputs in the extension's older look, 12px and 32px tall, above and
 below a dropdown drawn as a field. On a phone the wallet pinned the control
 height for its own buttons and so left every text box 40px tall under 44px
 dropdowns, with Quick add's button 36px beside them; and the switch was drawn
-only in the extension's sheet. The find field's Filter density tied with the
-field rule, so every full-tab page that loads `capabilities.css` after
-`travel.css` drew Taxes' and Travel's find field as a plain field. A second
-check in the same file holds that no
+only in the extension's sheet. A second check in the same file holds that no
 sheet in either host but `select.css` paints a text area or a dropdown — the
 compact face and a generated result drawn with the family's own tokens are the
 two named differences — that focus sets no edge and hover no fill, that the
 touch size is set on the field itself and on the phone for boxes and dropdowns
-together, that the find field out-specifies the field rule, that the switch is
-drawn once in `select.css`, and that no component builds a field outside
-`FormField`. Look at Email's reply and any phone form with a dropdown in it.
+together, that the switch is drawn once in `select.css`, and that no component
+builds a field outside `FormField`. Look at Email's reply and any phone form
+with a dropdown in it.
+
+The find field was the last of them. DESIGN.md holds the find-record field
+above a record list to the Filter density — 34px, 13px, the quiet line — and
+only Travel and Taxes drew it that way, from a copy of their own in
+`travel.css` that tied with the field rule and so was drawn by whichever sheet
+came last — and under a finger that copy still set 13px, so iOS Safari zoomed
+the page into it the moment it was touched. Gifts, Sizes, Replacements,
+Rewards, Health, Personal information, the saved-data library and Draft
+capture's player search drew theirs at the size of the fields they filter.
+`FindField` in `ui.js` now draws every find field, and `select.css` sizes it
+once with the family's own tokens: the Filter density under a pointer, 44px and
+16px under a finger and on the phone, the quiet line on both, and the family's
+hover, focus and disabled looks throughout. A box with no kind is a text box,
+so a field that fills in a record — *Which card do you have?* — is never drawn
+as a filter. A third check holds that nothing but `FindField` asks for a search
+box and nothing named or labelled for finding is built as an ordinary field,
+that every tool's view draws its find field through it, that the Filter density
+and the touch size are the ones above, and that no sheet in either host sizes
+or paints a text box with the family's weight or more — the weight a tool's own
+copy needs before it can take effect. Look at any list with a find field above
+it, at 380px and on the phone.
+
+**UI-56 — disabled is half, wherever it shows.** *Enforced.* The sweep behind
+UI-55 found one control still dimming its own way. While a tool saves, its
+rows' verbs are disabled, and they dimmed to .4 on a finger, on an opened
+travel record's number line and on the ledger's page, where every other
+disabled control in either host takes .5. Under a pointer it was worse: the
+rule that shows a row's verbs when the row is pointed at out-weighed the plain
+disabled rule, so a paused verb stood at full ink, looking pressable and doing
+nothing; the ledger page's Record cash in or out did the same. A paused verb is
+not hidden the way UI-16 hides an action that does not apply: it applies again
+the moment the save lands, and taking it away would pull the line out from
+under the finger that pressed it. So it is dimmed to half with the ordinary
+cursor wherever it shows, and only a verb still waiting unseen for the pointer
+stays at 0. `chrome-sidebar/tests/ui-rules.test.js` holds that every disabled
+rule in either host dims to half and keeps the ordinary cursor, and that every
+rule revealing a control has a disabled twin at half in the same context. Look
+at a list's verbs while its tool saves, under a pointer and on the phone.

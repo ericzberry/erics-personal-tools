@@ -1,11 +1,11 @@
 import * as UI from './ui.js';
-const {Stack,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,GroupTitle,Section,ToolTitle,Strong}=UI;
+const {Stack,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,FindField,Form,GroupTitle,Section,ToolTitle,Strong}=UI;
 export function GiftsView(){
   return Stack([
     ToolTitle('Gift ideas',{actionsId:'gifts-actions',statusId:'gifts-status'}),
     Stack([],{id:'gifts-capture'}),
     SettingsGroup({title:'Ideas',level:2,children:[
-      FormField({id:'gifts-search',label:'Find an idea',kind:'search',placeholder:'Person or idea…'}),
+      FindField({id:'gifts-search',label:'Find an idea',placeholder:'Person or idea…'}),
       Stack([],{id:'gifts-list',className:'travel-list'})
     ]}),
     // Bought is out of the way but never gone: it is the answer to "what did I

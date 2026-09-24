@@ -20,7 +20,7 @@ export function RewardsView(){
         Stack([],{id:'rewards-foryou',className:'rewards-foryou'}),
         ActionGroup([],{id:'rewards-foryou-actions',compact:true}),
         Disclosure('Browse offers',[
-          UI.FormField({id:'programs-search',label:'Find an offer',kind:'search',placeholder:'Airline, hotel, merchant…'}),
+          UI.FindField({id:'programs-search',label:'Find an offer',placeholder:'Airline, hotel, merchant…'}),
           Stack([],{id:'programs-filter'}),
           Notice('',{id:'programs-status'}),
           Stack([],{id:'programs-list',className:'program-offers'})
@@ -31,7 +31,7 @@ export function RewardsView(){
         Stack([Stack([],{id:'balance-body'}),Notice('',{id:'balance-status'})],{id:'balance-panel',className:'balance-panel',hidden:true}),
         UI.SettingsGroup({title:'Update wallet',level:2,children:[Notice('',{id:'rewards-coverage-status'}),Stack([],{id:'rewards-coverage'})],id:'rewards-coverage-group',hidden:true}),
         UI.SettingsGroup({actionsId:'wallet-actions',children:[
-          UI.FormField({id:'rewards-search',label:'Find a card, program or benefit',kind:'search',placeholder:'Airline, card, merchant, membership…'}),
+          UI.FindField({id:'rewards-search',label:'Find a card, program or benefit',placeholder:'Airline, card, merchant, membership…'}),
           Stack([],{id:'rewards-list'})]}),
         UI.SettingsGroup({title:'Protected values',level:2,children:[
           Notice('',{id:'vault-status'}),

@@ -359,7 +359,7 @@
 .called-fill{height:100%;border-radius:999px;background:var(--illiquid)}
 .overview-cell--actions{display:flex;justify-content:flex-end;align-self:center;gap:2px}
 .travel-wallet .overview-row:is(:hover,:focus-within) .row-action{opacity:1}
-.travel-wallet .overview-row:is(:hover,:focus-within) .row-action:disabled{opacity:.4}
+.travel-wallet .overview-row:is(:hover,:focus-within) .row-action:disabled{opacity:.5}
 .overview-row--pending .overview-name{color:var(--muted)}
 /* In a column narrower than the table's own columns need — a name and six
    figures take about 880px — the table becomes a stack of small statements: the name
@@ -414,6 +414,9 @@
     padding:0 2px;border-radius:4px;background:var(--surface)}
   .travel-wallet .firm-head .firm-figure>.action-group>button{opacity:0;transition:opacity .12s ease}
   .travel-wallet .firm-card:is(:hover,:focus-within) .firm-head .firm-figure>.action-group>button{opacity:1}
+  /* Paused while the ledger saves, it dims to half with the glyphs rather than
+     standing at full ink under the pointer (UI-56). */
+  .travel-wallet .firm-card:is(:hover,:focus-within) .firm-head .firm-figure>.action-group>button:disabled{opacity:.5}
 }
 @media(hover:none){.firm-head{flex-wrap:wrap}.firm-figure{margin-left:auto}}
 @media(prefers-reduced-motion:reduce){.travel-wallet .firm-head .firm-figure>.action-group>button{transition:none}}

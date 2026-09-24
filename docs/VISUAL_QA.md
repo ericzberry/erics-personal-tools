@@ -34,6 +34,8 @@ Start at the normal entry point with no helper query parameters or preselected f
 | Mobile | Approximately 390 × 844px, plus a narrower supported phone layout; check content with the on-screen keyboard where applicable |
 | Full-tab settings, editors, or workspaces | A normal desktop viewport, approximately 1440 × 900px, and a narrow viewport where that page is supported |
 
+A viewport emulator that turns into a phone below some width — the Claude Browser pane does below 768px — also reports a coarse pointer and no hover, so at 380px it shows the touch sizes rather than the side panel's. Review the panel under a pointer by framing the harness at 380px and 280px inside a desktop-width tab, and the touch look with the emulator.
+
 For shared components, review the affected extension and mobile consumers in their actual layouts. Desktop width is not a substitute for sidebar acceptance. Inspect the full scroll and capture useful evidence with synthetic values; one cropped component screenshot does not establish page acceptance.
 
 Review the applicable states below, including transitions between them:

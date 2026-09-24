@@ -1,11 +1,11 @@
 import * as UI from './ui.js';
-const {Stack,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,ToolTitle,Strong}=UI;
+const {Stack,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,FindField,Form,ToolTitle,Strong}=UI;
 export function ReplacementsView(){
   return Stack([
     ToolTitle('Replacement drawer',{actionsId:'replacements-actions',statusId:'replacements-status'}),
     Stack([],{id:'replacements-capture'}),
     SettingsGroup({title:'Buy again',level:2,children:[
-      FormField({id:'replacements-search',label:'Find a thing',kind:'search',placeholder:'Paint, pillow, cable, shop…'}),
+      FindField({id:'replacements-search',label:'Find a thing',placeholder:'Paint, pillow, cable, shop…'}),
       Stack([],{id:'replacements-list',className:'travel-list'})
     ]}),
     Disclosure('Add or edit a thing',[

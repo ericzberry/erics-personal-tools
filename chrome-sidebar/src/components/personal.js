@@ -1,12 +1,12 @@
 import * as UI from './ui.js';
 import {PERSONAL_CATEGORIES} from '../personal-data.js';
-const {Stack,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,Form,GroupTitle,Section,ToolTitle}=UI;
+const {Stack,Note,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,FindField,Form,GroupTitle,Section,ToolTitle}=UI;
 export function PersonalView(){
   return Stack([
     ToolTitle('Personal information',{actionsId:'personal-actions',statusId:'personal-status'}),
     SettingsGroup({title:'Expiring soon',level:2,children:[Stack([],{id:'personal-expiring'})]}),
     SettingsGroup({title:'Your records',level:2,children:[
-      FormField({id:'personal-search',label:'Find a record',kind:'search',placeholder:'Name, category, person…'}),
+      FindField({id:'personal-search',label:'Find a record',placeholder:'Name, category, person…'}),
       Stack([],{id:'personal-list',className:'travel-list'})
     ]}),
     Disclosure('Add or edit a record',[

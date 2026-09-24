@@ -1,6 +1,6 @@
 import * as UI from './ui.js';
 import {HEALTH_TYPES,MEDICATION_STATUSES,CONDITION_STATUSES,FAMILY_SIDES,SUMMARY_CHOICES} from '../health-data.js';
-const {Stack,Section,Note,Notice,Button,ActionGroup,Disclosure,FormField,Form,GroupTitle,ToolTitle,Strong,Label,Text,Tabs}=UI;
+const {Stack,Section,Note,Notice,Button,ActionGroup,Disclosure,FormField,FindField,Form,GroupTitle,ToolTitle,Strong,Label,Text,Tabs}=UI;
 const choices=list=>list.map(text=>({text,value:text}));
 
 // The notebook. One search over everything, three views one at a time, and
@@ -9,7 +9,7 @@ const choices=list=>list.map(text=>({text,value:text}));
 export function HealthView(){
   return Stack([
     ToolTitle('Health',{actionsId:'health-actions',statusId:'health-status'}),
-    FormField({id:'health-search',label:'Search health',kind:'search',placeholder:'Note, medication, relative…'}),
+    FindField({id:'health-search',label:'Search health',placeholder:'Note, medication, relative…'}),
     // While a search is active this is the one list on the screen.
     Stack([],{id:'health-results',className:'travel-list',hidden:true}),
     Tabs({id:'health-tabs',label:'Health',items:[

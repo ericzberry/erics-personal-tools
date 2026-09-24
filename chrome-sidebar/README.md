@@ -4299,3 +4299,39 @@ fields are built as fields; Quick add's button stands level with its box on the
 phone; the find field on the full-tab pages keeps its Filter density; and the
 shared `Toggle` is the same switch on the phone as in the extension, where it
 had been a bare checkbox.
+
+## Find fields are filters, and a paused verb is half (0.6.286 / mobile 0.1.235)
+
+What the UI-55 sweep reported and did not fix. DESIGN.md holds the field
+above a record list to the Filter density, and only Travel and Taxes drew it
+that way, from a copy of their own in `travel.css` that tied with the field
+rule and still set 13px under a finger, so iOS Safari zoomed the page into
+it. Gifts, Sizes, Replacements, Rewards, Health, Personal information, the
+saved-data library and Draft capture's player search drew theirs at the size
+of the fields they filter. `FindField` in `ui.js` now draws every one, and
+`select.css` sizes it once by setting the family's own tokens: 34px, 13px and
+the quiet line under a pointer, 44px and 16px under a finger and on the phone.
+A `Field` with no kind is a text box now, so Rewards' *Which card do you
+have?* is no longer a search box.
+
+A row's verbs, disabled while their tool saves, dimmed to .4 on a finger, on
+an opened travel record's number line and on the ledger's page, and under a
+pointer stood at full ink, because the rule revealing them out-weighed the
+disabled one; the ledger page's Record cash in or out did the same. They are
+paused rather than gone, so they are dimmed to half with the ordinary cursor
+wherever they show (UI-56), and still wait unseen at rest under a pointer.
+
+The draft preview had loaded no stylesheet since 0.6.236: under
+`<base href="../">` its link reached the server root. It links
+`tests/panel-cascade.css`, and so do the whole panel's harness and the Settings
+layout, which the UI-32 check never looked at because they are not named
+`-preview`. The check now resolves every link on every page under `tests/`
+and requires the file to exist.
+
+Held by `tests/ui-rules.test.js`: a find-field check (nothing but `FindField`
+asks for a search box, every tool's view draws its find field through it, the
+Filter and touch sizes, and no sheet in either host sizes a text box with the
+family's weight), a disabled-half check across both hosts' sheets, and the
+rewritten UI-32 check — each shown failing against 0.6.285's sources. Reviewed
+with synthetic data at 380px and 280px under a pointer, at desktop width on
+the full-tab pages, and on the phone at 390px and 320px.

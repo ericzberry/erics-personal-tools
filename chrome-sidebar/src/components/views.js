@@ -27,7 +27,7 @@ export function DraftSettings() {
       UI.FormField({id:'manual-clock',label:'Current overall pick',kind:'number',placeholder:'Unknown'}),
       UI.FormField({id:'manual-slot',label:'Your draft position',kind:'select',options:[{text:'Unknown',value:''},...Array.from({length:10},(_,i)=>({text:String(i+1),value:String(i+1)}))]}),
       Button('Save progress',{id:'save-manual-progress',variant:'primary'}),
-      UI.FormField({id:'manual-search',label:'Player outside your spreadsheet',placeholder:'Search ESPN players…'}),
+      UI.FindField({id:'manual-search',label:'Player outside your spreadsheet',placeholder:'Search ESPN players…'}),
       Note('',{id:'manual-result-count'}),Stack([],{id:'manual-players'})
     ],{id:'manual-settings',className:'form-stack',hidden:true}),
     Button('Refresh ESPN player list',{id:'sync-espn-players'}),Note('',{id:'espn-sync-status',role:'status'})

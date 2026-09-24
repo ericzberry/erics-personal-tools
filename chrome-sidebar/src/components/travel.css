@@ -159,13 +159,9 @@
 .travel-wallet .group-title{font:600 13px/1.4 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--wallet-ink)}
 .travel-wallet .group-title--name{letter-spacing:0;text-transform:none}
 .travel-wallet .record-group-title{padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
+/* The find field keeps 12px from the list it filters. Its Filter density is
+   drawn by `FindField` and select.css, for every tool at once (UI-55). */
 .travel-wallet .record-search{display:grid;gap:12px}
-/* The find field's Filter density. It out-specifies the shared field rule
-   rather than matching it: a tie went to whichever sheet came last, and the
-   pages that load capabilities.css after this one drew the same find field
-   37px tall in the control's darker edge (UI-31, UI-55). */
-.travel-wallet .record-search .form-field>input[type=search]{min-height:34px;padding:6px 10px;font-size:13px;border-color:var(--wallet-line)}
-.travel-wallet .record-search .form-field>input:hover:not(:disabled){border-color:var(--wallet-control-line)}
 .travel-wallet .record-search .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .travel-wallet .record-row{padding:0;border-bottom:1px solid var(--wallet-line);min-width:0}
 /* One record is one line: its name along the left, and its own actions at the
@@ -213,7 +209,16 @@
 .travel-wallet .record-row:hover .row-action,.travel-wallet .record-row:focus-within .row-action,
 .travel-wallet .group-line:hover .row-action,.travel-wallet .group-line:focus-within .row-action,
 .travel-wallet .row-action:focus-visible{opacity:1}
+/* While a tool saves, its verbs are paused, not gone: they still apply the
+   moment the save lands, so they are not hidden the way a verb that does not
+   apply is (UI-16). Wherever one shows — under the pointer, to a finger, on an
+   opened record's number line — a disabled verb is dimmed to half, as every
+   disabled control is (UI-10, UI-56). The pointed-at row out-specified the
+   plain disabled rule, so a paused verb stood at full ink under the pointer.
+   At rest under a pointer it waits unseen with the rest. */
 .travel-wallet .row-action:disabled{opacity:0}
+.travel-wallet .record-row:hover .row-action:disabled,.travel-wallet .record-row:focus-within .row-action:disabled,
+.travel-wallet .group-line:hover .row-action:disabled,.travel-wallet .group-line:focus-within .row-action:disabled{opacity:.5}
 @media(prefers-reduced-motion:reduce){.travel-wallet .row-action{transition:none}}
 /* A separator sits between records, never after the last one: a closing rule
    would land a gap above the rule that opens whatever follows the run, and the
@@ -262,7 +267,7 @@
   .travel-wallet .record-row-content button:not(.row-action){min-height:28px}
   .travel-wallet .record-line{min-height:36px}
   .travel-wallet .row-action{opacity:1;width:32px;min-height:32px}
-  .travel-wallet .row-action:disabled{opacity:.4}
+  .travel-wallet .row-action:disabled{opacity:.5}
 }
 /* The number and everything the record can be told to do with it: the value
    along the left, its verbs at the end of the same line. They are the point of
@@ -273,7 +278,7 @@
 .travel-wallet .record-number-line>.travel-number{flex:1 1 auto;min-width:0}
 .travel-wallet .record-number-line>.action-group{flex:none;gap:0;margin:0}
 .travel-wallet .record-number-line .row-action{opacity:1}
-.travel-wallet .record-number-line .row-action:disabled{opacity:.4}
+.travel-wallet .record-number-line .row-action:disabled{opacity:.5}
 /* Where the number is always shown, it is what the row is read for and the
    program's name is the label above it. */
 .travel-wallet .record-row:has(>.record-value) .record-row-toggle{min-height:22px;padding:4px 18px 0 0}

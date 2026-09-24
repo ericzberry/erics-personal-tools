@@ -28,7 +28,8 @@ The catalogue below describes existing exports, not a promise that each componen
 | Two concepts on one screen | `Tabs` | One at a time, with the row of labels as their heading; every label names a view, never an action, and a tab appears only while it has something to answer |
 | Layout | `Stack`, `ActionGroup`, `Workspace`, `WorkspaceFlow`, `FieldGrid` | Compose layout before introducing new wrappers; a full-tab workspace runs down the page rather than into a side column |
 | Text and supporting detail | `Title`, `Text`, `Note`, `Strong`, `Label` | `Heading` aliases `Title`; `Label` is a text span, not an input label |
-| Form and labeled inputs | `Form`, `FormStack`, `FormField`, `Field` | `Field` supplies an associated label and control |
+| Form and labeled inputs | `Form`, `FormStack`, `FormField`, `Field` | `Field` supplies an associated label and control; with no kind it is a text box |
+| Find a record in a list | `FindField` | The filter above a record list, at the Filter density under a pointer and the touch size under a finger. It is the only search box; never a `FormField` of kind `search` (UI-55) |
 | Actions and links | `Button`, `Link`, `IconButton` | Choose role and density explicitly; use real links for navigation |
 | A record's or group's own action | `RowAction`, `RowLink` | At the end of the record's line, never in a row of words under it. The glyph carries the verb and the label names the record it acts on; a decision that needs a sentence is not a row action |
 | Select or editable suggestions | `Select`, `Field` with `kind: 'select'` or `list` | Shared formatted trigger and open menu; keep custom text for suggestions |

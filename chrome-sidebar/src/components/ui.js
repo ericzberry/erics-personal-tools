@@ -155,7 +155,11 @@ export const Disclosure=(title,children=[],{titleHeading=false,...props}={})=>el
   isNode(title)||Array.isArray(title)?element('summary',{},[title].flat().filter(Boolean))
     :titleHeading?element('summary',{},[Title(title,2)]):element('summary',{text:title}),
   ...children]);
-export function Field({id,label,kind='search',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list,min,max,step}) {
+// A box with no kind is a plain text box. A search box is a find field, and
+// only `FindField` makes one, so a box that looks something up to fill in a
+// record — Which card do you have? — is never mistaken for the filter above a
+// list and drawn at its density.
+export function Field({id,label,kind='text',options=[],hiddenLabel=false,placeholder,rows=9,disabled=false,list,min,max,step}) {
   const caption=element('label',{for:id,id:kind==='select'?`${id}-label`:undefined,text:label,className:hiddenLabel?'sr-only':undefined});
   const control=kind==='select'?Select({id,label,disabled,options}):kind==='textarea'?element('textarea',{id,rows,placeholder,className:'editable-output'})
     :kind==='money'?MoneyInput(element('input',{id,type:'text',inputmode:'decimal',autocomplete:'off',placeholder,disabled,'data-money':''}))
@@ -496,6 +500,12 @@ export const Form=(children,props={})=>element('form',props,children);
 export const Panel=(children,props={})=>Section(children,{className:'settings-card',...props});
 export const FormStack=children=>Stack(children,{className:'form-stack'});
 export const FormField=({className='',...options})=>Stack(Field(options),{className:`form-field ${className}`.trim()});
+// The find-record field above a record list. It is a filter, not the page's
+// main control, so it is drawn at the Filter density (DESIGN.md, Record layout)
+// by one rule in select.css, and at the touch size under a finger. Every tool
+// draws its find field through this: the rest had drawn it at the size of the
+// fields it filters while Travel and Taxes kept a copy of their own (UI-55).
+export const FindField=({className='',...options})=>FormField({...options,kind:'search',className:`find-field ${className}`.trim()});
 
 // Reusable layouts for searchable workspaces and evidence-backed results.
 export const Workspace=children=>Stack(children,{className:'workspace-shell'});
