@@ -71,6 +71,7 @@ here.
 | **UI-48** | What is not known is left off the line. A record's line prints what is known; an unknown billing cycle or price is omitted, not spelled out as "Not established" or "Amount unknown", and the ordinary state is not said at all. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/subscriptions-tool.test.js` |
 | **UI-50** | Money is typed the way it reads. Every box a dollar figure is typed into is the shared `money` field: it groups thousands as they are typed and when a figure is filled in, and reads back as the plain number. No money box is a bare text or number input. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
 | **UI-51** | A total shows what it rests on. Any total the ledger draws can be opened down to the dated figures it adds up, each with what stated it, and says in money how much of it rests on figures more than 90 days old — and says nothing about age when none of it does. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-explain.test.js` |
+| **UI-55** | Fields side by side are one family, in every state. A dropdown shows a value, so it is drawn as a field — a text box's weight, inset and height, not a button's — a date or a number stands level with it, and every state is one look for every kind: disabled dimmed to half on its own fill with the ordinary cursor, focus the ring alone, hover the edge alone, touch 44px. Only `select.css`, which both hosts load, paints a field or draws the switch. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
 
 ## Ratcheting
 
@@ -81,7 +82,7 @@ colour rule, because defining the palette is what they are for.
 
 | | Rule | Budget when written |
 | --- | --- | --- |
-| **UI-6** | Colour comes from a token. A raw hex in a component sheet is a colour that cannot be retuned, cannot be reused, and will not match the next thing that needs the same tone. | 166, now **129** |
+| **UI-6** | Colour comes from a token. A raw hex in a component sheet is a colour that cannot be retuned, cannot be reused, and will not match the next thing that needs the same tone. | 166, now **122** |
 
 UI-7 closed by raising a tag's size and taking the width back from its tracking
 and its padding, so every heading in the ledger and every row in the draft
@@ -604,7 +605,10 @@ extension loads, into `travel.css`, which both hosts do — measured in the live
 phone document, a tag inside the restaurant workspace went from a bare 14px
 inline span with no border to 10px, `--line`, 4px. The wallet's own `.pill`
 override turned out to be the same declarations under the wallet token names
-and was deleted, so one tag is drawn once.
+and was deleted, so one tag is drawn once. The switch `Toggle` draws was the
+second instance: its track and knob were drawn only in `styles.css`, so the
+phone showed Restaurants' More dates as a bare square checkbox. It is drawn in
+`select.css` now, with its two greys as tokens, and UI-55 holds it there.
 
 The rule behind it is still open, because the size of the problem is not
 known. A static scan says 67 of the 129 classes `ui.js` emits are styled only
@@ -678,3 +682,47 @@ names. *From the rewards overhaul: "it's not linking well with my existing
 credit cards" — two Amex Platinums with different account hints collapsed into
 one row, and every screen reconciled the four stores its own way.* Look at any
 tool that names a record another tool holds.
+
+**UI-55 — fields side by side are one family, in every state.** *Enforced.*
+Restaurants put Date, People, Time and Window in one row. While a search ran,
+Time, Window and Menu turned into grey slabs of faded text — the dropdown's
+disabled look — beside Date, People and Neighborhood boxes that had not
+changed at all, because a disabled text box had no look of its own. At rest
+the dropdowns were still the odd ones out: the trigger is a button element and
+took a button's medium weight and 12px inset, so a chosen time read heavier
+than the typed date beside it and started further in, and the date box stood
+2px taller than the rest of its row. *"These dropdowns are ugly — make sure
+they're fixed … and make sure nothing like this is ugly in the app."* A
+dropdown shows a value, not an action, so it is drawn as a field. Every field
+in a row shares one fill, ink, weight, border, inset and height, and disabled
+is dimmed to half on the control's own fill with the ordinary cursor, for
+every kind at once. The family is defined once, in `select.css`, which both
+hosts load. `chrome-sidebar/tests/ui-rules.test.js` holds that the trigger
+carries the field's weight and inset, that one disabled rule covers the text
+box, the text area and the trigger, that no sheet in either host gives a field
+another disabled look, and that a date's inner edit area adds no height. Look
+at any form where a dropdown sits beside a box, at rest and while it works.
+
+The sweep behind it found the same thing wherever a feature drew a field for
+itself. Rewards' Notes, the purchase box on Best card and Pay, and the settings
+playground each had a text area repainted by its own sheet — a paler edge, a 14
+or 15px face, an 8px inset — that won or lost by sheet order, so one box looked
+two ways between the side panel and its own page. A focused text area put a
+forest border inside its ring that no other kind wore, and a dropdown took a
+tinted fill under the pointer. The drafted reply in Email sat under the box that
+asked for it with a paler edge and rounder corners, and the draft board's boxes
+were bare inputs in the extension's older look, 12px and 32px tall, above and
+below a dropdown drawn as a field. On a phone the wallet pinned the control
+height for its own buttons and so left every text box 40px tall under 44px
+dropdowns, with Quick add's button 36px beside them; and the switch was drawn
+only in the extension's sheet. The find field's Filter density tied with the
+field rule, so every full-tab page that loads `capabilities.css` after
+`travel.css` drew Taxes' and Travel's find field as a plain field. A second
+check in the same file holds that no
+sheet in either host but `select.css` paints a text area or a dropdown — the
+compact face and a generated result drawn with the family's own tokens are the
+two named differences — that focus sets no edge and hover no fill, that the
+touch size is set on the field itself and on the phone for boxes and dropdowns
+together, that the find field out-specifies the field rule, that the switch is
+drawn once in `select.css`, and that no component builds a field outside
+`FormField`. Look at Email's reply and any phone form with a dropdown in it.

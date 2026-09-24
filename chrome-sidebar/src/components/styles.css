@@ -29,7 +29,6 @@ body.settings-site {max-width:none;border:0;margin:0;font-size:16px;min-height:1
 .settings-card {background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:0 8px 24px #173e3705;}
 .settings-site .form-field {margin:18px 0;}
 .settings-site label {font-size:14px;margin-bottom:8px;}
-.settings-site input,.settings-site select {font-size:15px;padding:11px 12px;}
 .settings-site .quiet {font-size:14px;padding:8px 4px;}
 .settings-site .button-primary,.settings-site .button-secondary {font-size:14px;padding:11px 14px;}
 .settings-site .action-group {flex-wrap:wrap;gap:12px;}
@@ -45,7 +44,7 @@ body.settings-site {max-width:none;border:0;margin:0;font-size:16px;min-height:1
 .connection-key {font-size:13px;color:var(--muted);}
 .settings-empty {font-size:15px;line-height:1.7;color:var(--muted);padding:30px 22px;border:1px dashed #bcc8b9;border-radius:12px;margin-top:20px;}
 .playground-card {margin-top:28px;}
-.settings-site .editable-output {font-size:15px;min-height:80px;}
+.settings-site .editable-output {min-height:80px;}
 .ai-output {white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.7 var(--sans);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:20px;margin-top:18px;max-height:650px;overflow:auto;}
 @media(max-width:1000px) {.settings-shell {grid-template-columns:180px minmax(0,1fr);}.settings-shell > main {padding:30px 24px;}.settings-columns {gap:18px;}.settings-card {padding:20px;}}
 @media(max-width:800px) {.settings-shell {display:block;}.settings-rail {padding:16px 24px;}.settings-rail > .footnote,.settings-nav-current {display:none;}.settings-brand h1 {font-size:23px;}.settings-monogram {width:32px;height:32px;font-size:20px;}.settings-columns {grid-template-columns:1fr;}.settings-heading {align-items:flex-start;}.settings-heading h1 {font-size:29px;}}
@@ -181,7 +180,11 @@ th, td { padding: 8px 11px; }
 .button-primary, .button-secondary { padding: 9px 10px; border: 1px solid var(--forest); border-radius: 8px; background: var(--forest); color: var(--surface); font-size: 12px; }
 .button-secondary { background: var(--sage); color: var(--forest); border-color: var(--line); }
 .button-primary:disabled, .button-secondary:disabled { opacity: .5; cursor: default; }
-.editable-output { width: 100%; resize: vertical; padding: 11px; font: 12px/1.6 var(--sans); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); min-height: 150px; }
+/* A generated result is edited in place, so it is drawn as the field it sits
+   under: the family's edge, corners, fill and inset, at the compact size of the
+   box that asked for it. It had a paler edge, rounder corners and a wider inset,
+   and read as a second kind of box in the same section (UI-55). */
+.editable-output { width: 100%; resize: vertical; padding: 8px 10px; font: 12px/1.6 var(--sans); color: var(--control-ink); border: 1px solid var(--control-border); border-radius: var(--control-radius); background: var(--control-surface); min-height: 150px; }
 @media(max-width:330px) { .tool-heading { align-items: start; flex-direction: column; gap: 5px; } }
 
 /* Draft source */
@@ -258,11 +261,7 @@ th, td { padding: 8px 11px; }
 
 .settings-panel > :not(summary) { margin-left: 12px; margin-right: 12px; }
 .toggle-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px; color: var(--ink); font-size: 12px; font-weight: 600; }
-.toggle-field input { appearance: none; flex: 0 0 34px; width: 34px; height: 20px; padding: 2px; margin: 0; border-radius: 999px; border: 1px solid #8d9687; background: #b3b8ac; cursor: pointer; }
-.toggle-field input::before { content: ''; display: block; width: 14px; height: 14px; border-radius: 50%; background: white; }
-.toggle-field input:checked { background: var(--forest); border-color: var(--forest); }
-.toggle-field input:checked::before { transform: translateX(14px); }
-.toggle-field input:disabled { opacity: .5; cursor: wait; }
+/* The switch itself is drawn in select.css, which the phone loads too. */
 .settings-panel label:not(.toggle-field) { margin-top: 9px; }
 
 .roster-count-card { padding: 11px 10px; margin: 10px 0; border: 1px solid #b7c9b5; border-radius: 8px; background: #e3eddf; }
@@ -357,7 +356,7 @@ details[open]:where(:not(.capability-submenu, .recommendation details, .recommen
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23526b60' stroke-width='1.5'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 10px center; }
 .select-control:hover { border-color: #93aa9b; }
-.select-control:disabled { opacity: .55; cursor: default; }
+.select-control:disabled { opacity: .5; cursor: default; }
 @supports (appearance: base-select) {
   .select-control, .select-control::picker(select) { appearance: base-select; }
   .select-control { background-image: none; padding-right: 10px; align-items: center; }
@@ -425,12 +424,11 @@ a.row-action { text-decoration: none; color: inherit; }
 .ai-tasks-card .record-row { padding: 6px 0; }
 .ai-task-row .record-line { gap: 12px; }
 .ai-task-model { flex: 0 0 auto; min-width: 190px; }
-.ai-task-model .formatted-select-trigger { font-size: 12px; min-height: 30px; }
 .app-header { flex-wrap: wrap; }
 .app-header .button-secondary { font-size: 11px; padding: 5px 8px; }
 
 /* Generated text stays fully visible, including after edits and sidebar resizing. */
-.editable-output--fit { field-sizing: content; min-height: 96px; resize: none; overflow: hidden; line-height: 1.65; padding: 12px; }
+.editable-output--fit { field-sizing: content; min-height: 96px; resize: none; overflow: hidden; }
 
 /* Capability navigation is a single expandable list, independent of page actions.
    The header is pinned by an offset as tall as the brand row above the Tools
@@ -488,7 +486,7 @@ a.row-action { text-decoration: none; color: inherit; }
 .settings-columns{gap:16px;margin-top:16px;}
 .settings-site .footnote,.settings-site .notice{font-size:12px;}
 .settings-site .settings-card{padding:12px;border-radius:6px;box-shadow:none;}
-.settings-site input,.settings-site textarea,.settings-site button{border-radius:6px;}
+.settings-site button{border-radius:6px;}
 .settings-site .pill{border-radius:6px;padding:4px 6px;}
 .record-row{padding:8px 0;}.record-row > p{margin:3px 0;}
 @media(max-width:600px){.settings-shell > main{padding:14px;}}

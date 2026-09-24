@@ -35,8 +35,8 @@ const RULES={
   'UI-6 colour comes from a token':{
     // capabilities.css keeps one: the forest-at-12% shadow under the open Tools
     // menu, which has no token because it is the only elevation in the product.
-    budget:{'styles.css':91,'select.css':16,'upload.css':7,'travel.css':5,
-      'workspace.css':4,'cards.css':2,'capabilities.css':1,'home.css':1,'reminders.css':1},
+    budget:{'styles.css':88,'select.css':14,'upload.css':7,'travel.css':5,
+      'workspace.css':3,'cards.css':2,'capabilities.css':1,'home.css':1,'reminders.css':1},
     fix:'use a token from tokens.css, or add one there if the tone is genuinely new',
     count:name=>PALETTE.includes(name)?0:(sheet(name).match(/#[0-9a-fA-F]{3,8}\b/g)||[]).length
   },
@@ -476,4 +476,130 @@ test('money is typed the way it reads, in every form that takes it',async()=>{
     box.value='';
     assert.equal(box.value,'','an empty box stays empty rather than becoming 0');
   }finally{globalThis.document=before;Object.defineProperty(window.HTMLSelectElement.prototype,'value',selectValue);}
+});
+
+// UI-55. A dropdown shows a value, so it is drawn as a field. Restaurants put
+// Date, People, Time and Window in one row, and while a search ran the three
+// dropdowns turned into grey slabs of faded text beside boxes that had not
+// changed at all — a disabled text box had no look of its own. At rest the
+// dropdowns were still the odd ones out: the trigger is a button element and
+// took a button's medium weight and 12px inset, and the date box stood 2px
+// taller than the row. The family is defined once, in select.css.
+test('fields side by side are one family: a dropdown matches the boxes beside it, at rest and disabled',()=>{
+  const css=sheet('select.css');
+  const rules=text=>[...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([,selector,body])=>({parts:selector.split(',').map(part=>part.trim()),body}));
+  const rule=part=>rules(css).find(entry=>entry.parts.includes(part));
+  const declared=(entry,name)=>new RegExp(`(?:^|;)\\s*${name}\\s*:\\s*([^;]+)`).exec(entry.body)?.[1].trim();
+  const box=rule('.form-field > textarea'),trigger=rule('.formatted-select .formatted-select-trigger');
+  assert.ok(box&&trigger,'the shared field and dropdown rules moved; point this check at them. See UI-55 in docs/UI_RULES.md.');
+  assert.equal(declared(trigger,'padding'),declared(box,'padding'),
+    'a chosen value starts further in than a typed one beside it. See UI-55 in docs/UI_RULES.md.');
+  assert.equal(declared(trigger,'font-weight'),undefined,
+    'a dropdown sets its value in a button\'s weight rather than a field\'s. See UI-55 in docs/UI_RULES.md.');
+  const disabled=rule('.formatted-select .formatted-select-trigger:disabled');
+  for(const member of ['.form-field > input:not([type=checkbox]):not([type=radio]):disabled','.form-field > textarea:disabled'])
+    assert.ok(disabled?.parts.includes(member),`${member} is not dimmed with the rest of its family. See UI-55 in docs/UI_RULES.md.`);
+  assert.match(css,/::-webkit-datetime-edit-fields-wrapper\s*\{[^}]*padding-block:\s*0/,
+    'a date or time box stands taller than the fields in its row. See UI-55 in docs/UI_RULES.md.');
+  // No sheet in either host gives a field a disabled look of its own.
+  const mobile=['styles.css','tool-navigation.css'].map(name=>[`mobile-app/public/app/${name}`,
+    readFileSync(new URL(`../../mobile-app/public/app/${name}`,import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'')]);
+  const FIELD=/\b(input|textarea|select|formatted-select-trigger|select-control)\b/;
+  let found=0;
+  for(const [name,text] of [...sheets().map(name=>[name,sheet(name)]),...mobile])
+    for(const entry of rules(text))for(const part of entry.parts){
+      if(!/:disabled/.test(part.replace(/:not\(:disabled\)/g,''))||!FIELD.test(part))continue;
+      found++;
+      assert.match(entry.body,/opacity:\s*0?\.5\s*(?:;|$)/,`${name}: ${part} dims a field by something other than half. See UI-55 in docs/UI_RULES.md.`);
+      assert.doesNotMatch(entry.body,/(?:^|;)\s*(?:background|color|border)[a-z-]*\s*:/,
+        `${name}: ${part} repaints a disabled field rather than dimming it. See UI-55 in docs/UI_RULES.md.`);
+      assert.doesNotMatch(entry.body,/cursor:(?!\s*default\b)/,`${name}: ${part} gives a disabled field a cursor of its own. See UI-55 in docs/UI_RULES.md.`);
+    }
+  assert.ok(found>=3,`only ${found} disabled field rules found — the check stopped matching`);
+});
+
+// UI-55, the rest of the family. The dropdown was not the only field drawn
+// apart. Rewards' Notes, the purchase box on Best card and Pay, and the
+// settings playground each had a text area repainted by a feature sheet — a
+// paler edge, a 14 or 15px face, an 8px inset — that won or lost by sheet
+// order, so one box looked two ways between the side panel and its own page.
+// A focused text area put a forest border inside its ring that no other field
+// wore, and a dropdown took a tinted fill under the pointer. On a phone the
+// wallet's own tokens left its text boxes 40px tall under 44px dropdowns. The
+// draft panel's boxes were never fields at all, and the switch was drawn only
+// for the extension, so the phone showed a bare checkbox.
+test('fields side by side are one family in every state, in every sheet of both hosts',()=>{
+  // A selector list splits only at its own commas, never inside :is() or :not().
+  const split=selector=>{const out=[];let depth=0,part='';for(const c of selector){
+    if('(['.includes(c))depth++;else if(')]'.includes(c))depth--;
+    if(c===','&&!depth){out.push(part.trim());part='';}else part+=c;}out.push(part.trim());return out;};
+  const parse=text=>[...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([,selector,body])=>({parts:split(selector),
+    props:[...body.matchAll(/(?:^|;)\s*(-{0,2}[a-z][a-z-]*)\s*:\s*([^;]+)/g)].map(([,name,value])=>[name,value.trim()])}));
+  // What a selector draws: its last compound, outside any brackets.
+  const subject=part=>{let depth=0,start=0;for(let i=0;i<part.length;i++){const c=part[i];
+    if('(['.includes(c))depth++;else if(')]'.includes(c))depth--;else if(!depth&&/[\s>+~]/.test(c))start=i+1;}return part.slice(start);};
+  const value=(entry,prop)=>entry?.props.find(([name])=>name===prop)?.[1];
+  const PAINT=/^(?:font(?:-[a-z]+)?|line-height|padding(?:-[a-z]+)?|border(?:-(?:top|right|bottom|left))?(?:-(?:color|width|style))?|border-radius|background(?:-color)?|color|appearance)$/;
+  const mobile=['styles.css','tool-navigation.css'].map(name=>[`mobile-app/public/app/${name}`,
+    readFileSync(new URL(`../../mobile-app/public/app/${name}`,import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'')]);
+  const others=[...sheets().filter(name=>name!=='select.css').map(name=>[name,parse(sheet(name))]),...mobile.map(([name,text])=>[name,parse(text)])];
+  const family=parse(sheet('select.css'));
+  const find=part=>family.find(entry=>entry.parts.includes(part));
+  // Only select.css paints a text area or a dropdown. The two named
+  // differences: the compact face a 280px panel asks for, and a generated
+  // result, which is not a child of a field and so draws itself — with the
+  // family's own tokens, checked below.
+  const ALLOWED={'.form-field.form-field--compact > textarea':['font'],
+    '.editable-output':['padding','font','color','border','border-radius','background']};
+  let seen=0;
+  for(const [name,rules] of others)for(const entry of rules)for(const part of entry.parts){
+    const drawn=subject(part);
+    if(drawn.includes('::')||!/^(?:textarea|\.editable-output)(?![\w])|\.formatted-select-trigger(?![\w-])/.test(drawn))continue;
+    seen++;
+    const painted=entry.props.map(([prop])=>prop).filter(prop=>PAINT.test(prop)&&!(ALLOWED[part]||[]).includes(prop));
+    assert.deepEqual(painted,[],`${name}: ${part} paints a field (${painted.join(', ')}) that select.css draws for every host, and wins or loses by sheet order. See UI-55 in docs/UI_RULES.md.`);
+  }
+  assert.ok(seen>=4,`only ${seen} text area and dropdown rules found outside select.css — the check stopped matching`);
+  const output=parse(sheet('styles.css')).find(entry=>entry.parts.includes('.editable-output'));
+  for(const [prop,token] of [['border','var(--control-border)'],['border-radius','var(--control-radius)'],['background','var(--control-surface)'],['color','var(--control-ink)']])
+    assert.ok(value(output,prop)?.includes(token),`a generated result draws its ${prop} without ${token}, apart from the field that asked for it. See UI-55 in docs/UI_RULES.md.`);
+  assert.equal(value(output,'padding'),value(find('.form-field > textarea'),'padding'),
+    'a generated result sits at another inset from the field that asked for it. See UI-55 in docs/UI_RULES.md.');
+  // Focus is the ring alone, and the pointer firms the edge alone, for every kind.
+  const focus=find('.form-field textarea:focus-visible'),hover=find('.formatted-select .formatted-select-trigger:hover:not(:disabled)');
+  assert.ok(focus&&hover,'the field focus or dropdown hover rule moved; point this check at it. See UI-55 in docs/UI_RULES.md.');
+  assert.equal(value(focus,'border-color'),undefined,'a focused text area changes its edge where no other field does. See UI-55 in docs/UI_RULES.md.');
+  // A generated result is no child of a field, so the states name it as well.
+  assert.ok(focus.parts.includes('.editable-output:focus-visible')&&find('.form-field textarea:hover:not(:disabled)')?.parts.includes('.editable-output:hover:not(:disabled)'),
+    'a generated result hovers or focuses unlike the box that asked for it. See UI-55 in docs/UI_RULES.md.');
+  // It declares the field's own fill rather than none, so a host's rule for
+  // its buttons cannot tint it either: the wallet's fills a button sage.
+  assert.ok(hover.props.filter(([prop])=>/^background/.test(prop)).map(([,fill])=>fill).join()==='var(--control-surface)',
+    'a dropdown fills under the pointer where a text box does not. See UI-55 in docs/UI_RULES.md.');
+  // The touch size is set on the field itself, so a sheet that pins the
+  // control tokens for its own buttons cannot leave its boxes shorter than its
+  // dropdowns; the phone sizes both alike whatever the pointer reports; and no
+  // other sheet sizes a field apart from the rest.
+  for(const parts of [[':root','.form-field','.formatted-select'],['.unlocked-tools .form-field','.unlocked-tools .formatted-select']])
+    assert.ok(family.some(entry=>parts.every(part=>entry.parts.includes(part))&&value(entry,'--control-height')==='44px'),
+      `the touch size is not set on ${parts.join(', ')} together. See UI-55 in docs/UI_RULES.md.`);
+  for(const [name,rules] of others)for(const entry of rules)for(const part of entry.parts)
+    if(/^(?:\.form-field|\.formatted-select|input|textarea)(?![\w-])/.test(subject(part)))
+      assert.ok(!entry.props.some(([prop])=>/^--control-(?:height|font)$/.test(prop)),`${name}: ${part} sizes a field apart from the rest of its family. See UI-55 in docs/UI_RULES.md.`);
+  // The find field's Filter density is a named difference as well, and it
+  // out-specifies the field rule rather than tying with it: the tie went to
+  // sheet order, and every full-tab page that loads capabilities.css after
+  // travel.css drew the find field as a plain field.
+  assert.match(sheet('travel.css'),/\.travel-wallet \.record-search \.form-field>input\[type=search\]\{[^}]*min-height:34px/,
+    'the find field ties with the shared field rule and is left to sheet order. See UI-55 and UI-31 in docs/UI_RULES.md.');
+  // The switch is drawn once, in the sheet both hosts load.
+  assert.ok(find('.toggle-field > input[type=checkbox]'),'the switch left select.css, the sheet both hosts load. See UI-55 in docs/UI_RULES.md.');
+  for(const [name,rules] of others)for(const entry of rules)for(const part of entry.parts)
+    if(/\.toggle-field\s*>?\s*input(?![\w-])/.test(part))
+      assert.ok(!entry.props.some(([prop])=>PAINT.test(prop)),`${name}: ${part} draws the switch for one host only. See UI-55 in docs/UI_RULES.md.`);
+  // A value box is a field: no component drops a label and its control loose
+  // into a container, where no family rule reaches them.
+  for(const name of readdirSync(COMPONENTS).filter(file=>file.endsWith('.js')&&file!=='ui.js'))
+    assert.doesNotMatch(readFileSync(new URL(name,COMPONENTS),'utf8'),/(?:^|[^\w.]|\.\.\.)(?:UI\.)?Field\(/,
+      `${name} builds a field outside FormField, where no family rule draws it. See UI-55 in docs/UI_RULES.md.`);
 });

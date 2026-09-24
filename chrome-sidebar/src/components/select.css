@@ -25,14 +25,28 @@
   color: var(--control-ink);
   font: var(--control-font);
 }
-.form-field input:hover:not(:disabled), .form-field textarea:hover:not(:disabled) { border-color: var(--control-hover); }
-.form-field input:focus-visible, .form-field textarea:focus-visible {
-  border-color: var(--control-focus);
+/* A date or a time sits in the same row as a text box and a dropdown, and its
+   inner edit area carries padding of its own that stood it 2px taller than
+   both (UI-55). */
+.form-field > input::-webkit-datetime-edit-fields-wrapper { padding-block: 0; }
+/* `.editable-output` is the class Field gives every text area, so a generated
+   result edited in place, which is no child of a field, hovers and focuses as
+   the box above it does rather than keeping still under the pointer and
+   taking the page's wider ring (UI-55). */
+.form-field input:hover:not(:disabled), .form-field textarea:hover:not(:disabled), .editable-output:hover:not(:disabled) { border-color: var(--control-hover); }
+/* Focus is the ring and nothing else, for every kind. A text area also turned
+   its own border forest, and the box being typed in wore a double ring that
+   the text boxes and dropdowns around it never did. An open list keeps its
+   forest border, which is how open differs from focused (UI-55). */
+.form-field input:focus-visible, .form-field textarea:focus-visible, .editable-output:focus-visible {
   outline: 2px solid var(--control-focus);
   outline-offset: 2px;
 }
 .formatted-select { position: relative; min-width: 0; width: 100%; font: var(--control-font); color: var(--control-ink); }
 .formatted-select > select[hidden] { display: none !important; }
+/* The trigger is a button element, but what it shows is a value, not an
+   action: it takes a text box's weight and inset, so a chosen time reads like
+   the typed date beside it and the two line up (UI-55). */
 .formatted-select .formatted-select-trigger {
   box-sizing: border-box;
   display: flex;
@@ -43,13 +57,12 @@
   min-width: 0;
   min-height: var(--control-height);
   margin: 0;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--control-border);
   border-radius: var(--control-radius);
   background: var(--control-surface);
   color: var(--control-ink);
   font: inherit;
-  font-weight: 500;
   text-align: left;
   cursor: pointer;
 }
@@ -64,11 +77,21 @@
   transform: translateY(-2px) rotate(45deg);
   margin: 0 2px 0 6px;
 }
-.formatted-select .formatted-select-trigger:hover:not(:disabled) { border-color: var(--control-hover); background: #f2f5ee; }
+/* Under the pointer a dropdown firms its edge the way a text box does, and
+   keeps its own fill: a tint made it read as a button the moment it was
+   pointed at, and the wallet's rule for its buttons would fill it sage (UI-55). */
+.formatted-select .formatted-select-trigger:hover:not(:disabled) { border-color: var(--control-hover); background: var(--control-surface); }
 .formatted-select .formatted-select-trigger[aria-expanded=true] { border-color: var(--control-focus); background: var(--control-surface); }
 .formatted-select-trigger[aria-expanded=true]::after { transform: translateY(2px) rotate(225deg); border-color: var(--control-focus); }
 .formatted-select .formatted-select-trigger:focus-visible { outline: 2px solid var(--control-focus); outline-offset: 2px; }
-.formatted-select .formatted-select-trigger:disabled { opacity: .55; cursor: default; background: var(--paper, #f7f6f2); }
+/* Disabled is one look for every field, whatever kind it is: dimmed to half on
+   its own fill, with the ordinary cursor. Dropdowns alone used to turn into
+   grey slabs while the text boxes beside them did not change at all, so a form
+   at work looked broken in three places rather than paused (UI-55). */
+.form-field > input:not([type=checkbox]):not([type=radio]):disabled,
+.form-field > textarea:disabled,
+.formatted-select > input:disabled,
+.formatted-select .formatted-select-trigger:disabled { opacity: .5; cursor: default; }
 .formatted-select-list {
   box-sizing: border-box;
   position: absolute;
@@ -112,8 +135,28 @@
 .formatted-select-option[aria-disabled=true] { opacity: .5; cursor: default; }
 .formatted-select-list[hidden] { display: none; }
 .form-field [aria-invalid=true] { border-color: #a34b3e; }
+/* The switch `Toggle` draws: a track, and a knob that crosses it when on. It
+   is here because this is the sheet both hosts load; drawn in styles.css
+   alone, the phone showed the same Toggle as a bare square checkbox beside
+   fields that were styled. The selector names the input's type so that a
+   sheet's own rule for its inputs — the wallet's, the phone workspace's, the
+   settings page's — cannot tie with it, and it sets its own sizing so every
+   host draws the same 34 by 20 track. */
+.toggle-field > input[type=checkbox] { appearance: none; box-sizing: border-box; flex: 0 0 34px; width: 34px; height: 20px; min-height: 0; padding: 2px; margin: 0; border: 1px solid var(--switch-off-edge); border-radius: 999px; background: var(--switch-off); cursor: pointer; }
+.toggle-field > input[type=checkbox]::before { content: ''; display: block; width: 14px; height: 14px; border-radius: 50%; background: white; }
+.toggle-field > input[type=checkbox]:checked { background: var(--forest); border-color: var(--forest); }
+.toggle-field > input[type=checkbox]:checked::before { transform: translateX(14px); }
+.toggle-field > input[type=checkbox]:disabled { opacity: .5; cursor: default; }
+/* A finger aims at the whole row: the label is the switch's target, and it
+   holds the touch height the 20px track cannot (UI-13). */
+@media (pointer: coarse) { .toggle-field { min-height: 44px; } }
+.unlocked-tools .toggle-field { min-height: 44px; }
+/* A finger gets the touch size, and so does every field it could touch. The
+   size is set on the field as well as on the root, because a sheet that pins
+   these tokens for its own buttons — the wallet does — otherwise left its text
+   boxes 40px tall under 44px dropdowns (UI-55). */
 @media (pointer: coarse) {
-  :root { --control-height: 44px; --control-font: 16px/1.4 var(--sans); }
+  :root, .form-field, .formatted-select { --control-height: 44px; --control-font: 16px/1.4 var(--sans); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .formatted-select-trigger { transition: background-color .15s, border-color .15s; }
@@ -124,4 +167,6 @@
   .formatted-select-option[aria-selected=true] { border: 1px solid Highlight; }
 }
 
-.unlocked-tools .formatted-select{--control-height:44px;--control-font:16px/1.4 var(--sans);}
+/* The phone gives its fields the touch size whatever the pointer reports — the
+   text boxes with the dropdowns, not the dropdowns alone (UI-55). */
+.unlocked-tools .form-field,.unlocked-tools .formatted-select{--control-height:44px;--control-font:16px/1.4 var(--sans);}

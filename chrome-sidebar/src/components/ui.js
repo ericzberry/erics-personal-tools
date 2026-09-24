@@ -46,7 +46,11 @@ export const Stack=(children=[],props={})=>element('div',props,children);
 export const Section=(children=[],props={})=>element('section',props,children);
 export const PageBody=children=>element('main',{className:'page-body'},children);
 export const Main=PageBody;
-export const Button=(text,{variant='quiet',size,className,...props}={})=>element('button',{type:'button',text,className:[className||(variant==='quiet'?'quiet':`button-${variant}`),size?`button--${size}`:''].filter(Boolean).join(' '),...props});
+// A variant is what a button is and a class is where it sits, so a class adds
+// to a variant and never replaces it: Restaurants' time slots asked to be
+// secondary and, given a class as well, rendered as the browser's own bare
+// buttons. With no variant, a class draws the button by itself.
+export const Button=(text,{variant,size,className,...props}={})=>element('button',{type:'button',text,className:[variant?(variant==='quiet'?'quiet':`button-${variant}`):(className?'':'quiet'),className,size?`button--${size}`:''].filter(Boolean).join(' '),...props});
 export const Link=(text,href,props={})=>element('a',{text,href,target:'_blank',rel:'noreferrer',...props});
 export const Select=({id,label='',disabled=false,options=[]})=>FormattedSelect(element('select',{id,disabled,className:'select-control'},options.map(o=>Option(o.text,o.value))),label);
 export const Option=(text,value)=>element('option',{text,value});
@@ -581,7 +585,7 @@ export const ReleaseBanner=()=>Notice('',{className:'release-banner',hidden:true
 // the press: the name is what the list is read down, and the record's own verbs
 // ride at the end of the value's line inside the block rather than under it.
 export function ExpandableRecord({title,subtitle,preview,children,onToggle}) {
-  const toggle=Button('',{variant:'secondary',className:'record-row-toggle','aria-expanded':'false'});
+  const toggle=Button('',{className:'record-row-toggle','aria-expanded':'false'});
   toggle.append(Strong(title),...(subtitle?[Note(subtitle)]:[]));
   const content=Stack(children,{className:'record-row-content',hidden:true});
   toggle.addEventListener('click',()=>{

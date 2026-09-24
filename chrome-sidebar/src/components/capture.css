@@ -5,4 +5,11 @@
 .capture-field .notice{grid-column:1/-1;margin:0}
 .capture-field .notice:empty{display:none}
 @media(max-width:360px){.capture-field{grid-template-columns:minmax(0,1fr)}.capture-field .action-group{justify-content:flex-end}}
-@media(hover:none){.capture-field button{min-height:44px}}
+/* Level with the note on touch and throughout the phone, where the note is
+   44px whatever the pointer reports and the 1px lift that sets a 36px button
+   against a 36.84px box would leave Add standing high. It out-specifies the
+   wallet's rule for its own buttons, which the phone loads after this sheet:
+   Add stood 36px beside a taller box (UI-31, UI-55). */
+@media(hover:none){.capture-field .action-group{padding-bottom:0}.capture-field .action-group>button{min-height:44px}}
+.unlocked-tools .capture-field .action-group{padding-bottom:0}
+.unlocked-tools .capture-field .action-group>button{min-height:44px}

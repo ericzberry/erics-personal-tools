@@ -17,6 +17,10 @@
   --open-band: #dde6d8;
   --open-band-hover: #d3ded0;
   --line: #dedfd5;
+  /* A switch that is off: a grey track with a firmer edge, so it reads as a
+     control at rest and as nothing like the forest it turns when on. */
+  --switch-off: #b3b8ac;
+  --switch-off-edge: #8d9687;
   /* What is owed, and what a proportion is drawn with. The red is the one the
      product already uses for danger; a negative amount borrows the ink and
      none of the rest of a status tone. The share bar sits behind a line of

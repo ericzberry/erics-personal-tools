@@ -1,5 +1,8 @@
 .card-tool {background:#f7f6f2}
-.card-tool textarea {font:inherit;min-height:96px;width:100%;padding:8px;border:1px solid var(--wallet-control-line);border-radius:var(--control-radius);background:var(--wallet-surface);color:var(--wallet-ink);resize:vertical}
+/* Drawn by the field family in select.css; only its height is its own here.
+   Its own face, edge and inset won on the full-tab pages and lost in the side
+   panel, so one box looked two ways (UI-55). */
+.card-tool textarea {min-height:96px;resize:vertical}
 .card-tool .settings-group+.settings-group {border-top:1px solid var(--wallet-line);padding-top:16px}
 .card-tool .bonus-rule {display:grid;gap:12px;padding:12px 0;border-top:1px solid var(--wallet-line)}
 .card-tool .purchase-intake textarea {min-height:56px}

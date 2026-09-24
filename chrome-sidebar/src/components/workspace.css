@@ -49,11 +49,12 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .segmented {border:0;margin:0;padding:0;min-width:0;display:grid;gap:5px;}
 .segmented-legend {padding:0;font-size:11px;font-weight:500;color:var(--muted);}
 .segmented-options {display:flex;gap:6px;}
-.segmented-option {position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:8px 10px;margin:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-size:12px;text-align:center;cursor:pointer;}
+/* A choice drawn as a field of the family, so it can stand in a row of them (UI-55). */
+.segmented-option {position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;min-height:var(--control-height);padding:8px 10px;margin:0;border:1px solid var(--control-border);border-radius:var(--control-radius);background:var(--control-surface);color:var(--control-ink);font:var(--control-font);text-align:center;cursor:pointer;}
 .segmented-option:has(input:checked) {border-color:var(--forest);background:var(--sage);color:var(--forest);font-weight:600;}
 .segmented-option:has(input:focus-visible) {outline:2px solid var(--forest);outline-offset:2px;}
 .workspace-shell .segmented-input {position:absolute;width:1px;height:1px;margin:0;padding:0;opacity:0;pointer-events:none;}
-@media (hover:hover) {.segmented-option:hover {border-color:#93aa9b;}}
+@media (hover:hover) {.segmented-option:hover {border-color:var(--control-hover);}}
 @media(max-width:720px) {.workspace-shell {padding:20px 14px;}.workspace-heading {align-items:flex-start;flex-wrap:wrap;}}
 @media(max-width:340px) {.field-grid {grid-template-columns:minmax(0,1fr);}.workspace-shell .settings-group {padding:12px;}}
 
@@ -62,7 +63,7 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .workspace-shell--mobile .workspace-flow{gap:20px}
 .workspace-shell--mobile .workspace-form{grid-template-columns:minmax(0,1fr);gap:24px}
 .workspace-shell--mobile .segmented-legend{font-size:13px;font-weight:600;color:inherit}
-.workspace-shell--mobile .segmented-option{min-height:44px;font-size:14px}
+.workspace-shell--mobile .segmented-option{min-height:44px;font-size:16px}
 .workspace-shell--mobile .workspace-heading{margin-bottom:20px}
 .workspace-shell--mobile h1{font-size:24px;letter-spacing:-.5px}
 .workspace-shell--mobile h2{font-size:18px}
@@ -71,9 +72,8 @@ body.workspace-site {max-width:none;margin:0;border:0;min-width:0;}
 .workspace-shell--mobile .settings-group+.settings-group{border-top:1px solid var(--line);padding-top:20px}
 .workspace-shell--mobile .form-stack{display:grid;gap:24px;padding-top:16px}
 .workspace-shell--mobile .form-field label{font-size:13px;font-weight:600}
-.workspace-shell--mobile input,.workspace-shell--mobile select{font:inherit;font-size:16px;min-height:44px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit;padding:8px}
 .workspace-shell--mobile .toggle-field{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.workspace-shell--mobile input[type=checkbox]{min-height:24px;width:24px;height:24px}
+.workspace-shell--mobile input[type=checkbox]:not([role=switch]){min-height:24px;width:24px;height:24px}
 .workspace-shell--mobile details{border-top:1px solid var(--line)}
 .workspace-shell--mobile summary{cursor:pointer;min-height:44px;padding:10px 0;font-weight:600}
 .workspace-shell--mobile .notice{border-radius:6px;padding:12px;margin:0;font-size:13px}

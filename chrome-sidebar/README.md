@@ -4275,3 +4275,27 @@ read, above the research. Also: times outside the window read in 12-hour
 time, cuisines are capitalised, a quiet action on the phone no longer draws
 as the loudest button, a clock time is never read as a budget, and a text area
 shows the placeholder it is given (the purchase advisor's was dropped too).
+
+## Fields side by side are one family (0.6.285 / mobile 0.1.234)
+
+*"These dropdowns are ugly — make sure they're fixed … and make sure nothing
+like this is ugly in the app."* While a search ran, Restaurants' Time, Window
+and Menu dropdowns turned into grey slabs of faded text beside boxes that had
+not changed at all. A dropdown now takes a text box's weight, inset and height
+(its trigger is a button element and had taken a button's), a date box stands
+level with its row, and disabled is one look for every field of every kind:
+dimmed to half on its own fill with the ordinary cursor. Recorded as UI-55 in
+[docs/UI_RULES.md](../docs/UI_RULES.md) and held by `tests/ui-rules.test.js`.
+`Button` no longer drops its variant when it is given a class as well, which
+had left Restaurants' time slots and location choices as the browser's own bare
+buttons.
+
+The same rule, swept across both hosts: focus is the ring alone for every
+field; a hovered dropdown firms its edge and keeps its fill; a touch screen
+gives every field in a form the same 44px and 16px, not the dropdowns alone;
+Rewards' Notes, the Best card and Pay purchase boxes, the Settings playground
+and Email's drafted reply lose their own faces for the family's; Draft capture's
+fields are built as fields; Quick add's button stands level with its box on the
+phone; the find field on the full-tab pages keeps its Filter density; and the
+shared `Toggle` is the same switch on the phone as in the extension, where it
+had been a bare checkbox.

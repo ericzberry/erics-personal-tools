@@ -260,3 +260,14 @@ test('an open disclosure is marked, in the wallet and on the pages around it',()
     'the rail under a card’s benefits was the second idiom; the block says it now');
   assert.match(pages,/details\[open\][^{]*>\s*summary\s*\{[^}]*background:\s*var\(--open-band\)/);
 });
+// A variant is what a button is and a class is where it sits. Given both,
+// Button used to keep the class and drop the variant, so Restaurants' time
+// slots and location choices asked to be secondary and rendered as the
+// browser's own bare buttons (UI-55's complaint, from the same screen).
+test('a button keeps the variant it asked for when it is given a class as well',()=>{
+  setup();
+  assert.equal(Button('7:15',{variant:'secondary',size:'compact',className:'slot-action'}).className,'button-secondary slot-action button--compact');
+  assert.equal(Button('Search as a name',{variant:'quiet',size:'compact'}).className,'quiet button--compact');
+  assert.equal(Button('Open',{className:'record-row-toggle'}).className,'record-row-toggle','with no variant, a class draws the button by itself');
+  assert.equal(Button('More').className,'quiet');
+});

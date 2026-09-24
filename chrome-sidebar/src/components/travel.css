@@ -160,8 +160,11 @@
 .travel-wallet .group-title--name{letter-spacing:0;text-transform:none}
 .travel-wallet .record-group-title{padding:0 0 5px;border-bottom:1px solid var(--wallet-line)}
 .travel-wallet .record-search{display:grid;gap:12px}
-/* Matches the shared .form-field input specificity so the compact size applies. */
-.travel-wallet .record-search .form-field>input{min-height:34px;padding:6px 10px;font-size:13px;border-color:var(--wallet-line)}
+/* The find field's Filter density. It out-specifies the shared field rule
+   rather than matching it: a tie went to whichever sheet came last, and the
+   pages that load capabilities.css after this one drew the same find field
+   37px tall in the control's darker edge (UI-31, UI-55). */
+.travel-wallet .record-search .form-field>input[type=search]{min-height:34px;padding:6px 10px;font-size:13px;border-color:var(--wallet-line)}
 .travel-wallet .record-search .form-field>input:hover:not(:disabled){border-color:var(--wallet-control-line)}
 .travel-wallet .record-search .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .travel-wallet .record-row{padding:0;border-bottom:1px solid var(--wallet-line);min-width:0}
@@ -291,7 +294,10 @@
 .travel-wallet .connection-surface>details:has(>summary[hidden]){background:transparent;border:0;border-radius:0;margin:0;padding:0}
 .travel-wallet .connection-surface>details:has(>summary[hidden])>.connection-content{margin-top:0}
 
-.rewards-wallet{padding:0;gap:12px;max-width:none;}.rewards-wallet .record-row{padding:4px 0;border-bottom:1px solid var(--wallet-line);}.rewards-wallet .record-row p{margin:3px 0;}.rewards-wallet .record-row>.action-group{margin-top:4px;}.rewards-wallet .form-stack{display:grid;gap:10px;}.rewards-wallet .form-field{gap:4px;}.rewards-wallet textarea{font:inherit;width:100%;min-width:0;padding:8px;border:1px solid var(--wallet-control-line);border-radius:6px;background:var(--wallet-surface);color:var(--wallet-ink);}.rewards-wallet .notice:empty,.rewards-wallet .footnote:empty{display:none;}.rewards-wallet .settings-group{gap:8px;}
+/* No text area rule here: select.css draws them with the other fields. The
+   wallet's own gave Notes a paler edge, a 14px face and an 8px inset under nine
+   fields that had none of them, and won or lost by sheet order (UI-55). */
+.rewards-wallet{padding:0;gap:12px;max-width:none;}.rewards-wallet .record-row{padding:4px 0;border-bottom:1px solid var(--wallet-line);}.rewards-wallet .record-row p{margin:3px 0;}.rewards-wallet .record-row>.action-group{margin-top:4px;}.rewards-wallet .form-stack{display:grid;gap:10px;}.rewards-wallet .form-field{gap:4px;}.rewards-wallet .notice:empty,.rewards-wallet .footnote:empty{display:none;}.rewards-wallet .settings-group{gap:8px;}
 
 /* Values sealed on the device. The masked form is the resting state; a revealed
    number is monospaced and grouped so digits can be read back without

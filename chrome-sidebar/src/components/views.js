@@ -2,7 +2,7 @@ import {CapabilityPicker} from './capabilities.js';
 import * as UI from './ui.js';
 import {AI_PROVIDERS} from '../ai-providers.js';
 import {usageSummary,formatBytes} from '../quota-data.js';
-const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Strong,Label,Heading,Note,Notice,Button,Link,Badge,List,Field,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField}=UI;
+const {SubPage,ActionGroup,AppHeader,Section,Main,Stack,Text,Strong,Label,Heading,Note,Notice,Button,Link,Badge,List,SectionTitle,Disclosure,ToolHeading,Highlight,StatusCard,Metrics,SourceNote,UploadField}=UI;
 export function DraftView() {
   const draft=Section([
     Notice('',{id:'advice-status',className:'notice notice-subtle'}),
@@ -20,13 +20,16 @@ export function DraftSettings() {
   return Disclosure('Draft capture',[
     Button('Download ESPN diagnostics',{id:'download-espn-diagnostics'}),
     UI.Toggle({id:'capture-picks',label:'ESPN is capturing picks',checked:true}),
+    // Fields in the shared family, as in every other form. Bare labels and
+    // inputs took the extension's older input look — 12px, a paler edge, 32px
+    // tall — above and below a dropdown drawn as a field (UI-55).
     Stack([
-      ...Field({id:'manual-clock',label:'Current overall pick',kind:'number',placeholder:'Unknown'}),
-      ...Field({id:'manual-slot',label:'Your draft position',kind:'select',options:[{text:'Unknown',value:''},...Array.from({length:10},(_,i)=>({text:String(i+1),value:String(i+1)}))]}),
+      UI.FormField({id:'manual-clock',label:'Current overall pick',kind:'number',placeholder:'Unknown'}),
+      UI.FormField({id:'manual-slot',label:'Your draft position',kind:'select',options:[{text:'Unknown',value:''},...Array.from({length:10},(_,i)=>({text:String(i+1),value:String(i+1)}))]}),
       Button('Save progress',{id:'save-manual-progress',variant:'primary'}),
-      ...Field({id:'manual-search',label:'Player outside your spreadsheet',placeholder:'Search ESPN players…'}),
+      UI.FormField({id:'manual-search',label:'Player outside your spreadsheet',placeholder:'Search ESPN players…'}),
       Note('',{id:'manual-result-count'}),Stack([],{id:'manual-players'})
-    ],{id:'manual-settings',hidden:true}),
+    ],{id:'manual-settings',className:'form-stack',hidden:true}),
     Button('Refresh ESPN player list',{id:'sync-espn-players'}),Note('',{id:'espn-sync-status',role:'status'})
   ],{id:'draft-settings',className:'settings-panel'});
 }
