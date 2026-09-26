@@ -18,7 +18,7 @@ import {formatAmount} from './credit-data.js';
 import {cardAccounts,accountCoverage} from './wallet-data.js';
 import {loyaltyProgramNamed} from './loyalty-sites.js';
 import {programById} from './program-data.js';
-import {key} from './card-data.js';
+import {key,usableRewards,usableCatalogs} from './card-data.js';
 
 // Priority buckets, in the order they are shown. Within a bucket the score
 // decides; across buckets it never does.
@@ -55,7 +55,8 @@ const sourceOf=(entry,entries)=>cardOf(entry,entries)?.name||entry.source||'';
 export function rewardOpportunities({entries=[],cards=[],catalogs=[],resolutions=[],goals=[]}={},{now=new Date()}={}){
   const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const midnight=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
-  const live=entries.filter(entry=>entry&&!entry.deleting&&!entry.conflict);
+  catalogs=usableCatalogs(catalogs,entries);
+  const live=usableRewards(entries).filter(entry=>!entry.deleting&&!entry.conflict);
   const items=[];
   const add=item=>items.push({figure:'',action:null,state:'confirmed',...item,score:score(item.parts||{})});
   // Benefits and access: what needs setting up, what is about to close.

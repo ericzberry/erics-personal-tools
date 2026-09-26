@@ -1,7 +1,7 @@
 import {CardsView,BonusRule,SavedCard,CardMatches,CardIngest,PurchaseConditions,PurchaseReading,ComparisonResults,WalletCards} from './components/cards.js';
 import {Note,setStatus} from './components/ui.js';
 import {aiConnections} from './ai-connection.js';
-import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent,walletCards,merchantPerks} from './card-data.js';
+import {normalizeCard,rewardRules,compareCards,normalizePurchase,parsePurchaseIntent,usableCardRates,walletCards,merchantPerks} from './card-data.js';
 // `wallet` is the Rewards wallet's own store, read and never written. It is
 // what already knows which cards the owner holds: a card entry is the card
 // itself, and a credit read off an issuer's page carries the card that page
@@ -154,7 +154,7 @@ export function mountCards(root,{credentials,offline,remote,wallet=null,purchase
     const key=JSON.stringify([input.category,input.channel,input.merchant,records]);
     if(key!==conditionKey){$('conditions').replaceChildren(...PurchaseConditions(records,input));conditionKey=key;}
     const confirmed=[...$('conditions').querySelectorAll('input:checked')].map(node=>node.getAttribute('data-confirm'));
-    $('results').replaceChildren(...ComparisonResults(compareCards(records,{...input,confirmed}),
+    $('results').replaceChildren(...ComparisonResults(compareCards(usableCardRates(records,held),{...input,confirmed}),
       {unrated,perks:perksAt(input.merchant)}));controls();
   }
   if(comparing){

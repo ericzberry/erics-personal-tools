@@ -20,7 +20,7 @@
 // as a line of its own and summed separately as what the card could come to,
 // so a $50 offer nobody has enrolled in never lifts a card over one that earns
 // more right now, and an expired one adds nothing anywhere.
-import {compareCards,normalizePurchase,walletCards,merchantPerks,matchCard,sameMerchant,merchantKey} from './card-data.js';
+import {compareCards,normalizePurchase,walletCards,usableCatalogs,usableCardRates,merchantPerks,matchCard,sameMerchant,merchantKey} from './card-data.js';
 import {rewardWorth} from './rewards-data.js';
 import {offerUrl} from './program-data.js';
 import {money} from './money.js';
@@ -187,6 +187,8 @@ export function breakEven(points,cash){
 // Two accounts of one product share its terms and nothing else: each is a
 // plan of its own, carrying its own credits and the digits that tell it apart.
 export function advise({cards=[],wallet=[],catalogs=[],purchase,confirmed=[],today=new Date().toISOString().slice(0,10)}){
+  cards=usableCardRates(cards,wallet);
+  catalogs=usableCatalogs(catalogs,wallet);
   const input=normalizePurchase(purchase);
   const rows=compareCards(cards,{...input,confirmed},today);
   const amount=input.amount,estimated=amount!==null;

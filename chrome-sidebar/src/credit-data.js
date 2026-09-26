@@ -16,7 +16,7 @@ import {validateReward,CADENCES,BENEFIT_LIMIT,calendarDate,httpsOnly} from './re
 // Which card a name is, and the digits an issuer prints beside it, belong to
 // the cards themselves: Best card reads the same wallet to find the cards it
 // has no rates for, and both have to tell one card from another the same way.
-import {key,matchCard} from './card-data.js';
+import {cancelledCard,usableRewards,key,matchCard} from './card-data.js';
 export {key,matchCard};
 
 // A premium card tracks a couple of dozen credits; a page stating more than
@@ -91,9 +91,9 @@ const same=(a,b)=>{
 // entry may only be claimed by one of them, or the same benefit would be
 // proposed twice and saved over itself.
 export function matchCredits(rows=[],entries=[],taken=new Set()){
-  const cards=entries.filter(entry=>entry?.kind==='card'&&!entry.deleting);
-  const benefits=entries.filter(entry=>['benefit','membership'].includes(entry?.kind)&&!entry.deleting);
-  return rows.map(row=>{
+  const cards=usableRewards(entries).filter(entry=>entry?.kind==='card'&&!entry.deleting);
+  const benefits=usableRewards(entries).filter(entry=>['benefit','membership'].includes(entry?.kind)&&!entry.deleting);
+  return rows.filter(row=>!cancelledCard(row.card,entries)).map(row=>{
     const {card,ambiguous}=matchCard(row.card,cards);
     const candidates=benefits.filter(entry=>!taken.has(entry.id)&&same(entry.name,row.name)
       &&(!card||!entry.card||entry.card===card.id));

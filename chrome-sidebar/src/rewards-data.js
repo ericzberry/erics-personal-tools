@@ -1,8 +1,9 @@
+import {usableRewards} from './card-data.js';
 import {isSealed} from './secret-vault.js';
 export const REWARDS_KEY='personalRewardsV1';
 export const SECRET_MAX=4096;
 export const REWARD_KINDS=['balance','benefit','membership','card'];
-export const REWARD_STATES=['available','activation','used'];
+export const REWARD_STATES=['available','activation','used','cancelled'];
 // How often a recurring credit comes back. A blank cadence is a benefit that
 // does not reset, which is every entry saved before cadence existed.
 export const CADENCES=['monthly','quarterly','semiannual','annual'];
@@ -49,7 +50,7 @@ export function validateReward(input,now=new Date().toISOString()){
 const WINDOW={monthly:7,quarterly:14,semiannual:30,annual:45};
 export function nextActions(entries,now=new Date()){
   const today=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
-  return entries.filter(e=>e.state!=='used'&&e.kind!=='card').flatMap(e=>{
+  return usableRewards(entries).filter(e=>e.state!=='used'&&e.kind!=='card').flatMap(e=>{
     const reset=!e.due&&e.cadence?resetDate(e.cadence,now):'';
     const deadline=e.due||reset,limit=reset?WINDOW[e.cadence]:30;
     const days=deadline?Math.round((Date.parse(deadline)-today)/86400000):null;
@@ -92,7 +93,7 @@ export const QUARTER_FLOOR=50;
 export function creditsThisQuarter(entries=[],{now=new Date(),floor=QUARTER_FLOOR}={}){
   const today=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
   const closes=Date.parse(resetDate('quarterly',now));
-  return entries.flatMap(entry=>{
+  return usableRewards(entries).flatMap(entry=>{
     if(!entry||entry.deleting||entry.conflict||entry.state==='used')return [];
     if(!['benefit','membership'].includes(entry.kind))return [];
     const deadline=entry.due||(entry.cadence?resetDate(entry.cadence,now):'');

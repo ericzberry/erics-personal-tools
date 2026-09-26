@@ -156,3 +156,6 @@ remains partial and never retires unseen offers. Chase application hash routes
 are retained so saved links return to the right view. Secret query parameters
 are removed. A merge exceeding the catalogue limit fails rather than silently
 discarding older offers.
+
+Offers naming a saved cancelled card are excluded from browser capture and
+Browse offers. The account exclusion is shared with Rewards and Pay.

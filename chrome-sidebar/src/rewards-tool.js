@@ -1,3 +1,4 @@
+import {usableCatalogs,usableRewards,cancelledCard} from './card-data.js';
 import {RewardsView,RewardGroup,CardBenefits,BalancePanel,readingSummary,OpportunityRow,PointsRow,ValuationForm,REWARDS_VIEWS} from './components/rewards.js';
 import {CardMatches} from './components/cards.js';
 import {RecordRow,RecordGroup,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,DONE_GLYPH,HIDE_GLYPH,SHOW_GLYPH,OPEN_GLYPH,Note,Link,Stack,ActionGroup,MaskedValue,Option,FormField,setStatus} from './components/ui.js';
@@ -26,7 +27,7 @@ const RETRY_MS=60000;
 const VIEW_KEY='rewards-view';
 const remembered=()=>{try{return globalThis.localStorage?.getItem(VIEW_KEY)||'';}catch{return '';}};
 const remember=key=>{try{globalThis.localStorage?.setItem(VIEW_KEY,key);}catch{/* A view not remembered is a view chosen again. */}};
-const STATES={available:'Available',activation:'Needs activation',used:'Used'};
+const STATES={available:'Available',activation:'Needs activation',used:'Used',cancelled:'Cancelled'};
 const grouped=digits=>digits.replace(/(.{4})/g,'$1 ').trim();
 const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
   ?'Passkey verification was canceled or timed out. Try again when you’re ready.'
@@ -239,7 +240,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   function renderPrograms(){
     // No catalogue store, and nothing read yet, come to the same thing: there
     // is nothing on offer to browse, so the drawer is not there at all.
-    const catalogsLive=programs?catalogs.filter(catalog=>catalog?.offers?.length):[];
+    const catalogsLive=programs?usableCatalogs(catalogs,entries).filter(catalog=>catalog?.offers?.length):[];
     $('programs-browse').hidden=!catalogsLive.length;
     renderForYou();
     if(!catalogsLive.length){$('programs-list').replaceChildren();$('programs-filter').replaceChildren();categorySignature='';return;}
@@ -408,7 +409,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('balance-body').replaceChildren(BalancePanel({
       site,programs:loyaltySitePrograms(site),rows:balances||[],credits:credits||[],
       rates:rates||[],benefits:benefits||[],disabled:busy||!loaded,
-      cards:entries.filter(entry=>entry.kind==='card'&&!entry.deleting),
+      cards:usableRewards(entries).filter(entry=>entry.kind==='card'&&!entry.deleting),
       onRead:readSnapshot,onSave:saveSnapshot,onDiscard:discardSnapshot,onChoose:chooseAccount
     }));
   }
@@ -460,7 +461,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       // only when there is a rate to land on one.
       const read=parseRateReading(result,site.source);
       if(read.length&&cards)await loadCards(token);
-      const rated=matchRates(read,held);
+      const rated=matchRates(read.filter(row=>!cancelledCard(row.card,entries)),held);
       balances=rows.length?rows:null;credits=found.length?found:null;
       rates=rated.length?rated:null;benefits=extra.length?extra:null;
       // A reading that found something says so by turning the panel into what
@@ -492,7 +493,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     // The page's own address goes with them, so an offer's link opens the list
     // it is on: an issuer keeps one per card, told apart by an account key the
     // reading never sees and never needs.
-    const offers=parseOfferReading(result,program.id,{path:url});
+    const offers=usableCatalogs([{offers:parseOfferReading(result,program.id,{path:url})}],entries)[0].offers;
     if(!offers.length)return 0;
     const value=validateProgramCatalog({programId:program.id,complete:false,offers});
     await remote(token,`/v1/rewards/programs/${program.id}`,{method:'PUT',value,maxBytes:MAX_CATALOG_BYTES});
@@ -672,6 +673,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     // The collapsed line says the one useful thing about the card: what is
     // waiting to be set up, or that its trackers have not been read.
     const summary=group=>{
+      if(group.card.state==='cancelled')return [group.card.source,'Cancelled'].filter(Boolean).join(' · ');
       const setup=group.filed.filter(e=>e.state==='activation').length;
       const money=group.filed.filter(e=>e.kind==='benefit'&&/\$/.test(String(e.value||''))&&e.state!=='used');
       const unread=money.filter(e=>!e.remaining).length;
@@ -768,7 +770,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // six times is six presses again. Those cards are named at the end and left
   // to the intake, which is where choosing between products belongs.
   async function sweepCards(){
-    const cardEntries=entries.filter(entry=>entry.kind==='card'&&!entry.deleting);
+    const cardEntries=usableRewards(entries).filter(entry=>entry.kind==='card'&&!entry.deleting);
     if(!cardEntries.length)throw Error('No saved cards to look up yet. Name one below and it will be researched as it is added.');
     const {token,connection}=await lookupReady();
     const results=[],asked=[],missed=[];

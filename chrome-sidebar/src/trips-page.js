@@ -13,6 +13,7 @@ export const mountExtensionTrips=(root,options={})=>{
   const connections=aiConnections({load:async()=>(await request('list')).connections,need:'for travel research'});
   const credentials=deviceCredentials();
   return mountTrips(root,{credentials,offline:tripsOffline(),research:api?args=>researchTrip({...args,channel:tripSources(args.trip).find(c=>c.id===args.channel),browser:travelBrowser(api),onObservation:createRewardsCapture({
+    entries:async()=>(await cloudRequest(await credentials.get(),'/v1/rewards')).entries||[],
     read:async value=>cloudRequest(await credentials.get(),`/v1/ai-connections/${await connections.id()}/balance-intake`,{method:'POST',value,timeoutMs:130000}),
     save:async(id,value)=>cloudRequest(await credentials.get(),`/v1/rewards/programs/${id}`,{method:'PUT',value})
   }),generate:async messages=>{

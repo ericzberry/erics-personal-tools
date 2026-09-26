@@ -123,7 +123,7 @@ export function applyBindings(rows=[],bindings=[],entries=[],{adapter=''}={}){
     const bound=bindings.find(binding=>binding.kind==='binding'&&binding.key===wanted&&(!adapter||binding.adapter===adapter));
     const holder=bound?cards.find(card=>card.id===bound.accountId):null;
     return holder?{...row,holder,ambiguous:false,bound:true}:row;
-  });
+  }).filter(row=>row.holder?.state!=='cancelled');
 }
 // The binding a choice makes: this page name is that account, on this source.
 export const bindingFor=(adapter,pageName,account)=>validateWalletRecord({kind:'binding',adapter,key:bindingKey(pageName),accountId:account.id,label:account.name||account.product||''});

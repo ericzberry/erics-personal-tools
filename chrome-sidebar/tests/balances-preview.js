@@ -98,6 +98,13 @@ const reserveBalance=[{program:'Ultimate Rewards',source:'Chase',amount:204812,u
 const ihgPage=async()=>({text:'IHG One Rewards\nPoints balance 28,550',host:'ihg.com',title:'IHG One Rewards',trimmed:0,tables:1});
 const ihgFound=[{program:'IHG One Rewards',source:'IHG',amount:28550,unit:'points',confidence:'high',notes:''}];
 
+const params=new URLSearchParams(location.search);
+const cancelled=params.has('cancelled');
+if(['280','390'].includes(params.get('frame')))document.body.className=`preview-${params.get('frame')}`;
+if(cancelled)entries.splice(0,entries.length,...[
+ {kind:'card',name:'Platinum (12345)',source:'American Express',value:'Historical account',state:'cancelled'},
+ {kind:'card',name:'Platinum (56789)',source:'American Express',value:'Active account',state:'available'}
+].map(e=>validateReward(e)));
 const root=document.getElementById('balance-states');
 for(const [label,url,remote,read,cards] of [
   ['Beside a program page · nothing read yet','https://www.united.com/en/us/myunited',reading(found),page],
@@ -113,7 +120,7 @@ for(const [label,url,remote,read,cards] of [
     reading(reserveBalance,[],reserveRates,reserveBenefits),reservePage,cardStore([])],
   ['An ordinary page · no panel at all','https://example.invalid/',reading(found),page],
   ['A full tab · the wallet, with no page to read',null,reading(found),null]
-]){
+].filter((_,i)=>!cancelled||i===10)){
   const heading=document.createElement('h2');
   heading.textContent=`Synthetic state · ${label}`;
   heading.style.cssText='font:600 12px/1.4 system-ui;margin:16px 0 8px;color:#666';

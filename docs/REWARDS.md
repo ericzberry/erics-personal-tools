@@ -78,6 +78,16 @@ that name files itself. Conflicting digits never match; missing digits prove
 nothing either way. `cardAccounts` and `matchAccount` in `wallet-data.js` are
 the one reading of "which account is that".
 
+### Cancelled accounts
+
+Set a card's Status to **Cancelled** to retain its history while excluding the
+account, its linked credits and its account-specific offers from recommendations,
+credit reminders, card research sweeps and travel offer capture. Other accounts
+of the same product remain usable. A cancellation is matched on the account's
+digits and product; a shared points balance is retained. Historical entries remain
+in Wallet. Old clients that cannot edit this status must update before saving;
+pending records are not discarded.
+
 ## Entry kinds
 
 Every entry names itself, who provides it, and what it is worth.

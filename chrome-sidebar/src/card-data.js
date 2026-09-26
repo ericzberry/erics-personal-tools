@@ -115,7 +115,7 @@ const mentions=(field,merchant)=>{
 };
 export function merchantPerks(entries=[],cardId='',merchant=''){
   if(!cardId||!merchant)return [];
-  return (entries||[]).filter(entry=>entry&&!entry.deleting&&entry.card===cardId
+  return usableRewards(entries).filter(entry=>entry&&!entry.deleting&&entry.card===cardId
     &&['benefit','membership'].includes(entry.kind)&&entry.state!=='used'
     &&[entry.name,entry.value,entry.notes].some(field=>mentions(field,merchant)))
     .map(entry=>({name:String(entry.name||''),value:String(entry.value||''),
@@ -215,9 +215,30 @@ export const coversCard=(name,other)=>{
 // the page filed it under down to the account it belongs to. Neither is a
 // reward rate — but a card that has to be typed in again before it can be
 // compared is a card the owner already told this app about once.
+// Cancellation belongs to one account, never every card of the same product.
+export function cancelledCard(name,entries=[]){
+  const digits=cardDigits(name);
+  if(!digits)return false;
+  return entries.some(entry=>entry?.kind==='card'&&entry.state==='cancelled'
+    &&(entry.secretHint||cardDigits(entry.name))===digits
+    &&(coversCard(cardProductName(entry.name),cardProductName(name))||coversCard(cardProductName(name),cardProductName(entry.name))));
+}
+export function usableRewards(entries=[]){
+  const cancelled=new Set(entries.filter(e=>e?.kind==='card'&&e.state==='cancelled').map(e=>e.id));
+  return entries.filter(e=>e&&e.state!=='cancelled'&&(e.kind==='balance'||!cancelled.has(e.card))
+    &&!(e.kind==='card'&&cancelledCard(e.name,entries))
+    &&!(['benefit','membership'].includes(e.kind)&&cancelledCard(e.source,entries)));
+}
+export function usableCardRates(cards=[],entries=[]){
+  const accounts=walletCards(entries,cards);
+  return cards.filter(card=>!cancelledCard(card.name,entries)&&!(entries.some(e=>e.kind==='card'&&e.state==='cancelled'&&coversCard(cardProductName(e.name),cardProductName(card.name)))&&!accounts.some(a=>a.card?.id===card.id)));
+}
+export const usableCatalogs=(catalogs=[],entries=[])=>catalogs.map(catalog=>({...catalog,
+  offers:(catalog.offers||[]).filter(offer=>!cancelledCard(offer.card,entries))}));
+
 export function walletCards(entries=[],cards=[]){
   const found=[];
-  for(const entry of entries||[]){
+  for(const entry of usableRewards(entries)){
     if(!entry||entry.deleting)continue;
     // The wallet's own id for a card entry travels with it, because what the
     // wallet files under that card — its credits, its discounts, its

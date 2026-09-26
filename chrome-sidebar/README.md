@@ -4354,3 +4354,10 @@ Travel passes also capture encountered Amex and Chase offers into Rewards,
 with partial coverage, bounded reads and visible capture failures. Chase Offers
 & Travel is now a supported catalogue. See [Travel planning](../docs/TRAVEL_PLANNING.md)
 and [Rewards capture](../docs/REWARD_PROGRAMS.md).
+
+## Cancelled reward accounts (0.6.290 / mobile 0.1.239)
+
+Cancelled cards remain in Wallet history. Account-specific offers, linked credits,
+benefit imports and payment recommendations exclude them. Other active accounts
+of the same product and shared points balances remain usable. Travel offer capture
+checks the saved wallet before importing offers.

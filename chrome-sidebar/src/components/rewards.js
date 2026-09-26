@@ -69,7 +69,7 @@ export function RewardsView(){
             field('value','Balance or benefit',undefined,undefined,'42,000 miles · $50 credit · Member offers'),
             field('due','Expiration or use-by date (optional)','date'),
             field('cadence','Resets','select',CADENCE_OPTIONS),
-            field('state','Status','select',[{text:'Available',value:'available'},{text:'Needs activation',value:'activation'},{text:'Used',value:'used'}]),
+            field('state','Status','select',[{text:'Available',value:'available'},{text:'Needs activation',value:'activation'},{text:'Used',value:'used'},{text:'Cancelled',value:'cancelled'}]),
             field('url','Official account or offer URL (optional)','url'),
             UI.FormField({id:'reward-notes',label:'Terms, eligibility, and next step (optional)',kind:'textarea',rows:3}),
             UI.ProtectedField({id:'reward-secret',label:'Card details (optional)'}),
