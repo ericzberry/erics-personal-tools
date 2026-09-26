@@ -146,7 +146,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `unlockInWindow()`, which runs the check in `unlock.html` and lets the panel
   adopt the session it stores.
 - **Family context** — `people-data.js`, `people-offline.js`, `people.js` and `components/people.js` are shared with mobile. `people-page.js` mounts the extension. See [FAMILY_CONTEXT.md](FAMILY_CONTEXT.md).
-- **Travel browser execution** — `trip-research.js` orchestrates bounded, persisted research; extension-only `trip-browser.js` and `trip-browser-page.js` operate owned Chrome tabs. `travel.browser` is the registered AI action. Mobile reads the resulting evidence offline.
+- **Travel browser execution** — `trip-research.js` orchestrates bounded, persisted research; extension-only `trip-browser.js` and `trip-browser-page.js` operate owned Chrome tabs. Extension-only `rewards-capture.js` forwards encountered issuer offers into the Rewards catalogue through the registered balance-intake action. `travel.browser` is the registered AI action. Mobile reads the resulting evidence offline.
 - **Travel planning** — `trip-data.js` (bounded hotel/flight research, exact search context, evidence age and eligibility), `trips-offline.js` (encrypted offline records and conflict resolution), `trips.js` and `components/trips.{js,css}` (shared controller and comparison). All five ship to mobile via its build list and service-worker shell. See [TRAVEL_PLANNING.md](TRAVEL_PLANNING.md).
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js` (the reward rates and the comparison, plus

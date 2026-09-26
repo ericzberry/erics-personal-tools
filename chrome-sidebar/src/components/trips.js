@@ -1,5 +1,5 @@
 import {Stack,Section,Heading,Text,Note,Strong,Link,Button,ActionGroup,Disclosure,Form,FormField,Notice,ToolTitle,RowAction,EDIT_GLYPH,DELETE_GLYPH,ResultBlock,money} from './ui.js';
-import {rankCandidates,researchCurrent,offerState,tripKey,TRIP_RETENTION_MS} from '../trip-data.js';
+import {rankCandidates,researchCurrent,offerState,tripKey,TRIP_RETENTION_MS,tripSources,tripCoverage} from '../trip-data.js';
 const when=value=>value?new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}):'';
 export function TripsView(){
   return Stack([
@@ -29,13 +29,23 @@ const checkRows=(trip,checks)=>trip.criteria.map(c=>{
   return Stack([Strong(c.label),Text(`${checkLabel[check?.status||'unknown']}${c.required?'':' · preference'}${check?.detail?` — ${check.detail}`:''}`),
     check?.source?Link(`Source · ${when(check.checkedAt)}`,check.source):null],{className:'trip-check'});
 });
-export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch,onStop,researching=false,busy=false,now=Date.now()}){
+export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch,onStop,onSource=()=>{},source='web',researching=false,busy=false,now=Date.now()}){
   const actions=[RowAction(EDIT_GLYPH,`Edit ${trip.title}`,onEdit,{disabled:busy}),RowAction(DELETE_GLYPH,`Delete ${trip.title}`,()=>{confirm.hidden=false;},{disabled:busy,danger:true})];
   const yes=Button('Delete trip from all devices',{variant:'danger',disabled:busy});yes.addEventListener('click',onDelete);
   const no=Button('Keep trip',{variant:'secondary'});no.addEventListener('click',()=>{confirm.hidden=true;});
   const confirm=Stack([Text(`Delete “${trip.title}” and its saved research?`),ActionGroup([yes,no])],{hidden:true});
   const copy=Button('Copy research request',{variant:'secondary',size:'compact',disabled:busy});copy.addEventListener('click',onCopy);
   const current=researchCurrent(trip);
+  let search=null;
+  if(onResearch){
+    const sources=tripSources(trip),selected=sources.some(c=>c.id===source)?source:sources[0].id;
+    const field=FormField({id:'trips-source',label:'Source',kind:'select',options:sources.map(c=>({value:c.id,text:c.label}))});
+    const select=field.querySelector('select');select.value=selected;select.disabled=busy||researching;select.dispatchEvent(new document.defaultView.Event('change'));
+    select.addEventListener('change',()=>onSource(select.value));
+    const run=Button('Search source',{variant:'primary',size:'compact',disabled:busy||researching});run.addEventListener('click',()=>onResearch(select.value));
+    const stop=Button('Stop search',{variant:'secondary',size:'compact'});stop.addEventListener('click',onStop);
+    search=Stack([field,ActionGroup([run,...(researching?[stop]:[]),copy])]);
+  }
   const auth=trip.channels.filter(c=>c.status==='login');
   const summary=Stack([
     Stack([Heading(trip.title,2),ActionGroup(actions,{compact:true})],{className:'trip-heading group-line'}),confirm,
@@ -48,7 +58,7 @@ export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch
     trip.candidates.length&&!current?Note('Previous search — recheck'):null,
     current&&trip.summary?Text(trip.summary):null,
     trip.questions.length?Section([Heading('Needed to finish',3),...trip.questions.map(q=>Text(q))]):null,
-    ActionGroup([...(onResearch?['web','amex','chase'].map((channel,i)=>{const b=Button(['Search websites','Search Amex','Search Chase'][i],{variant:i?'secondary':'primary',size:'compact',disabled:busy||researching});b.addEventListener('click',()=>onResearch(channel));return b;}):[]),...(researching?[(()=>{const b=Button('Stop search',{variant:'secondary',size:'compact'});b.addEventListener('click',onStop);return b;})()]:[]),copy]),
+    search||ActionGroup([copy]),
   ],{className:'trip-summary'});
   const candidates=rankCandidates(trip,now);
   const options=candidates.map(candidate=>ResultBlock({title:candidate.name,status:fitLabel[candidate.fit],detail:candidate.description,
@@ -67,10 +77,11 @@ export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch
       !candidate.offers.length?Note('No dated offers'):null,
       Disclosure('Requirements and sources',checkRows(trip,candidate.checks))
     ]}));
-  const channels=trip.channels.length?Disclosure('Search coverage',trip.channels.map(c=>Stack([
+  const coverage=tripCoverage(trip);
+  const channels=Disclosure('Search coverage',coverage.map(c=>Stack([
     Strong(c.label),Text(`${({'not-checked':'Not checked',partial:'Partly checked',checked:'Checked',login:'Sign-in needed',blocked:'Could not check'})[c.status]}${c.note?` — ${c.note}`:''}`),c.checkedAt?Note(when(c.checkedAt)):null,
-    c.nextStep?Text(c.nextStep):null,c.resumeURL?Link('Resume on provider',c.resumeURL):null,
+    c.nextStep&&c.nextStep!==c.note?Text(c.nextStep):null,c.resumeURL?Link('Resume on provider',c.resumeURL):null,
     c.contextKey&&c.contextKey!==tripKey(trip)?Note('Request changed — restart this search'):null
-  ],{className:'trip-check'}))):null;
+  ],{className:'trip-check'})));
   return Stack([summary,...options,!options.length?Note('No research saved'):null,channels],{className:'trip-comparison'});
 }

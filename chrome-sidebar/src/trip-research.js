@@ -2,26 +2,28 @@ import {normalizeTrip,tripKey} from './trip-data.js';
 const parse=text=>JSON.parse(text.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,''));
 // Every checkpoint is persisted before another browser action. A page error or
 // interrupted run remains partial, never evidence of sold-out inventory.
-export async function researchTrip({trip,channel,browser,generate,save,signal,onProgress=()=>{}}){
-  let scope=tripKey(trip),current=trip;const pages=[],actions=[];
+export async function researchTrip({trip,channel,browser,generate,save,signal,onProgress=()=>{},onObservation=null}){
+  let scope=tripKey(trip),current=trip,rewardsNote='';const pages=[],actions=[];
   const checkpoint=async(status,note,url='')=>{
+    if(rewardsNote)note=`${note} ${rewardsNote}`.slice(0,500);
     current={...current,channels:[...current.channels.filter(c=>c.id!==channel.id),{id:channel.id,label:channel.label,status,note,checkedAt:new Date().toISOString(),resumeURL:url,nextStep:note,contextKey:scope}]};
     current=await save(current);return current;
   };
   let url=channel.url;
   try{
-    const staleScope=trip.researchKey&&trip.researchKey!==scope||trip.channels.some(c=>c.contextKey)&&!trip.channels.some(c=>c.contextKey===scope);
+    const parsedKey=trip.intentKey||trip.researchKey;
+    const staleScope=parsedKey?parsedKey!==scope:trip.channels.some(c=>c.contextKey)&&!trip.channels.some(c=>c.contextKey===scope);
     if(!trip.start||!trip.party||!trip.criteria.length||staleScope){
       onProgress('Reading the travel request…');
       const intent=parse(await generate([
         {role:'system',content:'Read this travel request into JSON {start:"YYYY-MM-DD",end:"YYYY-MM-DD",party:{adults:number,childrenAges:number[],rooms:number},criteria:[{id:string,label:string,required:boolean}],questions:string[]}. Use supplied family reference facts when relevant, adjusting children ages to the travel year. Do not invent an exact birthday. Guaranteed connecting rooms may fulfill two bedrooms only when allowed. A sofa bed or pull-out is never another real bedroom. Preserve explicit constraints. If dates, party, destination or other essential facts cannot be established, return questions and do not guess. Today is '+new Date().toISOString().slice(0,10)+'.'},
-        {role:'user',content:trip.request}
+        {role:'user',content:JSON.stringify({request:trip.request,existingCriteria:trip.criteria,instruction:'Keep the id and label of an existing requirement exactly when its meaning is unchanged. Changed requirements need new ids. Keep an explicit outside-city requirement separate from the driving-time requirement.'})}
       ]));
       if(intent.questions?.length){current=await save({...current,questions:intent.questions});return current;}
-      const keep=checks=>checks.filter(c=>intent.criteria?.some(r=>r.id===c.id));
+      const keep=checks=>checks.filter(c=>intent.criteria?.some(r=>r.id===c.id&&trip.criteria.some(old=>old.id===r.id&&old.label===r.label)));
       const candidates=current.candidates.map(c=>({...c,checks:keep(c.checks),offers:c.offers.map(o=>({...o,checks:keep(o.checks)}))}));
       current={...normalizeTrip({...current,start:intent.start,end:intent.end,party:intent.party,criteria:intent.criteria,questions:[],candidates}),id:current.id,revision:current.revision};
-      current=await save(current);trip=current;scope=tripKey(trip);
+      scope=tripKey(current);current=await save({...current,intentKey:scope});trip=current;
     }
     const prior=trip.channels.find(c=>c.id===channel.id&&c.contextKey===scope);
     url=prior?.resumeURL||url;await checkpoint('partial','Starting browser research.',url);
@@ -30,6 +32,11 @@ export async function researchTrip({trip,channel,browser,generate,save,signal,on
       signal?.throwIfAborted();onProgress(`Checking ${channel.label} · step ${step+1}`);
       const page=await browser.read(tab,signal);if(!page)throw Error('The page could not be read.');url=page.url;
       if(page.attention)return await checkpoint(page.attentionKind||'login',page.attention,url);
+      if(onObservation){
+        try{const captured=await onObservation(page);if(captured?.status==='limit')rewardsNote='Rewards capture limit reached; continue reading offers in Rewards.';}
+        catch(error){rewardsNote=`Rewards not saved: ${error.message||'Read this page again in Rewards.'}`.slice(0,220);}
+        signal?.throwIfAborted();
+      }
       pages.push({url:page.url,text:page.text.slice(0,6000),at:new Date().toISOString()});if(pages.length>4)pages.shift();
       await checkpoint('partial','Research in progress. Resume if interrupted.',url);
       const result=parse(await generate([

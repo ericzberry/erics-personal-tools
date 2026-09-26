@@ -4341,3 +4341,16 @@ the full-tab pages, and on the phone at 390px and 320px.
 Saved hotel and flight requests now carry comparisons with dated sources, exact room/fare evidence, full-trip totals, terms and separate conditional benefits. Research is scoped to the request and stale offers need a recheck. Provider sign-in checkpoints preserve where an assisted browser search resumes. The same records and pending edits work offline on mobile.
 
 This is an agent-assisted browser workflow; refreshing saved research does not launch an unattended search. See [Travel planning](../docs/TRAVEL_PLANNING.md).
+
+## Travel source coverage (0.6.289 / mobile 0.1.238)
+
+Travel planning now lists portals, metasearch, agencies and deal sites in one
+Source picker, with explicit unsearched coverage on both hosts. Parsed requests
+survive sign-in and source retries without losing earlier criterion ids. Open
+search dialogs take priority over long result lists. Session-bearing provider
+URLs are stripped before research checkpoints are saved.
+
+Travel passes also capture encountered Amex and Chase offers into Rewards,
+with partial coverage, bounded reads and visible capture failures. Chase Offers
+& Travel is now a supported catalogue. See [Travel planning](../docs/TRAVEL_PLANNING.md)
+and [Rewards capture](../docs/REWARD_PROGRAMS.md).

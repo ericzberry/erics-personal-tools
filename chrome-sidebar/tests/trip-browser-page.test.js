@@ -12,3 +12,7 @@ test('a stale control and a purchase control cannot be clicked',()=>{
   const captured=tripBrowserPage();assert.throws(()=>tripBrowserPage({type:'click',control:captured.controls[1]}),/outside travel search/);
   document.querySelector('button').textContent='Confirm booking';assert.throws(()=>tripBrowserPage({type:'click',control:captured.controls[0]}),/page changed/);
 });
+test('open search dialogs remain readable after large hotel result lists',()=>{
+  page(`<html><body>${'<button>Hotel details</button>'.repeat(110)}<div role="dialog"><label>Child age<select><option value="7">7</option></select></label><button>Done</button></div></body></html>`);
+  const read=tripBrowserPage();assert.equal(read.controls.length,2);assert.equal(read.controls[0].tag,'select');assert.equal(read.controls[1].label,'Done');assert.equal(read.text.includes('Hotel details'),false);
+});

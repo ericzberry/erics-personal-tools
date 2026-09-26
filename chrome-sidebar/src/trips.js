@@ -5,7 +5,7 @@ import {normalizeTrip} from './trip-data.js';
 export function mountTrips(root,{credentials,offline,onSettings=()=>{},clipboard=globalThis.navigator?.clipboard,research=null}){
   root.replaceChildren(TripsView());
   const $=id=>root.querySelector(`#trips-${id}`);
-  let researchAbort=null;
+  let researchAbort=null,source='web';
   let records=[],selected='',editing=null,busy=false,loaded=false,tokenUsed='',generation=0;
   const status=(s,t='')=>setStatus($('status'),s,t);
   function edit(record=null){
@@ -18,7 +18,7 @@ export function mountTrips(root,{credentials,offline,onSettings=()=>{},clipboard
     if(!records.some(r=>r.id===selected))selected=records[0]?.id||'';
     const current=records.find(r=>r.id===selected);
     $('picker').replaceChildren(...(records.length?[TripPicker(records,selected,id=>{selected=id;$('editor').open=false;render();})]:[]));
-    $('result').replaceChildren(current?TripComparison(current,{busy:busy||!!researchAbort,researching:!!researchAbort,onResearch:research?channel=>startResearch(current,channel):null,onStop:()=>researchAbort?.abort(),onEdit:()=>edit(current),onDelete:()=>remove(current),onCopy:async()=>{
+    $('result').replaceChildren(current?TripComparison(current,{source,onSource:value=>{source=value;},busy:busy||!!researchAbort,researching:!!researchAbort,onResearch:research?channel=>startResearch(current,channel):null,onStop:()=>researchAbort?.abort(),onEdit:()=>edit(current),onDelete:()=>remove(current),onCopy:async()=>{
       try{await clipboard.writeText(`Research the saved Travel planning trip ${current.id} in Eric’s Tools. Follow docs/TRAVEL_PLANNING.md and use the Eric Chrome profile.\n\n${current.request}`);status('Research request copied.','success');}
       catch{status('Copy failed. Select the trip request instead.','error');}
     },onResolve:choice=>run(token=>offline.resolve(token,current.id,choice))}):Note(loaded?'No trips saved. Add a trip to start.':''));

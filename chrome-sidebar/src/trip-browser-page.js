@@ -3,7 +3,11 @@
 export function tripBrowserPage(action=null){
   const visible=e=>!!(e.getClientRects().length)&&getComputedStyle(e).visibility!=='hidden';
   const forbidden=/password|passcode|verification|one.time|security.code|credit.card|card.number|payment|email|user.?name/i;
-  const nodes=[...document.querySelectorAll('a[href],button,input,select,[role="button"],[role="option"],[role="tab"],[role="combobox"],[role="spinbutton"]')].filter(visible).slice(0,100);
+  // Date/guest/filter dialogs often follow hundreds of result controls in DOM
+  // order. The open dialog owns the next interaction, so read it first.
+  const dialog=[...document.querySelectorAll('[role="dialog"],dialog[open]')].filter(visible).at(-1);
+  const surface=dialog||document;
+  const nodes=[...surface.querySelectorAll('a[href],button,input,select,[role="button"],[role="option"],[role="tab"],[role="combobox"],[role="spinbutton"]')].filter(visible).slice(0,100);
   const describe=(e,index)=>({index,tag:e.tagName.toLowerCase(),role:e.getAttribute('role')||'',type:e.type||'',label:(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||e.innerText||e.placeholder||e.name||'').trim().slice(0,180),href:e.tagName==='A'?e.href:'',disabled:!!e.disabled,options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})).slice(0,40):undefined});
   const controls=nodes.map(describe).filter(c=>!forbidden.test(`${c.type} ${c.label}`));
   const formControls=[...document.querySelectorAll('input')].filter(visible);
@@ -35,5 +39,5 @@ export function tripBrowserPage(action=null){
   }
   if(locked||checkout)return {url:location.href,title:document.title,text:'',controls:[],attentionKind:checkout?'blocked':'login',attention:locked?'Complete sign-in or verification in this tab. If Apple Passwords is locked, unlock it on your Mac.':'Review the checkout yourself; research stops before booking.'};
   while(JSON.stringify(controls).length>14000)controls.pop();
-  return {url:location.href,title:document.title,text:(document.body?.innerText||'').slice(0,10000),controls};
+  return {url:location.href,title:document.title,text:(dialog?.innerText||document.body?.innerText||'').slice(0,10000),controls};
 }

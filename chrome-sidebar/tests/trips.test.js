@@ -1,9 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeTrip,tripKey,offerState,rankCandidates} from '../src/trip-data.js';
+import {normalizeTrip,tripKey,offerState,rankCandidates,tripSources,tripCoverage,travelResearchURL} from '../src/trip-data.js';
 import {tripsOffline} from '../src/trips-offline.js';
 import {fixture} from './trips-fixture.js';
 const now=Date.now();
+test('travel checkpoints preserve safe application routes and exclude provider session credentials',()=>{
+  const source='https://secure.chase.com/web/auth/dashboard#/dashboard/travel';
+  assert.equal(travelResearchURL(source),source);
+  const contaminated='https://travelsecure.chase.com/details/hotels/Hotel/123?cnxtoken=secret&h.s.sid=session&checkin=2026-10-16';
+  assert.equal(travelResearchURL(contaminated),null);
+  assert.equal(travelResearchURL(contaminated,{stripSecrets:true}),'https://travelsecure.chase.com/details/hotels/Hotel/123?checkin=2026-10-16');
+  assert.equal(travelResearchURL('https://example.com/#/callback?token=secret'),'https://example.com/');
+});
+test('source coverage includes unsearched engines and verified direct checkpoints without inventing checks',()=>{
+  const t=fixture();t.channels=[{id:'iris-direct',label:'Iris direct',status:'partial',resumeURL:'https://example.com/rooms'}];
+  const coverage=tripCoverage(t);
+  for(const id of ['amex','chase','web','kayak','booking','expedia','priceline','hotwire','travelzoo','suiteness'])assert.equal(coverage.find(c=>c.id===id).status,'not-checked');
+  assert.equal(tripSources(t).find(c=>c.id==='iris-direct').url,'https://example.com/rooms');
+  assert.equal(tripSources(t).find(c=>c.id==='chase').url,'https://secure.chase.com/web/auth/dashboard#/dashboard/travel');
+});
 test('only an exact, fresh, fully priced and evidenced offer can qualify',()=>{
   const t=fixture(),c=t.candidates[0],o=c.offers[0];
   assert.equal(offerState(t,c,o,now),'Observed offer — recheck before booking');

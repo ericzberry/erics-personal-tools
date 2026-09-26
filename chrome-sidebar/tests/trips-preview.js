@@ -1,5 +1,7 @@
 import {mountTrips} from '../src/trips.js';
 import {fixture} from './trips-fixture.js';
+const frame=new URLSearchParams(location.search).get('frame');
+if(['280','390'].includes(frame))document.body.classList.add(`preview-${frame}`);
 if(new URLSearchParams(location.search).get('layout')==='page'){document.body.classList.add('workspace-site');document.getElementById('preview').classList.add('workspace-shell');}
 const state=new URLSearchParams(location.search).get('state');
 let records=state==='empty'?[]:[{...fixture(),id:'11111111-1111-4111-8111-111111111111',revision:'r1'}];

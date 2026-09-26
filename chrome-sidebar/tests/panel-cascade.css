@@ -26,3 +26,6 @@
 @import url('../src/components/home.css');
 @import url('../src/components/health.css');
 @import url('../src/components/trips.css');
+/* Host frames only; component rules above remain exactly the host cascade. */
+body.preview-280{width:280px;min-width:0}
+body.preview-390{width:390px;min-width:0}

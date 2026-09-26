@@ -20,12 +20,21 @@ const stamp=(value,name)=>{
   if(s&&(!/^\d{4}-\d{2}-\d{2}T/.test(s)||!Number.isFinite(Date.parse(s))||Date.parse(s)>Date.now()+60000))fail(`Check ${name}.`);
   return s;
 };
+// Provider result pages may attach session credentials to otherwise ordinary
+// search URLs. Such credentials never belong in prompts or saved checkpoints.
+export function travelResearchURL(value,{stripSecrets=false}={}){
+  const clean=safePublicURL(value);if(!clean)return null;
+  const parsed=new URL(clean),original=new URL(value);
+  for(const key of [...parsed.searchParams.keys()])if(/token|password|secret|authorization|(?:^|[._-])(?:code|state|session|sessionid|sid)$/i.test(key)){
+    if(!stripSecrets)return null;parsed.searchParams.delete(key);
+  }
+  if(/^#\/[a-z0-9/_-]+$/i.test(original.hash))parsed.hash=original.hash;
+  return parsed.href;
+}
 const url=(value,name)=>{
   if(!value)return '';
-  const clean=safePublicURL(str(value,name,2048,true));
+  const clean=travelResearchURL(str(value,name,2048,true));
   if(!clean)fail(`Use a public HTTPS link for ${name}.`);
-  const parsed=new URL(clean);
-  if([...parsed.searchParams.keys()].some(k=>/^(access_token|id_token|refresh_token|password|secret|authorization|code|state|session|sessionid)$/i.test(k)))fail(`Remove sign-in credentials from ${name}.`);
   return clean;
 };
 const unique=(rows,name)=>{
@@ -57,7 +66,7 @@ export function normalizeTrip(input,previous={}){
     party={adults:p.adults,childrenAges,rooms:p.rooms};
   }
   const trip={schemaVersion:1,title:str(v.title,'trip name',120,true),kind:one(v.kind??'hotel',['hotel','flight','both'],'trip type'),request:str(v.request,'trip request',4000,true),start,end,party,criteria,
-    researchKey:text(v.researchKey,'research context',12000),summary:text(v.summary,'summary',1500),questions:list(v.questions??[],'open questions',12).map(q=>str(q,'question',400,true)),
+    intentKey:text(v.intentKey,'parsed request context',12000),researchKey:text(v.researchKey,'research context',12000),summary:text(v.summary,'summary',1500),questions:list(v.questions??[],'open questions',12).map(q=>str(q,'question',400,true)),
     channels:unique(list(v.channels??[],'channels',15).map(c=>({id:id(c.id),label:str(c.label,'channel',100,true),status:one(c.status,['not-checked','partial','checked','login','blocked'],'channel status'),note:text(c.note,'channel note',500),checkedAt:stamp(c.checkedAt,'channel observation'),resumeURL:url(c.resumeURL,'resume link'),nextStep:text(c.nextStep,'next step',500),contextKey:text(c.contextKey,'channel context',12000)})),'channel'),
     candidates:unique(list(v.candidates??[],'options',20).map(c=>({id:id(c.id),name:str(c.name,'option name',150,true),description:text(c.description,'description',700),url:url(c.url,'option link'),checks:checks(c.checks,criteria),
       offers:unique(list(c.offers??[],'offers',12).map(o=>{
@@ -103,3 +112,28 @@ export function rankCandidates(trip,now=Date.now()){
 
 export const TRIP_RETENTION_MS=90*86400000;
 export const tripExpired=(record,now=Date.now())=>!!record.updatedAt&&Number.isFinite(Date.parse(record.updatedAt))&&Date.parse(record.updatedAt)+TRIP_RETENTION_MS<=now;
+
+// One catalogue supplies the desktop search picker and both hosts' coverage.
+// Merely listing a source never counts as checking it.
+export const TRIP_CHANNELS=[
+  {id:'web',label:'Google Hotels',url:'https://www.google.com/travel/hotels'},
+  {id:'amex',label:'Amex Travel',url:'https://www.americanexpress.com/en-us/travel/'},
+  {id:'chase',label:'Chase Travel',url:'https://secure.chase.com/web/auth/dashboard#/dashboard/travel'},
+  {id:'kayak',label:'KAYAK',url:'https://www.kayak.com/'},
+  {id:'trivago',label:'Trivago',url:'https://www.trivago.com/'},
+  {id:'booking',label:'Booking.com',url:'https://www.booking.com/'},
+  {id:'expedia',label:'Expedia',url:'https://www.expedia.com/'},
+  {id:'priceline',label:'Priceline',url:'https://www.priceline.com/'},
+  {id:'hotwire',label:'Hotwire',url:'https://www.hotwire.com/'},
+  {id:'travelzoo',label:'Travelzoo',url:'https://www.travelzoo.com/'},
+  {id:'suiteness',label:'Suiteness',url:'https://www.suiteness.com/'}
+];
+export function tripSources(trip){
+  const known=new Set(TRIP_CHANNELS.map(c=>c.id));
+  // Saved direct-provider checkpoints retain their verified URLs. A hotel
+  // result URL can be an OTA, so never automatically label it "direct".
+  return [...TRIP_CHANNELS,...trip.channels.filter(c=>!known.has(c.id)&&c.resumeURL).map(c=>({id:c.id,label:c.label,url:c.resumeURL}))];
+}
+export function tripCoverage(trip){
+  return [...TRIP_CHANNELS.filter(c=>!trip.channels.some(s=>s.id===c.id)).map(c=>({...c,status:'not-checked'})),...trip.channels];
+}

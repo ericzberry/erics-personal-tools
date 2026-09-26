@@ -1,8 +1,12 @@
 # Travel planning
 
 Travel planning holds browser research in Eric’s Tools. In the installed Chrome
-extension, **Search websites**, **Search Amex** and **Search Chase** execute a
-bounded browser pass in an owned tab. `trip-research.js` reads the request into
+extension, **Search source** selects Google Hotels, Amex, Chase, KAYAK, Trivago,
+Booking.com, Expedia, Priceline, Hotwire, Travelzoo or Suiteness, plus saved
+direct-provider checkpoints. **Search source** executes a bounded browser pass
+in an owned tab. The shared source catalogue always shows unsearched sources
+as **Not checked**, including on mobile. A result link is never assumed to be
+the hotel's direct site. `trip-research.js` reads the request into
 travel criteria, asks the centrally selected `travel.browser` model for observed
 search-control actions, and saves progress before each action. The adapter only
 fills search fields, clicks search controls, or opens observed public links. It
@@ -19,6 +23,12 @@ the page/panel to remain open and Chrome site access; it has no background
 monitor. Site-specific controls, iframe booking forms and flight workflows still
 need live adapter testing. Mobile presents and edits the saved research offline;
 search execution requires the desktop Chrome extension.
+
+Encountered issuer offers also go into Rewards through its existing catalogue
+reader, up to six distinct snapshots per pass. Capture failures or limits stay
+in the source checkpoint while hotel research continues. This is partial
+coverage; finishing the hotel search never means every card's offers were read.
+See [reward program capture](REWARD_PROGRAMS.md#capture-during-travel-research).
 
 ## Browser and sign-in
 
@@ -89,6 +99,9 @@ hotel without the owner's instruction to do that specific action.
    partial results before continuing. Each channel gets `not-checked`, `partial`,
    `checked`, `login` or `blocked` and an explanation. Do not claim exhaustive
    coverage of every search engine.
+   Expand beyond the portals to metasearch, online agencies and deal sites;
+   opaque deals cannot meet a named property, room or connection requirement
+   without that configuration being disclosed before purchase.
 6. Read the actual bookable product, full-trip cash total, included taxes and
    mandatory fees, currency, cancellation deadline with timezone, payment timing,
    and applicable restrictions. For hotels establish the beds in each bedroom,
@@ -109,6 +122,10 @@ hotel without the owner's instruction to do that specific action.
    `contextKey` captured when read. Changing scope must not relabel old offers.
    Retain previous observations under distinct offer ids, within the bounded
    record size; do not refresh timestamps just because a record was saved.
+   `intentKey` records which request has already been parsed, including a run
+   paused for authentication. Retrying another source must not reparse a current
+   request just because earlier source checkpoints are stale. Unchanged criteria
+   retain their ids and labels; changed criteria do not inherit old checks.
 9. Write concise `summary`, `questions`, `candidates` and channel coverage.
    Distinguish recommendation, verified constraints, compromises and unverified
    facts. Do not recommend a booking when no candidate satisfies requirements.

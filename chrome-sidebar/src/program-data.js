@@ -13,7 +13,7 @@
 // hold, and nothing here writes one.
 
 export const MAX_OFFERS = 500;
-export const FIELD_MAX = {name: 200, category: 60, summary: 400, badge: 40, dates: 80, card: 120, path: 200};
+export const FIELD_MAX = {name: 200, category: 60, summary: 400, badge: 40, dates: 80, card: 120, path: 500};
 // A catalogue is one document, and a large program's is several times the 64 KB
 // an ordinary record is allowed. Both ends of the write agree on this number:
 // the device refuses to send more, and the Worker refuses to read more.
@@ -46,6 +46,16 @@ export const REWARD_PROGRAMS = [
     // An offer's own page. Its path is the offer's identity everywhere here.
     offer: /^\/offer\/[a-z0-9_.-]+$/i,
     reading: READ_MARKUP
+  },
+  {
+    id: 'chase-offers',
+    label: 'Chase Offers & Travel',
+    source: 'Chase',
+    hosts: ['chase.com', 'ultimaterewards.com'],
+    origin: 'https://secure.chase.com',
+    catalog: '/web/auth/dashboard#/dashboard/travel',
+    offer: null,
+    reading: READ_TEXT
   },
   {
     id: 'amex-offers',
@@ -191,7 +201,19 @@ export function programPath(programId, url) {
   let parsed;
   try {parsed = new URL(String(url || ''), program.origin);} catch {return '';}
   if (parsed.origin !== program.origin) return '';
-  return text(`${parsed.pathname}${parsed.search}`, FIELD_MAX.path);
+  // Keep application routes, but never persist login tokens or redirect state.
+  for (const key of [...parsed.searchParams.keys()])
+    if (/token|password|secret|authorization|^code$|^state$|^session$/i.test(key)) parsed.searchParams.delete(key);
+  let hash = '';
+  if (parsed.hash.startsWith('#/')) {
+    const route = new URL(parsed.hash.slice(1), program.origin);
+    if (/^\/[a-z0-9/_-]+$/i.test(route.pathname)) {
+      for (const key of [...route.searchParams.keys()])
+        if (!['accountId', 'offerId', 'offerCategoryName'].includes(key)) route.searchParams.delete(key);
+      hash = `#${route.pathname}${route.search}`;
+    }
+  }
+  return text(`${parsed.pathname}${parsed.search}${hash}`, FIELD_MAX.path);
 }
 
 // A whole catalogue, as it is stored and as it crosses the network. `complete`
@@ -235,9 +257,11 @@ export function mergeCatalog(previous, next) {
     return {...offer, firstSeenAt: older?.firstSeenAt || offer.firstSeenAt};
   });
   const kept = next.complete ? [] : [...before.values()];
+  if (merged.length + kept.length > MAX_OFFERS)
+    throw Error(`This catalogue exceeds ${MAX_OFFERS} offers. No offers were discarded; narrow the catalogue before retrying.`);
   return {
     ...next,
-    offers: [...merged, ...kept].slice(0, MAX_OFFERS),
+    offers: [...merged, ...kept],
     // A catalogue stays complete once a complete reading has filled it: a later
     // partial reading refreshes part of it without making the whole unknown.
     complete: next.complete || previous?.complete === true,

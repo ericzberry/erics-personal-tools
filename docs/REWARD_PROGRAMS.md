@@ -2,8 +2,8 @@
 
 A reward program is a perks portal: a membership with no balance, whose value is
 the catalogue of offers behind it. Morgan Stanley Reserved Living & Giving
-(`msreserved.com`) is the first one, and **Amex Offers** — the offers American
-Express picks for the cards you hold — is the second. Offers change without
+(`msreserved.com`) is the first one. **Amex Offers** and **Chase Offers & Travel** hold the
+account-specific offers read from those issuer pages. Offers change without
 notice, so a catalogue is read from the program's own pages instead of being
 typed in.
 
@@ -143,3 +143,16 @@ it sits on. If the program's markup differs from
 the card markup `readProgramCards` expects, extend that reader in
 [`reward-programs.js`](../chrome-sidebar/src/reward-programs.js) rather than
 teaching the catalogue about a second shape.
+
+## Capture during travel research
+
+An explicitly started travel research pass also reads offers from encountered
+Amex and Chase pages through `rewards-capture.js`, using the existing
+`rewards.balances` task and catalogue writer. Authentication screens are skipped.
+Each pass is bounded to six distinct page readings; failed writes remain
+retryable and a limit or failure is reported without stopping hotel research.
+This captures encountered offers, not every offer across every card: coverage
+remains partial and never retires unseen offers. Chase application hash routes
+are retained so saved links return to the right view. Secret query parameters
+are removed. A merge exceeding the catalogue limit fails rather than silently
+discarding older offers.
