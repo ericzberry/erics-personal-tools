@@ -4377,3 +4377,10 @@ stale action and read the page again, within the existing step limit. Foreign
 pages and other extensions remain rejected. These fixes were found by running
 the live all-source flow. Publication is included in the subsequent combined
 release after the concurrent navigation work completes.
+
+## Travel model response recovery (0.6.293)
+
+Malformed JSON and nonexistent control indexes get one correction attempt
+before a source is marked blocked. No browser action runs from the invalid
+response. Network failures are not retried. Covered by focused regression tests;
+publication joins the next combined release.

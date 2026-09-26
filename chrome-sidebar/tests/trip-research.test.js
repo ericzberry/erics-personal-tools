@@ -86,6 +86,17 @@ test('a same-site URL change discards stale controls and reobserves before actin
  await assert.rejects(browser.act(1,{url:channel.url,controls:[{index:0}]},{type:'click',index:0}),e=>e.code==='TRAVEL_PAGE_CHANGED');
  assert.equal(injected,0);
  let reads=0,models=0,acts=0;
- const result=await researchTrip({trip,channel,browser:{open:async()=>1,read:async()=>{reads++;return {url:channel.url,text:'Observed rooms',controls:[]};},act:async()=>{acts++;throw Object.assign(Error('Page changed'),{code:'TRAVEL_PAGE_CHANGED'});}},generate:async()=>JSON.stringify(++models===1?{type:'click',index:0}:models===2?{type:'done',note:'Fresh page inspected'}:{summary:'Observed fresh page',candidates:[]}),save:async v=>v});
+ const result=await researchTrip({trip,channel,browser:{open:async()=>1,read:async()=>{reads++;return {url:channel.url,text:'Observed rooms',controls:[{index:0,label:'Search'}]};},act:async()=>{acts++;throw Object.assign(Error('Page changed'),{code:'TRAVEL_PAGE_CHANGED'});}},generate:async()=>JSON.stringify(++models===1?{type:'click',index:0}:models===2?{type:'done',note:'Fresh page inspected'}:{summary:'Observed fresh page',candidates:[]}),save:async v=>v});
  assert.equal(reads,2);assert.equal(acts,1);assert.equal(result.channels[0].status,'partial');
+});
+
+test('invalid model JSON or control indexes get one repair before any browser action',async()=>{
+ for(const invalid of ['{"type":"click","index":0}\n{"type":"click","index":1}',JSON.stringify({type:'click',index:999})]){
+  let calls=0,acted=0;
+  const result=await researchTrip({trip,channel,browser:{open:async()=>1,read:async()=>({url:channel.url,text:'Rooms observed',controls:[{index:0,label:'Search'}]}),act:async()=>{acted++;}},generate:async messages=>{calls++;if(calls===1)return invalid;if(calls===2){assert.match(messages.at(-1).content,/previous response was invalid/);return JSON.stringify({type:'done'});}return JSON.stringify({summary:'Observed rooms',candidates:[]});},save:async v=>v});
+  assert.equal(acted,0);assert.equal(calls,3);assert.equal(result.channels[0].status,'partial');
+ }
+ let calls=0;
+ const result=await researchTrip({trip,channel,browser:{open:async()=>1,read:async()=>({url:channel.url,text:'Rooms',controls:[]})},generate:async()=>{calls++;return 'not JSON';},save:async v=>v});
+ assert.equal(calls,2);assert.equal(result.channels[0].status,'blocked');assert.match(result.channels[0].note,/invalid response twice/);
 });
