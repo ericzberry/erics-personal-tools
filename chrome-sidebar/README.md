@@ -4384,3 +4384,10 @@ Malformed JSON and nonexistent control indexes get one correction attempt
 before a source is marked blocked. No browser action runs from the invalid
 response. Network failures are not retried. Covered by focused regression tests;
 publication joins the next combined release.
+
+## Travel field state (0.6.294)
+
+Travel research focuses destination/date/guest fields before filling and reads
+their labeled current values on the next step. Unrelated text and credential
+values remain excluded. A changed field invalidates a stale action. Regression
+tests cover focus, changed values, and private-field exclusion.

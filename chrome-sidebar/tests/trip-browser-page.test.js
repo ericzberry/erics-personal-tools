@@ -16,3 +16,11 @@ test('open search dialogs remain readable after large hotel result lists',()=>{
   page(`<html><body>${'<button>Hotel details</button>'.repeat(110)}<div role="dialog"><label>Child age<select><option value="7">7</option></select></label><button>Done</button></div></body></html>`);
   const read=tripBrowserPage();assert.equal(read.controls.length,2);assert.equal(read.controls[0].tag,'select');assert.equal(read.controls[1].label,'Done');assert.equal(read.text.includes('Hotel details'),false);
 });
+test('travel field values reflect fills while unrelated and credential values stay concealed',()=>{
+ const window=page('<html><body><input type="text" aria-label="Destination" value="Brookline"><input type="text" aria-label="Check-in date" value="10/16/2026"><input type="text" aria-label="Message" value="private"><input type="text" aria-label="Access token" value="secret"><input type="text" aria-label="Email" value="private"></body></html>');
+ globalThis.HTMLInputElement=window.HTMLInputElement;globalThis.Event=window.Event;
+ let focused=false;document.querySelector('input').focus=()=>{focused=true;};
+ const before=tripBrowserPage();assert.equal(before.controls[0].value,'Brookline');assert.equal(before.controls[1].value,'10/16/2026');assert.equal(before.controls.find(c=>c.label==='Message').value,undefined);assert.ok(!JSON.stringify(before.controls).includes('private'));assert.ok(!JSON.stringify(before.controls).includes('secret'));
+ tripBrowserPage({type:'fill',value:'Newton',control:before.controls[0]});assert.equal(focused,true);assert.equal(tripBrowserPage().controls[0].value,'Newton');
+ assert.throws(()=>tripBrowserPage({type:'fill',value:'Needham',control:before.controls[0]}),/page changed/);
+});

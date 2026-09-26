@@ -1,15 +1,20 @@
-// Runs only in a tab opened by Travel planning. No credentials or input values
-// are read. Actions name one observed control and must still match on execution.
+// Runs only in a tab opened by Travel planning. Only labeled travel-search
+// values are read; credentials never are. Controls must still match on execution.
 export function tripBrowserPage(action=null){
   const visible=e=>!!(e.getClientRects().length)&&getComputedStyle(e).visibility!=='hidden';
-  const forbidden=/password|passcode|verification|one.time|security.code|credit.card|card.number|payment|email|user.?name/i;
+  const forbidden=/password|passcode|verification|one.time|security.code|credit.card|card.number|payment|email|user.?name|secret|token/i;
+  const travelField=/\b(search|destination|where|city|location|arrival|departure|adults?|children|child|ages?|guests?|rooms?|dates?|flights?|from|to|return|promo)\b|starting point|check.?in|check.?out/i;
   // Date/guest/filter dialogs often follow hundreds of result controls in DOM
   // order. The open dialog owns the next interaction, so read it first.
   const dialogs=[...document.querySelectorAll('[role="dialog"],dialog[open]')].filter(visible);
   const dialog=dialogs.find(d=>d.contains(document.activeElement))||dialogs.find(d=>/date|calendar|traveler|guest|room|search/i.test(d.getAttribute('aria-label')||d.innerText||''))||dialogs.at(-1);
   const surface=dialog||document;
   const nodes=[...surface.querySelectorAll('a[href],button,input,select,[role="button"],[role="option"],[role="tab"],[role="combobox"],[role="spinbutton"],summary,td[aria-label],[role="gridcell"][aria-label]')].filter(e=>visible(e)&&!e.disabled).slice(0,160);
-  const describe=(e,index)=>({index,tag:e.tagName.toLowerCase(),role:e.getAttribute('role')||'',type:e.type||'',label:(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||e.innerText||e.placeholder||e.name||'').trim().slice(0,180),href:e.tagName==='A'?e.href:'',disabled:!!e.disabled,readOnly:!!e.readOnly,value:['date','number','search'].includes(e.type)&&!forbidden.test(e.name||e.getAttribute('aria-label')||'')?e.value:undefined,options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})).slice(0,40):undefined});
+  const describe=(e,index)=>{
+    const label=(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||e.innerText||e.placeholder||e.name||'').trim().slice(0,180);
+    const safeValue=['date','number','search','text',''].includes(e.type||'')&&travelField.test(label)&&!forbidden.test(`${e.type} ${label} ${e.name} ${e.autocomplete}`);
+    return {index,tag:e.tagName.toLowerCase(),role:e.getAttribute('role')||'',type:e.type||'',label,href:e.tagName==='A'?e.href:'',disabled:!!e.disabled,readOnly:!!e.readOnly,value:safeValue?e.value:undefined,options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})).slice(0,40):undefined};
+  };
   const controls=nodes.map(describe).filter(c=>!forbidden.test(`${c.type} ${c.label}`));
   const formControls=[...document.querySelectorAll('input')].filter(visible);
   const locked=formControls.some(e=>e.type==='password')||/verify you are human|unusual traffic|complete the captcha/i.test(document.body?.innerText||'');
@@ -22,9 +27,10 @@ export function tripBrowserPage(action=null){
     if(forbidden.test(`${actual.type} ${actual.label}`))throw Error('Sign-in requires browser autofill.');
     const bad=/confirm|pay\b|purchase|reserv|book(?:ing)?\b|buy\b|order|checkout|complete|submit|cancel.*(?:trip|booking)|delete|sign.?out|log.?out|subscribe/i;
     if(action.type==='fill'){
-      if(!['input','select'].includes(actual.tag)||!(/search|destination|where|city|location|check.?in|check.?out|arrival|departure|adult|child|age|guest|room|date|flight|from|to|return|promo/i.test(actual.label)||['search','date','number'].includes(actual.type)))throw Error('This is not a travel search field.');
+      if(!['input','select'].includes(actual.tag)||!(travelField.test(actual.label)||['search','date','number'].includes(actual.type)))throw Error('This is not a travel search field.');
       if(e.readOnly)throw Error('This date field uses a calendar. Open it and choose the observed date.');
       if(typeof action.value!=='string'||action.value.length>500)throw Error('Invalid search value.');
+      e.focus();
       if(actual.tag==='select'){
         if(!actual.options.some(o=>o.value===action.value))throw Error('Choose an observed option.');
         e.value=action.value;
@@ -35,7 +41,7 @@ export function tripBrowserPage(action=null){
       e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));
     }else if(action.type==='click'){
       if(actual.tag==='a')throw Error('Links must be opened by the browser adapter.');
-      if(bad.test(actual.label)||!(actual.role==='option'||/destination|where|hotel|flight|search|find|check availability|show|apply|filter|guest|room|adult|child|date|calendar|next|previous|more|less|details|view|done|close|accept.*cookie|reject|^\d{1,2}$|^(mon|tue|wed|thu|fri|sat|sun)|january|february|march|april|may|june|july|august|september|october|november|december|^[+−-]$/i.test(actual.label)))throw Error('This control is outside travel search.');
+      if(bad.test(actual.label)||!(actual.role==='option'||/directions|driving|depart at|arrive by|leave now|destination|where|hotel|flight|search|find|check availability|show|apply|filter|guest|room|adult|child|date|calendar|next|previous|more|less|details|view|done|close|accept.*cookie|reject|^\d{1,2}$|^(mon|tue|wed|thu|fri|sat|sun)|january|february|march|april|may|june|july|august|september|october|november|december|^[+−-]$/i.test(actual.label)))throw Error('This control is outside travel search.');
       e.click();
     }else throw Error('Unsupported browser action.');
     return {acted:true};
