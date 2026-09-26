@@ -4,7 +4,7 @@ const releaseChecks=new WeakMap();
 import {migrateCredentials} from './credential-migration.js';
 import {cloudRequest, CONNECTION_KEY} from './cloud-storage.js';
 export function isSettingsPage(sender, chromeApi) {
-  return sender?.id === chromeApi.runtime.id && ['settings.html','sidepanel.html','restaurants.html'].some(path=>sender.url === chromeApi.runtime.getURL(path));
+  return sender?.id === chromeApi.runtime.id && ['settings.html','sidepanel.html','restaurants.html','trips.html'].some(path=>sender.url === chromeApi.runtime.getURL(path));
 }
 export async function settingsAction(message, chromeApi, request = cloudRequest) {
   const storage = chromeApi.storage.local;

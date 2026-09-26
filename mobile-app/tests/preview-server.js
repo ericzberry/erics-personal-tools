@@ -7,6 +7,7 @@ import {sendPush, base64url, fromBase64url} from '../../tools-api/src/web-push.j
 import {normalizePushSubscription, reminderDigest} from '../../tools-api/src/push.js';
 const root = new URL('../dist/', import.meta.url);
 import {fixture as tripFixture} from '../../chrome-sidebar/tests/trips-fixture.js';
+let people=[{id:'91111111-1111-4111-8111-111111111111',revision:'first',schemaVersion:1,name:'Younger child',role:'Child',age:7,ageYear:2026,location:'',notes:''}];
 let trips=[{...tripFixture(),id:'81111111-1111-4111-8111-111111111111',revision:'first'}];
 const previewRevision=crypto.randomUUID();
 const port = Number(process.env.PORT || 8791);
@@ -278,6 +279,15 @@ createServer(async (req, res) => {
         catch(error){results.push({ok:false,status:0,error:String(error?.message||error)});}
       }
       res.end(JSON.stringify({results}));return;
+    }
+    if (url.pathname === '/v1/people/snapshot') {res.end(JSON.stringify({records:people}));return;}
+    if (url.pathname.startsWith('/v1/people/')) {
+      const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
+      const previous=people.find(record=>record.id===recordId);
+      if ((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
+      people=people.filter(record=>record.id!==recordId);
+      if(req.method==='PUT'){const record={...previous,...value,id:recordId,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};people.push(record);res.end(JSON.stringify({record}));return;}
+      res.end('{}');return;
     }
     if (url.pathname === '/v1/trips/snapshot') {res.end(JSON.stringify({records:trips}));return;}
     if (url.pathname.startsWith('/v1/trips/')) {

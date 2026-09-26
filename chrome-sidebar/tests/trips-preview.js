@@ -6,7 +6,7 @@ let records=state==='empty'?[]:[{...fixture(),id:'11111111-1111-4111-8111-111111
 if(state==='login'){records[0].channels=[{id:'amex',label:'Amex Travel',status:'login',nextStep:'Unlock Apple Passwords on your Mac, then tell me it’s ready.',resumeURL:'https://www.americanexpress.com/en-us/travel/'}];}
 if(state==='conflict'){records[0].pending=true;records[0].conflict=true;}
 if(state==='stale'){records[0].request='A changed request, with a longer itinerary and a different room.';}
-mountTrips(document.getElementById('preview'),{credentials:{get:async()=>'synthetic-token'},offline:{
+mountTrips(document.getElementById('preview'),{research:async({trip,save,signal,onProgress})=>{onProgress('Checking the booking page…');await new Promise(resolve=>signal.addEventListener('abort',resolve,{once:true}));return save({...trip,summary:'Search stopped; checkpoint preserved.'});},credentials:{get:async()=>'synthetic-token'},offline:{
   async request(token,path,options={}){
     if(state==='failure'&&options.method)throw Error('Synthetic connection failure. Your changes are still here.');
     if(options.method==='PUT')records=[{...options.value,revision:'r2'},...records.filter(r=>r.id!==options.value.id)];

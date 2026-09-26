@@ -4336,7 +4336,7 @@ rewritten UI-32 check — each shown failing against 0.6.285's sources. Reviewed
 with synthetic data at 380px and 280px under a pointer, at desktop width on
 the full-tab pages, and on the phone at 390px and 320px.
 
-## Travel planning (0.6.287 / mobile 0.1.236)
+## Travel planning (0.6.288 / mobile 0.1.237)
 
 Saved hotel and flight requests now carry comparisons with dated sources, exact room/fare evidence, full-trip totals, terms and separate conditional benefits. Research is scoped to the request and stale offers need a recheck. Provider sign-in checkpoints preserve where an assisted browser search resumes. The same records and pending edits work offline on mobile.
 

@@ -1,14 +1,24 @@
 # Travel planning
 
-The saved trip is the workspace for an assisted browser search. The owner says
-what they want in the conversation; the agent researches it and files dated
-evidence into **Travel planning** in Eric’s Tools. The same comparison is on
-the extension and the phone, including a cold offline reopen after download.
-The app can create and edit requests, copy a request for the conversation,
-refresh saved findings and delete a trip. **Refresh saved research downloads
-saved records; it does not run searches.** This release has no unattended
-browser worker, price monitoring or automatic purchasing. Flight requests and
-fare evidence use the same model; live flight-site execution is not yet tested.
+Travel planning holds browser research in Eric’s Tools. In the installed Chrome
+extension, **Search websites**, **Search Amex** and **Search Chase** execute a
+bounded browser pass in an owned tab. `trip-research.js` reads the request into
+travel criteria, asks the centrally selected `travel.browser` model for observed
+search-control actions, and saves progress before each action. The adapter only
+fills search fields, clicks search controls, or opens observed public links. It
+never enters credentials, books, pays or contacts a hotel. Sign-in and CAPTCHA
+pause prominently; browser autofill and the owner's Mac unlock finish sign-in.
+
+Each pass allows 18 steps and retains at most four short page observations in
+memory for extraction. Only claims with a quote found in the observed source
+can get a supported check. These are structural findings, not verified bookable
+prices. The comparison deliberately keeps totals and availability unverified
+until an exact live offer has been checked. Refresh downloads saved evidence;
+it does not search. A pass is partial, not exhaustive. The current runner needs
+the page/panel to remain open and Chrome site access; it has no background
+monitor. Site-specific controls, iframe booking forms and flight workflows still
+need live adapter testing. Mobile presents and edits the saved research offline;
+search execution requires the desktop Chrome extension.
 
 ## Browser and sign-in
 
@@ -64,7 +74,7 @@ hotel without the owner's instruction to do that specific action.
 3. Turn requirements into `criteria` with stable ids, explicit labels and
    `required:true`; preferences use false. “High-end” is not automatically
    “five-star.” A two-bedroom suite, guaranteed connected rooms and merely
-   adjacent rooms are different. A sofa bed never supplies another bedroom.
+   adjacent rooms are different. A sofa bed or pull-out never supplies a required bed or another bedroom. A listing that confirms only one bed is unverified for the second bedroom; never assume an unstated real bed.
    Geography has its own criterion: map the actual anchor and direction.
    For a drive-time limit record routing source, departure scenario and range;
    straight-line distance does not verify a 20-minute drive, especially at rush hour.
@@ -127,8 +137,7 @@ other private copy on disconnect, only after pending work is resolved.
 `/v1/trips[/snapshot|/:id]` reuses the generic authenticated encrypted D1 store.
 `trips-schema.sql` creates only the new table; apply it to the existing database
 before deploying. No existing records or schema are rewritten. The server
-encrypts research at rest; the phone holds an encrypted offline copy. Records
-remain until explicitly deleted; device disconnect leaves cloud research intact.
+encrypts research at rest; the phone holds an encrypted offline copy. Search records expire 90 days after their last write; reads do not renew them. An indexed hourly cleanup and cleanup before API access delete expired records. Downloaded cloud copies are pruned on local access; queued edits remain recoverable and a stale revision conflicts rather than recreating a deleted search. Research is excluded from new quarterly backups. Existing D1 recovery snapshots follow Cloudflare retention. Family & places is a separate permanent reference store. Device disconnect clears its copy and leaves unexpired cloud research intact.
 Unknown future formats are rejected without clearing pending changes. Private
 API responses never enter the service-worker shell cache.
 

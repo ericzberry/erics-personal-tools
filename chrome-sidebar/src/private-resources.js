@@ -1,3 +1,4 @@
+import {peopleOffline} from './people-offline.js';
 import {tripsOffline} from './trips-offline.js';
 import {subscriptionsOffline} from './subscriptions-offline.js';
 import {remindersOffline} from './reminders-offline.js';
@@ -30,6 +31,7 @@ import {cloudRequest} from './cloud-storage.js';
 // worked out afresh each day, one is downloaded research — so they are cleared
 // with the rest and never hold a disconnect up.
 export const PRIVATE_RESOURCES=Object.freeze({
+  people:peopleOffline,
   trips:tripsOffline,
   subscriptions:subscriptionsOffline,
   reminders:remindersOffline,

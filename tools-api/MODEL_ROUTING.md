@@ -131,3 +131,5 @@ tokens and a $0.10 estimated ceiling. No model IDs live in feature controllers.
 Synthetic evaluations cover missing evidence / dates / currencies, incomplete
 reads, invalid source URLs and absent web search. No paid quality evaluation was
 performed for this release; statement identification remains reviewable.
+
+Family reference context is added centrally by `owner-context.js` when relevant. Year-based ages retain their reference year. `travel.browser` selects the model for bounded visible-page search actions and evidence extraction; it does not use server web search or accept a request model override.

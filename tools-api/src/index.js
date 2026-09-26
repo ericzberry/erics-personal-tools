@@ -1,3 +1,4 @@
+import {people} from './people.js';
 import {travel} from './travel.js';
 import {cards,classifyPurchase,researchCard} from './cards.js';
 import {finance,readFinanceUpdates} from './finance.js';
@@ -12,7 +13,7 @@ import {subscriptions,readSubscriptions,researchSubscriptions} from './subscript
 import {reminders} from './reminders.js';
 import {gifts} from './gifts.js';
 import {sizes} from './sizes.js';
-import {trips} from './trips.js';
+import {trips,sweepTrips} from './trips.js';
 import {replacements} from './replacements.js';
 import {readCapture} from './capture.js';
 import {pushSubscriptions, sendTestPush, deliverDueReminders} from './push.js';
@@ -94,6 +95,7 @@ export default {
       ctx.waitUntil(sweepBackup(env, {log}).then(() => sweepHealthBackup(env, {log})));
       return;
     }
+    ctx.waitUntil(sweepTrips(env));
     ctx.waitUntil(deliverDueReminders(env, {log: message => console.log(message)}));
     ctx.waitUntil(sweepBirthdays(env, {log: message => console.log(message)}));
     // Cheap, and the only chance to say something before a limit is reached
@@ -184,6 +186,7 @@ export default {
       if(path==='/v1/reminders'||path.startsWith('/v1/reminders/'))return await reminders(request,env,readValue,json);
       if(path==='/v1/gifts'||path.startsWith('/v1/gifts/'))return await gifts(request,env,readValue,json);
       if(path==='/v1/sizes'||path.startsWith('/v1/sizes/'))return await sizes(request,env,readValue,json);
+      if(path==='/v1/people'||path.startsWith('/v1/people/'))return await people(request,env,readValue,json);
       if(path==='/v1/trips'||path.startsWith('/v1/trips/'))return await trips(request,env,readValue,json);
       if(path==='/v1/replacements'||path.startsWith('/v1/replacements/'))return await replacements(request,env,readValue,json);
       if(path==='/v1/push/test'){

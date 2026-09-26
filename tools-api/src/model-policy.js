@@ -103,6 +103,7 @@ export const TASK_POLICIES = {
   // runs against, so a misread weekday costs a whole research and
   // availability pass on the wrong day: level 2, which selects a current
   // model that answers without reasoning first, for about a tenth of a cent.
+  'travel.browser':{label:'Travel browser research',level:3,outputTokens:2200,web:false,maxCost:0.15},
   'restaurant.intent':{label:'Restaurant request reading',level:2,outputTokens:600,web:false,maxCost:0.01}
 };
 // Counts the text a request carries, whether a message is a plain string or a

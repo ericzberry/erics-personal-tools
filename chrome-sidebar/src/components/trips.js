@@ -1,5 +1,5 @@
 import {Stack,Section,Heading,Text,Note,Strong,Link,Button,ActionGroup,Disclosure,Form,FormField,Notice,ToolTitle,RowAction,EDIT_GLYPH,DELETE_GLYPH,ResultBlock,money} from './ui.js';
-import {rankCandidates,researchCurrent,offerState,tripKey} from '../trip-data.js';
+import {rankCandidates,researchCurrent,offerState,tripKey,TRIP_RETENTION_MS} from '../trip-data.js';
 const when=value=>value?new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}):'';
 export function TripsView(){
   return Stack([
@@ -29,7 +29,7 @@ const checkRows=(trip,checks)=>trip.criteria.map(c=>{
   return Stack([Strong(c.label),Text(`${checkLabel[check?.status||'unknown']}${c.required?'':' · preference'}${check?.detail?` — ${check.detail}`:''}`),
     check?.source?Link(`Source · ${when(check.checkedAt)}`,check.source):null],{className:'trip-check'});
 });
-export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,busy=false,now=Date.now()}){
+export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch,onStop,researching=false,busy=false,now=Date.now()}){
   const actions=[RowAction(EDIT_GLYPH,`Edit ${trip.title}`,onEdit,{disabled:busy}),RowAction(DELETE_GLYPH,`Delete ${trip.title}`,()=>{confirm.hidden=false;},{disabled:busy,danger:true})];
   const yes=Button('Delete trip from all devices',{variant:'danger',disabled:busy});yes.addEventListener('click',onDelete);
   const no=Button('Keep trip',{variant:'secondary'});no.addEventListener('click',()=>{confirm.hidden=true;});
@@ -41,13 +41,14 @@ export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,busy=false
     Stack([Heading(trip.title,2),ActionGroup(actions,{compact:true})],{className:'trip-heading group-line'}),confirm,
     auth.length?Section([Heading('Sign-in needs your help',3),...auth.map(c=>Stack([Notice(`${c.label}: ${c.nextStep||c.note||'Complete sign-in, then resume research.'}`,{tone:'alert'}),c.resumeURL?Link('Open sign-in',c.resumeURL):null],{className:'trip-check'}))],{className:'trip-auth'}):null,
     Text(trip.request),
+    trip.updatedAt?Note(`Research expires ${new Date(Date.parse(trip.updatedAt)+TRIP_RETENTION_MS).toLocaleDateString()}`):null,
     trip.start?Note(`${trip.start}${trip.end?` → ${trip.end}`:''}${trip.party?` · ${trip.party.adults} adults${trip.party.childrenAges.length?`, children aged ${trip.party.childrenAges.join(', ')}`:''} · ${trip.party.rooms} room(s)`:''}`):null,
     trip.pending?Notice(trip.conflict?'This trip changed on another device. Choose which version to keep.':'Waiting to sync.',{tone:'alert'}):null,
     trip.conflict?ActionGroup(['local','cloud'].map(choice=>{const b=Button(choice==='local'?'Keep my change':'Use cloud version',{variant:'secondary',disabled:busy});b.addEventListener('click',()=>onResolve(choice));return b;})):null,
     trip.candidates.length&&!current?Note('Previous search — recheck'):null,
     current&&trip.summary?Text(trip.summary):null,
     trip.questions.length?Section([Heading('Needed to finish',3),...trip.questions.map(q=>Text(q))]):null,
-    ActionGroup([copy]),
+    ActionGroup([...(onResearch?['web','amex','chase'].map((channel,i)=>{const b=Button(['Search websites','Search Amex','Search Chase'][i],{variant:i?'secondary':'primary',size:'compact',disabled:busy||researching});b.addEventListener('click',()=>onResearch(channel));return b;}):[]),...(researching?[(()=>{const b=Button('Stop search',{variant:'secondary',size:'compact'});b.addEventListener('click',onStop);return b;})()]:[]),copy]),
   ],{className:'trip-summary'});
   const candidates=rankCandidates(trip,now);
   const options=candidates.map(candidate=>ResultBlock({title:candidate.name,status:fitLabel[candidate.fit],detail:candidate.description,

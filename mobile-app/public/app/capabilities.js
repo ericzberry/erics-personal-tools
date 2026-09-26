@@ -1,3 +1,4 @@
+import {mountPeople} from './shared/people.js';
 import {mountTrips} from './shared/trips.js';
 import {mountAttention} from './shared/attention.js';
 import {mountSubscriptions} from './shared/subscriptions.js';
@@ -47,7 +48,7 @@ const credentials={
   async beforeDisconnect(){const token=await this.get();if(token)await assertNothingPending(deviceCopies,token);},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();healthTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();tripTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();healthTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();tripTool.clear();peopleTool.clear();taxTool.clear();await mobileCredentials.remove();}
 };
 const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
 // Rewards is the one wallet: the cards, the programs, what to pay with and
@@ -63,6 +64,7 @@ const healthTool=mountHealth(document.getElementById('capability-health'),{crede
 const reminderTool=mountReminders(document.getElementById('capability-reminders'),{credentials,offline:reminderStore,onSettings:openSettings});
 const giftTool=mountGifts(document.getElementById('capability-gifts'),{credentials,offline:giftStore,onSettings:openSettings});
 const sizeTool=mountSizes(document.getElementById('capability-sizes'),{credentials,offline:sizeStore,onSettings:openSettings});
+const peopleTool=mountPeople(document.getElementById('capability-people'),{credentials,offline:stores.people,onSettings:openSettings});
 const tripTool=mountTrips(document.getElementById('capability-trips'),{credentials,offline:stores.trips,onSettings:openSettings});
 const replacementTool=mountReplacements(document.getElementById('capability-replacements'),{credentials,offline:replacementStore,onSettings:openSettings});
 // Today's weather leads the home screen, worked out once a day from where the
@@ -90,7 +92,7 @@ const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai'
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
-async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();healthTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();tripTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
+async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();healthTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();tripTool.clear();peopleTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
 mountTravel(document.getElementById('capability-travel'),{credentials,offline:travelStore,showNumbers:true,request:travelStore.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
 const subscriptionTool=mountSubscriptions(document.getElementById('capability-subscriptions'),{credentials,offline:subscriptionStore,remote:cloudRequest,onSettings:openSettings});
 const attentionTool=mountAttention(document.getElementById('capability-attention'),{credentials,stores:{reminders:reminderStore,rewards:rewardStore,travel:travelStore,personal:personalStore,finance:financeStore,subscriptions:subscriptionStore},onSettings:openSettings,onOpen:(id)=>navigation.show(id,{focus:true})});
@@ -118,6 +120,7 @@ function showScreen(screen){
   // credit read in Rewards, is worth reading again.
   if(!homeRoot.hidden)home?.refresh();
   for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=selectedTool!==capability.id;
+  if(selectedTool==='people')peopleTool.refresh();
   if(selectedTool==='trips')tripTool.refresh();
   if(selectedTool==='attention')attentionTool.refresh();
   if(selectedTool==='subscriptions')subscriptionTool.refresh();

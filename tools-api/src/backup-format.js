@@ -27,7 +27,7 @@ const UPGRADES = {};
 // Never written into a backup: SQLite's and Cloudflare's own bookkeeping, and
 // the fifteen-minute Drive tickets, which are expired before anyone could need
 // them back.
-export const SKIPPED_TABLES = ['drive_tickets'];
+export const SKIPPED_TABLES = ['drive_tickets','trip_records'];
 export const skippedTable = name => /^(sqlite_|_cf_|d1_)/.test(String(name)) || SKIPPED_TABLES.includes(name);
 
 // A cell is null, a number or a string, which JSON carries as-is. Two things it

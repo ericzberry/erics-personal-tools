@@ -1,3 +1,4 @@
+import {withOwnerContext} from './owner-context.js';
 import {chooseTaskModel,taskPolicy} from './model-policy.js';
 import {providerFor} from '../../chrome-sidebar/src/ai-providers.js';
 const fail=(status,message)=>{throw {status,message};};
@@ -116,6 +117,7 @@ async function boundedJSON(response) {
 }
 export async function providerJSON(connection,config,path,body,fetcher,timeoutMs=25000) {
   if (!connection.apiKey) fail(400,'Save an API key for this connection first.');
+  body=withOwnerContext(connection,body,config.format);
   const headers={'Content-Type':'application/json',...(config.format==='anthropic'?{'x-api-key':connection.apiKey,'anthropic-version':'2023-06-01'}:{Authorization:`Bearer ${connection.apiKey}`})};
   try {
     const response=await fetcher(config.baseUrl+path,{method:body?'POST':'GET',headers,body:body?JSON.stringify(body):undefined,
@@ -182,6 +184,9 @@ export async function generate(connection,input,fetcher=fetch) {
 // server when it was loaded. It never comes from the request: which model runs
 // an action is a setting, not something a caller can ask for.
 export async function routeTask(connection,task,input,fetcher=fetch) {
+  const original={messages:input.messages||[{role:'user',content:JSON.stringify(input)}]};
+  const measured=withOwnerContext(connection,original,'chat');
+  if(measured!==original)input={...input,messages:measured.messages};
   taskPolicy(task,input);
   const availability=await listModels(connection,fetcher);
   return chooseTaskModel({provider:connection.provider,available:availability.models,task,input,chosen:connection.taskModels?.[task]||''});

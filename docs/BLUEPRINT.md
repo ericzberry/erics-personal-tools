@@ -35,6 +35,7 @@ and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 | --- | --- | --- |
 | `sidepanel.html` | `src/app.js` | The side panel shell; mounts views, then navigation and feature controllers |
 | `settings.html` | `src/settings-page.js` | Connections, credentials, AI settings |
+| `people.html` | `src/people-page.js` | Shared family, year-based ages and named places |
 | `trips.html` | `src/trips-page.js` | Travel planning: saved hotel/flight requests, evidence and provider sign-in checkpoints |
 | `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
 | `rewards.html` | `src/rewards.js` | Rewards & benefits: For you, Wallet, Pay and Points in one tool; `?view=pay` opens on a view |
@@ -144,6 +145,8 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   request from the side panel, so `app.js` gives the panel's vault
   `unlockInWindow()`, which runs the check in `unlock.html` and lets the panel
   adopt the session it stores.
+- **Family context** — `people-data.js`, `people-offline.js`, `people.js` and `components/people.js` are shared with mobile. `people-page.js` mounts the extension. See [FAMILY_CONTEXT.md](FAMILY_CONTEXT.md).
+- **Travel browser execution** — `trip-research.js` orchestrates bounded, persisted research; extension-only `trip-browser.js` and `trip-browser-page.js` operate owned Chrome tabs. `travel.browser` is the registered AI action. Mobile reads the resulting evidence offline.
 - **Travel planning** — `trip-data.js` (bounded hotel/flight research, exact search context, evidence age and eligibility), `trips-offline.js` (encrypted offline records and conflict resolution), `trips.js` and `components/trips.{js,css}` (shared controller and comparison). All five ship to mobile via its build list and service-worker shell. See [TRAVEL_PLANNING.md](TRAVEL_PLANNING.md).
 - **Per-capability data + offline wrappers** — `travel-data.js`/`travel-offline.js`,
   `card-data.js`/`cards-offline.js` (the reward rates and the comparison, plus
@@ -381,7 +384,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   in `src/restaurants.js`; `restaurants` takes a legacy `{search}` or a v2 `{intent}`; the v2 path runs
   `src/restaurants.js` discovery and then `src/source-fetch.js`, which reads each
   cited source and marks claims supported only where the page says so),
-  `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/wallet[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`, `/v1/trips[/…]`,
+  `/v1/rewards`, `/v1/rewards/programs[/…]`, `/v1/wallet[/…]`, `/v1/cards[/…]`, `/v1/travel[/…]`, `/v1/trips[/…]`, `/v1/people[/…]`,
   `/v1/finance[/…]`, `/v1/personal[/…]`, `/v1/health[/…]`, `/v1/reminders[/…]`, `/v1/gifts[/…]`, `/v1/sizes[/…]`, `/v1/replacements[/…]`,
   `/v1/push/…`, `/v1/drive/…`, `/v1/calendar/birthdays[/scan]`, `/v1/voice[/scan]`,
   `/v1/storage`, `/v1/backup[/files|/run|/restore]`, `/v1/weather`. `/v1/push/key` is public like the release route,
@@ -392,6 +395,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   catalogue is one document.
   `/v1/drive/callback` is the one route outside the bearer check — Google's
   redirect carries a single-use `state` instead (see [TAXES.md](TAXES.md)).
+- `src/people.js` — encrypted family reference records (`people_records`); `src/owner-context.js` enriches relevant AI requests through the central provider adapter.
 - `src/trips.js` — Travel planning records (`trip_records`), using the generic encrypted store.
 - `src/travel.js` — the generic encrypted record store; `src/cards.js`,
   `src/personal.js`, `src/health.js`, `src/reminders.js`, `src/gifts.js`, `src/sizes.js` and
@@ -451,7 +455,7 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
   task → model policy and priced catalogue, where `vision` marks a model that may
   be sent an image — never copy model IDs into features).
 - Schema: `schema.sql` (`ai_connections`, `rewards_wallet`), `travel-schema.sql`
-  (`travel_records`), `trips-schema.sql` (`trip_records`, additive upgrade), `cards-schema.sql` (`card_records`), `finance-schema.sql`
+  (`travel_records`), `trips-schema.sql` (`trip_records`, additive upgrade and expiry index), `people-schema.sql` (`people_records`, additive upgrade), `cards-schema.sql` (`card_records`), `finance-schema.sql`
   (`finance_portfolios`, `finance_marks`, `finance_holdings`, `finance_capital`,
   `finance_properties`, `finance_valuations`, `finance_flows`, `finance_imports`), `personal-schema.sql` (`personal_records`), `health-schema.sql` (`health_records`),
   `reminders-schema.sql` (`reminder_records`), `gifts-schema.sql` (`gift_records`), `sizes-schema.sql` (`size_records`),

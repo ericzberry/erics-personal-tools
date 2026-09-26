@@ -221,3 +221,5 @@ All behind the bearer token.
 | `GET /v1/backup/files` | The backups in the folder, newest first |
 | `POST /v1/backup/run` | Takes one now |
 | `POST /v1/backup/restore` | `{fileId, tables, confirm}` — a preview unless `confirm` is exactly `true`. Reads only files in the backup folder |
+
+Temporary `trip_records` research is excluded from new backups because it expires after 90 days. Family reference records remain included.

@@ -20,6 +20,7 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | API, authentication, storage, or deployment | [tools-api/README.md](tools-api/README.md), the affected schema files, and the package scripts |
 | Cloudflare runtime, D1 lifecycle, or Worker release | [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md) |
 | AI calls or provider integrations | [model routing](tools-api/MODEL_ROUTING.md), [providers](tools-api/PROVIDERS.md) |
+| Family defaults, year-based ages, or named places | [docs/FAMILY_CONTEXT.md](docs/FAMILY_CONTEXT.md) |
 | Reminders and dates | [docs/REMINDERS.md](docs/REMINDERS.md) |
 | The home screen's weather and what to wear | [docs/WEATHER.md](docs/WEATHER.md) |
 | Push notifications, the cron, or VAPID keys | [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) |

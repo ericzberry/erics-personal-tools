@@ -65,3 +65,10 @@ test('sign-in checkpoints survive saves without being mistaken for search result
   assert.equal(normalizeTrip({...saved,title:'Renamed'}).channels[0].nextStep,t.channels[0].nextStep);
   assert.throws(()=>normalizeTrip({...t,end:t.start}));
 });
+test('search retention removes downloaded expired data but preserves queued edits',async()=>{
+  const {offlineResource}=await import('../src/offline-resource.js');
+  const {tripExpired}=await import('../src/trip-data.js');
+  let state={cloud:[{id:'old',updatedAt:'2020-01-01T00:00:00.000Z'}],pending:{pending:{value:{id:'pending',title:'Unsynced'},localRevision:'local:x',method:'PUT'}},syncedAt:'2020-01-01T00:00:00.000Z'};
+  const resource=offlineResource({resource:'trips',path:'/v1/trips',store:{read:async()=>structuredClone(state),write:async(r,t,v)=>{state=structuredClone(v);}},remote:()=>assert.fail('Offline'),normalize:v=>v,metadata:v=>v,online:()=>false,expired:tripExpired,locks:null});
+  const result=await resource.request('token','/v1/trips');assert.equal(state.cloud.length,0);assert.equal(result.records.length,1);assert.equal(result.records[0].pending,true);
+});

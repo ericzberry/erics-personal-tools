@@ -100,3 +100,6 @@ export function rankCandidates(trip,now=Date.now()){
   return trip.candidates.map(c=>({...c,fit:researchCurrent(trip)?checksFit(trip.criteria,c.checks,now):'unknown'}))
     .sort((a,b)=>order[a.fit]-order[b.fit]||a.name.localeCompare(b.name));
 }
+
+export const TRIP_RETENTION_MS=90*86400000;
+export const tripExpired=(record,now=Date.now())=>!!record.updatedAt&&Number.isFinite(Date.parse(record.updatedAt))&&Date.parse(record.updatedAt)+TRIP_RETENTION_MS<=now;

@@ -43,3 +43,5 @@ The playground uses the selected saved connection. Save/cancel pending edits bef
 ## Verification
 
 Adapter fixtures cover every registered provider, all three wire formats, error handling, redaction, limits and model listing. Route tests verify that credentials are decrypted internally and caller-supplied keys/URLs are ignored. Page tests cover fetching models, testing, running, dirty-state protection and text-safe output. No provider credentials were saved when this integration was built, so successful provider inference requires adding a key and clicking Test connection. Live Worker routing is checked separately without provider credentials.
+
+Family reference context is added centrally by `owner-context.js` when relevant. Year-based ages retain their reference year. `travel.browser` selects the model for bounded visible-page search actions and evidence extraction; it does not use server web search or accept a request model override.

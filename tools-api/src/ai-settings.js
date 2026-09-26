@@ -61,10 +61,16 @@ export async function taskModels(env) {
     return Object.fromEntries(results.map(row=>[row.task,row.model]));
   } catch { return {}; }
 }
+async function savedPeople(env){
+  try{
+    const {results}=await env.DB.prepare('SELECT id, value FROM people_records ORDER BY updated_at DESC LIMIT 40').all();
+    return await Promise.all(results.map(row=>decryptSettings(row.value,`people:${row.id}`,env)));
+  }catch(error){if(/no such table.*people_records/i.test(error.message||String(error)))return [];throw error;}
+}
 export async function savedConnection(id,env) {
   const row=await env.DB.prepare('SELECT value FROM ai_connections WHERE id = ?').bind(id).first();
   if(!row)fail(404,'Connection not found.');
-  return {...await decryptSettings(row.value,id,env),taskModels:await taskModels(env)};
+  return {...await decryptSettings(row.value,id,env),taskModels:await taskModels(env),people:await savedPeople(env)};
 }
 // Callers holding the plaintext pass it in; a value this request just
 // encrypted must not be decrypted again to describe it.

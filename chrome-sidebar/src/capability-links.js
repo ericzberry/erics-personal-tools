@@ -88,6 +88,7 @@ const panelTool=(id,load)=>{
   document.getElementById(`navigate-${id}`)?.addEventListener('click',open);
   return open;
 };
+export const openPeopleTool=panelTool('people',(root,options)=>import('./people-page.js').then(({mountExtensionPeople})=>mountExtensionPeople(root,options)));
 export const openTripsTool=panelTool('trips',(root,options)=>import('./trips-page.js').then(({mountExtensionTrips})=>mountExtensionTrips(root,options)));
 export const openGiftsTool=panelTool('gifts',(root,options)=>import('./gifts-page.js').then(({mountExtensionGifts})=>mountExtensionGifts(root,options)));
 export const openSizesTool=panelTool('sizes',(root,options)=>import('./sizes-page.js').then(({mountExtensionSizes})=>mountExtensionSizes(root,options)));
@@ -98,7 +99,7 @@ export const openAdvisorTool=panelTool('advisor',(root,options)=>import('./advis
 export const openPersonalTool=panelTool('personal',(root,options)=>import('./personal-page.js').then(({mountExtensionPersonal})=>mountExtensionPersonal(root,options)));
 export const openHealthTool=panelTool('health',(root,options)=>import('./health-page.js').then(({mountExtensionHealth})=>mountExtensionHealth(root,options)));
 
-const PANEL_TOOLS={trips:openTripsTool,attention:openAttentionTool,subscriptions:openSubscriptionsTool,travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,
+const PANEL_TOOLS={people:openPeopleTool,trips:openTripsTool,attention:openAttentionTool,subscriptions:openSubscriptionsTool,travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,
   gifts:openGiftsTool,sizes:openSizesTool,replacements:openReplacementsTool,reminders:openRemindersTool,cards:openCardsTool,advisor:openAdvisorTool,personal:openPersonalTool,health:openHealthTool};
 export const openPanelTool=id=>PANEL_TOOLS[id]?.()??null;
 

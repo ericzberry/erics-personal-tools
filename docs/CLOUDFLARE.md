@@ -37,7 +37,7 @@ Preserve the existing origin restrictions, mobile security headers, request vali
 
 ## D1 data and compatibility
 
-D1 stores durable application data here, including encrypted settings and wallets, plus public release metadata. It is not a temporary webhook inbox. Do not apply pending-only retention to saved records or delete cloud data when a device disconnects.
+D1 stores durable application data here, including encrypted settings and wallets, plus public release metadata. Temporary travel research is a separate, indexed table with a 90-day inactivity retention policy; permanent reference records are unaffected. Do not apply pending-only retention to saved records or delete cloud data when a device disconnects.
 
 Protected values inside the rewards wallet (today, card numbers) are a distinct
 category: the device seals them with a key derived from the user's passkey

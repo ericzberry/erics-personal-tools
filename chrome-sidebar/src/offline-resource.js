@@ -1,5 +1,5 @@
 // Shared offline-first data adapter. All state changes are serialized across windows.
-export function offlineResource({resource,path,store,remote,normalize,metadata,online=()=>globalThis.navigator?.onLine!==false,locks=globalThis.navigator?.locks,now=()=>new Date().toISOString()}) {
+export function offlineResource({resource,path,store,remote,normalize,metadata,online=()=>globalThis.navigator?.onLine!==false,locks=globalThis.navigator?.locks,now=()=>new Date().toISOString(),expired=()=>false}) {
   let chain=Promise.resolve();
   const exclusive=action=>{
     const execute=()=>locks?locks.request(`erics-data:${resource}`,action):action();
@@ -63,7 +63,13 @@ export function offlineResource({resource,path,store,remote,normalize,metadata,o
     await store.write(resource,token,state);
     return state;
   }
-  async function load(token){return await store.read(resource,token)||empty();}
+  async function load(token){
+    const state=await store.read(resource,token)||empty();
+    const cloud=state.cloud.filter(record=>!expired(record));
+    // Retention never silently discards queued edits; stale bases still conflict.
+    if(cloud.length!==state.cloud.length){state.cloud=cloud;await store.write(resource,token,state);}
+    return state;
+  }
   const request=(token,url,options={})=>exclusive(async()=>{
     if(!token)throw Error('Connect with your private access token first.');
     let state=await load(token);
