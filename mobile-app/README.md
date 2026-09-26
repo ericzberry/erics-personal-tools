@@ -93,3 +93,7 @@ with an owner password opens, text drawn inside form XObjects and subset fonts
 comes out as rows, and a file that did not read says so as an error rather than
 in the colour of a success. No tool asks which AI connection to use — including
 Restaurants, whose picker and its Reload are gone.
+
+## Travel planning
+
+See [Travel planning](../docs/TRAVEL_PLANNING.md) for saved requests, comparison evidence, provider checkpoints, shared offline access and the authenticated `/v1/trips` store. Apply `tools-api/trips-schema.sql` before deploying this capability.

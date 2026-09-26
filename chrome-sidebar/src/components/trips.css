@@ -1,0 +1,13 @@
+@import url('./travel.css');
+@import url('./workspace.css');
+.trip-workspace{max-width:1040px;margin:0 auto}
+.trip-workspace p{margin:0}
+.trip-comparison,.trip-summary{display:grid;gap:12px}
+.trip-heading{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.trip-heading h2,.trip-heading h3{margin:0}
+.trip-check,.trip-offer{display:grid;gap:4px;padding:8px 0;border-bottom:1px solid var(--line)}
+.trip-check:last-child,.trip-offer:last-child{border-bottom:0}
+.trip-workspace .result-block{padding:12px 0;border:0;border-top:1px solid var(--line);border-radius:0}
+.trip-workspace .result-block>p{margin:4px 0}
+.trip-workspace a{overflow-wrap:anywhere}
+.trip-workspace .notice:empty{display:none}

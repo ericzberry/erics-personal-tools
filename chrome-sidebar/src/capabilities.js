@@ -9,6 +9,7 @@ export const MISC_SECTION='Misc';
 const SECTION_ICONS=new Map([[MISC_SECTION,'M6 12h.01 M12 12h.01 M18 12h.01']]);
 export const CAPABILITIES = [
   {id:'travel',label:'Travel wallet',href:'travel.html',icon:'M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z M9 8V5h6v3'},
+  {id:'trips',label:'Travel planning',href:'trips.html',icon:'M3 6h18v15H3V6Z M7 3v6 M17 3v6 M3 11h18 M7 15h4 M7 18h8'},
   {id:'attention',label:'Needs attention',href:'attention.html',icon:'M9 4h6l6 16H3L9 4Z M12 9v5 M12 17h.01'},
   {id:'subscriptions',label:'Subscriptions & renewals',href:'subscriptions.html',icon:'M4 8a8 8 0 0 1 14-2l2 2 M20 3v5h-5 M20 16a8 8 0 0 1-14 2l-2-2 M4 21v-5h5'},
   {id:'sizes',label:'Clothing sizes',href:'sizes.html',icon:'M8.5 4 3 6.5 4.5 10 7 9v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9l2.5 1L21 6.5 15.5 4 M8.5 4a3.5 3.5 0 0 0 7 0'},
@@ -38,7 +39,7 @@ export function capabilitySections(items=CAPABILITIES){
   return [...groups].filter(([,list])=>list.length).map(([title,list])=>({title,icon:title?SECTION_ICONS.get(title):null,items:list}));
 }
 // The capabilities that mount inside the side panel rather than opening a tab.
-export const PANEL_CAPABILITIES=['travel','rewards','finance','taxes','attention','subscriptions','gifts','sizes','replacements','reminders','personal','health'];
+export const PANEL_CAPABILITIES=['trips','travel','rewards','finance','taxes','attention','subscriptions','gifts','sizes','replacements','reminders','personal','health'];
 // Best card and Purchase advisor are Rewards' Pay view now. Their ids and
 // pages stay as ways in — a bookmark, an older link, the strip — and land on
 // that view rather than on a second calculator.

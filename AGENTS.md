@@ -31,6 +31,7 @@ This file holds repository-wide rules. Supporting documents hold architecture, c
 | Gmail or restaurant workflows | [Gmail](docs/GMAIL.md) or [restaurants](chrome-sidebar/RESTAURANTS.md) |
 | Filing tax documents or Google Drive access | [docs/TAXES.md](docs/TAXES.md) |
 | Backups, restoring data, or the backup file format | [docs/BACKUPS.md](docs/BACKUPS.md) |
+| Hotel/flight research, comparisons and sign-in checkpoints | [travel planning](docs/TRAVEL_PLANNING.md) |
 | Rewards wallet, card benefits, or card comparisons | [rewards](docs/REWARDS.md), [best card](docs/BEST_CARD.md) |
 | What to pay with for one purchase: card, credits and offers together | [purchase advisor](docs/PURCHASE_ADVISOR.md) |
 | Reading a reward program's published offers from its own site | [docs/REWARD_PROGRAMS.md](docs/REWARD_PROGRAMS.md) |

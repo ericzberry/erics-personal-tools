@@ -6,6 +6,8 @@ import worker from '../../tools-api/src/index.js';
 import {sendPush, base64url, fromBase64url} from '../../tools-api/src/web-push.js';
 import {normalizePushSubscription, reminderDigest} from '../../tools-api/src/push.js';
 const root = new URL('../dist/', import.meta.url);
+import {fixture as tripFixture} from '../../chrome-sidebar/tests/trips-fixture.js';
+let trips=[{...tripFixture(),id:'81111111-1111-4111-8111-111111111111',revision:'first'}];
 const previewRevision=crypto.randomUUID();
 const port = Number(process.env.PORT || 8791);
 const token = 'synthetic-private-token-at-least-32-characters';
@@ -276,6 +278,15 @@ createServer(async (req, res) => {
         catch(error){results.push({ok:false,status:0,error:String(error?.message||error)});}
       }
       res.end(JSON.stringify({results}));return;
+    }
+    if (url.pathname === '/v1/trips/snapshot') {res.end(JSON.stringify({records:trips}));return;}
+    if (url.pathname.startsWith('/v1/trips/')) {
+      const recordId=url.pathname.split('/').at(-1);let text='';for await(const data of req)text+=data;const value=JSON.parse(text||'{}');
+      const previous=trips.find(record=>record.id===recordId);
+      if ((previous?.revision??null)!==(value.revision??null)){res.statusCode=409;res.end('{}');return;}
+      trips=trips.filter(record=>record.id!==recordId);
+      if(req.method==='PUT'){const record={...previous,...value,id:recordId,revision:crypto.randomUUID(),updatedAt:new Date().toISOString()};trips.push(record);res.end(JSON.stringify({record}));return;}
+      res.end('{}');return;
     }
     if (url.pathname === '/v1/travel/snapshot') {res.end(JSON.stringify({records}));return;}
     if (url.pathname.startsWith('/v1/travel/')) {

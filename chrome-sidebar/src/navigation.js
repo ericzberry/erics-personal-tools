@@ -9,7 +9,7 @@ export function onNavigate(listener){navigated.add(listener);return()=>navigated
 const $=id=>document.getElementById(id);
 function render(){
   const active=selection===AUTO_CAPABILITY.id?currentTool:selection;
-  for(const key of ['football','finance','gmail','home','rewards','taxes','travel','attention','subscriptions','gifts','sizes','replacements','reminders','personal','health'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
+  for(const key of ['football','finance','gmail','home','rewards','taxes','travel','trips','attention','subscriptions','gifts','sizes','replacements','reminders','personal','health'])$(`${key}-tool`).hidden=settingsOpen||key!==active;
   $('settings-tool').hidden=!settingsOpen;
   $('current-function').textContent=settingsOpen?'Settings':selection===AUTO_CAPABILITY.id?AUTO_CAPABILITY.label:destinations.find(item=>item.id===selection)?.label;
   $('open-settings').setAttribute('aria-expanded',String(settingsOpen));

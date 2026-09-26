@@ -164,3 +164,7 @@ before deploying `/v1/subscriptions` and the `subscription-intake` /
 `subscription-research` AI operations. Records use the generic encrypted store
 with revision conflicts; statement intake accepts the same bounded image request
 size as finance intake. See [attention and subscriptions](../docs/ATTENTION.md).
+
+## Travel planning
+
+See [Travel planning](../docs/TRAVEL_PLANNING.md) for saved requests, comparison evidence, provider checkpoints, shared offline access and the authenticated `/v1/trips` store. Apply `tools-api/trips-schema.sql` before deploying this capability.
