@@ -11,7 +11,15 @@ export function travelBrowser(api){
     async release(id){if(owned.has(id))retained=id;},
     async read(id,signal){if(!owned.has(id))throw Error('Use a research tab opened by this search.');await ready(id,signal);guard((await api.tabs.get(id)).url,{stripSecrets:true});const result=await api.scripting.executeScript({target:{tabId:id},func:tripBrowserPage});const page=result[0]?.result;if(page){page.url=guard(page.url,{stripSecrets:true});page.controls=page.controls.map(c=>c.href&&!travelResearchURL(c.href)?{...c,href:''}:c);}return page;},
     async act(id,page,step,signal){
-      signal?.throwIfAborted();if(!owned.has(id)||guard((await api.tabs.get(id)).url,{stripSecrets:true})!==page.url)throw Error('The research tab moved. Resume the search.');
+      signal?.throwIfAborted();if(!owned.has(id))throw Error('Use a research tab opened by this search.');
+      const currentURL=guard((await api.tabs.get(id)).url,{stripSecrets:true});
+      if(currentURL!==page.url){
+        const error=Error('The research tab moved. Resume the search.');
+        // Dynamic search pages update their query/hash while the model reads.
+        // Discard the stale action and observe again; never click stale controls.
+        if(new URL(currentURL).origin===new URL(page.url).origin)error.code='TRAVEL_PAGE_CHANGED';
+        throw error;
+      }
       if(step.type==='wait'){await wait(1500);return;}
       if(step.type==='scroll'){await api.scripting.executeScript({target:{tabId:id},func:tripBrowserPage,args:[step]});return;}
       const control=page.controls.find(c=>c.index===step.index);if(!control)throw Error('The model named a control not on the page.');

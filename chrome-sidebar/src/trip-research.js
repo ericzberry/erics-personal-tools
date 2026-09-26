@@ -46,7 +46,9 @@ export async function researchTrip({trip,channel,browser,generate,save,signal,on
       signal?.throwIfAborted();
       if(result.type==='done'){finished=true;finishNote=String(result.note||'').slice(0,250);break;}
       if(actions.slice(-3).length===3&&actions.slice(-3).every(a=>JSON.stringify(a)===JSON.stringify(result)))throw Error('The search control did not respond after three attempts. Continue from the saved page.');
-      tab=await browser.act(tab,page,result,signal)||tab;actions.push(result);if(actions.length>8)actions.shift();
+      try{tab=await browser.act(tab,page,result,signal)||tab;}
+      catch(error){if(error.code==='TRAVEL_PAGE_CHANGED')continue;throw error;}
+      actions.push(result);if(actions.length>8)actions.shift();
     }
     onProgress('Saving observed evidence…');
     const result=parse(await generate([

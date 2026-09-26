@@ -78,3 +78,14 @@ test('provider result tabs replace only the tab opened by this research',async()
  const next=await browser.act(first,{url:'https://example.com/search',controls:[control]},{type:'click',index:0});
  assert.equal(next,2);assert.deepEqual(removed,[1]);await browser.release(next);assert.equal(await browser.open('https://example.com/another'),2);assert.equal(created,1);
 });
+
+test('a same-site URL change discards stale controls and reobserves before acting',async()=>{
+ const {travelBrowser}=await import('../src/trip-browser.js');let injected=0;
+ const api={tabs:{create:async()=>({id:1}),get:async()=>({url:'https://example.com/rooms?loaded=1',status:'complete'})},scripting:{executeScript:async()=>{injected++;}}};
+ const browser=travelBrowser(api);await browser.open(channel.url);
+ await assert.rejects(browser.act(1,{url:channel.url,controls:[{index:0}]},{type:'click',index:0}),e=>e.code==='TRAVEL_PAGE_CHANGED');
+ assert.equal(injected,0);
+ let reads=0,models=0,acts=0;
+ const result=await researchTrip({trip,channel,browser:{open:async()=>1,read:async()=>{reads++;return {url:channel.url,text:'Observed rooms',controls:[]};},act:async()=>{acts++;throw Object.assign(Error('Page changed'),{code:'TRAVEL_PAGE_CHANGED'});}},generate:async()=>JSON.stringify(++models===1?{type:'click',index:0}:models===2?{type:'done',note:'Fresh page inspected'}:{summary:'Observed fresh page',candidates:[]}),save:async v=>v});
+ assert.equal(reads,2);assert.equal(acts,1);assert.equal(result.channels[0].status,'partial');
+});

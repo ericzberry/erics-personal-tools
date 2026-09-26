@@ -4368,3 +4368,12 @@ Search all sources opens a dedicated results page, runs the supported providers
 sequentially and saves source checkpoints. Exact observed offers carry quoted
 product, scope, price and terms evidence; incomplete offers remain unverified.
 See [Travel planning](../docs/TRAVEL_PLANNING.md) for limits and sign-in handling.
+
+## Travel results-page follow-up (0.6.292)
+
+Saved-trip query parameters no longer prevent the results page from accessing
+its configured AI connection. Dynamic same-site search URL changes discard the
+stale action and read the page again, within the existing step limit. Foreign
+pages and other extensions remain rejected. These fixes were found by running
+the live all-source flow. Publication is included in the subsequent combined
+release after the concurrent navigation work completes.

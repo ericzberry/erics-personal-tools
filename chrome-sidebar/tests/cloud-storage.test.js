@@ -15,6 +15,12 @@ test('only installed sidebar and settings pages can access the bridge',()=>{
  let listener,open;chrome.runtime.onMessage={addListener:fn=>{listener=fn;}};chrome.omnibox={setDefaultSuggestion:()=>{},onInputEntered:{addListener:fn=>{open=fn;}}};chrome.tabs={update:value=>assert.equal(value.url,chrome.runtime.getURL('settings.html'))};registerSettingsBridge(chrome);
  let result;listener({type:'ERIC_SETTINGS',action:'list'},{id:'extension',url:'https://mail.google.com/'},value=>{result=value;});assert.equal(result.ok,false);open('', 'currentTab');
 });
+test('saved-trip results URLs can use the bridge without trusting other pages',()=>{
+ const chrome=api();
+ for(const suffix of ['?trip=example','?trip=example&run=all','#results','?trip=example#results'])assert.equal(isSettingsPage({id:'extension',url:chrome.runtime.getURL('trips.html')+suffix},chrome),true);
+ for(const url of ['https://extension/trips.html?trip=example','chrome-extension://other/trips.html?trip=example','chrome-extension://extension/trips.html/extra?trip=example','chrome-extension://extension/unknown.html?trip=example','not a URL'])assert.equal(isSettingsPage({id:'extension',url},chrome),false);
+ assert.equal(isSettingsPage({id:'other',url:chrome.runtime.getURL('trips.html?trip=example')},chrome),false);
+});
 test('bridge keeps token private and restricts operations to AI settings',async()=>{
  const chrome=api();assert.deepEqual(await settingsAction({action:'status'},chrome),{connected:true});
  let calls=[];const request=async(key,path,options)=>{assert.equal(key,token);calls.push({path,options});return path==='/health'?{ok:true,service:'erics-tools-api',version:2}:{connections:[]};};
