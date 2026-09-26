@@ -4361,3 +4361,10 @@ Cancelled cards remain in Wallet history. Account-specific offers, linked credit
 benefit imports and payment recommendations exclude them. Other active accounts
 of the same product and shared points balances remain usable. Travel offer capture
 checks the saved wallet before importing offers.
+
+## All-source travel research (0.6.291 / mobile 0.1.240)
+
+Search all sources opens a dedicated results page, runs the supported providers
+sequentially and saves source checkpoints. Exact observed offers carry quoted
+product, scope, price and terms evidence; incomplete offers remain unverified.
+See [Travel planning](../docs/TRAVEL_PLANNING.md) for limits and sign-in handling.

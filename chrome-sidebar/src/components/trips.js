@@ -29,7 +29,7 @@ const checkRows=(trip,checks)=>trip.criteria.map(c=>{
   return Stack([Strong(c.label),Text(`${checkLabel[check?.status||'unknown']}${c.required?'':' · preference'}${check?.detail?` — ${check.detail}`:''}`),
     check?.source?Link(`Source · ${when(check.checkedAt)}`,check.source):null],{className:'trip-check'});
 });
-export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch,onStop,onSource=()=>{},source='web',researching=false,busy=false,now=Date.now()}){
+export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch,onOpenResults,onStop,onSource=()=>{},source='web',researching=false,busy=false,now=Date.now()}){
   const actions=[RowAction(EDIT_GLYPH,`Edit ${trip.title}`,onEdit,{disabled:busy}),RowAction(DELETE_GLYPH,`Delete ${trip.title}`,()=>{confirm.hidden=false;},{disabled:busy,danger:true})];
   const yes=Button('Delete trip from all devices',{variant:'danger',disabled:busy});yes.addEventListener('click',onDelete);
   const no=Button('Keep trip',{variant:'secondary'});no.addEventListener('click',()=>{confirm.hidden=true;});
@@ -42,10 +42,12 @@ export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch
     const field=FormField({id:'trips-source',label:'Source',kind:'select',options:sources.map(c=>({value:c.id,text:c.label}))});
     const select=field.querySelector('select');select.value=selected;select.disabled=busy||researching;select.dispatchEvent(new document.defaultView.Event('change'));
     select.addEventListener('change',()=>onSource(select.value));
-    const run=Button('Search source',{variant:'primary',size:'compact',disabled:busy||researching});run.addEventListener('click',()=>onResearch(select.value));
+    const all=Button('Search all sources',{variant:'primary',size:'compact',disabled:busy||researching});all.addEventListener('click',()=>onResearch('all'));
+    const run=Button('Search source',{variant:'secondary',size:'compact',disabled:busy||researching});run.addEventListener('click',()=>onResearch(select.value));
     const stop=Button('Stop search',{variant:'secondary',size:'compact'});stop.addEventListener('click',onStop);
-    search=Stack([field,ActionGroup([run,...(researching?[stop]:[]),copy])]);
+    search=Stack([ActionGroup([all,...(researching?[stop]:[])]),Disclosure('Search one source',[field,ActionGroup([run])])]);
   }
+  const open=onOpenResults?Button('Open results page',{variant:'secondary',size:'compact'}):null;open?.addEventListener('click',onOpenResults);
   const auth=trip.channels.filter(c=>c.status==='login');
   const summary=Stack([
     Stack([Heading(trip.title,2),ActionGroup(actions,{compact:true})],{className:'trip-heading group-line'}),confirm,
@@ -58,9 +60,12 @@ export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch
     trip.candidates.length&&!current?Note('Previous search — recheck'):null,
     current&&trip.summary?Text(trip.summary):null,
     trip.questions.length?Section([Heading('Needed to finish',3),...trip.questions.map(q=>Text(q))]):null,
-    search||ActionGroup([copy]),
+    search||ActionGroup([copy]),open,
   ],{className:'trip-summary'});
   const candidates=rankCandidates(trip,now);
+  const supported=candidates.filter(c=>c.fit==='match').length;
+  const bookable=candidates.reduce((n,c)=>n+c.offers.filter(o=>offerState(trip,c,o,now)==='Observed offer — recheck before booking').length,0);
+  const outcome=Section([Heading(bookable?`${bookable} observed matching offer${bookable===1?'':'s'}`:'No verified bookable match yet',3),Note(`${supported} configuration${supported===1?' meets':'s meet'} the requirements · ${candidates.length} researched`)]);
   const options=candidates.map(candidate=>ResultBlock({title:candidate.name,status:fitLabel[candidate.fit],detail:candidate.description,
     children:[candidate.url?Link('Hotel or itinerary details',candidate.url):null,
       ...candidate.offers.map(offer=>{
@@ -78,10 +83,10 @@ export function TripComparison(trip,{onEdit,onDelete,onCopy,onResolve,onResearch
       Disclosure('Requirements and sources',checkRows(trip,candidate.checks))
     ]}));
   const coverage=tripCoverage(trip);
-  const channels=Disclosure('Search coverage',coverage.map(c=>Stack([
+  const channels=Disclosure(`Search coverage · ${coverage.filter(c=>c.status!=='not-checked').length}/${coverage.length} sources attempted`,coverage.map(c=>Stack([
     Strong(c.label),Text(`${({'not-checked':'Not checked',partial:'Partly checked',checked:'Checked',login:'Sign-in needed',blocked:'Could not check'})[c.status]}${c.note?` — ${c.note}`:''}`),c.checkedAt?Note(when(c.checkedAt)):null,
     c.nextStep&&c.nextStep!==c.note?Text(c.nextStep):null,c.resumeURL?Link('Resume on provider',c.resumeURL):null,
     c.contextKey&&c.contextKey!==tripKey(trip)?Note('Request changed — restart this search'):null
   ],{className:'trip-check'})));
-  return Stack([summary,...options,!options.length?Note('No research saved'):null,channels],{className:'trip-comparison'});
+  return Stack([summary,outcome,channels,...options,!options.length?Note('No research saved'):null],{className:'trip-comparison'});
 }

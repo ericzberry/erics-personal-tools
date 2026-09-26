@@ -117,6 +117,7 @@ export const tripExpired=(record,now=Date.now())=>!!record.updatedAt&&Number.isF
 // Merely listing a source never counts as checking it.
 export const TRIP_CHANNELS=[
   {id:'web',label:'Google Hotels',url:'https://www.google.com/travel/hotels'},
+  {id:'maps',label:'Google Maps',url:'https://www.google.com/maps'},
   {id:'amex',label:'Amex Travel',url:'https://www.americanexpress.com/en-us/travel/'},
   {id:'chase',label:'Chase Travel',url:'https://secure.chase.com/web/auth/dashboard#/dashboard/travel'},
   {id:'kayak',label:'KAYAK',url:'https://www.kayak.com/'},
@@ -132,8 +133,9 @@ export function tripSources(trip){
   const known=new Set(TRIP_CHANNELS.map(c=>c.id));
   // Saved direct-provider checkpoints retain their verified URLs. A hotel
   // result URL can be an OTA, so never automatically label it "direct".
-  return [...TRIP_CHANNELS,...trip.channels.filter(c=>!known.has(c.id)&&c.resumeURL).map(c=>({id:c.id,label:c.label,url:c.resumeURL}))];
+  const sources=trip.kind==='flight'?TRIP_CHANNELS.filter(c=>['web','amex','chase','kayak','expedia','priceline'].includes(c.id)).map(c=>c.id==='web'?{...c,label:'Google Flights',url:'https://www.google.com/travel/flights'}:c):TRIP_CHANNELS;
+  return [...sources,...trip.channels.filter(c=>!known.has(c.id)&&c.resumeURL).map(c=>({id:c.id,label:c.label,url:c.resumeURL}))];
 }
 export function tripCoverage(trip){
-  return [...TRIP_CHANNELS.filter(c=>!trip.channels.some(s=>s.id===c.id)).map(c=>({...c,status:'not-checked'})),...trip.channels];
+  return [...tripSources(trip).filter(c=>!trip.channels.some(s=>s.id===c.id)).map(c=>({...c,status:'not-checked'})),...trip.channels];
 }

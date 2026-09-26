@@ -1,28 +1,35 @@
 # Travel planning
 
-Travel planning holds browser research in Eric’s Tools. In the installed Chrome
-extension, **Search source** selects Google Hotels, Amex, Chase, KAYAK, Trivago,
-Booking.com, Expedia, Priceline, Hotwire, Travelzoo or Suiteness, plus saved
-direct-provider checkpoints. **Search source** executes a bounded browser pass
-in an owned tab. The shared source catalogue always shows unsearched sources
-as **Not checked**, including on mobile. A result link is never assumed to be
-the hotel's direct site. `trip-research.js` reads the request into
-travel criteria, asks the centrally selected `travel.browser` model for observed
-search-control actions, and saves progress before each action. The adapter only
-fills search fields, clicks search controls, or opens observed public links. It
-never enters credentials, books, pays or contacts a hotel. Sign-in and CAPTCHA
-pause prominently; browser autofill and the owner's Mac unlock finish sign-in.
+Travel planning holds browser research in Eric’s Tools. **Search all sources**
+opens the trip’s results page and runs each supported source sequentially in a
+reused browser tab: Google Hotels, Google Maps, Amex, Chase, KAYAK, Trivago,
+Booking.com, Expedia, Priceline, Hotwire, Travelzoo and Suiteness, followed by
+saved or newly observed official booking links (up to 15 sources). Flight-only
+requests use Google Flights and the flight-capable portals. **Search one source**
+resumes an individual checkpoint. A sign-in or page failure records the problem
+and lets other sources continue. Stop preserves progress. Keep the results tab
+open while it runs; closing it interrupts execution. The sidebar can be closed.
 
-Each pass allows 18 steps and retains at most four short page observations in
-memory for extraction. Only claims with a quote found in the observed source
-can get a supported check. These are structural findings, not verified bookable
-prices. The comparison deliberately keeps totals and availability unverified
-until an exact live offer has been checked. Refresh downloads saved evidence;
-it does not search. A pass is partial, not exhaustive. The current runner needs
-the page/panel to remain open and Chrome site access; it has no background
-monitor. Site-specific controls, iframe booking forms and flight workflows still
-need live adapter testing. Mobile presents and edits the saved research offline;
-search execution requires the desktop Chrome extension.
+Each source allows 32 steps. Search controls are read again before every action;
+repeated unchanged actions stop. Dates, guests, child ages and visible options
+are sent to the centrally chosen `travel.browser` model, never credentials. The
+runner supports page loading waits, scrolling, native selectors and observed
+links. It cannot book, pay, contact providers, inspect Apple Passwords or bypass
+sign-in/CAPTCHA. Sign-in is prominently linked for browser autofill and owner
+verification. Site-specific and cross-origin iframe controls may still block a
+pass; source coverage retains that limitation rather than claiming sold out.
+
+Extraction retains four bounded observations. A supported requirement needs a
+quote from its stated observed source. Room offers require their own product,
+availability, price, taxes/fees and terms quotes. Prices and availability also
+require the exact dates and party plus observed scope quotes. Missing scope or
+missing evidence keeps the offer unverified. Headline/nightly prices never count
+as full-stay totals. Model extraction still requires reviewing linked evidence;
+quotes are provenance checks, not an independent semantic proof. Results retain
+conditional benefits separately from cash due. The results page shows matching
+offer/configuration counts, exact products, totals, terms, evidence and source
+coverage. Refresh only downloads saved research. Mobile reads the same records
+offline; browser execution requires desktop Chrome.
 
 Encountered issuer offers also go into Rewards through its existing catalogue
 reader, up to six distinct snapshots per pass. Capture failures or limits stay

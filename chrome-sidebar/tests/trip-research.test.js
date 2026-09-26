@@ -42,3 +42,39 @@ test('rewards capture runs only on unlocked observations and failures remain vis
   const result=await researchTrip(args);assert.equal(calls,1);assert.equal(result.summary,'Saved room evidence');assert.match(result.channels[0].note,/Rewards not saved/);assert.equal(result.channels[0].status,'partial');
   await researchTrip({...args,browser:{open:async()=>1,read:async()=>({url:channel.url,attention:'Sign in'})}});assert.equal(calls,1);
 });
+
+test('all-source research continues after sign-in and saves each source without claiming completion',async()=>{
+ const {researchAll}=await import('../src/trip-research.js');let opens=0,revision=0;
+ const result=await researchAll({trip,browser:{open:async()=>++opens,read:async()=>({url:'https://example.com/',attention:'Sign in required'})},generate:async()=>assert.fail('Locked page must not reach AI'),save:async value=>({...value,revision:String(++revision)})});
+ assert.equal(opens,12);assert.equal(result.channels.length,12);assert.ok(result.channels.every(c=>c.status==='login'));assert.match(result.summary,/12 sources attempted/);
+});
+test('observed prices require exact occupancy and quotes for product, total and fees',async()=>{
+ const {observedCandidates}=await import('../src/trip-research.js');
+ const at=new Date().toISOString(),source='https://example.com/rooms';
+ const quotes={product:'Two bedroom suite',availability:'Available for these dates',total:'Total $900.00',allIn:'Includes all taxes and fees',terms:'Refundable until October 14 at 6 PM ET; pay at hotel'};
+ const scope={start:trip.start,end:trip.end,party:trip.party,quotes:['October 16–17, 2026','2 adults, children 7 and 9, 1 suite']};
+ const page={url:source,at,text:[...Object.values(quotes),...scope.quotes].join('\n')};
+ const data={candidates:[{name:'Suite',checks:[],offers:[{source,product:quotes.product,total:900,currency:'USD',allIn:true,terms:quotes.terms,availability:'available',scope,quotes}]}]};
+ const extract=()=>observedCandidates(data,trip,channel,[page])[0].offers[0];
+ assert.equal(extract().total,900);assert.equal(extract().allIn,true);assert.equal(extract().availability,'available');
+ data.candidates[0].offers[0].scope={...scope,party:{...trip.party,childrenAges:[]}};
+ assert.equal(extract().total,null);assert.equal(extract().availability,'unknown');
+ data.candidates[0].offers[0].scope=scope;data.candidates[0].offers[0].total=90;
+ assert.equal(extract().total,null);
+ data.candidates[0].offers[0].quotes={...quotes,allIn:'Invented inclusion'};
+ assert.equal(extract().allIn,false);
+});
+test('stopping all-source research never starts the next provider',async()=>{
+ const {researchAll}=await import('../src/trip-research.js');const controller=new AbortController();let opens=0;
+ await researchAll({trip,signal:controller.signal,browser:{open:async()=>{opens++;controller.abort();return 1;}},generate:async()=>'',save:async value=>value});
+ assert.equal(opens,1);
+});
+test('provider result tabs replace only the tab opened by this research',async()=>{
+ const {travelBrowser}=await import('../src/trip-browser.js');let removed=[],created=0;
+ const control={index:0,label:'Search',tag:'button'};
+ const tabs=new Map([[1,{id:1,url:'https://example.com/search',status:'complete'}]]);
+ const api={tabs:{create:async()=>{created++;return tabs.get(1);},get:async id=>tabs.get(id),update:async(id,change)=>{tabs.set(id,{...tabs.get(id),...change});return tabs.get(id);},query:async()=>[...tabs.values()],remove:async id=>{removed.push(id);tabs.delete(id);}},scripting:{executeScript:async()=>{tabs.set(2,{id:2,openerTabId:1,url:'https://example.com/results',status:'complete'});return [];}}};
+ const browser=travelBrowser(api),first=await browser.open('https://example.com/search');
+ const next=await browser.act(first,{url:'https://example.com/search',controls:[control]},{type:'click',index:0});
+ assert.equal(next,2);assert.deepEqual(removed,[1]);await browser.release(next);assert.equal(await browser.open('https://example.com/another'),2);assert.equal(created,1);
+});

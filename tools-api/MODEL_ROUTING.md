@@ -133,3 +133,5 @@ reads, invalid source URLs and absent web search. No paid quality evaluation was
 performed for this release; statement identification remains reviewable.
 
 Family reference context is added centrally by `owner-context.js` when relevant. Year-based ages retain their reference year. `travel.browser` selects the model for bounded visible-page search actions and evidence extraction; it does not use server web search or accept a request model override.
+
+Travel browser research reserves up to 6,000 output tokens for quoted room/fare offers and their scope evidence, using the existing central `travel.browser` action.

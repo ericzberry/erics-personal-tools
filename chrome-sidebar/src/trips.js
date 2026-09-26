@@ -2,11 +2,11 @@ import {TripsView,TripPicker,TripComparison} from './components/trips.js';
 import {Button,Note,setStatus} from './components/ui.js';
 import {normalizeTrip} from './trip-data.js';
 
-export function mountTrips(root,{credentials,offline,onSettings=()=>{},clipboard=globalThis.navigator?.clipboard,research=null}){
+export function mountTrips(root,{credentials,offline,onSettings=()=>{},clipboard=globalThis.navigator?.clipboard,research=null,initialTrip='',autoResearch='',onOpenResults=null}){
   root.replaceChildren(TripsView());
   const $=id=>root.querySelector(`#trips-${id}`);
   let researchAbort=null,source='web';
-  let records=[],selected='',editing=null,busy=false,loaded=false,tokenUsed='',generation=0;
+  let records=[],selected=initialTrip,editing=null,busy=false,loaded=false,tokenUsed='',generation=0;
   const status=(s,t='')=>setStatus($('status'),s,t);
   function edit(record=null){
     editing=record;
@@ -15,10 +15,10 @@ export function mountTrips(root,{credentials,offline,onSettings=()=>{},clipboard
     setStatus($('form-status'),'');$('editor').open=true;$('title').focus();
   }
   function render(){
-    if(!records.some(r=>r.id===selected))selected=records[0]?.id||'';
+    if(!records.some(r=>r.id===selected))selected=records.some(r=>r.id===initialTrip)?initialTrip:records[0]?.id||'';
     const current=records.find(r=>r.id===selected);
     $('picker').replaceChildren(...(records.length?[TripPicker(records,selected,id=>{selected=id;$('editor').open=false;render();})]:[]));
-    $('result').replaceChildren(current?TripComparison(current,{source,onSource:value=>{source=value;},busy:busy||!!researchAbort,researching:!!researchAbort,onResearch:research?channel=>startResearch(current,channel):null,onStop:()=>researchAbort?.abort(),onEdit:()=>edit(current),onDelete:()=>remove(current),onCopy:async()=>{
+    $('result').replaceChildren(current?TripComparison(current,{source,onSource:value=>{source=value;},busy:busy||!!researchAbort,researching:!!researchAbort,onOpenResults:onOpenResults?()=>onOpenResults(current):null,onResearch:research?channel=>startResearch(current,channel):null,onStop:()=>researchAbort?.abort(),onEdit:()=>edit(current),onDelete:()=>remove(current),onCopy:async()=>{
       try{await clipboard.writeText(`Research the saved Travel planning trip ${current.id} in Eric’s Tools. Follow docs/TRAVEL_PLANNING.md and use the Eric Chrome profile.\n\n${current.request}`);status('Research request copied.','success');}
       catch{status('Copy failed. Select the trip request instead.','error');}
     },onResolve:choice=>run(token=>offline.resolve(token,current.id,choice))}):Note(loaded?'No trips saved. Add a trip to start.':''));
@@ -52,13 +52,13 @@ export function mountTrips(root,{credentials,offline,onSettings=()=>{},clipboard
       if(epoch!==generation)throw Error('Connection changed.');
       records=result.records;render();
       const saved=records.find(r=>r.id===trip.id);if(!saved||saved.pending)throw Error('Reconnect and sync before continuing browser research.');return saved;
-    }});if(epoch===generation){const checkpoint=result?.channels?.find(c=>c.id===channel);if(checkpoint?.status==='blocked')status(checkpoint.note,signal.aborted?'':'error');else if(checkpoint?.status==='login')status('');else if(result?.questions?.length)status('Review the details needed below.','alert');else status('Browser pass saved. Review the remaining checks.','success');}}
+    }});if(epoch===generation){const checkpoint=result?.channels?.find(c=>c.id===channel);if(signal.aborted)status('Search stopped. Progress saved.');else if(checkpoint?.status==='blocked')status(checkpoint.note,signal.aborted?'':'error');else if(checkpoint?.status==='login')status('');else if(result?.questions?.length)status('Review the details needed below.','alert');else status('Research saved. Review results and source coverage.','success');}}
     catch(error){if(epoch===generation)status(error.message||'Search could not continue.','error');}
     finally{if(epoch===generation){researchAbort=null;render();}}
   }
-  async function load(){status('Loading saved research…','progress');await run(token=>offline.request(token,'/v1/trips'));}
+  async function load(){status('Loading saved research…','progress');await run(token=>offline.request(token,'/v1/trips'));if(autoResearch&&loaded){const channel=autoResearch;autoResearch='';const trip=records.find(r=>r.id===initialTrip);if(trip)await startResearch(trip,channel);}}
   async function remove(record){status('Deleting trip…','progress');await run(token=>offline.request(token,`/v1/trips/${record.id}`,{method:'DELETE',value:record}));}
-  function clear(){researchAbort?.abort();researchAbort=null;generation++;records=[];selected='';loaded=false;tokenUsed='';busy=false;editing=null;$('editor').open=false;for(const key of ['title','request'])$(key).value='';status('');render();}
+  function clear(){researchAbort?.abort();researchAbort=null;generation++;records=[];selected=initialTrip;loaded=false;tokenUsed='';busy=false;editing=null;$('editor').open=false;for(const key of ['title','request'])$(key).value='';status('');render();}
   $('form').addEventListener('submit',async event=>{
     event.preventDefault();if(busy||!loaded)return;
     try{
