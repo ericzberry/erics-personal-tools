@@ -4,7 +4,7 @@ import {parseHTML} from 'linkedom';
 import {readFileSync} from 'node:fs';
 import {mountApp} from '../src/components/views.js';
 import {selectTool} from '../src/navigation.js';
-import {capabilities,PANEL_CAPABILITIES} from '../src/capabilities.js';
+import {capabilities,PANEL_CAPABILITIES,areaForCapability} from '../src/capabilities.js';
 import {FinanceView} from '../src/components/finance.js';
 import {activeAccountTab} from '../src/finance-page-read.js';
 import {mountFinance} from '../src/finance.js';
@@ -45,7 +45,7 @@ test('Finance opens inside the sidebar instead of sending the owner to a tab',()
   selectTool('finance');
   assert.equal(doc.getElementById('finance-tool').hidden,false);
   assert.equal(doc.getElementById('travel-tool').hidden,true);
-  assert.equal(doc.getElementById('current-function').textContent,'Finance');
+  assert.equal(doc.getElementById('current-function').textContent,'Money');
   selectTool('travel');
   assert.equal(doc.getElementById('finance-tool').hidden,true);
 });
@@ -70,7 +70,7 @@ test('the finance screen leads with its title, status and one action, and has no
   assert.equal(doc.querySelectorAll('#finance-tabs [role=tabpanel]:not([hidden])').length,1,'one panel at a time');
   assert.equal(headings.includes('Position'),false,'the NET and ASSETS labels already say that');
   const title=doc.querySelector('.tool-title-block');
-  assert.equal(title.querySelector('h1').textContent,'Finance');
+  assert.equal(title.querySelector('h1').textContent,'Net worth');
   assert.ok(title.contains(doc.getElementById('finance-actions')));
   assert.ok(title.contains(doc.getElementById('finance-status')));
   // Labels and live status only: no intro paragraph above the upload zone.
@@ -181,7 +181,7 @@ test('a capability in the panel opens there, and nothing left opens a tab but th
     assert.ok(doc.getElementById(`${id}-tool`),`${id} has no section in the panel to mount into`);
     selectTool(id);
     assert.equal(doc.getElementById(`${id}-tool`).hidden,false,`${id} did not open in the panel`);
-    assert.equal(doc.getElementById('current-function').textContent,entry.label);
+    assert.equal(doc.getElementById('current-function').textContent,areaForCapability(id).label);
   }
   // Player rankings is reference data and Restaurants is a workspace of its own;
   // neither has a panel home yet, so both stay links.

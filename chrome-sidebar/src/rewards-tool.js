@@ -5,7 +5,7 @@ import {RecordRow,RecordGroup,Button,RowAction,RowLink,EDIT_GLYPH,DELETE_GLYPH,D
 import {validateReward,luhnValid,parseCardBenefits,unheldBenefits,CADENCE_LABELS} from './rewards-data.js';
 import {sharedVault,sealSecret} from './secret-vault.js';
 import {catalogOffers,catalogGroups,catalogCategories,offerUrl,rewardProgram,parseOfferReading,validateProgramCatalog,MAX_CATALOG_BYTES,READ_TEXT} from './program-data.js';
-import {parseBalanceReading,matchBalances,balanceRecord,programName,programShort,walletRun,WALLET_RUNS,UNREAD_BALANCE} from './balance-data.js';
+import {parseBalanceReading,matchBalances,balanceRecord,programName,programShort,walletRun,isLoyaltyReward,WALLET_RUNS,UNREAD_BALANCE} from './balance-data.js';
 import {parseCreditReading,parseBenefitReading,matchCredits,creditRecord,benefitRecord} from './credit-data.js';
 import {parseRateReading,matchRates,rateCards,rateCardRecord} from './rate-data.js';
 import {loyaltySitePrograms,loyaltyProgramNamed} from './loyalty-sites.js';
@@ -46,7 +46,7 @@ const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
 // Without it those choices are asked again each time and nothing else changes.
 // `mountPay` and `mountRates` build the Pay view's two tools on first use;
 // the host supplies them so a harness without those tools mounts none.
-export function mountRewards(root,{credentials,offline,remote=null,programs=null,readPage=null,cards=null,wallet=null,mountPay=null,mountRates=null,adapter=null,onSettings=()=>{},onChanged=()=>{},vault=sharedVault()}){
+export function mountRewards(root,{credentials,offline,remote=null,programs=null,readPage=null,cards=null,wallet=null,mountPay=null,mountRates=null,adapter=null,onSettings=()=>{},onChanged=()=>{},scope='all',vault=sharedVault()}){
   root.replaceChildren(RewardsView());
   const $=id=>root.querySelector(`#${id}`);
   let entries=[],editing=null,busy=false,loaded=false,activeToken='',generation=0;
@@ -79,6 +79,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // state rather than to the list's.
   const rowAction=(glyph,label,fn,danger=false)=>RowAction(glyph,label,fn,{danger,disabled:busy||!loaded});
   const vaultRowAction=(glyph,label,fn)=>RowAction(glyph,label,fn,{disabled:vaultBusy});
+  const inScope=e=>scope==='all'||(scope==='memberships'?isLoyaltyReward(e):!isLoyaltyReward(e));
   const live=()=>entries.filter(entry=>!entry.deleting&&!entry.conflict);
   function forget(){revealed.clear();clearTimeout(revealTimer);revealTimer=null;$('vault-code').replaceChildren();}
   function hold(){clearTimeout(revealTimer);revealTimer=setTimeout(()=>{forget();renderVault();render();},REVEAL_MS);}
@@ -346,7 +347,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // Balances by program, each with what earns into it and what a point is
   // worth on the owner's own value. Nothing is summed across programs.
   function renderPoints(){
-    const rows=loaded?pointsAccounts({entries:live(),cards:held,valuations:records}):[];
+    const rows=loaded?pointsAccounts({entries:live().filter(inScope),cards:held,valuations:records}):[];
     tabs.show('points',rows.length>0);
     $('rewards-points').replaceChildren(...rows.map(row=>{
       const editing=valuing===row.id;
@@ -372,7 +373,9 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // wallet lands on For you, and after that wherever the owner last was.
   function renderTabs(){
     const canPay=!!mountPay&&loaded&&(held.length>0||live().some(entry=>entry.kind==='card'));
-    tabs.show('pay',canPay);
+    tabs.show('pay',canPay&&scope!=='memberships');
+    if(scope==='memberships'){tabs.show('foryou',false);tabs.select('wallet');}
+    const heading=root.closest('#rewards-tool')?.querySelector('h1')||root.querySelector('h1');if(heading)heading.textContent=scope==='memberships'?'Memberships':scope==='cards'?'Cards & benefits':'Rewards & benefits';
   }
   // Decided once, after the first full load — the wallet, the cards and the
   // catalogues — because which tabs there are is not known before then.
@@ -658,7 +661,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   function render(){
     const query=$('rewards-search').value.trim().toLowerCase();
     const hit=e=>[e.name,e.source,e.notes,e.value].join(' ').toLowerCase().includes(query);
-    const cardEntries=entries.filter(e=>e.kind==='card'),held=new Set(cardEntries.map(card=>card.id));
+    const cardEntries=entries.filter(e=>e.kind==='card'&&inScope(e)),held=new Set(cardEntries.map(card=>card.id));
     // Looking up the cards the wallet holds is an action about those cards, so
     // it is there while there are some and gone while there are none.
     $('reward-card-sweep').hidden=!remote||!cardEntries.length;
@@ -669,7 +672,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
       const filed=entries.filter(e=>e.kind!=='card'&&e.card===card.id);
       return {card,filed,visible:hit(card)?filed:filed.filter(hit),matched:hit(card)||filed.some(hit)};
     }).filter(group=>group.matched);
-    const loose=entries.filter(e=>e.kind!=='card'&&!held.has(e.card)&&hit(e));
+    const loose=entries.filter(e=>inScope(e)&&e.kind!=='card'&&!held.has(e.card)&&hit(e));
     // The collapsed line says the one useful thing about the card: what is
     // waiting to be set up, or that its trackers have not been read.
     const summary=group=>{
@@ -709,7 +712,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     $('reward-save').disabled=busy||!loaded;$('reward-cancel').disabled=busy;
     // Finding a card is the one wallet action that needs AI and the network, so
     // it is the one that disappears where neither is available.
-    $('reward-card-intake').hidden=!remote;
+    $('reward-card-intake').hidden=!remote||scope==='memberships';
     $('reward-card-name').disabled=busy||!loaded;
     $('reward-card-find').disabled=busy||!loaded||globalThis.navigator?.onLine===false;
     // The wallet syncs on its own, so the title carries no Refresh. A wallet
@@ -919,6 +922,7 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
   // Keeping the lock state honest must not keep a host process alive.
   watch?.unref?.();
   return {refresh,clear,view,
+    scope(value){scope=value;$('rewards-search').value='';render();renderPoints();renderTabs();if(scope==='memberships')view('wallet');},
     // The tab beside the panel, as the host already knows it. Leaving a
     // program's page takes the reading with it: a figure read off one program's
     // site has nothing to say beside another's.

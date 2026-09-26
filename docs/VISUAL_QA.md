@@ -70,3 +70,8 @@ Fix visible defects before packaging or pushing a UI change. If rendering is una
 After deployment, revisit the normal entry path and the originally affected view. Verify the delivered version and requested behavior separately, following [Cloudflare release verification](CLOUDFLARE.md). Check installed Chrome behavior when extension APIs or live capture matter, and native iPhone behavior when passkey, clipboard, keyboard, or installed-app behavior matters. A browser fixture or phone-sized desktop viewport does not prove these device behaviors.
 
 In the handoff, briefly name the surfaces, sizes, states, and important interactions reviewed; summarize the relevant test results and release evidence. Distinguish preview verification, deployed mobile assets, published update metadata, and the version actually loaded on the device. State any remaining live or device checks precisely.
+
+Area navigation: `/tests/areas-widths-preview.html` frames the production sidebar
+shell and Info controller at 380px and 280px with synthetic records and a mock
+vault. Normal entry/navigation is still checked at `sidepanel.html`; mobile uses
+its normal preview. The fixture does not verify real passkeys or paid AI quality.

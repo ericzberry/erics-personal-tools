@@ -1,3 +1,10 @@
+## Navigation release 0.6.295
+
+Today, Money, Travel, Info, Health and More replace the flat tool list.
+Finance is Net worth. Info searches existing records together and holds loyalty
+memberships; Travel keeps planning and documents. Quick add also reads people
+and subscriptions. See [navigation](../docs/NAVIGATION.md).
+
 # Eric's Chrome sidebar
 
 A standalone Chrome extension within `erics-personal-tools`. Its first tool is ESPN fantasy football: saved league settings and draft-pick tracking.

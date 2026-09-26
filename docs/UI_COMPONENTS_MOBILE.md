@@ -28,3 +28,10 @@ Keep queued edits through restarts and backgrounding. Reconnect and foreground r
 ## Acceptance
 
 Review around 390 × 844px and a narrower phone width, with populated, empty, loading, failed, and offline states relevant to the change. Exercise restart, reconnect, Settings return, conflict handling, menus, and keyboard interaction. Verify native passkey, clipboard, installed-app, and keyboard behavior when affected. Follow [VISUAL_QA.md](VISUAL_QA.md); desktop emulation and mock passkeys establish only preview behavior.
+
+## Area navigation
+
+The six-area shell and unified Info collection supersede the flat capability
+menu and mobile home grid. See [navigation](NAVIGATION.md). `AreaWorkspace` uses
+shared `Tabs` with existing panels; `CapabilityNavigation` and `CapabilityMenu`
+render `APP_AREAS`. Capability IDs still own records and legacy links.

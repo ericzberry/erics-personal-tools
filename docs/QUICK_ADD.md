@@ -45,6 +45,16 @@ is the owner's to fix, not a failure of the service.
 
 ## Offline
 
-Only the reading needs the network. The write goes through the capability's
-offline store, so a note typed with no signal queues and syncs like any other
-change. With no saved AI connection the field says so and writes nothing.
+The reading needs the network. If it fails offline, the note remains for retry;
+manual editors still work offline. Once read, the write goes through the
+capability’s durable offline queue and syncs like any other change. With no saved AI connection the field says so and writes nothing.
+
+## Areas release
+
+Quick add is also on sidebar Today and behind Add in Info. People/places and
+subscriptions join the original four targets. The client sends its supported
+`capabilities`; absent that field, the API restricts the response to the original
+four for compatibility. Subscription captures always remain Review, strip account
+numbers and cannot write charge evidence or research. Info's instances have unique
+field IDs. Clearing a capture form invalidates an outstanding reading before it
+can save or repopulate that cleared form.

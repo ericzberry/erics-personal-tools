@@ -8,7 +8,7 @@ import {readFileSync} from 'node:fs';
 test('shared capabilities replace special travel links and use unique accessible fields',()=>{
   const {document}=parseHTML('<html><body><main id="app"></main></body></html>');globalThis.document=document;
   mountApp(document.getElementById('app'));
-  assert.equal(document.querySelectorAll('#navigate-travel').length,1);
+  assert.equal(document.querySelectorAll('#navigate-area-journeys').length,1);
   assert.equal([...document.querySelectorAll('a')].some(a=>a.textContent.includes('travel wallet')),false);
   document.getElementById('app').replaceChildren(CapabilitiesView());
   for(const kind of ['rankings','ai'])document.getElementById(`capability-${kind}`).append(DataLibrary({id:kind,title:kind,description:'Saved data'}));

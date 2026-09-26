@@ -95,3 +95,10 @@ Use the existing shared data notifications and adapters when records change acro
 Prefer existing inline edit and confirmation patterns for small tasks. If a modal or drawer becomes necessary, add a shared implementation with a labeled dialog, initial focus, contained keyboard focus, dismissal behavior, background interaction control, and focus restoration. Preserve unsaved input on failure or accidental dismissal. Do not assume `appConfirm`, `appToast`, or other helpers from the source document exist here.
 
 Use semantic HTML, associated field labels, unique IDs, visible focus, readable contrast, and status announcements appropriate to the change. Keep external data as text; do not inject provider HTML. Host wrappers must not hide content or controls from keyboard access. Review long labels, zoom, reduced motion, and all changed states following VISUAL_QA.md.
+
+## Area navigation
+
+The six-area shell and unified Info collection supersede the flat capability
+menu and mobile home grid. See [navigation](NAVIGATION.md). `AreaWorkspace` uses
+shared `Tabs` with existing panels; `CapabilityNavigation` and `CapabilityMenu`
+render `APP_AREAS`. Capability IDs still own records and legacy links.

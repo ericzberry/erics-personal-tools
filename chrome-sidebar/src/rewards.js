@@ -33,7 +33,7 @@ const onSettings=()=>document.getElementById('open-settings')?document.getElemen
 // The Pay view's two tools, built on the view's first opening: the purchase
 // advisor over the card terms, the wallet and the catalogues, and the card
 // terms themselves without a second purchase box.
-export const rewardsTool=mountRewards(root,{credentials,offline,programs,readPage,cards,wallet,remote:cloudRequest,onChanged:()=>changes.publish(),onSettings,
+export const rewardsTool=mountRewards(root,{scope:'cards',credentials,offline,programs,readPage,cards,wallet,remote:cloudRequest,onChanged:()=>changes.publish(),onSettings,
   mountPay:node=>mountPurchaseAdvisor(node,{credentials,cards,wallet:offline,programs,remote:cloudRequest,onSettings,embedded:true}),
   mountRates:node=>mountCards(node,{credentials,offline:cards,wallet:offline,remote:cloudRequest,purchase:false,heading:false,onChanged:()=>rewardsTool.refresh({quiet:true})})});
 // A page opened as `rewards.html?view=pay` — where cards.html and advisor.html
@@ -54,6 +54,7 @@ document.getElementById('close-rewards')?.addEventListener('click',()=>showRewar
 let onScreen=false;
 onNavigate(capability=>{
   const arrived=capability==='rewards'&&!onScreen;
+  if(arrived)rewardsTool.scope('cards');
   onScreen=capability==='rewards';
   if(arrived){rewardsTool.refresh({quiet:true});const view=takeRequestedView();if(view)rewardsTool.view(view);}
 });

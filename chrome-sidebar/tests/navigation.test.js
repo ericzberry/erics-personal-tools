@@ -2,49 +2,39 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseHTML} from 'linkedom';
 import {mountApp} from '../src/components/views.js';
-import {selectTool,showTool,showSettings} from '../src/navigation.js';
-test('selected wallet remains in the sidebar through active-tab refresh and settings',()=>{
-  const {document}=parseHTML('<html><body><main id="app"></main></body></html>');
-  globalThis.document=document;mountApp(document.getElementById('app'));
-  selectTool('travel');showTool('gmail');
-  assert.equal(document.getElementById('travel-tool').hidden,false);
-  assert.equal(document.getElementById('gmail-tool').hidden,true);
-  showSettings(true);assert.equal(document.getElementById('travel-tool').hidden,true);
-  showSettings(false);assert.equal(document.getElementById('travel-tool').hidden,false);
-  selectTool('');assert.equal(document.getElementById('gmail-tool').hidden,false);
+import {selectTool,showTool,showSettings,selectCapability} from '../src/navigation.js';
+import {APP_AREAS} from '../src/capabilities.js';
+const setup=()=>{const {document}=parseHTML('<html><body><main id="app"></main></body></html>');globalThis.document=document;mountApp(document.getElementById('app'));return document;};
+test('manual selection survives context changes and settings',()=>{
+  const doc=setup();selectTool('travel');showTool('gmail');
+  assert.equal(doc.getElementById('travel-tool').hidden,false);assert.equal(doc.getElementById('gmail-tool').hidden,true);
+  showSettings(true);assert.equal(doc.getElementById('travel-tool').hidden,true);
+  showSettings(false);assert.equal(doc.getElementById('travel-tool').hidden,false);
+  selectTool('');assert.equal(doc.getElementById('gmail-tool').hidden,false);
 });
-test('choosing a tool inside a section leaves that section open, so the selection stays visible',()=>{
-  const {document}=parseHTML('<html><body><main id="app"></main></body></html>');
-  globalThis.document=document;mountApp(document.getElementById('app'));
-  const misc=document.querySelector('.capability-submenu');
-  assert.equal(misc.hasAttribute('open'),false);
-  selectTool('football');
-  assert.equal(misc.hasAttribute('open'),true);
-  assert.equal(document.getElementById('navigate-football').getAttribute('aria-current'),'page');
+test('the six areas replace the old menu and mark only their selected parent',()=>{
+  const doc=setup();selectTool('sizes');
+  assert.deepEqual([...doc.querySelectorAll('.capability-list .capability-item')].map(n=>n.textContent),['Today','Money','Travel','Info','Health','More']);
+  assert.equal(doc.getElementById('navigate-area-info').getAttribute('aria-current'),'page');
+  assert.equal(doc.getElementById('current-function').textContent,'Info');
+  assert.equal(doc.querySelectorAll('.capability-list [aria-current]').length,1);
+  assert.equal(doc.getElementById('navigate-sizes'),null);
 });
-test('the selected row is marked by aria-current alone, with no label suffix',()=>{
-  const {document}=parseHTML('<html><body><main id="app"></main></body></html>');
-  globalThis.document=document;mountApp(document.getElementById('app'));
-  selectTool('travel');
-  const row=document.getElementById('navigate-travel');
-  assert.equal(row.getAttribute('aria-current'),'page');
-  assert.equal(row.querySelector('.capability-text > strong').textContent,'Travel wallet');
-  assert.equal(document.getElementById('current-function').textContent,'Travel wallet');
-  selectTool('');
-  assert.equal(document.getElementById('current-function').textContent,'Current tab');
+test('Today includes attention and remains selected when the browser tab changes',()=>{
+  const doc=setup();showTool('gmail');selectTool('attention');
+  assert.equal(doc.getElementById('home-tool').hidden,false);
+  assert.ok(doc.getElementById('home-tool').contains(doc.getElementById('attention-tool')));
+  assert.equal(doc.getElementById('attention-tool').hidden,false);
+  showTool('finance');assert.equal(doc.getElementById('home-tool').hidden,false);
 });
-test('Home leads the Tools menu and stays open whatever the tab shows',()=>{
-  const {document}=parseHTML('<html><body><main id="app"></main></body></html>');
-  globalThis.document=document;mountApp(document.getElementById('app'));
-  const home=document.getElementById('navigate-home');
-  assert.equal(document.querySelector('.capability-list').firstElementChild,home);
-  assert.equal(home.tagName,'BUTTON');
-  showTool('gmail');selectTool('home');
-  assert.equal(document.getElementById('home-tool').hidden,false);
-  assert.equal(document.getElementById('gmail-tool').hidden,true);
-  assert.equal(home.getAttribute('aria-current'),'page');
-  assert.equal(document.getElementById('current-function').textContent,'Home');
-  showTool('finance');
-  assert.equal(document.getElementById('home-tool').hidden,false);
-  selectTool('');
+test('area switching preserves forms and returns a shared panel to its own tab',()=>{
+  const doc=setup();selectTool('documents');const wallet=doc.getElementById('travel-tool');
+  const input=doc.createElement('input');input.value='unsaved';wallet.append(input);
+  assert.ok(doc.getElementById('area-journeys').contains(wallet));
+  selectTool('travel');assert.ok(doc.querySelector('.area-detail').contains(wallet));
+  selectTool('documents');assert.ok(doc.getElementById('area-journeys').contains(wallet));
+  assert.equal(input.value,'unsaved');assert.equal(wallet.hidden,false);
+  selectCapability('rewards',{area:'info'});assert.equal(doc.getElementById('current-function').textContent,'Info');
+  selectTool('rewards');assert.equal(doc.getElementById('current-function').textContent,'Money');
+  assert.ok(doc.getElementById('area-money').contains(doc.getElementById('rewards-tool')));
 });

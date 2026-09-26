@@ -34,7 +34,7 @@ const readAt=number=>{const when=new Date(number);return `${when.toLocaleDateStr
 // test that has to know which figures are stale.
 export function mountFinance(root,{credentials,offline,remote,readPage=null,readZestimate=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false,layout='page',openDetails=null,today:now=today}){
   const gate=mountVaultGate(root,{
-    id:'finance-vault',title:'Finance',
+    id:'finance-vault',title:'Net worth',
     // A tool built because the tab beside the panel is a finance page raises no
     // passkey sheet of its own. The mode is settled here rather than a moment
     // after mounting, so the prompt cannot get out first.

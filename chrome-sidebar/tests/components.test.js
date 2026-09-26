@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {parseHTML} from 'linkedom';
 import {mountApp} from '../src/components/views.js';
 import {RecommendationCard,Field,DataTable,Button,PickRow} from '../src/components/ui.js';
-import {capabilities} from '../src/capabilities.js';
+import {APP_AREAS,capabilities} from '../src/capabilities.js';
 function setup(){const {document}=parseHTML('<html><body><div id="app"></div></body></html>');globalThis.document=document;return document;}
 test('all screens mount through components with unique, accessible controller hooks',()=>{
   const doc=setup();mountApp(doc.getElementById('app'));
@@ -22,31 +22,13 @@ test('all screens mount through components with unique, accessible controller ho
   assert.equal(doc.getElementById('email-result'),null);
   assert.equal(doc.querySelectorAll('header').length,1);
 });
-test('every Tools entry carries an icon and the sidebar menu renders one per row',()=>{
+test('the sidebar exposes exactly six areas, each with its shared icon',()=>{
   const doc=setup();mountApp(doc.getElementById('app'));
-  for(const item of capabilities)assert.ok(item.icon,`${item.id} has no icon`);
-  for(const item of capabilities){
-    const glyph=doc.querySelector(`#navigate-${item.id} svg`);
-    assert.ok(glyph,`${item.id} rendered no icon`);
-    assert.equal(glyph.getAttribute('aria-hidden'),'true');
-    assert.equal(glyph.querySelector('path').getAttribute('d'),item.icon);
-  }
-  // The label, not the icon, names each row.
-  assert.equal(doc.querySelector('#navigate-travel .capability-text > strong').textContent,'Travel wallet');
+  assert.deepEqual([...doc.querySelectorAll('.capability-list .capability-item')].map(n=>n.textContent),APP_AREAS.map(a=>a.label));
+  for(const area of APP_AREAS)assert.equal(doc.querySelector(`#navigate-area-${area.id} svg path`).getAttribute('d'),area.icon);
+  assert.equal(doc.querySelectorAll('.capability-submenu').length,0);
+  for(const id of ['travel','gifts','people','sizes','finance','attention'])assert.equal(doc.getElementById(`navigate-${id}`),null);
   assert.ok(doc.querySelector('#open-settings svg'));
-  // Gmail follows the active tab; AI connections and League rules left the menu.
-  // Current tab is the automatic mode the toggle names, not a row of its own.
-  for(const id of ['navigate-gmail','navigate-ai','navigate-rules','navigate-auto'])assert.equal(doc.getElementById(id),null);
-  // Misc is one closed row after the ungrouped tools; its tools appear only once opened.
-  const branches=[...doc.querySelectorAll('.capability-list .capability-submenu')];
-  assert.equal(branches.length,1);
-  const [misc]=branches;
-  assert.equal(misc.hasAttribute('open'),false);
-  assert.equal(misc.querySelector('summary').id,'navigate-section-misc');
-  assert.equal(misc.querySelector('summary .capability-text > strong').textContent,'Misc');
-  assert.ok(misc.querySelector('summary svg'));
-  assert.equal(misc.previousElementSibling.id,'navigate-restaurants');
-  assert.deepEqual([...misc.querySelectorAll('.capability-item:not(.capability-item--branch)')].map(node=>node.id),['navigate-rankings','navigate-football']);
 });
 
 test('shared cards and tables treat external text as text, not markup',()=>{

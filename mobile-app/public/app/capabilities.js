@@ -1,3 +1,5 @@
+import {AreaWorkspace,MoreView} from './shared/components/areas.js';
+import {mountInfo,focusInfoRecord} from './shared/info.js';
 import {mountPeople} from './shared/people.js';
 import {mountTrips} from './shared/trips.js';
 import {mountAttention} from './shared/attention.js';
@@ -48,14 +50,14 @@ const credentials={
   async beforeDisconnect(){const token=await this.get();if(token)await assertNothingPending(deviceCopies,token);},
   get:()=>mobileCredentials.get(),
   set:token=>mobileCredentials.set(token),
-  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();healthTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();tripTool.clear();peopleTool.clear();taxTool.clear();await mobileCredentials.remove();}
+  async remove(){const token=await this.get();if(token)await disconnectStores(deviceCopies,token);subscriptionTool.clear();attentionTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();healthTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();tripTool.clear();peopleTool.clear();taxTool.clear();infoTool.clear();await mobileCredentials.remove();}
 };
 const openSettings=()=>navigation.show(SETTINGS_SCREEN,{focus:true});
 // Rewards is the one wallet: the cards, the programs, what to pay with and
 // what the points can do. Its Pay view is the purchase advisor over the card
 // terms, the wallet and the catalogues, and the card terms themselves; both
 // are built the first time that view is opened.
-const rewardTool=mountRewards(document.getElementById('capability-rewards'),{credentials,offline:rewardStore,programs:programStore,cards:cardStore,wallet:walletStore,remote:cloudRequest,onSettings:openSettings,
+const rewardTool=mountRewards(document.getElementById('capability-rewards'),{scope:'cards',credentials,offline:rewardStore,programs:programStore,cards:cardStore,wallet:walletStore,remote:cloudRequest,onSettings:openSettings,
   mountPay:node=>mountPurchaseAdvisor(node,{credentials,cards:cardStore,wallet:rewardStore,programs:programStore,remote:cloudRequest,onSettings:openSettings,embedded:true}),
   mountRates:node=>mountCards(node,{credentials,offline:cardStore,wallet:rewardStore,remote:cloudRequest,purchase:false,heading:false,onChanged:()=>rewardTool.refresh({quiet:true})})});
 const financeTool=mountFinance(document.getElementById('capability-finance'),{credentials,offline:financeStore,remote:cloudRequest,onSettings:openSettings});
@@ -72,12 +74,12 @@ const replacementTool=mountReplacements(document.getElementById('capability-repl
 // follow it, read from the same offline copies the tools keep, so a phone with
 // no signal still knows whose day it is and what is about to be taken back.
 const homeRoot=document.getElementById('capability-birthdays');
-const home=mountHome(homeRoot,{credentials,reminders:reminderStore,rewards:rewardStore,weather});
+const home=mountHome(homeRoot,{credentials,weather});
 // Quick add sits on the home screen and writes through the same offline store
 // the tool uses, so a note typed with no signal queues like any other change.
 const captureRoot=document.getElementById('capability-capture');
 captureRoot.className='travel-wallet';
-mountCapture(captureRoot,{credentials,remote:cloudRequest,stores:captureStores({reminders:reminderStore,gifts:giftStore,sizes:sizeStore,replacements:replacementStore}),
+mountCapture(captureRoot,{credentials,remote:cloudRequest,stores:captureStores(stores),
   onSaved:capability=>{
     ({gifts:giftTool,sizes:sizeTool,replacements:replacementTool,reminders:reminderTool}[capability])?.refresh();
     // A note typed here can be a birthday, and the birthdays are the thing
@@ -92,10 +94,10 @@ const aiLibrary=mountLibrary(document.getElementById('capability-ai'),{kind:'ai'
   const token=await credentials.get();if(!token)throw Error('Connect this device above to download saved connection details.');
   const result=await ai.request(token,'/v1/ai-connections');return {value:result.records,message:result.syncMessage};
 }});
-async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();healthTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();tripTool.clear();peopleTool.clear();taxTool.clear();}}catch{aiLibrary.clear();}}
-mountTravel(document.getElementById('capability-travel'),{credentials,offline:travelStore,showNumbers:true,request:travelStore.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
+async function connectionChanged(){try{if(await credentials.get())await aiLibrary.refresh();else {aiLibrary.clear();subscriptionTool.clear();attentionTool.clear();rewardTool.clear();financeTool.clear();personalTool.clear();healthTool.clear();reminderTool.clear();giftTool.clear();sizeTool.clear();replacementTool.clear();tripTool.clear();peopleTool.clear();taxTool.clear();infoTool.clear();}}catch{aiLibrary.clear();}}
+const travelTool=mountTravel(document.getElementById('capability-travel'),{credentials,offline:travelStore,showNumbers:true,request:travelStore.request,connectionRoot:document.getElementById('capability-connection'),onConnectionChange:connectionChanged});
 const subscriptionTool=mountSubscriptions(document.getElementById('capability-subscriptions'),{credentials,offline:subscriptionStore,remote:cloudRequest,onSettings:openSettings});
-const attentionTool=mountAttention(document.getElementById('capability-attention'),{credentials,stores:{reminders:reminderStore,rewards:rewardStore,travel:travelStore,personal:personalStore,finance:financeStore,subscriptions:subscriptionStore},onSettings:openSettings,onOpen:(id)=>navigation.show(id,{focus:true})});
+const attentionTool=mountAttention(document.getElementById('capability-attention'),{credentials,automatic:false,stores:{reminders:reminderStore,rewards:rewardStore,travel:travelStore,personal:personalStore,finance:financeStore,subscriptions:subscriptionStore},onSettings:openSettings,onOpen:(id,recordId,destination=id)=>navigation.show(destination,{focus:true})});
 const rankings=mountLibrary(document.getElementById('capability-rankings'),{kind:'rankings',load:async()=>({value:await (await fetch('/app/data/rankings-2026.json')).json()})});
 await rankings.refresh();
 let selectedTool;
@@ -108,28 +110,34 @@ cloud.open=true;
 cloud.querySelector('summary').hidden=true;
 // Settings is a screen like any tool: the hamburger stays available, and the
 // shell mirrors the chosen screen so it can show its own device settings.
-function showScreen(screen){
-  const settings=screen===SETTINGS_SCREEN;
-  selectedTool=settings?null:screen;
-  connectionRoot.hidden=!settings;
-  // Quick add and the glance belong to the home screen: with a tool open, the
-  // tool is what the page is for.
-  captureRoot.hidden=settings||!!selectedTool;
-  homeRoot.hidden=settings||!!selectedTool;
-  // Coming back to the home screen is when a birthday added in Reminders, or a
-  // credit read in Rewards, is worth reading again.
-  if(!homeRoot.hidden)home?.refresh();
-  for(const capability of CAPABILITIES)document.getElementById(`capability-${capability.id}`).hidden=selectedTool!==capability.id;
-  if(selectedTool==='people')peopleTool.refresh();
-  if(selectedTool==='trips')tripTool.refresh();
-  if(selectedTool==='attention')attentionTool.refresh();
-  if(selectedTool==='subscriptions')subscriptionTool.refresh();
-  if(selectedTool==='restaurants')restaurants.open();
-  if(selectedTool==='rewards')rewardTool.refresh({quiet:true});
-  parent.postMessage({type:'mobile-screen',screen:settings?SETTINGS_SCREEN:selectedTool||'home'},location.origin);
+const infoTool=mountInfo(document.getElementById('capability-info'),{credentials,stores,remote:cloudRequest,onSettings:openSettings,onOpen:async row=>{
+  navigation.show(row.tool,{area:'info',focus:true});
+  const tool={people:peopleTool,personal:personalTool,travel:travelTool,gifts:giftTool,sizes:sizeTool,replacements:replacementTool,rewards:rewardTool}[row.tool];
+  await tool?.refresh?.();if(row.tool==='rewards'){rewardTool.scope('memberships');rewardTool.view('wallet');}
+  focusInfoRecord(document.getElementById(`capability-${row.tool}`),row);
+}});
+const moreRoot=document.getElementById('capability-more');moreRoot.replaceChildren(MoreView({mobile:true}));
+for(const item of CAPABILITIES.filter(c=>['restaurants','rankings'].includes(c.id)))moreRoot.querySelector(`#navigate-${item.id}`).addEventListener('click',()=>navigation.show(item.id,{focus:true}));
+const workspace=AreaWorkspace({mobile:true,rootFor:id=>document.getElementById(`capability-${id==='documents'?'travel':id}`),onSelect:id=>navigation.show(id)});
+root.append(workspace);
+function showScreen(screen,{area='',view=''}={}){
+  const settings=screen===SETTINGS_SCREEN;selectedTool=settings?null:screen;
+  connectionRoot.hidden=!settings;workspace.hidden=settings;
+  if(!settings)workspace.show(screen,{area});
+  captureRoot.hidden=false;homeRoot.hidden=false;
+  if(screen==='home'){home?.refresh();attentionTool.refresh();}
+  if(screen==='info')infoTool.refresh();
+  if(screen==='people')peopleTool.refresh();
+  if(screen==='trips')tripTool.refresh();
+  if(screen==='subscriptions')subscriptionTool.refresh();
+  if(screen==='restaurants')restaurants.open();
+  if(screen==='travel'||screen==='documents')travelTool.setScope(screen==='documents'?'documents':'memberships');
+  if(screen==='rewards'){rewardTool.scope(area==='info'?'memberships':'cards');rewardTool.refresh({quiet:true});if(view)rewardTool.view(view);}
+  parent.postMessage({type:'mobile-screen',screen:settings?SETTINGS_SCREEN:screen==='home'?'home':screen},location.origin);
 }
 mountPushBridge();
 const navigation=mountToolNavigation(root.querySelector('.capability-navigation'),{onScreen:showScreen});
+navigation.show('home');
 await connectionChanged();
 window.addEventListener('online',connectionChanged);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)connectionChanged();});

@@ -1,3 +1,10 @@
+## Navigation release 0.1.241
+
+The same six areas as the sidebar: Today, Money, Travel, Info, Health, More.
+Info searches downloaded reference records locally, with entry behind Add.
+The existing passkey and offline queues are unchanged. See
+[navigation](../docs/NAVIGATION.md) for the mapping and AI entry behavior.
+
 # Eric’s Tools for iPhone
 
 Open https://tools.ezberry.net/app/ in Safari, then Share → Add to Home Screen. Leave Open as Web App enabled if shown. Open the installed app once online and wait for Offline access: Ready before trying airplane mode.

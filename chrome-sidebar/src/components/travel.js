@@ -2,7 +2,7 @@ import {Section,Heading,GroupTitle,Note,FormField,FindField,Form,Disclosure,Sett
 import {TRAVEL_CATEGORIES} from '../travel-data.js';
 export function TravelView({connection=true,mode='inline',editId=null}={}) {
   return Section([
-    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Travel wallet',1),Button('Add record',{id:'travel-add',variant:'primary',size:'compact',hidden:mode!=='browse'})],{compact:true}),
+    ActionGroup([Heading(mode==='editor'?(editId?'Edit record':'Add record'):'Documents & memberships',1),Button('Add record',{id:'travel-add',variant:'primary',size:'compact',hidden:mode!=='browse'})],{compact:true}),
     Note('',{id:'travel-status',role:'status','aria-live':'polite'}),
     Stack([
       FindField({id:'travel-search',label:'Find record',hiddenLabel:true,placeholder:'find record'}),

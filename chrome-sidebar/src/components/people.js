@@ -1,7 +1,7 @@
 import {Stack,Section,Heading,Text,Note,Strong,Button,ActionGroup,Disclosure,Form,FormField,Notice,ToolTitle,RowAction,EDIT_GLYPH,DELETE_GLYPH} from './ui.js';
 import {PEOPLE_ROLES,ageInYear} from '../people-data.js';
 export function PeopleView(){return Stack([
-  ToolTitle('Family & places',{actionsId:'people-actions',statusId:'people-status'}),
+  ToolTitle('People & places',{actionsId:'people-actions',statusId:'people-status'}),
   Note('AI reference context'),
   Stack([],{id:'people-list',className:'travel-list'}),
   Disclosure('Person',[

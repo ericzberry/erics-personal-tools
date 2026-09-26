@@ -27,6 +27,15 @@ sidebar validation modules directly (`../../chrome-sidebar/src/...`). So a chang
 under `chrome-sidebar/src/` can affect all three apps — check `mobile-app/build.js`
 and `grep -r chrome-sidebar tools-api/src` before assuming otherwise.
 
+## Navigation areas
+
+Both hosts expose Today, Money, Travel, Info, Health and More from `APP_AREAS`
+in `chrome-sidebar/src/capabilities.js`. `components/areas.js` composes the existing
+panels with shared Tabs. `info-data.js`, `info.js` and `components/info.js` provide
+the shared, passkey-gated metadata collection over existing stores; all four new
+modules ship in the mobile build and offline shell. No new record store or schema.
+See [navigation](NAVIGATION.md) for destination ownership and compatibility.
+
 ## chrome-sidebar/
 
 ### Entry points (HTML → controller)
@@ -362,11 +371,9 @@ copies the shared sidebar modules into `dist/app/shared/` and the config JSON in
 - `unlocked.html` → `unlocked.js` — the disposable unlocked frame that actually runs
   the tools; `mobile-session.js` guards access to it, `tool-layout.js` sizes it.
 - `capabilities.js` — mounts capabilities from the shared registry and mirrors the
-  chosen screen to the shell, and mounts the home screen's own two pieces — the
-  fortnight's birthdays (`#capability-birthdays`) and the shared quick-add note
-  (`#capability-capture`) — both hidden as soon as a tool is open; `tool-navigation.js`/`.css` render the home-screen
-  icon grid and, once a tool or Settings is open, the same grid behind the
-  hamburger menu.
+  chosen screen to the shell, and mounts Today’s weather, Quick add and attention
+  list inside the shared area workspace. `tool-navigation.js`/`.css` render the
+  six-area menu; Info is a searchable collection instead of a tool grid.
 - `restaurants.js` — thin wiring of the shared restaurant controller: the
   reading and research through the Worker, no browser, history from the shared
   `restaurants` store.
@@ -594,3 +601,7 @@ checks, held by `chrome-sidebar/tests/ui-rules.test.js` and the
 `chrome-sidebar/RESTAURANTS.md`.
 
 Travel planning checks: `chrome-sidebar/tests/trips.test.js`, `trips-controller.test.js` and `tools-api/tests/trips.test.js`. Its synthetic rendered fixture is `chrome-sidebar/tests/trips-preview.html`; mobile’s normal preview server also includes a synthetic trip.
+
+Area-navigation acceptance: `tests/areas-preview.html` and
+`tests/areas-widths-preview.html` under chrome-sidebar use the production Info
+controller at sidebar widths; mobile’s normal preview covers populated areas.

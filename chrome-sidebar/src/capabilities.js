@@ -8,17 +8,17 @@
 export const MISC_SECTION='Misc';
 const SECTION_ICONS=new Map([[MISC_SECTION,'M6 12h.01 M12 12h.01 M18 12h.01']]);
 export const CAPABILITIES = [
-  {id:'travel',label:'Travel wallet',href:'travel.html',icon:'M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z M9 8V5h6v3'},
-  {id:'people',label:'Family & places',href:'people.html',icon:'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M2 21v-3a7 7 0 0 1 14 0v3 M17 4a4 4 0 0 1 0 8 M19 15a6 6 0 0 1 3 6'},
+  {id:'travel',label:'Documents & memberships',href:'travel.html',icon:'M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z M9 8V5h6v3'},
+  {id:'people',label:'People & places',href:'people.html',icon:'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M2 21v-3a7 7 0 0 1 14 0v3 M17 4a4 4 0 0 1 0 8 M19 15a6 6 0 0 1 3 6'},
   {id:'trips',label:'Travel planning',href:'trips.html',icon:'M3 6h18v15H3V6Z M7 3v6 M17 3v6 M3 11h18 M7 15h4 M7 18h8'},
   {id:'attention',label:'Needs attention',href:'attention.html',icon:'M9 4h6l6 16H3L9 4Z M12 9v5 M12 17h.01'},
-  {id:'subscriptions',label:'Subscriptions & renewals',href:'subscriptions.html',icon:'M4 8a8 8 0 0 1 14-2l2 2 M20 3v5h-5 M20 16a8 8 0 0 1-14 2l-2-2 M4 21v-5h5'},
+  {id:'subscriptions',label:'Subscriptions',href:'subscriptions.html',icon:'M4 8a8 8 0 0 1 14-2l2 2 M20 3v5h-5 M20 16a8 8 0 0 1-14 2l-2-2 M4 21v-5h5'},
   {id:'sizes',label:'Clothing sizes',href:'sizes.html',icon:'M8.5 4 3 6.5 4.5 10 7 9v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9l2.5 1L21 6.5 15.5 4 M8.5 4a3.5 3.5 0 0 0 7 0'},
-  {id:'replacements',label:'Replacement drawer',href:'replacements.html',icon:'M4 4h16v16H4V4Z M4 12h16 M10 8h4 M10 16h4'},
+  {id:'replacements',label:'Buy again',href:'replacements.html',icon:'M4 4h16v16H4V4Z M4 12h16 M10 8h4 M10 16h4'},
   {id:'gifts',label:'Gift ideas',href:'gifts.html',icon:'M3 11h18v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9Z M2.5 7.5h19V11h-19V7.5Z M12 7.5V21 M12 7.5C10.6 5 9.2 3.6 8 4.3c-1.2.8-.4 3.2 4 3.2Z M12 7.5c1.4-2.5 2.8-3.9 4-3.2 1.2.8.4 3.2-4 3.2Z'},
   {id:'reminders',label:'Reminders',href:'reminders.html',icon:'M12 4a5 5 0 0 0-5 5v3.4L5.5 16h13L17 12.4V9a5 5 0 0 0-5-5Z M10 19a2 2 0 0 0 4 0'},
   {id:'rewards',label:'Rewards & benefits',href:'rewards.html',icon:'M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.3-4.8-2.5-4.8 2.5.9-5.3L4.2 9.7l5.4-.8L12 4Z'},
-  {id:'finance',label:'Finance',href:'finance.html',icon:'M4 20V10 M9.5 20V5 M15 20v-7 M20.5 20V8 M3 20h18'},
+  {id:'finance',label:'Net worth',href:'finance.html',icon:'M4 20V10 M9.5 20V5 M15 20v-7 M20.5 20V8 M3 20h18'},
   {id:'personal',label:'Personal information',href:'personal.html',icon:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M5 20a7 7 0 0 1 14 0'},
   {id:'health',label:'Health',href:'health.html',icon:'M12 20.5s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7.6a4.2 4.2 0 0 1 7.5 2.6c0 5.7-7.5 10.3-7.5 10.3Z M9.5 12.5h5 M12 10v5'},
   {id:'taxes',label:'Taxes',href:'taxes.html',icon:'M6 3h7l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z M13 3v5h5 M9 13h6 M9 17h4'},
@@ -52,10 +52,25 @@ export const resolveCapability=id=>CAPABILITY_ALIASES[id]?.capability||id;
 export const AUTO_CAPABILITY={id:'auto',label:'Current tab'};
 // The screen both hosts open on. It is not a tool, so it stays out of the
 // registry, but both menus lead with it so it can be reached from any page.
-export const HOME_CAPABILITY={id:'home',label:'Home',icon:'M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z M9.5 21v-6h5v6'};
+export const HOME_CAPABILITY={id:'home',label:'Today',icon:'M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z M9.5 21v-6h5v6'};
 export const capabilities=[
   // The panel is where a tool belongs: beside the page the work came from. A
   // capability keeps its `href` only while it has no home in the panel yet.
   ...CAPABILITIES.map(({href,...rest})=>PANEL_CAPABILITIES.includes(rest.id)?rest:{...rest,href}),
   {id:'football',label:'Fantasy football',section:MISC_SECTION,icon:'M7.5 4h9v5a4.5 4.5 0 0 1-9 0V4Z M12 13.5V17 M8.5 20h7'}
 ];
+
+// The six destinations are shared by both hosts. Capability IDs remain stable
+// for saved links and data stores; navigation no longer exposes each as an app.
+export const APP_AREAS=Object.freeze([
+  {id:'today',label:'Today',default:'home',icon:HOME_CAPABILITY.icon,views:['home','reminders']},
+  {id:'money',label:'Money',default:'finance',icon:CAPABILITIES.find(c=>c.id==='finance').icon,views:['finance','rewards','subscriptions','taxes']},
+  {id:'journeys',label:'Travel',default:'trips',icon:CAPABILITIES.find(c=>c.id==='trips').icon,views:['trips','documents']},
+  {id:'info',label:'Info',default:'info',icon:CAPABILITIES.find(c=>c.id==='personal').icon,views:['info']},
+  {id:'health',label:'Health',default:'health',icon:CAPABILITIES.find(c=>c.id==='health').icon,views:['health']},
+  {id:'more',label:'More',default:'more',icon:'M6 12h.01 M12 12h.01 M18 12h.01',views:['more']}
+]);
+export const AREA_LABELS={home:'Today',documents:'Documents',info:'Info',more:'More',trips:'Plans',rewards:'Cards & benefits'};
+export const areaForCapability=id=>APP_AREAS.find(a=>a.views.includes(id))||APP_AREAS.find(a=>a.id===({attention:'today',travel:'info',memberships:'info',people:'info',personal:'info',gifts:'info',sizes:'info',replacements:'info',rankings:'more',restaurants:'more',football:'more',gmail:'more'}[id]))||APP_AREAS[0];
+export const areaDestination=id=>APP_AREAS.find(a=>a.id===id)?.default||id;
+export const capabilityLabel=id=>AREA_LABELS[id]||CAPABILITIES.find(c=>c.id===id)?.label||capabilities.find(c=>c.id===id)?.label||id;

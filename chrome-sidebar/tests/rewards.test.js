@@ -105,9 +105,9 @@ test('capability navigation uses one registry, supports pinned tools, and defaul
  assert.equal(document.getElementById('navigate-gmail'),null);
  showTool('gmail');assert.equal(document.getElementById('gmail-tool').hidden,false);
  selectCapability('travel');showTool('football');assert.equal(document.getElementById('travel-tool').hidden,false);
- assert.equal(document.getElementById('navigate-travel').getAttribute('aria-current'),'page');
+ assert.equal(document.getElementById('navigate-area-info').getAttribute('aria-current'),'page');
  selectCapability('auto');assert.equal(document.getElementById('football-tool').hidden,false);
- assert.equal(document.getElementById('navigate-travel').hasAttribute('aria-current'),false);
+ assert.equal(document.getElementById('navigate-area-info').hasAttribute('aria-current'),false);
  assert.equal(document.getElementById('app-navigation').open,false);
 });
 

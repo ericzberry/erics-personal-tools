@@ -70,8 +70,7 @@ export const VoiceLines=(voices=[])=>voices.map(voice=>Stack([
 // The quiet screen, and the things it is worth interrupting for: whose birthday
 // it is, and the money on a card that the close of the quarter takes back.
 // Nothing coming leaves it exactly as it was.
-export const HomeView=()=>Section([UI.PageHeader({title:'Home'}),
-  Main([Stack([],{id:'home-birthdays'})])],{id:'home-tool',className:'tool-page',hidden:true});
+export const HomeView=()=>Section([Main([Stack([],{id:'home-birthdays'}),Stack([],{id:'today-capture'}),Section([],{id:'attention-tool'})])],{id:'home-tool',className:'tool-page',hidden:true});
 export function SettingsView() {
   return SubPage({id:'settings-tool',title:'Settings',backId:'close-settings',children:[
     UI.SettingsList([
@@ -95,7 +94,7 @@ export function SettingsView() {
 // controller for it fills the section in on first use.
 const PanelTool=id=>Section([],{id:`${id}-tool`,className:'tool-page',hidden:true});
 export function mountApp(root) {root.replaceChildren(AppHeader({}),UI.PageOfferBar(),DraftView(),GmailView(),HomeView(),RewardsView(),Section([],{id:'travel-tool',hidden:true}),
-  ...['people','trips','finance','taxes','attention','subscriptions','gifts','sizes','replacements','reminders','personal','health'].map(PanelTool),SettingsView());}
+  ...['people','trips','finance','taxes','info','more','subscriptions','gifts','sizes','replacements','reminders','personal','health'].map(PanelTool),SettingsView());}
 
 // One AI action and the model that runs it. The action's name reads down the
 // left and its model sits at the end of the line, the way a record's own

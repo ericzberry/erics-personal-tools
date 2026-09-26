@@ -314,7 +314,7 @@ export function PagePanel({site,rows=[],editing=false,disabled=false,source=null
 
 export function FinanceView({layout='page'}={}){
   const view=Stack([
-    ToolTitle('Finance',{actionsId:'finance-actions',statusId:'finance-status'}),
+    ToolTitle('Net worth',{actionsId:'finance-actions',statusId:'finance-status'}),
     // Three scopes, one at a time: the page in front of you, what the whole
     // ledger comes to, and the ways of putting a figure in. They used to run
     // down one page, so reaching the ledger meant scrolling past a reading that
@@ -332,7 +332,7 @@ export function FinanceView({layout='page'}={}){
     // then named what the owner leaves with rather than what is under the
     // label, and nobody arrives here holding figures — they arrive holding a
     // statement, a number, or nothing but the bank's web address.
-    Tabs({id:'finance-tabs',label:'Finance',items:[
+    Tabs({id:'finance-tabs',label:'Net worth',items:[
       {key:'page',label:'This page',hidden:true,content:
         SettingsGroup({id:'finance-page-block',className:'settings-group snapshot-panel',children:[
           Stack([],{id:'finance-snapshot-body'}),

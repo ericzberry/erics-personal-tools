@@ -17,3 +17,7 @@ await Promise.all([import('./sidepanel.js'),import('./context-panel.js'),import(
 await import('./home-page.js').then(({mountPanelHome})=>mountPanelHome());
 
 await import('./release-banner.js');
+
+// Full-tab area navigation uses the same shell and stable destinations.
+const area=new URL(location.href).searchParams.get('area');
+if(area)document.getElementById(`navigate-area-${area}`)?.click();

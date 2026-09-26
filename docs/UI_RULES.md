@@ -770,3 +770,13 @@ stays at 0. `chrome-sidebar/tests/ui-rules.test.js` holds that every disabled
 rule in either host dims to half and keeps the ordinary cursor, and that every
 rule revealing a control has a disabled twin at half in the same context. Look
 at a list's verbs while its tool saves, under a pointer and on the phone.
+
+**UI-57 — a data type does not earn its own main destination.** *Enforced by
+`tests/navigation.test.js`, `tests/info.test.js` and mobile's
+`tests/tool-navigation.test.js`.* “There's way too many sections and stuff.”
+Both hosts expose Today, Money, Travel, Info, Health and More, rather than a
+menu or home grid of every capability. Info is one searchable collection, not
+six nested tool launchers; its record editors have a single return path. Today
+absorbs Home and Needs attention. See [navigation](NAVIGATION.md) for the
+canonical mapping, retained URLs and record ownership. Review both menus and
+Info at 280px and on a phone whenever a capability is added.

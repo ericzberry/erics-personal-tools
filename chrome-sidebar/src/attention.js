@@ -2,10 +2,10 @@ import {AttentionView} from './components/attention.js';
 import {Button,RecordRow,RowAction,OPEN_GLYPH,Note,setStatus} from './components/ui.js';
 import {attentionItems,ATTENTION_SOURCES} from './attention-data.js';
 import {mountVaultGate} from './vault-gate.js';
-export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings=()=>{},vault}={}){
+export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings=()=>{},vault,automatic=true}={}){
   const refreshButton=Button('Refresh',{variant:'secondary',size:'compact'});refreshButton.addEventListener('click',refresh);
   const settings=Button('Connection settings',{variant:'secondary',size:'compact'});settings.addEventListener('click',onSettings);
-  const gate=mountVaultGate(root,{id:'attention-vault',title:'Needs attention',lockedDetail:'Unlock to review attention items from your private records.',...(vault?{vault}:{}),onChange:open=>open?refresh():clear()});
+  const gate=mountVaultGate(root,{id:'attention-vault',automatic,title:'Needs attention',lockedDetail:'Unlock to review attention items from your private records.',...(vault?{vault}:{}),onChange:open=>open?refresh():clear()});
   gate.content.replaceChildren(AttentionView());
   const $=id=>gate.content.querySelector(`#attention-${id}`);
   let generation=0,busy=false,unreachable=false;
@@ -27,12 +27,12 @@ export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings
       const items=attentionItems(data);
       $('coverage').replaceChildren(...coverage.map(text=>Note(text)));
       $('records').replaceChildren(...(items.length?items.map(item=>{
-        const open=RowAction(OPEN_GLYPH,`Open ${item.title} in ${ATTENTION_SOURCES[item.tool]}`,()=>onOpen(item.tool,item.recordId));
+        const open=RowAction(OPEN_GLYPH,`Open ${item.title} in ${ATTENTION_SOURCES[item.tool]}`,()=>onOpen(item.tool,item.recordId,item.destination));
         return RecordRow({title:item.title,detail:[item.reason,item.due,item.pending?'Waiting to sync':''].filter(Boolean).join(' · '),actions:[open]});
       }):[Note(failures?'No attention items in the sources that could be checked. Other sources are unavailable.':'Nothing needs attention in the saved records checked.')]));
       // Items waiting and sources that could not be checked are both things to
       // act on; a clean, complete check is the only success here.
-      setStatus($('status'),`${items.length} item${items.length===1?'':'s'} · ${results.length-failures} of ${results.length} sources checked`,items.length||failures?'alert':'success');
+      setStatus($('status'),failures?'Some saved information could not be checked.':'',failures?'alert':'');
     }catch(error){if(current===generation)setStatus($('status'),error.message,'error');}
     finally{if(current===generation){busy=false;refreshButton.disabled=false;renderActions();}}
   }

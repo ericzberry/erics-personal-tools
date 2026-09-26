@@ -224,6 +224,8 @@ createServer(async (req, res) => {
     if(url.pathname===`/v1/ai-connections/${id}/capture`){
       let text='';for await(const data of req)text+=data;const {note,today}=JSON.parse(text);
       if(String(note).includes('failure')){res.statusCode=422;res.end('{"error":"That does not name anything to keep."}');return;}
+      if(/subscription|monthly|renews/i.test(String(note))){res.end(JSON.stringify({capability:'subscriptions',path:'/v1/subscriptions',record:{name:'Synthetic Stream',currency:'USD',amount:23,cycle:'monthly',state:'Review'},summary:'Synthetic Stream · USD 23 · Monthly · Review terms'}));return;}
+      if(/partner|age|lives/i.test(String(note))){res.end(JSON.stringify({capability:'people',path:'/v1/people',record:{schemaVersion:1,name:'Alex',role:'Partner',age:39,ageYear:2026,location:'',notes:''},summary:'Alex · Partner · 39 in 2026'}));return;}
       if(/gift|would like|wants/i.test(String(note))){
         res.end(JSON.stringify({capability:'gifts',path:'/v1/gifts',
           record:{person:'Celeste',idea:'Butterfly net',link:'',status:'Idea'},

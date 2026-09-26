@@ -1,3 +1,5 @@
+import {peopleOffline} from './people-offline.js';
+import {subscriptionsOffline} from './subscriptions-offline.js';
 import {remindersOffline} from './reminders-offline.js';
 import {giftsOffline} from './gifts-offline.js';
 import {sizesOffline} from './sizes-offline.js';
@@ -7,6 +9,8 @@ import {replacementsOffline} from './replacements-offline.js';
 // refused by whichever tool happened to be open — so a host passes the stores
 // it already has and gets the rest built to match.
 export const captureStores=(provided={},options={})=>({
+  people:provided.people||peopleOffline(options),
+  subscriptions:provided.subscriptions||subscriptionsOffline(options),
   reminders:provided.reminders||remindersOffline(options),
   gifts:provided.gifts||giftsOffline(options),
   sizes:provided.sizes||sizesOffline(options),

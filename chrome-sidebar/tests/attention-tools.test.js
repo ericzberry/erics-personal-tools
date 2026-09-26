@@ -10,8 +10,8 @@ const credentials={get:async()=>'synthetic-token'};
 function setup(){const {document,window}=parseHTML('<html><body><main></main></body></html>');globalThis.document=document;globalThis.window=window;const descriptor=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value');Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,get(){return [...this.options].find(o=>o.hasAttribute('selected'))?.value||'';},set(value){for(const option of this.options)option.removeAttribute('selected');[...this.options].find(o=>o.value===value)?.setAttribute('selected','');}});return {document,window,root:document.querySelector('main')};}
 test('attention shows partial source failure without claiming everything is clear',async()=>{
   const {root}=setup();mountAttention(root,{vault,credentials,stores:{reminders:{request:async()=>({records:[]})},subscriptions:{request:async()=>{throw Error('Unavailable');}}}});
-  await settle(()=>root.textContent.includes('1 of 2 sources checked'));
-  assert.match(root.textContent,/Subscriptions & renewals unavailable/);assert.match(root.textContent,/Other sources are unavailable/);
+  await settle(()=>root.textContent.includes('Some saved information could not be checked.'));
+  assert.match(root.textContent,/Subscriptions unavailable/);assert.match(root.textContent,/Other sources are unavailable/);
 });
 test('subscriptions preserve rejected edits, accept decimal prices, and exclude review candidates from totals',async()=>{
   const {root,window}=setup();let fail=false,writes=0;
@@ -51,12 +51,20 @@ test('review actions preserve terms and show failed acknowledgment beside the re
 test('attention offers Connection settings only when nothing could be reached',async()=>{
   const labels=root=>[...root.querySelectorAll('#attention-actions button')].map(b=>b.textContent);
   let {root}=setup();mountAttention(root,{vault,credentials,stores:{reminders:{request:async()=>({records:[]})}}});
-  await settle(()=>root.textContent.includes('1 of 1 sources checked'));
+  await settle(()=>root.textContent.includes('Nothing needs attention'));
   assert.deepEqual(labels(root),['Refresh']);
   ({root}=setup());mountAttention(root,{vault,credentials,stores:{reminders:{request:async()=>{throw Error('Unauthorized');}}}});
-  await settle(()=>root.textContent.includes('0 of 1 sources checked'));
+  await settle(()=>root.textContent.includes('Other sources are unavailable'));
   assert.deepEqual(labels(root),['Connection settings']);
   ({root}=setup());mountAttention(root,{vault,credentials:{get:async()=>''},stores:{reminders:{request:async()=>({records:[]})}}});
   await settle(()=>root.textContent.includes('Open Settings to connect this device.'));
   assert.deepEqual(labels(root),['Connection settings']);
+});
+
+test('attention routes expiring documents to Travel and membership conflicts to Info',async()=>{
+  const {root}=setup();const opened=[];
+  mountAttention(root,{vault,credentials,onOpen:(...args)=>opened.push(args),stores:{travel:{request:async()=>({records:[{id:'passport',name:'Test passport',category:'Passport',expires:'2020-01-01'},{id:'airline',name:'Test airline',category:'Airline',conflict:{}}]})}}});
+  await settle(()=>root.querySelectorAll('#attention-records button').length===2);
+  for(const button of root.querySelectorAll('#attention-records button'))button.click();
+  assert.deepEqual(opened,[['travel','passport','documents'],['travel','airline','travel']]);
 });

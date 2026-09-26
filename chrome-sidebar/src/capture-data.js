@@ -1,3 +1,5 @@
+import {normalizePerson,PEOPLE_ROLES} from './people-data.js';
+import {normalizeSubscription,BILLING_CYCLES,statementAccount} from './subscription-data.js';
 import {normalizeReminder,describeReminder,reminderDue,duePhrase,REMINDER_KINDS,REMINDER_EVENT_KINDS,DEFAULT_NOTICE_DAYS} from './reminder-data.js';
 import {normalizeGift,isBought,GIFT_STATUSES} from './gift-data.js';
 import {normalizeSize,describeSize} from './size-data.js';
@@ -17,6 +19,29 @@ import {normalizeReplacement,describeReplacement} from './replacement-data.js';
 // model could flatter a reading the record does not actually contain.
 const OBLIGATIONS=REMINDER_KINDS.filter(kind=>!REMINDER_EVENT_KINDS.includes(kind));
 export const CAPTURE_TARGETS=[
+  {
+    capability:'people',label:'people and places',path:'/v1/people',normalize:normalizePerson,
+    when:'the note records a person, relationship, age or a named place, rather than a dated reminder, gift or clothing size',
+    fields:today=>`- name: the person or place as named. Required.
+- role: one of ${PEOPLE_ROLES.join(', ')}. A place or an unspecified relationship is Other.
+- age and ageYear: both null unless an age is stated. For a current age, ageYear is ${today.slice(0,4)}; preserve an explicitly stated reference year. Never invent a birthday.
+- location: an address or place stated in the note, otherwise empty.
+- notes: other stated details, otherwise empty. Never infer addresses or relationships.`,
+    summary:record=>[record.name,record.role,record.location,record.age===null?'':`${record.age} in ${record.ageYear}`].filter(Boolean).join(' · ')
+  },
+  {
+    capability:'subscriptions',label:'subscriptions',path:'/v1/subscriptions',normalize:value=>normalizeSubscription({...Object.fromEntries(['name','currency','amount','cycle','renewal','notes'].map(key=>[key,value[key]])),account:statementAccount(value.account),state:'Review'}),
+    when:'the note records a recurring service and its price, billing terms or renewal date',
+    fields:()=>`- name: the service name. Required.
+- currency: the explicitly stated ISO currency code; use USD for a plain dollar sign. If no currency or dollar sign is stated, return an error asking for currency.
+- amount: the stated price per billing period, or null when unstated. Never annualize or infer a price.
+- cycle: one of ${Object.keys(BILLING_CYCLES).join(', ')}; unknown when unstated.
+- state: Review, so the owner can confirm the terms. Never infer that it is paid or canceled.
+- renewal: the stated renewal date as YYYY-MM-DD, or empty.
+- account: the named card or account, without account numbers, or empty.
+- notes: other stated details. Never invent charges, source evidence, research or cancellation dates.`,
+    summary:record=>[record.name,record.amount===null?'':`${record.currency} ${record.amount}`,BILLING_CYCLES[record.cycle],record.renewal?`Renews ${record.renewal}`:'','Review terms'].filter(Boolean).join(' · ')
+  },
   {
     capability:'reminders',label:'reminders',path:'/v1/reminders',normalize:normalizeReminder,
     when:'the note is about something that happens on a date, or something due again after an interval',

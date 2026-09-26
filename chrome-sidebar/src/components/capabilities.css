@@ -47,3 +47,11 @@
 .capability-navigation--launcher .capability-launcher{padding-top:10px;}
 .capability-navigation--launcher[open]:not(.capability-navigation--home) .capability-launcher{margin-top:-1px;padding:8px;border:1px solid var(--forest);border-radius:0 0 var(--control-radius,6px) var(--control-radius,6px);background:var(--surface);box-shadow:0 6px 16px #173e371f;}
 @media (prefers-reduced-motion:no-preference){.capability-navigation--launcher .capability-toggle::after{transition:transform .15s;}}
+
+/* A small set of destinations, with the selected area's content below it. */
+.area-workspace{min-width:0;}
+.area-return{padding:8px 14px;}
+.info-collection{display:grid;gap:10px;}
+
+.area-workspace .travel-wallet{padding:var(--section-gap) var(--page-inset);}
+.info-collection>div:empty{display:none;}

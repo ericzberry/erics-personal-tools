@@ -2,7 +2,7 @@ import * as UI from './ui.js';
 const {Stack,Notice,Button,ActionGroup,Disclosure,SettingsGroup,FormField,FindField,Form,ToolTitle,Strong}=UI;
 export function ReplacementsView(){
   return Stack([
-    ToolTitle('Replacement drawer',{actionsId:'replacements-actions',statusId:'replacements-status'}),
+    ToolTitle('Buy again',{actionsId:'replacements-actions',statusId:'replacements-status'}),
     Stack([],{id:'replacements-capture'}),
     SettingsGroup({title:'Buy again',level:2,children:[
       FindField({id:'replacements-search',label:'Find a thing',placeholder:'Paint, pillow, cable, shop…'}),

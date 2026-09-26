@@ -210,3 +210,6 @@ export function directoryBalances(programs=[],entries=[],now=new Date().toISOStr
       notes:'',secret:'',secretHint:''
     },now));
 }
+
+// Loyalty memberships belong in Info; issuer currencies remain with cards.
+export const isLoyaltyReward=entry=>['membership','balance'].includes(entry?.kind)&&!entry.card&&walletRun(entry)!=='issuer';

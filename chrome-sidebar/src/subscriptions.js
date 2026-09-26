@@ -12,7 +12,7 @@ export function researchMarket(language=globalThis.navigator?.language){
   catch{return '';}
 }
 export function mountSubscriptions(root,{credentials,offline,remote,onSettings=()=>{},onChanged=()=>{},vault}={}){
-  const gate=mountVaultGate(root,{id:'subscriptions-vault',title:'Subscriptions & renewals',lockedDetail:'Unlock to review private charges and subscriptions.',...(vault?{vault}:{}),onChange:open=>open?refresh():clear()});
+  const gate=mountVaultGate(root,{id:'subscriptions-vault',title:'Subscriptions',lockedDetail:'Unlock to review private charges and subscriptions.',...(vault?{vault}:{}),onChange:open=>open?refresh():clear()});
   gate.content.replaceChildren(SubscriptionsView());
   const $=id=>gate.content.querySelector(`#subscriptions-${id}`);
   let records=[],editing=null,busy=false,loaded=false,generation=0,activeToken='',attachment=null,opened=false,clears=0;

@@ -1,6 +1,6 @@
 import {FormattedSelect,FormattedSuggestions} from './select.js';
 import {money,typedAmount,plainAmount} from '../money.js';
-import {HOME_CAPABILITY,capabilities,capabilitiesByName,capabilitySections} from '../capabilities.js';
+import {HOME_CAPABILITY,capabilities,capabilitiesByName,capabilitySections,APP_AREAS} from '../capabilities.js';
 // All DOM construction lives here. Features compose components and supply data.
 function element(tag, props={}, children=[]) {
   const node=document.createElement(tag);
@@ -237,18 +237,11 @@ function capabilityBranch(title,icon,entries){
 }
 export function CapabilityNavigation(items){
   const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle'},[Label('Tools'),Strong('Current tab',{id:'current-function'})]);
-  const rows=[capabilityRow(HOME_CAPABILITY),...capabilitySections(items).flatMap(({title,icon,items:entries})=>
-    title?[capabilityBranch(title,icon,entries)]:entries.map(capabilityRow))];
-  const settings=element('button',{id:'open-settings',type:'button',className:'capability-settings','aria-controls':'settings-tool','aria-expanded':'false'},[Glyph(SETTINGS_GLYPH,{size:16}),Stack([Strong('Settings')],{className:'capability-text'})]);
+  const rows=APP_AREAS.map(area=>capabilityRow({...area,id:`area-${area.id}`}));
+  const settings=element('button',{id:'open-settings',type:'button',className:'capability-settings','aria-controls':'settings-tool','aria-expanded':'false'},[Glyph(SETTINGS_GLYPH,{size:16}),Strong('Settings')]);
   const nav=element('nav',{'aria-label':'Tools',className:'capability-list'},[...rows,settings]);
   const disclosure=element('details',{id:'app-navigation',className:'capability-navigation'},[summary,nav]);
-  // Escape leaves the open section first, then the menu itself.
-  disclosure.addEventListener('keydown',event=>{
-    if(event.key!=='Escape')return;
-    const branch=event.target.closest?.('.capability-submenu[open]');
-    if(branch){branch.open=false;branch.querySelector('summary').focus();return;}
-    disclosure.open=false;summary.focus();
-  });
+  disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'){disclosure.open=false;summary.focus();}});
   return disclosure;
 }
 // What the page in front of the owner has to offer, as one row under the
@@ -270,11 +263,13 @@ export function PageOfferStrip(offers=[],{onSelect=()=>{}}={}){
 }
 // Mobile Tools menu: the same icon grid, collapsed behind a hamburger once a
 // tool is open. On the home screen the caller unhides the grid in place.
-export function CapabilityMenu(items=capabilitiesByName,{current='Home'}={}){
-  const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle','aria-label':'Tools menu'},[Glyph(MENU_GLYPH,{size:20}),Strong(current,{id:'current-function'})]);
-  const disclosure=element('details',{id:'app-navigation',className:'capability-navigation capability-navigation--launcher'},[summary,CapabilityLauncher(items,{settings:true,home:true})]);
-  disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'&&!summary.hidden){disclosure.open=false;summary.focus();}});
-  return disclosure;
+export function CapabilityMenu(){
+  const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle','aria-label':'Tools menu'},[Glyph(MENU_GLYPH,{size:20}),Strong('Today',{id:'current-function'})]);
+  const grid=Stack(APP_AREAS.map(area=>LauncherTile(`navigate-area-${area.id}`,area.icon,area.label)),{className:'launcher-grid'});
+  const settings=LauncherTile('open-settings',SETTINGS_GLYPH,'Settings','launcher-tile launcher-tile--settings');
+  const menu=element('details',{id:'app-navigation',className:'capability-navigation capability-navigation--launcher'},[summary,element('nav',{'aria-label':'Tools',className:'capability-launcher'},[grid,settings])]);
+  menu.addEventListener('keydown',event=>{if(event.key==='Escape'){menu.open=false;summary.focus();}});
+  return menu;
 }
 export function AppHeader({name='Eric’s tools'}={}) {
   return element('header',{className:'app-header app-header--navigation'},[
@@ -372,8 +367,8 @@ export function Tabs({id,label,items=[],onSelect=()=>{}}) {
   const entries=items.map(item=>({
     key:item.key,
     button:Button(item.label,{id:`${id}-${item.key}-tab`,className:'tabs-button',role:'tab',
-      'aria-controls':`${id}-${item.key}-panel`,title:item.label,hidden:!!item.hidden}),
-    panel:Section(Array.isArray(item.content)?item.content:[item.content],
+      'aria-controls':item.panel?.id||`${id}-${item.key}-panel`,title:item.label,hidden:!!item.hidden}),
+    panel:item.panel||Section(Array.isArray(item.content)?item.content:[item.content],
       {id:`${id}-${item.key}-panel`,role:'tabpanel','aria-labelledby':`${id}-${item.key}-tab`,tabindex:0,hidden:true})
   }));
   const list=Stack(entries.map(entry=>entry.button),{role:'tablist','aria-label':label,className:'tabs-list'});

@@ -1,9 +1,10 @@
 import {mountExtensionTravel} from './travel-page.js';
-let mounted=false;
+let mounted=false,travelTool=null;
 // Settings shows the wallet's connection panel, so Settings mounts it too.
 export function mountTravelTool(){
   const root=document.getElementById('travel-tool');
-  if(root&&!mounted){mountExtensionTravel(root);mounted=true;}
+  if(root&&!mounted){travelTool=mountExtensionTravel(root,{mode:'inline'});mounted=true;}
+  return travelTool;
 }
 document.getElementById('navigate-travel')?.addEventListener('click',mountTravelTool);
 
@@ -59,12 +60,12 @@ export function openSubscriptionsTool(){
 export function openAttentionTool(){
   const root=document.getElementById('attention-tool');
   if(!root)return null;
-  attention??=import('./attention-page.js').then(({mountExtensionAttention})=>mountExtensionAttention(root,{onSettings:()=>document.getElementById('open-settings')?.click(),onOpen:async id=>{
+  attention??=import('./attention-page.js').then(({mountExtensionAttention})=>mountExtensionAttention(root,{automatic:false,onSettings:()=>document.getElementById('open-settings')?.click(),onOpen:async(id,recordId,destination=id)=>{
     // Everything attention can point at lives in the panel, so going there is
     // selecting it here rather than opening a tab beside the page it is about.
     const item=CAPABILITIES.find(c=>c.id===id);
     if(PANEL_TOOLS[id]||item&&!item.href){
-      const {selectCapability}=await import('./navigation.js');selectCapability(id);await openPanelTool(id);
+      const {selectCapability}=await import('./navigation.js');selectCapability(destination);const tool=await openPanelTool(id);if(id==='travel')tool?.setScope(destination==='documents'?'documents':'memberships');
     }else if(globalThis.chrome?.tabs?.create)chrome.tabs.create({url:chrome.runtime.getURL(item.href)});
     else location.assign(item.href);
   }}));
@@ -104,10 +105,11 @@ const PANEL_TOOLS={people:openPeopleTool,trips:openTripsTool,attention:openAtten
 export const openPanelTool=id=>PANEL_TOOLS[id]?.()??null;
 
 // Standalone settings/data pages use the same data registry in the shared formatted picker.
-const {CAPABILITIES}=await import('./capabilities.js');
+const {CAPABILITIES,APP_AREAS}=await import('./capabilities.js');
 const picker=document.getElementById('capability-picker');
 picker?.addEventListener('change',()=>{
-  const capability=CAPABILITIES.find(c=>c.id===picker.value);
+  const area=APP_AREAS.find(a=>`area-${a.id}`===picker.value);
+  const capability=area?{href:`sidepanel.html?area=${area.id}`}:CAPABILITIES.find(c=>c.id===picker.value);
   if(capability){
     if(globalThis.chrome?.tabs?.create&&location.protocol==='chrome-extension:')chrome.tabs.create({url:chrome.runtime.getURL(capability.href)});
     else location.assign(capability.href);

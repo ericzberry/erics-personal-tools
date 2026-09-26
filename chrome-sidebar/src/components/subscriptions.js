@@ -10,7 +10,7 @@ export const subscriptionFields=['name','account','amount','currency','cycle','s
 export function SubscriptionsView(){
   const field=(key,label,kind='text',extra={})=>FormField({id:`subscriptions-${key}`,label,kind,...extra});
   return Stack([
-    ToolTitle('Subscriptions & renewals',{actionsId:'subscriptions-actions',statusId:'subscriptions-status'}),
+    ToolTitle('Subscriptions',{actionsId:'subscriptions-actions',statusId:'subscriptions-status'}),
     Note('',{id:'subscriptions-total'}),
     // A run of records, so the last one does not close on a rule of its own
     // just above the rule that opens the drawer under it.

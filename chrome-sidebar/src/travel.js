@@ -1,7 +1,8 @@
 import {TravelView,TravelGroup,TravelRecord,TravelConnection} from './components/travel.js';
 import {Note,setStatus} from './components/ui.js';
+import {isMembership} from './info-data.js';
 import {groupTravelRecords} from './travel-data.js';
-export function mountTravel(root,{credentials,request,offline,connectionRoot,onConnectionChange=()=>{},mode='inline',showNumbers=false,editId=null,onOpenEditor=()=>{},onSaved=()=>{},onChanged=()=>{},onDone=()=>{},clipboard=globalThis.navigator?.clipboard}) {
+export function mountTravel(root,{credentials,request,offline,connectionRoot,onConnectionChange=()=>{},mode='inline',scope='all',showNumbers=false,editId=null,onOpenEditor=()=>{},onSaved=()=>{},onChanged=()=>{},onDone=()=>{},clipboard=globalThis.navigator?.clipboard}) {
   root.replaceChildren(TravelView({connection:!connectionRoot,mode,editId}));
   if(connectionRoot)connectionRoot.replaceChildren(TravelConnection());
   const $=id=>root.querySelector(`#travel-${id}`)||connectionRoot?.querySelector(`#travel-${id}`);
@@ -20,14 +21,15 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   function edit(record=null){
     selected=record;newId=crypto.randomUUID();dirty=false;
     for(const field of ['name'])$(field).value=record?.[field]||'';
-    $('category').value=record?.category||'Airline';$('number').value='';$('notes').value='';
+    $('category').value=record?.category||(scope==='documents'?'Passport':'Airline');$('number').value='';$('notes').value='';
     $('number').placeholder=record?'Saved — leave blank to keep':'';
     $('notes').placeholder=record?.hasNotes?'Saved — leave blank to keep':'';
     $('editor-title').textContent=record?`Editing ${record.name}`:'New record';
   }
   function render(){
     const term=$('search').value.trim().toLowerCase();
-    const matches=records.filter(r=>`${r.name} ${r.category} ${r.traveler}`.toLowerCase().includes(term));
+    const inScope=r=>scope==='all'||(scope==='memberships'?isMembership(r):!isMembership(r));
+    const matches=records.filter(inScope).filter(r=>`${r.name} ${r.category} ${r.traveler}`.toLowerCase().includes(term));
     const row=record=>TravelRecord(record,{
       showNumber:showNumbers,
       onEdit:()=>{if(busy)return;if(mode==='browse'){run(async()=>{await onOpenEditor(record.id);status('Editor opened in a new tab.','success');});return;}if(dirty){status('Save or cancel your edits first.','alert');return;}edit(record);$('editor').open=true;$('name').focus();},
@@ -109,5 +111,5 @@ export function mountTravel(root,{credentials,request,offline,connectionRoot,onC
   });
   render();
   const ready=run(async()=>{token=await credentials.get();$('cloud').open=!token;status(token?await refresh():'Connect in Settings to download your records.',token?'alert':'');});
-  return {ready,isDirty:()=>dirty,refresh:reload};
+  return {ready,isDirty:()=>dirty,refresh:reload,setScope(value){scope=value;$('search').value='';const title=root.querySelector('h1');if(title)title.textContent=scope==='documents'?'Documents':scope==='memberships'?'Memberships':'Documents & memberships';if(!dirty&&!selected)edit();render();}};
 }

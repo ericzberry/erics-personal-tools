@@ -51,6 +51,7 @@ export function mountVaultGate(root,{
   function render(){
     const unlocked=vault.unlocked(),available=vault.available();
     $('panel').dataset.state=unlocked?'unlocked':'locked';
+    $('panel').hidden=unlocked&&!message;
     // While locked the gate is the page, so it carries the heading. Unlocked, it
     // steps aside and the tool's own heading leads.
     $('title').hidden=unlocked;

@@ -142,4 +142,4 @@ const voice=mountWritingVoice({
 if(extension)$('email-voice').addEventListener('toggle',()=>{if($('email-voice').open)voice.load();});
 
 if (extension) {refresh();setInterval(refresh,1500);chrome.tabs.onActivated.addListener(refresh);chrome.tabs.onUpdated.addListener(refresh);}
-else {const previewTool=new URL(location.href).searchParams.get('tool');showTool(['gmail','home'].includes(previewTool)?previewTool:'football');renderEmail();}
+else {const previewTool=new URL(location.href).searchParams.get('tool');showTool(['gmail','home','football'].includes(previewTool)?previewTool:'home');renderEmail();}

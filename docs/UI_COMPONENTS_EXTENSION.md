@@ -25,3 +25,10 @@ Keep larger editing or research tasks in the existing full-tab workflow when tha
 ## Acceptance
 
 Review the normal sidebar entry, automatic and manual tool selection, Settings return, and open/closed disclosures at 380px and 280px. Exercise keyboard focus, menus, wrapped actions, loading, errors, and relevant offline states. For cross-window edits, verify refresh without losing input. Follow [VISUAL_QA.md](VISUAL_QA.md); static previews do not verify installed Chrome messaging or live-page capture.
+
+## Area navigation
+
+The six-area shell and unified Info collection supersede the flat capability
+menu and mobile home grid. See [navigation](NAVIGATION.md). `AreaWorkspace` uses
+shared `Tabs` with existing panels; `CapabilityNavigation` and `CapabilityMenu`
+render `APP_AREAS`. Capability IDs still own records and legacy links.

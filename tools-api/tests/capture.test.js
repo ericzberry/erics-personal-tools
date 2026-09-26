@@ -112,3 +112,16 @@ test('reminders store and validate through the shared record route',async()=>{
   assert.equal(sql.prepare('SELECT value FROM replacement_records').get().value.includes('67XL'),false);
   assert.equal((await call(drawerPath,'DELETE',{revision:thing.revision})).status,200);
 });
+
+test('new clients can capture people with a reference-year age',async()=>{
+  const result=await readCapture(connection,{note:'Alex is my partner, age 39',today:'2026-09-26',capabilities:['people']},reply({capability:'people',record:{name:'Alex',role:'Partner',age:39,ageYear:2026}}));
+  assert.equal(result.record.ageYear,2026);assert.equal(result.path,'/v1/people');assert.match(result.summary,/39 in 2026/);
+});
+test('subscription capture is reviewable and cannot invent charge evidence or research',async()=>{
+  const result=await readCapture(connection,{note:'Example Stream is $23 monthly',today:'2026-09-26',capabilities:['subscriptions']},reply({capability:'subscriptions',record:{name:'Example Stream',currency:'USD',amount:23,cycle:'monthly',state:'Active',account:'Visa ending in 1234',charges:[{on:'2026-09-01',amount:23,description:'invented'}],research:{checked:'2026-09-26'}}}));
+  assert.equal(result.record.state,'Review');assert.deepEqual(result.record.charges,[]);assert.equal(result.record.research,null);assert.equal(result.record.account,'Visa');
+});
+test('older clients cannot receive new capture destinations',async()=>{
+  await assert.rejects(readCapture(connection,{note:'Alex is my partner'},reply({capability:'people',record:{name:'Alex',role:'Partner'}})),error=>error.status===502);
+  await assert.rejects(readCapture(connection,{note:'Example is $20',capabilities:['gifts']},reply({capability:'subscriptions',record:{name:'Example',currency:'USD'}})),error=>error.status===502);
+});
