@@ -1402,8 +1402,8 @@ rows rather than as fields on every account that never had one.
 **A position is two rows.** `finance_holdings` is the investment: the portfolio
 that holds it, its name, the kind of vehicle it is, the kind its paperwork
 claims it is, and the asset class its value counts under. `VEHICLES` names the
-three kinds — **Direct Fund Investment**, **Direct Equity Investment**, **SPV
-Investment**. `finance_capital` is one statement: the ending capital account
+four kinds — **Direct Fund Investment**, **Direct Equity Investment**, **SPV
+Investment**, **SAFE or Convertible Note**. `finance_capital` is one statement: the ending capital account
 value, contributions to date, distributions to date, the commitment, and the
 date they were struck — four integers in cents, keyed by investment and date,
 so re-filing a quarter replaces its own row exactly as a figure does. Its

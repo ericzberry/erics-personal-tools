@@ -310,8 +310,9 @@ into a private equity total. So a position is its own pair of rows.
 **An investment** (`finance_holdings`, addressed `h3`) carries the portfolio
 that holds it, its name, the kind of vehicle it is, the kind its paperwork
 claims it is, and the asset class its value counts under. `VEHICLES` in
-`finance-data.js` names the three kinds: **Direct Fund Investment**, **Direct
-Equity Investment** and **SPV Investment**. Its name is encrypted exactly as a
+`finance-data.js` names the four kinds: **Direct Fund Investment**, **Direct
+Equity Investment**, **SPV Investment** and **SAFE or Convertible Note** — a
+right to shares not yet issued, counted under Private stock like equity. Its name is encrypted exactly as a
 portfolio's is; the portfolio number stays a readable column, because deleting a
 portfolio has to be able to find what it held.
 
@@ -352,6 +353,15 @@ compute a multiple or a return — `foldCapital` does all of that on the device,
 against a ledger the model never sees. A statement stating only the period's
 movement is added to the position's last filed figure here, and the review row
 says that it was.
+
+**The paper that makes an investment is read the same way.** A SAFE, a
+convertible note, a share purchase or a subscription agreement comes back as one
+capital entry marked `document: "purchase"`: the company or vehicle, the
+investor, the date the money was paid, and the purchase amount as contributed,
+with the instrument's terms (a valuation cap, a discount) in its reason. It
+states no value, so `parseFinanceUpdates` carries it at the purchase amount —
+the device's decision, flagged `atCost` and said on the review — until a later
+statement values it.
 
 **A statement is tied to its investment by the name it prints**, and to its
 portfolio by the partner it is addressed to. Both match by exact name first,

@@ -144,7 +144,11 @@ export const REGISTRATIONS=[
 export const VEHICLES=[
   {code:1,id:'fund',label:'Direct Fund Investment',short:'Fund',committed:true,holds:'funds'},
   {code:2,id:'equity',label:'Direct Equity Investment',short:'Equity',committed:false,holds:'private-stock'},
-  {code:3,id:'spv',label:'SPV Investment',short:'SPV',committed:true,holds:'funds'}
+  {code:3,id:'spv',label:'SPV Investment',short:'SPV',committed:true,holds:'funds'},
+  // A right to shares not yet issued: a SAFE or a convertible note. Bought
+  // outright like equity and counted with it, but kept apart because it has
+  // no share count and converts at a round nobody can date yet.
+  {code:4,id:'safe',label:'SAFE or Convertible Note',short:'SAFE',committed:false,holds:'private-stock'}
 ];
 // How much of a vehicle is this portfolio's. Most positions are all of one and
 // say nothing about it, but a general partner rarely is: the owner holds part
@@ -763,7 +767,7 @@ export function normalizeFinance(input,previous={}){
   // figure lives here — a name that changed should not move a total.
   if(row==='holding'){
     const kind=Number(get('vehicle'));
-    if(!vehicleOf(kind))fail('Choose whether this is a fund, an equity or an SPV investment.');
+    if(!vehicleOf(kind))fail('Choose whether this is a fund, an equity, an SPV or a SAFE investment.');
     const cls=Number(get('class'));
     if(!assetClass(cls)||classSide(cls)!=='asset')fail('Choose an asset class for this investment.');
     const claimed=Number(get('stated')??0);
@@ -1353,7 +1357,13 @@ export function parseFinanceUpdates(value){
         // What the paperwork calls itself, which is not the same as what it is.
         stated:vehicleById(draft.vehicle??draft.stated)?.id||'',
         holder:text(draft.holder??'',120,'a holder'),
-        asOf,value:optional(draft.value,'capital account value')??0,
+        asOf,value:optional(draft.value,'capital account value'),
+        // The paper that made the investment rather than a statement about it:
+        // a SAFE, a note, a share purchase or a subscription. It states what
+        // was paid and nothing about what it is worth since.
+        // Read twice like everything here, so the device's own words — purchase,
+        // atCost — are taken back as well as the model's.
+        purchase:draft.document==='purchase'||draft.purchase===true,atCost:draft.atCost===true,
         commitment:optional(draft.commitment,'the commitment'),
         contributed:optional(draft.contributed,'contributions to date'),
         distributed:optional(draft.distributed,'distributions to date'),
@@ -1366,6 +1376,13 @@ export function parseFinanceUpdates(value){
       }];
     }catch{return [];}
   });
+  // A purchase is carried at what was paid until a statement values it. The
+  // device decides that, not the model, so it is decided here and said on the
+  // row; any other statement that names no value is worth nothing stated.
+  for(const statement of statements){
+    statement.atCost||=statement.value===null&&statement.purchase&&!!statement.contributed;
+    statement.value=statement.value??(statement.atCost?statement.contributed:0);
+  }
   const unread=text(value.unread??'',800,'the unread note');
   if(!readings.length&&!statements.length&&!unread)throw Error('AI did not find any figures in that text. Add more detail, or enter the figure by hand.');
   return {readings,capital:statements,unread};
@@ -2077,6 +2094,7 @@ export function foldCapital(statements,records,{institution='',today=new Date().
       notes.push(`${statement.name}: no portfolio matched “${statement.holder}” closely enough to be sure, so a new one is proposed. Change it on the row if it belongs to one you already have.`);
     if(!holding.isNew&&vehicleById(statement.stated)&&vehicleById(statement.stated).code!==holding.vehicle)
       notes.push(`${statement.name}: the statement calls this ${vehicleById(statement.stated).label.toLowerCase()} and it is filed as ${vehicleLabel(holding.vehicle).toLowerCase()}. Saving does not change how it is filed.`);
+    if(statement.atCost)notes.push(`${statement.name}: valued at the ${statement.asOf} purchase amount until a statement says otherwise.`);
     if(managedVehicle(statement.name))runs.push(`${statement.name} at ${shareText(holding.share??WHOLE_SHARE)}`);
     rows.push({holding:holding.number,name:holding.name,vehicle:holding.vehicle,class:holding.class,
       share:holding.share??WHOLE_SHARE,follows:holding.follows||0,filed,

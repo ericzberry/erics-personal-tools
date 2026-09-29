@@ -941,6 +941,32 @@ test('a capital account statement is read, never totalled, and an unreadable one
   assert.throws(()=>parseFinanceUpdates({readings:[],capital:[],unread:''}));
 });
 
+test('a SAFE is a private investment carried at its purchase amount, decided on the device',()=>{
+  // What the Worker hands on is read again on the device, so the purchase and
+  // the at-cost decision must survive both passes.
+  const worker=parseFinanceUpdates({readings:[],unread:'',capital:[{
+    fund:'Remy and Celine, Inc',vehicle:'safe',document:'purchase',holder:'Eric Berry',asOf:'2026-09-28',
+    contributed:150000,confidence:'high',reason:'SAFE, $16,000,000 post-money valuation cap.'}]});
+  const {capital:[read]}=parseFinanceUpdates(JSON.parse(JSON.stringify(worker)));
+  assert.equal(read.stated,'safe');
+  assert.equal(read.value,150000,'nothing has valued it yet, so it stands at what was paid');
+  assert.equal(read.atCost,true);
+  const {rows,holdings,notes}=foldCapital([read],ledger(),{today:'2026-09-29'});
+  assert.equal(holdings.length,1);
+  assert.equal(vehicleLabel(holdings[0].vehicle),'SAFE or Convertible Note');
+  assert.equal(classLabel(holdings[0].class),classLabel(classById('private-stock').code));
+  assert.equal(rows[0].contributed,150000);
+  assert.equal(rows[0].value,150000);
+  assert.equal(rows[0].asOf,'2026-09-28');
+  assert.notEqual(rows[0].portfolio,2,'a SAFE bought by Eric Berry is not held in the IRA of that name');
+  assert.match(notes.join(' '),/valued at the 2026-09-28 purchase amount/);
+  // A statement that names no value is not a purchase, and is not given one.
+  const {capital:[plain]}=parseFinanceUpdates({readings:[],unread:'',capital:[{
+    fund:'Acme Fund',asOf:'2026-09-30',contributed:100}]});
+  assert.equal(plain.value,0);
+  assert.equal(plain.atCost,false);
+});
+
 test('a statement ties to the investment it names, and its period movement is added on the device',()=>{
   const records=ledger({...trust,id:'p3'},
     holding(1,'Acme Ventures Fund III, L.P.',1,3),
