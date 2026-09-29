@@ -168,6 +168,7 @@ async function fontOf(doc, number) {
     map: toUnicode(doc, number, unicodeRef ? await streamOf(doc, Number(unicodeRef[1])) : null),
     bytesPerCode: /\/Subtype\s*\/Type0/.test(dict) ? 2 : 1,
     widths: widthsOf(doc, dict),
+    cid: /\/Subtype\s*\/Type0/.test(dict) ? cidWidthsOf(doc, dict) : null,
     first: Number(/\/FirstChar\s+(\d+)/.exec(dict)?.[1] || 0),
     scale: Number(/\/FontMatrix\s*\[\s*([\d.eE+-]+)/.exec(dict)?.[1] || 0.001)
   };
@@ -179,6 +180,51 @@ function widthsOf(doc, dict) {
   const array = reference ? doc.objects.get(Number(reference[1]))?.dict : /\/Widths\s*\[([^\]]*)\]/.exec(dict)?.[1];
   const numbers = (array || '').match(/-?[\d.]+/g);
   return numbers ? numbers.map(Number) : null;
+}
+
+// A composite font keeps its widths on the font it descends from, as runs of
+// codes: `c [w1 w2 …]` gives consecutive codes their own widths, `c1 c2 w`
+// gives a range one width, and anything unlisted is the default. Guessing half
+// an em instead put every glyph of a word-processor PDF in the wrong place,
+// which read "Berry" as "Ber y" and "$150,000" as "$150,0 0".
+function cidWidthsOf(doc, dict) {
+  const target = (text, key) => {
+    const reference = new RegExp(`\\${key}\\s+(\\d+)\\s+\\d+\\s+R`).exec(text);
+    return reference ? doc.objects.get(Number(reference[1]))?.dict || '' : null;
+  };
+  let descendant = /\/DescendantFonts\s*\[\s*(\d+)\s+\d+\s+R/.exec(dict);
+  if (!descendant) {
+    const array = target(dict, '/DescendantFonts');
+    descendant = array && /(\d+)\s+\d+\s+R/.exec(array);
+  }
+  const font = descendant ? doc.objects.get(Number(descendant[1]))?.dict || '' : '';
+  if (!font) return null;
+  const fallback = Number(/\/DW\s+([\d.]+)/.exec(font)?.[1] ?? 1000);
+  let list = target(font, '/W');
+  if (list === null) {
+    const start = font.search(/\/W\s*\[/);
+    if (start < 0) return {map: new Map(), fallback};
+    let depth = 0, end = font.indexOf('[', start);
+    for (let i = end; i < font.length; i++) {
+      if (font[i] === '[') depth++;
+      else if (font[i] === ']' && --depth === 0) { end = i; break; }
+    }
+    list = font.slice(font.indexOf('[', start) + 1, end);
+  }
+  const map = new Map(), tokens = list.match(/\[|\]|-?[\d.]+/g) || [];
+  for (let i = 0; i < tokens.length && map.size < 70000;) {
+    const first = Number(tokens[i]);
+    if (tokens[i + 1] === '[') {
+      let code = first;
+      for (i += 2; i < tokens.length && tokens[i] !== ']'; i++) map.set(code++, Number(tokens[i]));
+      i++;
+    } else if (i + 2 < tokens.length) {
+      const last = Number(tokens[i + 1]), width = Number(tokens[i + 2]);
+      for (let code = first; code <= last && code - first < 70000; code++) map.set(code, width);
+      i += 3;
+    } else break;
+  }
+  return {map, fallback};
 }
 
 // ----------------------------------------------------------------- content --
@@ -276,7 +322,7 @@ async function paint(doc, content, resources, matrix, runs, depth, inherited = {
         const code = font.bytesPerCode === 2 ? (part.charCodeAt(i) << 8) + (part.charCodeAt(i + 1) || 0) : part.charCodeAt(i);
         const mapped = font.map.get(code);
         out += mapped ?? (code >= 32 && code < 127 ? part[i] : code === 9 ? ' ' : '');
-        const width = font.widths?.[code - font.first];
+        const width = font.cid ? font.cid.map.get(code) ?? font.cid.fallback : font.widths?.[code - font.first];
         advance.push((Number.isFinite(width) ? width * font.scale : 0.5) * size);
       }
     }
@@ -344,16 +390,19 @@ function layout(runs) {
   let current = null;
   for (const run of ordered) {
     if (!current || Math.abs(run.y - current.y) > Math.max(2, Math.min(run.size, current.size) * 0.3)) {
-      current = {y: run.y, size: run.size, end: run.end, text: run.text};
+      current = {y: run.y, size: run.size, end: run.end, start: run.x, text: run.text};
       lines.push(current);
       continue;
     }
     const gap = run.x - current.end;
     // Statements bold a heading by drawing it twice a hair apart. Keeping both
-    // copies doubles every title and glues the words together.
-    if (gap < 0 && current.text.endsWith(run.text)) continue;
+    // copies doubles every title and glues the words together. The copy starts
+    // where the first one did; a letter that merely touches the one before it
+    // is the second l of "will", and dropping it is how "$150,000" read "$150,00".
+    if (gap < 0 && current.text.endsWith(run.text) && Math.abs(run.x - current.start) < run.size * 0.1) continue;
     current.text += (gap > run.size * 0.8 ? '  ' : gap > run.size * 0.08 || gap < -run.size * 0.5 ? ' ' : '') + run.text;
     current.end = run.end;
+    current.start = run.x;
     current.size = run.size;
   }
   return lines.map(line => line.text.replace(/[ \t]+/g, match => match.length > 1 ? '  ' : ' ').trimEnd());

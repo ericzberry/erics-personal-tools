@@ -147,6 +147,65 @@ test('a statement drawn in form XObjects through a subset font reads as its own 
   assert.ok(result.text.indexOf('08/18') < result.text.indexOf('07/25'), 'rows keep the order they are drawn in');
 });
 
+// A word processor's PDF: a composite font whose widths live on the font it
+// descends from, and every glyph placed on its own. Read with a guessed width,
+// narrow letters overlapped the one before and a doubled one was taken for
+// bold drawn twice — "Eric Berry" came out "Eric Ber y", "$150,000" "$150,0 0".
+function wordProcessorPdf(lines, bold) {
+  const codes = new Map(), widths = new Map();
+  const wide = character => /[A-Z$MWmw]/.test(character) ? 720 : /[iljtf,.()'!| ]/.test(character) ? 260 : 500;
+  const code = character => {
+    if (!codes.has(character)) { codes.set(character, 3 + codes.size); widths.set(codes.get(character), wide(character)); }
+    return codes.get(character);
+  };
+  const glyphs = (text, x, y) => {
+    let at = x;
+    return [...text].map(character => {
+      const drawn = `1 0 0 1 ${at.toFixed(3)} ${y} Tm <${code(character).toString(16).padStart(4, '0')}> Tj`;
+      at += wide(character) / 1000 * 12;
+      return drawn;
+    }).join(' ');
+  };
+  const drawn = ['BT /F1 12 Tf',
+    // A heading made bold the usual way: drawn twice, a fraction of a point apart.
+    `1 0 0 1 72 720 Tm <${[...bold].map(character => code(character).toString(16).padStart(4, '0')).join('')}> Tj`,
+    `1 0 0 1 72.4 720 Tm <${[...bold].map(character => code(character).toString(16).padStart(4, '0')).join('')}> Tj`,
+    ...lines.map((line, index) => glyphs(line, 72, 690 - index * 16)), 'ET'].join('\n');
+  const cmap = ['/CIDInit /ProcSet findresource begin 12 dict begin begincmap',
+    '1 begincodespacerange <0000> <FFFF> endcodespacerange', `${codes.size} beginbfchar`,
+    ...[...codes].map(([character, value]) => `<${value.toString(16).padStart(4, '0')}> <${character.charCodeAt(0).toString(16).padStart(4, '0')}>`),
+    'endbfchar', 'endcmap end end'].join('\n');
+  // Widths written the way producers write them: runs of consecutive codes.
+  const ordered = [...widths].sort((a, b) => a[0] - b[0]);
+  const stream = body => `<< /Length ${Buffer.byteLength(body, 'latin1')} >>\nstream\n${body}\nendstream`;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    stream(drawn),
+    '<< /Type /Font /Subtype /Type0 /BaseFont /AAAAAA+Times /Encoding /Identity-H /DescendantFonts [6 0 R] /ToUnicode 7 0 R >>',
+    `<< /Type /Font /Subtype /CIDFontType2 /BaseFont /AAAAAA+Times /DW 1000 /W [${ordered[0][0]} [${ordered.map(([, width]) => width).join(' ')}]] >>`,
+    stream(cmap)
+  ];
+  let body = '%PDF-1.4\n';
+  const offsets = objects.map((object, index) => { const at = body.length; body += `${index + 1} 0 obj\n${object}\nendobj\n`; return at; });
+  const xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map(at => `${String(at).padStart(10, '0')} 00000 n \n`).join('')}`;
+  return new Uint8Array(Buffer.from(`${body}${xref}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${body.length}\n%%EOF`, 'latin1'));
+}
+
+test('a composite font is read at its own widths, so doubled letters and digits survive', async () => {
+  const result = await pdfText(wordProcessorPdf([
+    'THIS CERTIFIES THAT in exchange for the payment by Eric Berry (the Investor)',
+    'of $150,000 (the Purchase Amount) this Safe will automatically convert.',
+    'Section 1(ii) applies, and the officer will be called.'
+  ], 'SAFE'));
+  assert.match(result.text, /THIS CERTIFIES THAT in exchange for the payment by Eric Berry \(the Investor\)/);
+  assert.match(result.text, /of \$150,000 \(the Purchase Amount\) this Safe will automatically convert\./);
+  assert.match(result.text, /Section 1\(ii\) applies, and the officer will be called\./);
+  // Bold drawn twice is still read once.
+  assert.match(result.text, /^SAFE$/m);
+});
+
 // Banks ship statements locked with an owner password and an empty user
 // password: any reader may open them. Before this, every stream failed to
 // decompress and a statement full of figures was reported as a scan.
