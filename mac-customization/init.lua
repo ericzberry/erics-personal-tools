@@ -2,7 +2,6 @@
 --   - Per-space labels (Personal / Work / Focus) in upper-right
 --   - Auto-launch managed apps on login, restore size/position, place on saved space
 --   - Ctrl+/ cheat sheet listing every shortcut in this setup
---   - Gmail in Chrome: Shift+R opens the reply in a separate window
 --
 -- macOS handles Ctrl+1 / Ctrl+2 / Ctrl+3 (Switch to Desktop) natively
 -- via System Settings → Keyboard → Keyboard Shortcuts → Mission Control.
@@ -350,7 +349,7 @@ local cheatText = table.concat({
   "  Cmd+Opt+H   Hide all other apps",
   "",
   "GMAIL (with an email open)",
-  "  Shift+R   Reply in a separate window",
+  "  Shift+R   Reply in a pop-out box",
   "  Shift+A   Reply all in its own window",
   "  Shift+F   Forward in its own window",
   "  Shift+C   New email in its own window",
@@ -381,85 +380,6 @@ local function toggleCheatSheet()
 end
 
 hs.hotkey.bind({ "ctrl" }, "/", toggleCheatSheet)
-
--- ============================================================
--- Gmail: Shift+R replies in a separate browser window
--- ============================================================
--- Gmail's own Shift+R opens the reply in a box inside the Gmail tab.
--- Shift+clicking the Reply button opens it in its own window instead, so
--- when Chrome is showing Gmail (and you're not typing in a text box) this
--- finds the email's Reply button and Shift+clicks it. If it can't find one,
--- Shift+R falls through to Gmail as normal.
-
-local ax = require("hs.axuielement")
-local TEXT_ROLES = { AXTextArea = true, AXTextField = true, AXComboBox = true, AXSearchField = true }
-
-local function chromeAX()
-  local app = hs.application.frontmostApplication()
-  if not app or app:name() ~= "Google Chrome" then return nil end
-  local win = app:focusedWindow()
-  if not win or not (win:title() or ""):match("Mail") then return nil end
-  local axapp = ax.applicationElement(app)
-  -- Chrome only exposes page content to accessibility clients that ask
-  axapp:setAttributeValue("AXManualAccessibility", true)
-  return axapp, win
-end
-
-local function isTyping(axapp)
-  local f = axapp:attributeValue("AXFocusedUIElement")
-  if not f then return false end
-  return TEXT_ROLES[f:attributeValue("AXRole") or ""] or f:attributeValue("AXEditableAncestor") ~= nil
-end
-
--- Last visible button labelled exactly "Reply" (the latest message in the thread)
-local function findReplyButton(axwin, frame)
-  local best = nil
-  local function walk(e, depth)
-    if depth > 80 then return end
-    if e:attributeValue("AXRole") == "AXButton" then
-      local label = e:attributeValue("AXDescription")
-      if label == nil or label == "" then label = e:attributeValue("AXTitle") end
-      if label == "Reply" then
-        local pos, size = e:attributeValue("AXPosition"), e:attributeValue("AXSize")
-        if pos and size and size.w > 0 and pos.y >= frame.y and pos.y + size.h <= frame.y + frame.h then
-          best = { x = pos.x + size.w / 2, y = pos.y + size.h / 2 }
-        end
-      end
-    end
-    for _, k in ipairs(e:attributeValue("AXChildren") or {}) do walk(k, depth + 1) end
-  end
-  walk(axwin, 0)
-  return best
-end
-
-local function shiftClick(pt)
-  local ev = hs.eventtap.event
-  local saved = hs.mouse.absolutePosition()
-  ev.newMouseEvent(ev.types.leftMouseDown, pt, { "shift" }):post()
-  hs.timer.usleep(30000)
-  ev.newMouseEvent(ev.types.leftMouseUp, pt, { "shift" }):post()
-  hs.mouse.absolutePosition(saved)
-end
-
-local R_KEY = hs.keycodes.map["r"]
-
-gmailReplyTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
-  if e:getKeyCode() ~= R_KEY then return false end
-  local flags = e:getFlags()
-  if not flags.shift or flags.cmd or flags.ctrl or flags.alt then return false end
-  local ok, axapp, win = pcall(chromeAX)
-  if not ok or not axapp or isTyping(axapp) then return false end
-  local axwin = axapp:attributeValue("AXFocusedWindow")
-  if not axwin then return false end
-  local ok2, pt = pcall(findReplyButton, axwin, win:frame())
-  if not ok2 or not pt then
-    print("Gmail Shift+R: no visible Reply button found" .. (ok2 and "" or (": " .. tostring(pt))))
-    return false
-  end
-  hs.timer.doAfter(0, function() shiftClick(pt) end)
-  return true
-end)
-gmailReplyTap:start()
 
 -- Run on Hammerspoon launch (i.e. on every login if Hammerspoon launches at login)
 setupManagedApps()

@@ -9,7 +9,6 @@ Mac-specific tooling and config. Currently this is a [Hammerspoon](https://www.h
 - **Layout capture** — call `saveAppLayout("Messages")` (or the convenience wrappers) from the Hammerspoon Console to snapshot an app's current window frame **and current space** to `~/.hammerspoon/layouts/<app>.lua`. That file is read on every config load.
 
 - **Cheat sheet** — `Ctrl+/` shows every shortcut in this setup on screen.
-- **Gmail reply in a separate window** — in Chrome, when Gmail is showing an email and you're not typing, `Shift+R` Shift+clicks the latest Reply button so the reply opens in its own browser window. If no Reply button is visible it falls through to Gmail's normal `Shift+R`. Hammerspoon needs Accessibility access for this.
 
 `Ctrl+1` / `Ctrl+2` / `Ctrl+3` are handled natively by macOS (Mission Control shortcuts). `setup.sh` turns them on.
 
