@@ -538,6 +538,15 @@ builds and packages the extension, builds mobile, deploys the Worker, publishes
 both versions to D1, and then reads the release endpoint back to confirm.
 `--skip-tests`, `--repackage`, `--open`.
 
+## mac-customization/
+
+Not an app: this Mac's desktop setup. `init.lua` is the Hammerspoon config
+(Personal / Work / Focus space labels, app launch and layout restore, and a
+`Ctrl+/` shortcut cheat sheet); `~/.hammerspoon/init.lua` is a symlink to it.
+`setup.sh` is the one-command install for a new Mac: Hammerspoon, the symlink,
+launch at login, `Ctrl+1/2/3` desktop switching, and Finder defaults. Window
+layouts are per-machine and stay in `~/.hammerspoon/layouts/`, outside the repo.
+
 ## Attention and subscription modules
 
 `src/attention-data.js` is the shared attention projection; `attention.js` and
