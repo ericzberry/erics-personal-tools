@@ -65,24 +65,42 @@ echo "→ Finder: default to list view (Nlsv)"
 defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
 
 # ------------------------------------------------------------
-# Apply
+# Hammerspoon: Accessibility, then 3 desktops
 # ------------------------------------------------------------
 
-# Restarting the Dock is what makes macOS actually register the
-# Ctrl+2 / Ctrl+3 desktop shortcuts (only Ctrl+1 works until then).
-echo "→ Restarting Finder and Dock so changes take effect"
-killall Finder || true
-killall Dock || true
+HS=/Applications/Hammerspoon.app/Contents/Frameworks/hs/hs
 
 echo "→ (Re)starting Hammerspoon"
 killall Hammerspoon 2>/dev/null || true
 sleep 1
 open -a Hammerspoon
+for _ in $(seq 1 40); do
+  "$HS" -t 1 -c 'return 1' >/dev/null 2>&1 && break
+  sleep 0.5
+done
+
+if [ "$("$HS" -t 2 -c 'return hs.accessibilityState()' 2>/dev/null)" != "true" ]; then
+  echo "→ Turn on Hammerspoon in the Accessibility list that just opened"
+  open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+  until [ "$("$HS" -t 2 -c 'return hs.accessibilityState()' 2>/dev/null)" = "true" ]; do
+    sleep 1
+  done
+fi
+
+echo "→ Spaces: make sure there are 3 desktops"
+added="$("$HS" -t 30 -c 'return ensureDesktops(3)' 2>/dev/null || echo 0)"
+[ "$added" != "0" ] && echo "  (added $added)"
+
+# ------------------------------------------------------------
+# Apply
+# ------------------------------------------------------------
+
+# Restarting the Dock is what makes macOS actually register the
+# Ctrl+2 / Ctrl+3 desktop shortcuts (only Ctrl+1 works until then),
+# so it runs after the desktops exist.
+echo "→ Restarting Finder and Dock so changes take effect"
+killall Finder || true
+killall Dock || true
 
 echo
-echo "Done. A few things macOS won't let a script do:"
-echo "  1. Give Hammerspoon Accessibility access if it asks"
-echo "     (System Settings → Privacy & Security → Accessibility)."
-echo "  2. If you don't have 3 desktops yet: open Mission Control (F3), click +"
-echo "     until there are 3, then re-run this script so Ctrl+2/3 register."
-echo "  Press Ctrl+/ to see every shortcut."
+echo "Done. Press Ctrl+/ to see every shortcut."

@@ -27,13 +27,11 @@ bash ~/erics-personal-tools/mac-customization/setup.sh
 - Sets Hammerspoon to launch at login
 - Turns off "Automatically rearrange Spaces" and binds `Ctrl+1/2/3` to Desktop 1/2/3
 - Finder → default to **List view**
-- Restarts Finder, Dock and Hammerspoon. Restarting the Dock is what makes macOS register `Ctrl+2`/`Ctrl+3`. Without it only `Ctrl+1` works.
+- Starts Hammerspoon and, if it doesn't have **Accessibility** yet, opens that list in System Settings and waits for you to switch it on (macOS only lets a person flip that switch)
+- Adds desktops until there are 3 (Personal / Work / Focus)
+- Restarts Finder and the Dock. Restarting the Dock after the desktops exist is what makes macOS register `Ctrl+2`/`Ctrl+3`. Without it only `Ctrl+1` works.
 
-Then do the parts macOS won't let a script do:
-
-1. Grant Hammerspoon **Accessibility** in System Settings → Privacy & Security.
-2. Make 3 desktops in Mission Control (Personal / Work / Focus). If you add them after running the script, run it again so `Ctrl+2/3` register.
-3. Capture app layouts (per-machine). Position each managed app, then in the Hammerspoon Console run `saveMessagesLayout()`, `saveSpotifyLayout()`, `saveSlackLayout()`.
+Afterwards, capture app layouts (per-machine): position each managed app, then in the Hammerspoon Console run `saveMessagesLayout()`, `saveSpotifyLayout()`, `saveSlackLayout()`.
 
 Press **`Ctrl+/`** any time for an on-screen cheat sheet of every shortcut (spaces, speech to text, focus, Gmail).
 
