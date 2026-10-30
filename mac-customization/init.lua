@@ -99,6 +99,22 @@ local function updateLabel()
   labelCanvas["label"].text = labels[idx] or ("Space " .. idx)
 end
 
+-- Add desktops on the main screen until there are `n`. Needs Accessibility
+-- (Hammerspoon drives Mission Control's + button). Returns how many it added.
+local function ensureDesktops(n)
+  local screen = hs.screen.mainScreen()
+  if not screen or not hs.accessibilityState() then return 0 end
+  local added = 0
+  for _ = 1, n do
+    local ok, screenSpaces = pcall(hs.spaces.spacesForScreen, screen)
+    if not ok or not screenSpaces or #screenSpaces >= n then break end
+    if not hs.spaces.addSpaceToScreen(screen, true) then break end
+    added = added + 1
+  end
+  return added
+end
+_G.ensureDesktops = ensureDesktops
+
 pcall(function() createCanvas(); updateLabel() end)
 
 local spaceWatcher = hs.spaces.watcher.new(updateLabel)
