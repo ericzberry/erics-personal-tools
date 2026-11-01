@@ -1235,6 +1235,47 @@ export function financeSummary(records,{currency='USD',today=new Date().toISOStr
   };
 }
 
+// The ledger as a table: one row per figure today's totals add up, with
+// everything known about it in words — whose it is, the kind of account, what
+// it is and where it is held, what it is worth, on what day, and what stated
+// it. It is what a class on the page opens down to and what the export writes,
+// so the two can never disagree. A firm's name lives with the sites, so the
+// caller passes it in. Largest first, like every breakdown in the ledger.
+const LIQUIDITY={liquid:'Liquid',illiquid:'Illiquid'};
+export function ledgerRows(records,{currency='USD',today=new Date().toISOString().slice(0,10),firmName=firmId}={}){
+  const live=figuresOn(records,{currency});
+  const stored=new Map(counted(records).map(record=>[record.id||recordRef(record),record]));
+  const portfolios=new Map(portfoliosOf(records).map(entry=>[entry.number,entry]));
+  const positions=new Map(positionsOn(records).map(entry=>[entry.holding.number,entry]));
+  const properties=new Map(propertiesOf(records).map(entry=>[entry.number,entry]));
+  const imports=new Map(importsOf(records).map(entry=>[entry.number,entry]));
+  return explainTotal(live,{today}).figures.map(figure=>{
+    const portfolio=portfolios.get(figure.portfolio);
+    // A figure typed in names no firm, but the import that wrote it may: a
+    // capital account read off Carta is held at Carta.
+    const read=imports.get(Number(stored.get(figure.ref)?.importId)||0)||null;
+    const firm=Number(figure.firm||read?.firm||0);
+    const position=figure.kind==='position'?positions.get(figure.holding):null;
+    const holding=position?.holding,property=figure.kind==='property'?properties.get(figure.property):null;
+    const owed=classSide(figure.class)==='liability';
+    return {ref:figure.ref,kind:figure.kind,class:canonicalClass(figure.class),portfolio:figure.portfolio,
+      entity:portfolio?.name||'',accountType:registrationLabel(portfolio?.kind),
+      liquidity:owed?'Owed':LIQUIDITY[classGroup(figure.class)]||'Unclassified',
+      assetClass:classLabel(figure.class),
+      asset:holding?.name||property?.name||classLabel(figure.class),
+      heldAt:firm?firmName(firm):'',
+      value:figure.value,asOf:figure.asOf,age:figure.age,stale:figure.stale,
+      source:figure.kind==='position'?'Capital account statement'
+        :figure.kind==='property'?valueSourceLabel(figure.valuation)||'Valuation'
+        :figure.firm?'Read from the site':'Entered or dropped',
+      readFrom:read?importName(read):'',
+      vehicle:holding?vehicleLabel(holding.vehicle):'',
+      share:holding?(holding.share??WHOLE_SHARE)/WHOLE_SHARE:null,
+      commitment:position?position.commitment:null,contributed:position?position.contributed:null,
+      distributed:position?position.distributed:null,unfunded:position?position.unfunded:null};
+  });
+}
+
 export function netWorthSeries(records,{currency='USD',since=HISTORY_START}={}){
   const mine=new Set(portfoliosOf(records).filter(portfolio=>(portfolio.currency||'USD')===currency).map(portfolio=>portfolio.number));
   const marks=marksOf(records).filter(mark=>mine.has(mark.portfolio));

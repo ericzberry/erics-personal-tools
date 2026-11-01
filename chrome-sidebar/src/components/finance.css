@@ -329,6 +329,28 @@
 .allocation-line[data-key]{cursor:default}
 .allocation-line.is-active{background:var(--sage)}
 .allocation-line:focus-visible{outline:2px solid var(--forest);outline-offset:0}
+/* A class opens down to what is in it. The line is the summary, unchanged but
+   for a small chevron after the name; what opens under it is the figures, set
+   in from the line's edge so they read as its contents rather than as more
+   classes. None of the shell's panel dressing — no band, no border, no box.
+   The wallet's own rules for an open details are two classes deep, so these
+   are scoped to the column to stay ahead of them. */
+.allocation-column>details.allocation-item,.allocation-column>details.allocation-item[open]{margin:0;padding:0;border:0;
+  border-radius:0;background:none;overflow:visible}
+.allocation-column>details.allocation-item>summary,.allocation-column>details.allocation-item[open]>summary{display:block;
+  margin:0;width:auto;padding:0;list-style:none;font:inherit;color:inherit;background:none;border:0}
+.allocation-item>summary::-webkit-details-marker{display:none}
+.allocation-item>summary .allocation-line{cursor:pointer}
+.allocation-item>summary:focus-visible{outline:2px solid var(--forest);outline-offset:0;border-radius:4px}
+.allocation-item>summary .allocation-name::after{content:'';display:inline-block;width:5px;height:5px;margin:0 0 2px 8px;
+  border-right:1.5px solid var(--wallet-control-line);border-bottom:1.5px solid var(--wallet-control-line);
+  transform:rotate(-45deg);transition:transform .15s ease}
+.allocation-item[open]>summary .allocation-name::after{transform:translateY(-2px) rotate(45deg)}
+@media(prefers-reduced-motion:reduce){.allocation-item>summary .allocation-name::after{transition:none}}
+.allocation-detail{display:flex;flex-direction:column;gap:2px;margin:2px 0 10px 6px;padding-left:10px;border-left:2px solid var(--line)}
+.allocation-detail .record-row{padding:3px 0}
+/* Nothing here is edited, so the slot touch keeps for a row's verbs is not kept. */
+.finance-ledger .allocation-detail .record-line>.record-figure>.action-group:empty{display:none}
 
 /* Each institution's quarters side by side rather than one long column: a
    reader compares UBS with Morgan Stanley across, and reads one of them down. */

@@ -1,4 +1,4 @@
-import {Stack,Section,Label,Strong,Note,Amount,Heading,GroupTitle,ActionGroup,RecordRow,money} from './ui.js';
+import {Stack,Section,Label,Strong,Note,Amount,Heading,GroupTitle,ActionGroup,RecordRow,Disclosure,money} from './ui.js';
 import {LineChart,ProportionBar,linkParts,share} from './charts.js';
 import {moneyShort} from '../money.js';
 import {classSide,classGroup,valueSourceLabel,STALE_DAYS} from '../finance-data.js';
@@ -107,7 +107,11 @@ export const sourceLabel=key=>{
 //
 // `groups` is what can be sold and what cannot, each with its classes, in the
 // order they are drawn. A class nobody has placed is a group of its own.
-export function Allocation({groups=[],total=0,currency='USD',accounts=null}){
+//
+// A class opens down to what is in it — `details(row)` hands back its lines —
+// so "Private stock" is a list of the companies, not only a number. Which
+// classes are open survives a redraw through `open` and `onToggle`.
+export function Allocation({groups=[],total=0,currency='USD',accounts=null,details=null,open=new Set(),onToggle=null}){
   const runs=groups.map(group=>({tone:group.tone,parts:group.rows.map(row=>({key:row.key,label:row.label,value:row.total}))}));
   const bar=ProportionBar({runs,format:value=>money(value,currency),
     label:groups.map(group=>`${group.label} ${share(group.total/total)}`).join(', ')});
@@ -116,13 +120,21 @@ export function Allocation({groups=[],total=0,currency='USD',accounts=null}){
       Strong(group.label,{className:'allocation-name'}),
       Label(share(group.total/total),{className:'allocation-share'}),
       Amount(group.total,currency)],{className:'allocation-line allocation-line--group'}),
-    ...group.rows.filter(row=>row.total>0).map(row=>Stack([
-      Label(row.label,{className:'allocation-name'}),
-      Label(share(row.total/total),{className:'allocation-share'}),
-      Amount(row.total,currency),
-      Stack([Stack([],{className:`allocation-fill allocation-fill--${group.tone}`,style:`width:${Math.max(0.5,row.total/total*100).toFixed(2)}%`})],
-        {className:'allocation-track','aria-hidden':'true'})
-    ],{className:'allocation-line','data-key':row.key,tabindex:0}))
+    ...group.rows.filter(row=>row.total>0).map(row=>{
+      const line=Stack([
+        Label(row.label,{className:'allocation-name'}),
+        Label(share(row.total/total),{className:'allocation-share'}),
+        Amount(row.total,currency),
+        Stack([Stack([],{className:`allocation-fill allocation-fill--${group.tone}`,style:`width:${Math.max(0.5,row.total/total*100).toFixed(2)}%`})],
+          {className:'allocation-track','aria-hidden':'true'})
+      ],{className:'allocation-line','data-key':row.key,...(details?{}:{tabindex:0})});
+      if(!details)return line;
+      // The summary is what takes focus, so the line inside it does not.
+      const item=Disclosure(line,details(row),{className:'allocation-item'});
+      item.open=open.has(row.key);
+      item.addEventListener('toggle',()=>onToggle?.(row.key,item.open));
+      return item;
+    })
   ],{className:'allocation-column','aria-label':group.label}));
   // The same money a second way: the kinds of account it is held in. Not a
   // part of the bar above — a trust and an IRA are not sides of anything — so
@@ -153,7 +165,7 @@ const RUNS=[{id:'liquid',label:'Liquid',tone:'liquid'},{id:'illiquid',label:'Ill
 export function allocationGroups(byClass=[]){
   return RUNS.map(run=>{
     const rows=byClass.filter(row=>classSide(row.id)==='asset'&&row.total>0&&classGroup(row.id)===run.id)
-      .map(row=>({key:`class-${row.id}`,label:row.label,total:row.total}))
+      .map(row=>({key:`class-${row.id}`,id:row.id,label:row.label,total:row.total}))
       .sort((a,b)=>b.total-a.total);
     return {...run,rows,total:Math.round(rows.reduce((sum,row)=>sum+row.total,0)*100)/100};
   }).filter(run=>run.rows.length);

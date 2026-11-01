@@ -50,7 +50,7 @@ See [navigation](NAVIGATION.md) for destination ownership and compatibility.
 | `rewards.html` | `src/rewards.js` | Rewards & benefits: For you, Wallet, Pay and Points in one tool; `?view=pay` opens on a view |
 | `cards.html` | `src/cards-page.js` | Alias: sends its reader to `rewards.html?view=pay` (Best card is the Pay view's **Card rates**) |
 | `advisor.html` | `src/advisor-page.js` | Alias: sends its reader to `rewards.html?view=pay` (the purchase advisor is the Pay view) |
-| `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation, entities, private positions, houses, institutions, and the sources every total rests on — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
+| `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation (each class opens to its figures), entities, private positions, houses, institutions, and the sources every total rests on — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `health.html` | `src/health-page.js` | Health (passkey-gated): the notebook of personal and family history — a sentence is a record, filed under a relative when it names one — with its summary, medication history and visit-summary PDF. The panel mounts the same controller |
 | `reminders.html` | `src/reminders-page.js` | Reminders: dated commitments, and the quick-add note |
@@ -236,6 +236,9 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   `pdf-write.js` (a text PDF written on the device with no library: WinAnsi
   Helvetica, wrapped lines, an honest count of what the character set could
   not carry — what the visit summary leaves the vault as),
+  `xlsx-write.js` (a spreadsheet written on the device with no library: a
+  stored zip of sheet XML, numbers kept as money, date or share cells — what
+  Net worth's **Export to xlsx** writes from `ledgerRows`),
   `reminder-data.js`/`reminders-offline.js` (dated commitments; the next date is
   computed from an anchor and an interval, never stored, plus `birthdaysAhead`
   — the fortnight both hosts' home screens lead with),

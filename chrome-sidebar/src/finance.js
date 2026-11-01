@@ -1,10 +1,11 @@
 import {FinanceView,PortfolioGroup,ImportGroup,BreakdownList,TrendTable,FoldReview,CapitalReview,PagePanel,Figure,money,positionFigures,FigureList,propertyDetail,quarterPoints,quarterChange} from './components/finance.js';
 import {NetWorthHero,NetWorthChart,Allocation,LiquiditySummary,PositionsTable,PropertiesTable,Institutions,allocationGroups,changeText} from './components/finance-overview.js';
 import {share} from './components/charts.js';
-import {RecordRow,AttachmentCard,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus} from './components/ui.js';
+import {RecordRow,AttachmentCard,Button,RowAction,Amount,EDIT_GLYPH,DELETE_GLYPH,HISTORY_GLYPH,SHOW_GLYPH,REFRESH_GLYPH,Note,Stack,ActionGroup,Option,setStatus,downloadFile} from './components/ui.js';
 import {attachFileDrop} from './components/file-drop.js';
 import {staleText,staleNote,sourceLabel} from './components/finance-overview.js';
-import {figuresOn,explainBy} from './finance-data.js';
+import {figuresOn,explainBy,ledgerRows,canonicalClass} from './finance-data.js';
+import {writeXlsx} from './xlsx-write.js';
 import {readStatement,trimForReading,ACCEPTED,MAX_BYTES,MAX_SEND} from './statement-text.js';
 import {MAX_PAGE_TEXT} from './finance-page-read.js';
 import {normalizeFinance,financeSummary,financeCurrencies,netWorthSeries,groupFinanceRecords,parseFinanceUpdates,foldReadings,portfoliosOf,markRef,portfolioRef,classLabel,registrationLabel,classById,institutionName,signed,firmCode,foldCapital,holdingsOf,holdingRef,capitalRef,vehicleLabel,vehicleShort,vehicleOf,vehicleFigures,propertiesOf,propertiesOn,propertyRef,valuationRef,valueSourceById,valueSourceLabel,zillowHome,flowRef,FIRMS,PROPERTY_CLASS,PROPERTY_DEBT_CLASS,SITE_CLASSES,REGISTRATIONS,VEHICLES,VALUE_SOURCES,WHOLE_SHARE,shareText,
@@ -32,7 +33,7 @@ const readAt=number=>{const when=new Date(number);return `${when.toLocaleDateStr
 // the whole ledger.
 // `today` is the day a figure's age is measured against — today, except in a
 // test that has to know which figures are stale.
-export function mountFinance(root,{credentials,offline,remote,readPage=null,readZestimate=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false,layout='page',openDetails=null,today:now=today}){
+export function mountFinance(root,{credentials,offline,remote,readPage=null,readZestimate=null,onSettings=()=>{},onChanged=()=>{},vault,quiet:hushed=false,layout='page',openDetails=null,today:now=today,download=downloadFile}){
   const gate=mountVaultGate(root,{
     id:'finance-vault',title:'Net worth',
     // A tool built because the tab beside the panel is a finance page raises no
@@ -72,6 +73,9 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
   // survives a redraw the way the entities' does.
   let sourcesBy='source';
   const openSources=new Set();
+  // Which classes in Allocation are open down to their figures.
+  const openClasses=new Set();
+  let exportUrl='';
   // Arriving because the tab is a finance page is not the owner asking to see
   // what they are worth. Such an arrival is quiet: the intake is ready for what
   // the page in front of them can put into the ledger, and the ledger's own
@@ -483,8 +487,22 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // "By registration" is the paperwork's word for it. What the owner is
     // being told apart here is what kind of account each figure sits in, and
     // that is what the tag on every portfolio underneath says too.
+    // A class opens down to the figures in it: a fund or a company by name,
+    // otherwise whose account it is, each with where it is held and its date
+    // where that is behind the ledger's own.
+    const table=ledgerRows(records,{currency,today:now(),firmName:firmLabel});
+    const inClass=row=>{
+      const lines=table.filter(entry=>entry.class===canonicalClass(row.id));
+      return [Stack(lines.map(entry=>{
+        const named=entry.kind!=='mark';
+        return RecordRow({title:named?entry.asset:entry.entity,figure:Amount(entry.value,currency),
+          detail:[named?entry.entity:'',entry.heldAt,entry.asOf!==newest?entry.asOf:'',
+            entry.stale?`${entry.age} days old`:''].filter(Boolean).join(' · ')});
+      }),{className:'allocation-detail'})];
+    };
     $('breakdown').replaceChildren(...(summary.figures&&heldTotal>0?[Allocation({groups:held,total:heldTotal,currency,
-      accounts:{title:'Account types',rows:summary.byRegistration}})]:[]));
+      accounts:{title:'Account types',rows:summary.byRegistration},details:inClass,open:openClasses,
+      onToggle:(key,isOpen)=>{if(isOpen)openClasses.add(key);else openClasses.delete(key);}})]:[]));
     $('trend').replaceChildren(TrendTable(series,currency));
     // Each institution's performance, with the cash that moved taken out of it.
     // The section is absent rather than empty until a firm has been read or had
@@ -1271,6 +1289,35 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
       });
     }));
   }
+  // The ledger as a spreadsheet: one row per figure the totals add up, every
+  // currency, sorted the way the page reads — by entity, then liquid before
+  // illiquid, largest first. Written on the device; nothing leaves it but the
+  // file the owner saves.
+  const EXPORT_COLUMNS=[
+    {key:'entity',label:'Entity',width:40},{key:'accountType',label:'Account type',width:13},
+    {key:'liquidity',label:'Liquidity',width:11},{key:'assetClass',label:'Asset class',width:18},
+    {key:'asset',label:'Asset',width:44},{key:'heldAt',label:'Held at',width:18},
+    {key:'value',label:'Value',format:'money',width:17},{key:'currency',label:'Currency',width:9},
+    {key:'asOf',label:'As of',format:'date',width:11},{key:'age',label:'Days old',format:'number',width:9},
+    {key:'source',label:'Source',width:24},{key:'readFrom',label:'Read from',width:30},
+    {key:'vehicle',label:'Vehicle',width:24},{key:'share',label:'Share of vehicle',format:'share',width:14},
+    {key:'commitment',label:'Commitment',format:'money',width:15},{key:'contributed',label:'Contributed',format:'money',width:15},
+    {key:'distributed',label:'Distributed',format:'money',width:15},{key:'unfunded',label:'Unfunded',format:'money',width:15}];
+  const LIQUIDITY_ORDER=['Liquid','Illiquid','Unclassified','Owed'];
+  function exportLedger(){
+    try{
+      const rows=financeCurrencies(records).flatMap(({currency:code})=>
+        ledgerRows(records,{currency:code,today:now(),firmName:firmLabel}).map(row=>({...row,currency:code})))
+        .sort((a,b)=>a.entity.localeCompare(b.entity,undefined,{sensitivity:'base',numeric:true})
+          ||LIQUIDITY_ORDER.indexOf(a.liquidity)-LIQUIDITY_ORDER.indexOf(b.liquidity)||Math.abs(b.value)-Math.abs(a.value));
+      const bytes=writeXlsx([{name:'Net worth',columns:EXPORT_COLUMNS,rows}]);
+      if(exportUrl)URL.revokeObjectURL(exportUrl);
+      exportUrl=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+      const filename=`net-worth-${now()}.xlsx`;
+      download({url:exportUrl,filename});
+      status(`Saved ${filename} · ${rows.length} figure${rows.length===1?'':'s'}.`,'status','success');
+    }catch(error){status(error.message||'The file could not be written.','status','error');}
+  }
   // Not hidden figures: figures that were never put on the page.
   function sealLedger(){
     for(const id of ['currency-switch','totals','hero','breakdown','liquidity','trend','firms','list','positions','properties','sources','sources-by'])$(id)?.replaceChildren();
@@ -1353,8 +1400,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // something narrower here — one investment's capital account, on a row that
     // says Position — so the one button on a quiet arrival read as an offer to
     // open a single holding.
-    $('actions').replaceChildren(quiet?toolAction('Show net worth',showPosition)
-      :loaded?toolAction('Refresh',refresh):toolAction('Connection settings',onSettings));
+    // Export rides beside Refresh because it acts on the same thing: the whole
+    // ledger as it stands. Only once there is a figure to write.
+    $('actions').replaceChildren(...(quiet?[toolAction('Show net worth',showPosition)]
+      :loaded?[...(figuresOn(records).length?[toolAction('Export to xlsx',exportLedger)]:[]),toolAction('Refresh',refresh)]
+      :[toolAction('Connection settings',onSettings)]));
     syncReadings();
   }
 
