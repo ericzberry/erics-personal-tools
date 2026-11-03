@@ -1,17 +1,24 @@
-import {AdvisorView,AdviceConditions,Advice} from './components/purchase-advisor.js';
+import {AdvisorView,AdviceConditions,Advice,StandingAdvice} from './components/purchase-advisor.js';
 import {PurchaseReading} from './components/cards.js';
 import {setStatus} from './components/ui.js';
 import {aiConnections} from './ai-connection.js';
-import {parsePurchaseIntent} from './card-data.js';
-import {advise} from './purchase-data.js';
+import {parsePurchaseIntent,normalizeCard,walletCards,key as cardKey} from './card-data.js';
+import {advise,bestByCategory} from './purchase-data.js';
+// A card the wallet holds with no earning terms is looked up by itself, once
+// per card per device and again a week after an attempt that found nothing,
+// so a card is compared without anyone having to ask for its rates and an
+// answer research cannot give is not asked for on every open.
+const RESEARCH_KEY='rewards-rate-research',RESEARCH_AGAIN_MS=7*86400000;
+const tried=()=>{try{return JSON.parse(globalThis.localStorage?.getItem(RESEARCH_KEY)||'{}')||{};}catch{return {};}};
+const markTried=name=>{try{globalThis.localStorage?.setItem(RESEARCH_KEY,JSON.stringify({...tried(),[cardKey(name)]:Date.now()}));}catch{/* Asked again next time. */}};
 // Three stores, none of them this tool's. `cards` is Best card's, `wallet` is
 // Rewards', `programs` holds the offer catalogues; every one is read and never
 // written, so what is in them stays those tools' to change. A host that has no
 // programs store simply has no offers.
-export function mountPurchaseAdvisor(root,{credentials,cards,wallet=null,programs=null,remote,onSettings=()=>{},embedded=false}){
+export function mountPurchaseAdvisor(root,{credentials,cards,wallet=null,programs=null,remote,onSettings=()=>{},onChanged=()=>{},embedded=false}){
   root.replaceChildren(AdvisorView({embedded}));
   const $=key=>root.querySelector(`#advisor-${key}`);
-  let token='',generation=0,busy=false,reading=null,readFrom='',records=[],held=[],catalogs=[],conditionKey='';
+  let token='',generation=0,busy=false,filling=false,reading=null,readFrom='',records=[],held=[],catalogs=[],conditionKey='';
   const connections=aiConnections({load:async current=>(await remote(current,'/v1/ai-connections')).connections,need:'to read a purchase.'});
   const status=(message,target='status',tone='')=>setStatus($(target),message,tone);
   function controls(){for(const control of root.querySelectorAll('input,select,textarea,button'))control.disabled=busy||!token;}
@@ -98,9 +105,53 @@ export function mountPurchaseAdvisor(root,{credentials,cards,wallet=null,program
     const changed=JSON.stringify([found,entries,lists])!==JSON.stringify([records,held,catalogs]);
     records=found;held=entries;catalogs=lists;
     if(changed&&$('result').children.length){try{recommend();}catch(error){clearResult();status(error.message,'purchase-status','error');}}
-    controls();
-    status(records.length?'':'No card has earning rates yet. Add them under Card rates.');
+    controls();renderStanding();
+    status(records.length||unrated().length?'':'No card has earning rates yet. Add them under Card rates.');
     await connectionList();
+    fillRates();
+  }
+  // The cards the wallet holds that nothing here has rates for. One whose
+  // name fits several saved cards already has rates under one of them.
+  const unrated=()=>walletCards(held,records).filter(row=>!row.card&&!row.ambiguous);
+  function renderStanding(){
+    const rows=bestByCategory({cards:records,wallet:held});
+    const missing=filling?[]:unrated().map(row=>({name:row.product,hint:row.digits}));
+    $('standing-group').hidden=!rows.length&&!missing.length&&!filling;
+    $('standing').replaceChildren(...StandingAdvice(rows,missing));
+  }
+  // Research each unrated card in turn and save what it finds under the name
+  // the wallet already calls it, so the two are one card from then on. The
+  // terms stay editable under Card rates; nothing else about the card is
+  // touched, and a name research could not settle is left for the owner.
+  async function fillRates(){
+    if(filling||!token||globalThis.navigator?.onLine===false)return;
+    const seen=tried(),now=Date.now();
+    const due=unrated().filter(row=>!(now-(seen[cardKey(row.product)]||0)<RESEARCH_AGAIN_MS));
+    if(!due.length)return;
+    let id;try{id=await connections.id(token);}catch{return;}
+    filling=true;renderStanding();
+    const current=generation,today=new Date().toISOString().slice(0,10);
+    let saved=0;
+    try{
+      for(const [index,row] of due.entries()){
+        if(current!==generation)return;
+        status(`Finding rates for ${row.product}${due.length>1?` (${index+1} of ${due.length})`:''}`,'fill-status','progress');
+        markTried(row.product);
+        try{
+          const result=await remote(token,`/v1/ai-connections/${id}/card-research`,{method:'POST',value:{name:row.product},timeoutMs:130000});
+          if(!result?.card)continue;
+          const card=normalizeCard({...result.card,name:row.product,checked:result.card.checked||today});
+          if(card.unit==='points'&&!(card.cpp>0))continue;
+          const stored=await cards.request(token,`/v1/cards/${crypto.randomUUID()}`,{method:'PUT',value:{...card,revision:null}});
+          if(current!==generation)return;
+          records=stored.records||records;saved++;
+        }catch{/* This card stays named as not compared. */}
+      }
+    }finally{
+      filling=false;
+      if(current===generation){status('','fill-status');renderStanding();if($('result').children.length){try{recommend();}catch{/* The last answer stands. */}}}
+      if(saved)onChanged();
+    }
   }
   const reload=()=>{if(!busy)return run(refresh);};
   window.addEventListener('online',reload);

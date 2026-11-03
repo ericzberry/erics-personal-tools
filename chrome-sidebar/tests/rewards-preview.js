@@ -78,10 +78,15 @@ const ESTABLISHED = [
   {id: '64444444-4444-4444-8444-444444444444', kind: 'benefit', name: 'Airline fee credit', source: 'Synthetic Platinum Card', value: '$200 per year', remaining: '', cadence: 'annual', state: 'available', card: P2, updatedAt: '2026-09-01T00:00:00.000Z', revision: 'b2'},
   {id: '65555555-5555-4555-8555-555555555555', kind: 'membership', name: 'Synthetic Lounge Collection', source: 'Synthetic Platinum Card', value: 'Membership', state: 'activation', card: P1, url: 'https://issuer.example/lounge', updatedAt: '2026-09-01T00:00:00.000Z', revision: 'm1'},
   {id: '66666666-6666-4666-8666-666666666666', kind: 'balance', name: 'Bonvoy', source: 'Marriott', value: '240,118 points', state: 'available', updatedAt: '2026-05-01T00:00:00.000Z', revision: 'bal1'},
+  {id: '6bbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', kind: 'card', name: 'Synthetic Travel Card', source: 'Synthetic Bank', value: '', state: 'available', secretHint: '4321', updatedAt: '2026-09-01T00:00:00.000Z', revision: 'tc'},
   {id: '67777777-7777-4777-8777-777777777777', kind: 'balance', name: 'Membership Rewards', source: 'American Express', value: '13,674 points', state: 'available', updatedAt: '2026-09-21T00:00:00.000Z', revision: 'bal2'}
 ];
 const TERMS = [{id: '68888888-8888-4888-8888-888888888888', revision: 't1', name: 'Synthetic Platinum Card', unit: 'points', base: 1, cpp: 1.5, checked: '2026-09-01', source: '', notes: '',
-  rules: JSON.stringify([{category: 'Dining', channel: 'Any', rate: 4, remaining: null, active: true, end: '', condition: '', merchant: ''}])}];
+  rules: JSON.stringify([{category: 'Dining', channel: 'Any', rate: 4, remaining: null, active: true, end: '', condition: '', merchant: ''}])},
+  {id: '69999999-9999-4999-8999-999999999999', revision: 't2', name: 'Synthetic Everyday Card', unit: 'cash', base: 2, cpp: 1, checked: '2026-09-01', source: '', notes: '', rules: '[]'},
+  {id: '6aaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', revision: 't3', name: 'Synthetic Grocery Card', unit: 'cash', base: 1, cpp: 1, checked: '2026-09-01', source: '', notes: '',
+   rules: JSON.stringify([{category: 'Groceries', channel: 'Any', rate: 6, remaining: 0, active: true, end: '', condition: 'U.S. supermarkets', merchant: ''},
+     {category: 'Gas', channel: 'Any', rate: 3, remaining: null, active: true, end: '', condition: '', merchant: ''}])}];
 const recordStore = list => {
   let saved = [...list];
   return {async request(token, url, options = {}) {

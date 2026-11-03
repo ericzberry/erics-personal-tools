@@ -22,11 +22,6 @@ const REVEAL_MS=60000;
 // again, and on this timer while a change is still waiting to reach the cloud.
 // Nothing here asks the owner to press a refresh button.
 const RETRY_MS=60000;
-// The view the owner was last on, kept per device so the tool reopens where
-// it was left. A brand-new wallet ignores it and opens on Wallet.
-const VIEW_KEY='rewards-view';
-const remembered=()=>{try{return globalThis.localStorage?.getItem(VIEW_KEY)||'';}catch{return '';}};
-const remember=key=>{try{globalThis.localStorage?.setItem(VIEW_KEY,key);}catch{/* A view not remembered is a view chosen again. */}};
 const STATES={available:'Available',activation:'Needs activation',used:'Used',cancelled:'Cancelled'};
 const grouped=digits=>digits.replace(/(.{4})/g,'$1 ').trim();
 const reason=error=>error?.name==='NotAllowedError'||error?.name==='AbortError'
@@ -378,10 +373,12 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const heading=root.closest('#rewards-tool')?.querySelector('h1')||root.querySelector('h1');if(heading)heading.textContent=scope==='memberships'?'Memberships':scope==='cards'?'Cards & benefits':'Rewards & benefits';
   }
   // Decided once, after the first full load — the wallet, the cards and the
-  // catalogues — because which tabs there are is not known before then.
+  // catalogues — because which tabs there are is not known before then. It
+  // opens on Best card whenever there is a card: which card to use is the
+  // question the tool is opened for, so it is never behind a remembered tab.
   function settleView(){
     if(!loaded||chosenView)return;
-    const wanted=[requestedView,remembered(),'foryou','wallet'].find(key=>REWARDS_VIEWS.includes(key)&&!$(`rewards-tabs-${key}-tab`).hidden);
+    const wanted=[requestedView,'pay','wallet'].find(key=>REWARDS_VIEWS.includes(key)&&!$(`rewards-tabs-${key}-tab`).hidden);
     if(wanted){chosenView=true;tabs.select(wanted);opened(wanted);}
   }
   // The Pay view's two tools are built the first time the view is opened,
@@ -892,14 +889,13 @@ export function mountRewards(root,{credentials,offline,remote=null,programs=null
     const entry=validateReward({...base,...await protectedValues(base.id)},base.updatedAt);
     if(await save({...entry,revision:editing?.revision??null})){clearForm();$('reward-editor').open=false;}
   }catch(error){setStatus($('reward-form-status'),reason(error),'error');}});
-  // A view chosen by the owner is remembered, and Pay is built on its first
-  // opening.
+  // Best card is built on its first opening.
   tabs.addEventListener('click',event=>{
     const button=event.target.closest?.('[role=tab]');
     if(!button)return;
     const key=REWARDS_VIEWS.find(name=>button.id===`rewards-tabs-${name}-tab`);
     if(!key)return;
-    chosenView=true;remember(key);opened(key);
+    chosenView=true;opened(key);
   });
   clearForm();render();renderVault();renderPrograms();renderBalances();
   const reconnect=()=>{if(!$('reward-editor').open)refresh({quiet:true});};

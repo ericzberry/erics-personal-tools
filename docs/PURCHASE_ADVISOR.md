@@ -1,8 +1,8 @@
 # Purchase advisor
 
-The purchase advisor is the **Pay** view of [Rewards & benefits](REWARDS.md),
+The purchase advisor is the **Best card** view of [Rewards & benefits](REWARDS.md),
 on the extension and the phone. `advisor.html` and the `advisor` capability id
-stay as ways in and open Rewards on Pay. Say what you are buying — `I'm buying
+stay as ways in and open Rewards on Best card. Say what you are buying — `I'm buying
 a laptop from Dell for $2,000`, `uber to the airport`, `groceries` — and
 select Compare. One block answers: the account to pay with, what the purchase
 comes to in rewards today, the lines that make up that figure, and what has to
@@ -64,6 +64,10 @@ effectively tied rather than ranked on a difference this cannot support.
 Coverage is named: a card in the wallet with no earning terms, or whose name
 fits more than one saved card, is listed as not compared and able to change
 the answer, so **Pay with** is never "best" over cards it could not evaluate.
+Such a card is first researched by itself when the view opens, so it is
+normally compared rather than listed (see [By category](REWARDS.md#by-category)).
+A capped bonus saved with 0 room left — which is how research records a cap it
+could not see into — counts as unknown rather than spent.
 
 **Conditions** follow, one line each, only when there are any: the rule's own
 requirement, the purchase method it needs, the date it runs to, the eligible

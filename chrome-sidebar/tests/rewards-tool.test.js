@@ -276,11 +276,13 @@ test('a program’s offers are browsed under For you, with their own search and 
  // Neither offer is new, so there is no New group and the categories are the list.
  assert.deepEqual(groups(),['Home','Travel']);
  assert.equal($('programs-status').textContent,'Morgan Stanley Reserved · 2 offers · read 2026-09-11');
- // A catalogue that has been read gives For you something to answer, and an
- // established wallet opens there; the offers themselves wait behind one
- // closed line rather than taking a tab of their own.
+ // A catalogue that has been read gives For you something to answer, but
+ // the tool opens on Best card, or on Wallet where there is no Best card;
+ // the offers themselves wait behind one closed line under For you.
  assert.equal($('rewards-tabs-foryou-tab').hidden,false);
- assert.equal($('rewards-tabs-foryou-tab').getAttribute('aria-selected'),'true');
+ assert.equal($('rewards-tabs-foryou-tab').getAttribute('aria-selected'),'false');
+ assert.equal($('rewards-tabs-wallet-tab').getAttribute('aria-selected'),'true');
+ $('rewards-tabs-foryou-tab').click();
  assert.equal($('rewards-tabs-foryou-panel').hidden,false);
  assert.equal($('rewards-tabs-wallet-panel').hidden,true,'one at a time');
  assert.equal($('programs-browse').hidden,false);

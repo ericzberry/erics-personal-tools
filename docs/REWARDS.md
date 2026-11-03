@@ -8,22 +8,41 @@ questions, one tab each, through the shared `Tabs`:
 
 | View | Question | What is under it |
 | --- | --- | --- |
+| **Best card** | Which card should I use? | One purchase, one answer; then **By category**, the card to use for each kind of spending; then **Card rates** |
 | **For you** | What is worth doing? | A short ranked list of opportunities, then **Browse offers** |
 | **Wallet** | What do I actually have? | The cards and programs, what has been read for each, and the ways in |
-| **Pay** | Which card should I use? | One purchase, one answer, with the card terms it rests on under **Card rates** |
 | **Points** | What can my points do? | Each balance, what earns into it, and what a point is worth to you |
 
 A tab is in the row only while it has something to answer. A new wallet opens on
-Wallet alone; Pay arrives once a card with earning terms is saved; Points once a
-balance has a figure; For you once there is something to do or a catalogue to
-browse. An established wallet opens on For you, and after that on whichever
-view was last open on that device.
+Wallet alone; Best card arrives once any card is known, from the wallet or from
+Card rates; Points once a balance has a figure; For you once there is something
+to do or a catalogue to browse. Rewards always opens on Best card when it is
+there, and on Wallet otherwise — which card to use is the question the tool is
+opened for, so it is never behind a remembered tab. The view's key is still
+`pay`, so `rewards.html?view=pay` and the `cards` and `advisor` aliases land on
+it.
 
-**Best card** and **Purchase advisor** are the Pay view now. Their old pages
-(`cards.html`, `advisor.html`) and their capability ids stay as ways in — a
-bookmark, an older link, the strip under the header — and land on Pay rather
-than on a second calculator; see [BEST_CARD.md](BEST_CARD.md) and
-[PURCHASE_ADVISOR.md](PURCHASE_ADVISOR.md) for what that view does.
+### By category
+
+Under the purchase box, without a question asked, is the card to reach for in
+each kind of spending, as an effective rate (`bestByCategory` in
+[`purchase-data.js`](../chrome-sidebar/src/purchase-data.js)). A bonus with a
+requirement counts here and says the requirement under the card; a capped bonus
+whose remaining room research could not see (saved as 0) is treated as unknown
+rather than used up — in the single-purchase answer too — and says it is capped.
+Categories the "Everything else" card already wins at its everyday rate are
+folded into that row.
+
+Every card you hold is compared. A card in the wallet with no earning terms is
+researched by itself when Best card opens — once per card per device, and again
+a week after an attempt that found nothing — and saved to Card rates under the
+wallet's own name for it, where its terms stay editable. A card research cannot
+settle is named under the list as not compared.
+
+**Best card** and **Purchase advisor** were two tools; they are this view now.
+Their old pages (`cards.html`, `advisor.html`) and their capability ids stay as
+ways in; see [BEST_CARD.md](BEST_CARD.md) and
+[PURCHASE_ADVISOR.md](PURCHASE_ADVISOR.md) for what the view does.
 
 ## For you
 

@@ -9,11 +9,18 @@ const CADENCE_OPTIONS=[{text:'Does not reset',value:''},...Object.entries(CADENC
 // can do. A tab is in the row only while it has something to answer — a new
 // wallet opens on Wallet alone — and the row's label is the heading for what
 // is under it, so nothing inside repeats it.
-export const REWARDS_VIEWS=Object.freeze(['foryou','wallet','pay','points']);
+export const REWARDS_VIEWS=Object.freeze(['pay','foryou','wallet','points']);
 export function RewardsView(){
   const field=(key,label,kind='text',options,placeholder)=>UI.FormField({id:`reward-${key}`,label,kind,options,placeholder});
   return Stack([ToolTitle('Rewards & benefits',{actionsId:'rewards-connection',statusId:'rewards-status'}),
     Tabs({id:'rewards-tabs',label:'Rewards',items:[
+      // Which card to use: the best card for each kind of spending, then one
+      // purchase and one answer, with the card terms it rests on behind one
+      // closed line. It leads the row because it is the question the tool is
+      // opened to answer. The key stays `pay` so older links still land here.
+      {key:'pay',label:'Best card',hidden:true,content:[
+        Stack([],{id:'rewards-pay'}),
+        Disclosure('Card rates',[Stack([],{id:'rewards-rates'})],{id:'rewards-rates-drawer'})]},
       // What is worth doing: the short ranked list, then the catalogues to
       // browse behind one closed line rather than a tab of their own.
       {key:'foryou',label:'For you',hidden:true,content:[
@@ -78,12 +85,6 @@ export function RewardsView(){
           ],{id:'reward-form',className:'form-stack'})
         ],{id:'reward-editor'})
       ]},
-      // One purchase, one answer, with the card terms it rests on behind one
-      // closed line. Both are mounted by the controller when the tab is
-      // first opened, because each is a tool of its own.
-      {key:'pay',label:'Pay',hidden:true,content:[
-        Stack([],{id:'rewards-pay'}),
-        Disclosure('Card rates',[Stack([],{id:'rewards-rates'})],{id:'rewards-rates-drawer'})]},
       {key:'points',label:'Points',hidden:true,content:[
         Stack([],{id:'rewards-points'})]}
     ]})

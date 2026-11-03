@@ -33,9 +33,11 @@ const onSettings=()=>document.getElementById('open-settings')?document.getElemen
 // The Pay view's two tools, built on the view's first opening: the purchase
 // advisor over the card terms, the wallet and the catalogues, and the card
 // terms themselves without a second purchase box.
+let rates=null;
 export const rewardsTool=mountRewards(root,{scope:'cards',credentials,offline,programs,readPage,cards,wallet,remote:cloudRequest,onChanged:()=>changes.publish(),onSettings,
-  mountPay:node=>mountPurchaseAdvisor(node,{credentials,cards,wallet:offline,programs,remote:cloudRequest,onSettings,embedded:true}),
-  mountRates:node=>mountCards(node,{credentials,offline:cards,wallet:offline,remote:cloudRequest,purchase:false,heading:false,onChanged:()=>rewardsTool.refresh({quiet:true})})});
+  // Rates the advisor found for itself show up in Card rates straight away.
+  mountPay:node=>mountPurchaseAdvisor(node,{credentials,cards,wallet:offline,programs,remote:cloudRequest,onSettings,embedded:true,onChanged:()=>{rates?.refresh?.();rewardsTool.refresh({quiet:true});}}),
+  mountRates:node=>(rates=mountCards(node,{credentials,offline:cards,wallet:offline,remote:cloudRequest,purchase:false,heading:false,onChanged:()=>rewardsTool.refresh({quiet:true})}))});
 // A page opened as `rewards.html?view=pay` — where cards.html and advisor.html
 // now send their readers — opens on that view once the wallet has loaded.
 const asked=globalThis.location?.href?new URL(globalThis.location.href).searchParams.get('view'):'';

@@ -123,3 +123,45 @@ test('nothing saved and no connection each say so, and a disconnect clears the a
   assert.equal($('advisor-recommend').disabled,true);
   h.restore();
 });
+
+test('the best card for each kind of spending is listed before any question, and a held card with no rates is looked up by itself',async()=>{
+  const h=harness();const researched=[];const saved=[];
+  globalThis.localStorage={store:{},getItem(key){return this.store[key]??null;},setItem(key,value){this.store[key]=String(value);}};
+  // The wallet holds a third card nothing has rates for. Research finds them,
+  // a capped bonus with unknown room left, and the advisor saves them under
+  // the name the wallet already uses.
+  const held=[...wallet,{id:'w-groc',kind:'card',name:'Synthetic Grocery Card',source:'Synthetic Bank',value:'',state:'available'}];
+  let rated=[...cards];
+  const cardStore={saved:async()=>[...rated],request:async(token,path,options)=>{
+    if(options?.method==='PUT'){saved.push(options.value);rated=[...rated,{id:path.split('/').pop(),revision:'1',...options.value}];}
+    return {records:[...rated],syncMessage:''};
+  }};
+  const remote=async(token,path,options)=>{
+    if(path==='/v1/ai-connections')return {connections:[{id:'ai',hasApiKey:true,provider:'openai'}]};
+    researched.push(options.value);
+    return {card:{name:'Synthetic Grocery Card from Synthetic Bank',unit:'cash',base:1,cpp:1,checked:'2026-10-01',source:'',notes:'',
+      rules:[{category:'Groceries',channel:'Any',merchant:'',rate:6,remaining:0,active:true,end:'',condition:'U.S. supermarkets'}]}};
+  };
+  let changed=0;
+  const tool=mountPurchaseAdvisor(h.document.querySelector('main'),{credentials:{get:async()=>'token'},
+    cards:cardStore,wallet:store(held),programs:store([]),remote,onChanged:()=>changed++});
+  await tool.ready;
+  const $=id=>h.document.getElementById(id);
+  await settle(()=>saved.length===1&&$('advisor-fill-status').textContent==='');
+  assert.deepEqual(researched,[{name:'Synthetic Grocery Card'}],'only the card without rates is researched');
+  assert.equal(saved[0].name,'Synthetic Grocery Card','saved under the wallet’s own name so the two are one card');
+  assert.equal(changed,1);
+  const rows=[...$('advisor-standing').querySelectorAll('.record-row')].map(row=>row.querySelector('.record-name').textContent);
+  // Groceries is the new card's 6%, not its 1% base: a cap research could not
+  // see into is unknown, not spent. Categories the everyday 2% card already
+  // wins add nothing to the last row and are left out.
+  assert.deepEqual(rows,['Groceries','Online shopping','Everything else']);
+  assert.match($('advisor-standing').textContent,/Synthetic Grocery Card · 6% back/);
+  assert.match($('advisor-standing').textContent,/U\.S\. supermarkets · up to a spending cap/);
+  assert.doesNotMatch($('advisor-standing').textContent,/Not compared/);
+  // Opening again does not research the same card again.
+  await tool.refresh();
+  assert.equal(researched.length,1);
+  delete globalThis.localStorage;
+  h.restore();
+});

@@ -24,8 +24,22 @@ export function AdvisorView({embedded=false}={}){
       Stack([],{id:'advisor-conditions'}),
       Stack([],{id:'advisor-result',className:'advice'}),
       Notice('',{id:'advisor-ai-status'})
-    ],{id:'advisor-form',className:'form-stack'})
+    ],{id:'advisor-form',className:'form-stack'}),
+    // The answer that needs no question: the card for each kind of spending.
+    Section([Heading('By category',2),Notice('',{id:'advisor-fill-status'}),Stack([],{id:'advisor-standing'})],{id:'advisor-standing-group',hidden:true})
   ],{className:'travel-wallet card-tool advisor-tool'});
+}
+// One row per kind of spending: the category, the card, and what it earns
+// there as an effective rate down the right edge. A requirement on the bonus
+// is said under it, and cards that earn exactly as much are named beside it.
+// Cards the wallet holds that could not be compared are named once, below.
+export function StandingAdvice(rows,missing=[]){
+  return [
+    ...rows.map(row=>RecordRow({title:row.label,figure:percent(row.rate),
+      detail:[row.also.length?`${row.card} or ${row.also.join(' or ')}`:row.card,row.earns].join(' · '),
+      notes:row.condition})),
+    ...(missing.length?[Note(`Not compared: ${missing.map(card=>card.hint?`${card.name} •••• ${card.hint}`:card.name).join(', ')}. Add its rates under Card rates.`)]:[])
+  ];
 }
 // The bonus requirements this purchase may or may not meet, one box each.
 // Best card asks the same question with its own ids; a second tool in the same

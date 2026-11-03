@@ -589,6 +589,19 @@ that every total equals the sum of what explains it and that the words appear
 only when something is stale. The next total that stands for many figures — a
 wallet's points, a quarter's return — is the next case.
 
+**UI-60 — a tool opens on its answer.** *By eye.* A tool that exists to answer
+a question opens on that answer, worked out from what is already saved, before
+anything is typed: the first tab is the question, it is not hidden behind a
+remembered tab, a to-do list or a form, and it counts every record the app
+already holds. A record it cannot use yet is fetched for it where that can be
+done without the owner, and only what still cannot be used is named under the
+answer. *From Rewards, which opened on a list of chores and compared only the
+cards that had rates in a second store: "it doesn't seem to have all my cards
+and it doesn't give me recommendations - there's not even a clear way to do
+it."* Rewards now opens on Best card with the best card per category, and
+researches a held card's rates by itself. Look at the first screen of any tool
+whose name is a question — Rewards, Subscriptions, Net worth — with real data.
+
 ## Open
 
 **UI-Q1 — what is the spacing scale?** DESIGN.md says 4px increments. The

@@ -20,7 +20,7 @@
 // as a line of its own and summed separately as what the card could come to,
 // so a $50 offer nobody has enrolled in never lifts a card over one that earns
 // more right now, and an expired one adds nothing anywhere.
-import {compareCards,normalizePurchase,walletCards,usableCatalogs,usableCardRates,merchantPerks,matchCard,sameMerchant,merchantKey} from './card-data.js';
+import {compareCards,normalizePurchase,walletCards,usableCatalogs,usableCardRates,merchantPerks,matchCard,sameMerchant,merchantKey,rewardRules} from './card-data.js';
 import {rewardWorth} from './rewards-data.js';
 import {offerUrl} from './program-data.js';
 import {money} from './money.js';
@@ -187,7 +187,7 @@ export function breakEven(points,cash){
 // Two accounts of one product share its terms and nothing else: each is a
 // plan of its own, carrying its own credits and the digits that tell it apart.
 export function advise({cards=[],wallet=[],catalogs=[],purchase,confirmed=[],today=new Date().toISOString().slice(0,10)}){
-  cards=usableCardRates(cards,wallet);
+  cards=openCaps(usableCardRates(cards,wallet));
   catalogs=usableCatalogs(catalogs,wallet);
   const input=normalizePurchase(purchase);
   const rows=compareCards(cards,{...input,confirmed},today);
@@ -233,4 +233,48 @@ export function advise({cards=[],wallet=[],catalogs=[],purchase,confirmed=[],tod
     expired:all.length-offers.length,
     missing,unrated:missing.length,
     breakEven:estimated&&cash&&points?{cents:breakEven(points,cash),points:points.name,cash:cash.name,earned:points.earned}:null};
+}
+// The standing answer: for each kind of spending, the card to reach for, before
+// anyone has described a purchase. It is the same arithmetic as a single
+// purchase on the reference spend, with two differences that make it an
+// answer rather than a refusal. A bonus with a requirement — "U.S.
+// supermarkets", "booked through the portal" — counts, and its requirement is
+// said beside the card instead of dropping the card to its base rate. And a cap
+// research could not see the remaining room on (saved as 0 until the owner
+// says otherwise) is treated as unknown rather than spent, so a 6% grocery card
+// is not reported as a 1% one; the cap is still named.
+// Research saves a capped bonus with 0 room left until the owner says how much
+// is, so 0 is "not known" rather than "used up"; a cap the owner has filled in
+// is left exactly as it is. `capped` remembers which rules had one.
+export function openCaps(cards){
+  return cards.map(card=>{
+    let rules;try{rules=rewardRules(card.rules||'[]');}catch{rules=[];}
+    return {...card,rules:JSON.stringify(rules.map(rule=>rule.remaining===0?{...rule,remaining:null}:rule)),capped:rules.map(rule=>rule.remaining===0)};
+  });
+}
+const STANDING=[['Dining','Direct'],['Groceries','Direct'],['Gas','Direct'],['Travel','Direct'],['Transit','Direct'],
+  ['Online shopping','Online'],['Drugstores','Direct'],['Department stores','Direct'],['Entertainment','Direct'],['Other','Direct']];
+const STANDING_LABELS={Other:'Everything else'};
+export function bestByCategory({cards=[],wallet=[],today=new Date().toISOString().slice(0,10)}){
+  const usable=openCaps(usableCardRates(cards,wallet).filter(card=>!card.deleting&&!card.conflict));
+  if(!usable.length)return [];
+  const confirmed=usable.flatMap(card=>rewardRules(card.rules).map((rule,index)=>`${card.id}:${index}`));
+  const rows=STANDING.map(([category,channel])=>{
+    const rows=compareCards(usable,{category,channel,amount:null,merchant:'',confirmed},today);
+    const best=rows[0];
+    if(!best)return null;
+    const index=best.matched?rewardRules(best.rules).findIndex(rule=>JSON.stringify(rule)===JSON.stringify(best.matched)):-1;
+    const also=rows.slice(1).filter(row=>tied(row.rate,best.rate,false)).map(row=>row.name);
+    const rate=best.matched?best.matched.rate:best.base;
+    return {category,label:STANDING_LABELS[category]||category,card:best.name,id:best.id,rate:best.rate,
+      earns:best.unit==='cash'?`${rate}% back`:`${rate}× points`,
+      condition:[best.matched?.condition||'',best.matched&&best.matched.channel!=='Any'&&best.matched.channel!==channel?`${best.matched.channel} only`:'',
+        index>=0&&best.capped[index]?'up to a spending cap':''].filter(Boolean).join(' · '),
+      also};
+  }).filter(Boolean);
+  // A category the everyday card already wins at its everyday rate says
+  // nothing the last row does not, so only the categories where it pays to
+  // switch cards are listed.
+  const other=rows.find(row=>row.category==='Other');
+  return other?rows.filter(row=>row===other||row.card!==other.card||!tied(row.rate,other.rate,false)):rows;
 }

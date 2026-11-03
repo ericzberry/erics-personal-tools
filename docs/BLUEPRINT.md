@@ -47,9 +47,9 @@ See [navigation](NAVIGATION.md) for destination ownership and compatibility.
 | `people.html` | `src/people-page.js` | Shared family, year-based ages and named places |
 | `trips.html` | `src/trips-page.js` | Travel planning: saved hotel/flight requests, evidence and provider sign-in checkpoints |
 | `travel.html` | `src/travel-page.js` | Travel wallet browse/editor tab |
-| `rewards.html` | `src/rewards.js` | Rewards & benefits: For you, Wallet, Pay and Points in one tool; `?view=pay` opens on a view |
-| `cards.html` | `src/cards-page.js` | Alias: sends its reader to `rewards.html?view=pay` (Best card is the Pay view's **Card rates**) |
-| `advisor.html` | `src/advisor-page.js` | Alias: sends its reader to `rewards.html?view=pay` (the purchase advisor is the Pay view) |
+| `rewards.html` | `src/rewards.js` | Rewards & benefits: Best card, For you, Wallet and Points in one tool; `?view=pay` opens on a view |
+| `cards.html` | `src/cards-page.js` | Alias: sends its reader to `rewards.html?view=pay` (Best card is the Best card view's **Card rates**) |
+| `advisor.html` | `src/advisor-page.js` | Alias: sends its reader to `rewards.html?view=pay` (the purchase advisor is the Best card view) |
 | `finance.html` | `src/finance-page.js` | The ledger's own page (passkey-gated): the figure and its quarterly line, allocation (each class opens to its figures), entities, private positions, houses, institutions, and the sources every total rests on — what the panel's **Open details** brings to the front. The panel mounts the same controller with `layout:'panel'`: net worth, liquidity, each entity's total, and the ways a figure gets in |
 | `personal.html` | `src/personal-page.js` | Personal information (passkey-gated) |
 | `health.html` | `src/health-page.js` | Health (passkey-gated): the notebook of personal and family history — a sentence is a record, filed under a relative when it names one — with its summary, medication history and visit-summary PDF. The panel mounts the same controller |
@@ -107,7 +107,7 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
 
 - **Navigation / registry** — `capabilities.js` (the capability registry both hosts
   read; every entry needs an `icon`; `CAPABILITY_ALIASES` maps the retired
-  `cards` and `advisor` ids to Rewards' Pay view, and `navigation.js` hands
+  `cards` and `advisor` ids to Rewards' Best card view, and `navigation.js` hands
   the requested view to the tool on arrival), `navigation.js`, `capability-links.js`,
   `page-offers.js` (which capabilities have something for the page in front of
   the owner — one entry per source, and no page is read to answer it) and
@@ -302,13 +302,13 @@ See `src/components/README.md` and `chrome-sidebar/AGENTS.md`.
   catalogue whether or not the panel is open.
 - **Capability controllers** — `travel.js`, `cards.js` (the card terms;
   `purchase:false` mounts it without its own purchase box, which is how
-  Rewards' Pay view carries it under **Card rates**), `purchase-advisor.js`
+  Rewards' Best card view carries it under **Card rates**), `purchase-advisor.js`
   (reads the cards, rewards and programs stores and writes to none; its
   arithmetic is `purchase-data.js`, shared with mobile — supported figures
   apart from what could hold after a step, expired offers left out, two
   accounts of one product as two plans, a points card's break-even value;
-  `embedded:true` mounts it as the Pay view), `rewards-tool.js` (the four
-  views; the host hands it `mountPay`/`mountRates` to build the Pay view's
+  `embedded:true` mounts it as the Best card view), `rewards-tool.js` (the four
+  views; the host hands it `mountPay`/`mountRates` to build the Best card view's
   tools on first opening),
   `finance.js`, `personal.js`, `health.js`, `reminders.js`, `gifts.js`, `sizes.js`, `replacements.js`, `capture.js`, `taxes.js`, `data-library.js`.
 - **Restaurants** — `restaurants.js` (the shared controller: form, interpretation,
