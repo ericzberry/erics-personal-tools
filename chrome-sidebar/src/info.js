@@ -3,7 +3,7 @@ import {Note,Button,setStatus} from './components/ui.js';
 import {INFO_SOURCES,infoRecords,findInfo} from './info-data.js';
 import {mountVaultGate} from './vault-gate.js';
 import {mountCapture} from './capture.js';
-export function mountInfo(root,{credentials,stores,remote,onOpen=()=>{},onSettings=()=>{},vault}={}){
+export function mountInfo(root,{credentials,stores,remote,onOpen=()=>{},onSettings=()=>{},vault,clipboard=globalThis.navigator?.clipboard}={}){
   const gate=mountVaultGate(root,{id:'info-vault',title:'Info',...(vault?{vault}:{}),onChange:open=>open?refresh():clear()});
   gate.content.replaceChildren(InfoView());
   const $=id=>gate.content.querySelector(`#info-${id}`);
@@ -18,7 +18,11 @@ export function mountInfo(root,{credentials,stores,remote,onOpen=()=>{},onSettin
   $('actions').append(add,retry,settings);retry.hidden=true;settings.hidden=true;
   function render(){
     const found=findInfo(rows,$('search').value,$('filter').value);
-    $('records').replaceChildren(...(found.length?InfoRows(found,onOpen):[Note(rows.length?'No matching information. Change the search or filter.':'No saved information in the sources available.')]));
+    $('records').replaceChildren(...(found.length?InfoRows(found,onOpen,copy):[Note(rows.length?'No matching information. Change the search or filter.':'No saved information in the sources available.')]));
+  }
+  async function copy(row){
+    try{await clipboard.writeText(row.value);setStatus($('status'),`Copied ${row.title}`,'success');}
+    catch{setStatus($('status'),'Copy failed. Select the number instead.','error');}
   }
   function clear(){generation++;busy=false;rows=[];capture.clear();$('search').value='';$('coverage').replaceChildren();$('records').replaceChildren();setStatus($('status'),'');}
   async function refresh(){
@@ -40,7 +44,7 @@ export function mountInfo(root,{credentials,stores,remote,onOpen=()=>{},onSettin
   globalThis.addEventListener?.('online',refresh);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
   if(gate.unlocked())refresh();
-  return {refresh,clear};
+  return {refresh,clear,focus:()=>$('search')?.focus()};
 }
 // Open a result inside the existing editor's list, preserving its normal edit,
 // reveal and conflict controls. No private values pass through navigation.

@@ -10,7 +10,12 @@ test('Info searches across record types and keeps document numbers and sealed pa
   assert.deepEqual(findInfo(rows,'zoe').map(r=>r.id).sort(),['gift','passport','person']);
   assert.equal(findInfo(rows,'loro shirt')[0].id,'size');
   assert.equal(findInfo(rows,'loyalty Delta','memberships').length,2);
-  assert.equal(findInfo(rows,'secret').length,0);assert.doesNotMatch(JSON.stringify(rows),/SECRET|sealed-private|private notes/);
+  assert.equal(findInfo(rows,'secret').length,0);
+  // A membership's number is shown on its row (UI-58) but is never searched;
+  // document numbers, sealed payloads and notes never reach a row at all.
+  assert.equal(rows.find(r=>r.id==='miles').value,'SECRET-NUMBER');assert.equal(findInfo(rows,'SECRET-NUMBER').length,0);
+  assert.doesNotMatch(JSON.stringify(rows.map(({value,...row})=>row)),/SECRET|sealed-private|private notes/);
+  assert.doesNotMatch(JSON.stringify(rows),/SECRET-DOCUMENT|SECRET-NOTES|sealed-private|private notes/);
   assert.equal(rows.some(r=>r.id==='doc'||r.id==='issuer'||r.id==='deleted'),false);
   assert.equal(findInfo(rows,'Hale')[0].pending,true);
 });
@@ -42,4 +47,12 @@ test('locking or disconnecting while Info loads cannot repopulate private rows',
   const tool=mountInfo(root,{credentials:{get:async()=>'synthetic'},vault:{...vault,unlocked:()=>open},stores,remote:async()=>({connections:[]})});
   await new Promise(r=>setTimeout(r,5));open=false;tool.clear();finish({records:[{id:'x',name:'Private person',role:'You'}]});
   await new Promise(r=>setTimeout(r,5));assert.doesNotMatch(root.textContent,/Private person/);
+});
+test('a membership found in Info shows its number on the row, with Copy beside it',async()=>{
+  const {document}=parseHTML('<html><body></body></html>');globalThis.document=document;
+  const {InfoRows}=await import('../src/components/info.js');
+  const copied=[];const [row]=InfoRows([{title:'IHG One Rewards',kind:'memberships',detail:'Hotel',value:'123456789'}],()=>{},r=>copied.push(r.value));
+  assert.equal(row.querySelector('.saved-value').textContent,'123456789');
+  row.querySelector('.saved-value-line button').click();assert.deepEqual(copied,['123456789']);
+  const [plain]=InfoRows([{title:'Sweaters',kind:'sizes',detail:'M'}],()=>{});assert.equal(plain.querySelector('.saved-value'),null);
 });

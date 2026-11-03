@@ -2,3 +2,11 @@
 .unlocked-tools .capability-navigation{margin:0 0 12px;padding:0;border-bottom:0;}
 .unlocked-tools .capability-navigation--home{margin:0;padding:0;border-bottom:0;}
 .unlocked-tools .launcher-tile{min-height:66px;}
+/* The area row: six destinations and the Settings gear, each a full-height
+   finger target, the current one in forest with a bar under it. UI-59. */
+.unlocked-tools .area-bar{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) 40px;gap:2px;margin:0 0 12px;padding:2px;border:1px solid var(--line);border-radius:12px;background:var(--surface);}
+.unlocked-tools .area-tab{display:grid;justify-items:center;align-content:center;gap:2px;min-height:52px;margin:0;padding:6px 0;border:0;border-radius:8px;background:transparent;color:var(--muted);font:500 11px/1.2 var(--sans);cursor:pointer;}
+.unlocked-tools .area-tab .glyph{color:inherit;}
+.unlocked-tools .area-tab .launcher-label{white-space:nowrap;}
+.unlocked-tools .area-tab[aria-current='page']{background:var(--sage);color:var(--forest);font-weight:600;}
+.unlocked-tools .area-tab:focus-visible{outline:2px solid var(--forest);outline-offset:-2px;}

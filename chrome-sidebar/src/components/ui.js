@@ -211,7 +211,6 @@ function MoneyInput(input){
 // where the whole tool list should be visible at a glance: the mobile home
 // screen, and the mobile Tools menu once a tool is open.
 const SETTINGS_GLYPH='M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M12 2.8l1.6 2.3 2.8-.4 1 2.6 2.6 1-.4 2.8 2.3 1.6-2.3 1.6.4 2.8-2.6 1-1 2.6-2.8-.4-1.6 2.3-1.6-2.3-2.8.4-1-2.6-2.6-1 .4-2.8L2.8 12l2.3-1.6-.4-2.8 2.6-1 1-2.6 2.8.4L12 2.8Z';
-const MENU_GLYPH='M4 7h16 M4 12h16 M4 17h16';
 const LauncherTile=(id,icon,label,className='launcher-tile',props={})=>element('button',{id,type:'button',className,...props},[Glyph(icon),Label(label,{className:'launcher-label'})]);
 export function CapabilityLauncher(items=capabilitiesByName,{id='tool-launcher',label='Tools',settings=false,home=false}={}) {
   const groups=capabilitySections(items).map(({title,items:entries})=>{
@@ -263,13 +262,13 @@ export function PageOfferStrip(offers=[],{onSelect=()=>{}}={}){
 }
 // Mobile Tools menu: the same icon grid, collapsed behind a hamburger once a
 // tool is open. On the home screen the caller unhides the grid in place.
+// The phone's areas, always on screen as one row: a destination is one tap,
+// never a menu to open first. Settings is the gear at the end of the row.
+// UI-59.
 export function CapabilityMenu(){
-  const summary=element('summary',{id:'navigation-toggle',className:'capability-toggle','aria-label':'Tools menu'},[Glyph(MENU_GLYPH,{size:20}),Strong('Today',{id:'current-function'})]);
-  const grid=Stack(APP_AREAS.map(area=>LauncherTile(`navigate-area-${area.id}`,area.icon,area.label)),{className:'launcher-grid'});
-  const settings=LauncherTile('open-settings',SETTINGS_GLYPH,'Settings','launcher-tile launcher-tile--settings');
-  const menu=element('details',{id:'app-navigation',className:'capability-navigation capability-navigation--launcher'},[summary,element('nav',{'aria-label':'Tools',className:'capability-launcher'},[grid,settings])]);
-  menu.addEventListener('keydown',event=>{if(event.key==='Escape'){menu.open=false;summary.focus();}});
-  return menu;
+  const tabs=APP_AREAS.map(area=>LauncherTile(`navigate-area-${area.id}`,area.icon,area.label,'area-tab'));
+  const settings=element('button',{id:'open-settings',type:'button',className:'area-tab area-tab--settings','aria-label':'Settings'},[Glyph(SETTINGS_GLYPH)]);
+  return element('nav',{id:'app-navigation',className:'area-bar','aria-label':'Tools'},[...tabs,settings]);
 }
 export function AppHeader({name='Eric’s tools'}={}) {
   return element('header',{className:'app-header app-header--navigation'},[

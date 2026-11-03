@@ -1,4 +1,4 @@
-import {Stack,ToolTitle,FindField,FormField,ActionGroup,Button,RecordRow,RowAction,RowLink,OPEN_GLYPH,SEARCH_GLYPH,Note} from './ui.js';
+import {Stack,ToolTitle,FindField,FormField,ActionGroup,Button,RecordRow,RowAction,RowLink,Strong,OPEN_GLYPH,SEARCH_GLYPH,COPY_GLYPH,Note} from './ui.js';
 import {INFO_FILTERS,productSearchURL} from '../info-data.js';
 export function InfoView(){return Stack([
   ToolTitle('Info',{actionsId:'info-actions',statusId:'info-status'}),
@@ -7,7 +7,14 @@ export function InfoView(){return Stack([
   FormField({id:'info-filter',label:'Show',kind:'select',options:INFO_FILTERS.map(([value,text])=>({value,text}))}),
   Stack([],{id:'info-coverage'}),Stack([],{id:'info-records'})
 ],{className:'info-collection'});}
-export function InfoRows(rows,onOpen){return rows.map(row=>RecordRow({title:row.title,
+// A row that carries the value the owner came for shows it as the largest thing
+// in the row, with Copy beside it, so finding the program is the whole trip.
+// UI-63.
+export function SavedValue(value,label,onCopy){
+  return Stack([Strong(value,{className:'saved-value'}),RowAction(COPY_GLYPH,`Copy ${label}`,onCopy)],{className:'saved-value-line'});
+}
+export function InfoRows(rows,onOpen,onCopy=()=>{}){return rows.map(row=>RecordRow({title:row.title,
   detail:[INFO_FILTERS.find(([key])=>key===row.kind)?.[1],row.detail,row.conflict?'Resolve sync conflict':row.pending?'Waiting to sync':''].filter(Boolean).join(' · '),
-  actions:[RowAction(OPEN_GLYPH,`Open ${row.title}`,()=>onOpen(row)),row.web?RowLink(SEARCH_GLYPH,`Search the web for ${row.title}`,productSearchURL(row)):null].filter(Boolean)
+  actions:[RowAction(OPEN_GLYPH,`Open ${row.title}`,()=>onOpen(row)),row.web?RowLink(SEARCH_GLYPH,`Search the web for ${row.title}`,productSearchURL(row)):null].filter(Boolean),
+  extra:[row.value?SavedValue(row.value,`number for ${row.title}`,()=>onCopy(row)):null]
 }));}

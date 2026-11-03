@@ -73,6 +73,8 @@ here.
 | **UI-51** | A total shows what it rests on. Any total the ledger draws can be opened down to the dated figures it adds up, each with what stated it, and says in money how much of it rests on figures more than 90 days old — and says nothing about age when none of it does. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/finance-explain.test.js` |
 | **UI-55** | Fields side by side are one family, in every state. A dropdown shows a value, so it is drawn as a field — a text box's weight, inset and height, not a button's — a date or a number stands level with it, and every state is one look for every kind: disabled dimmed to half on its own fill with the ordinary cursor, focus the ring alone, hover the edge alone, touch 44px and 16px. The find field above a record list is the family at the Filter density, drawn by `FindField` in every tool and 16px under a finger like the rest. Only `select.css`, which both hosts load, paints a field or draws the switch. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
 | **UI-56** | Disabled is half, wherever it shows. Every disabled control in either host is dimmed to half with the ordinary cursor, a row's verb paused while its tool saves included — under the pointer, to a finger, on an opened record's line. It is dimmed, not hidden, because it applies again the moment the save lands; only a verb still waiting unseen for the pointer stays at 0. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
+| **UI-58** | The value you came for is the largest thing on its row. A saved number found by searching for its program — a membership, a confirmation code — shows on the result itself at `--saved-value-size`, with Copy at the end of its line, so finding the program is the whole trip. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/info.test.js` |
+| **UI-59** | On the phone, every area is one tap. The six areas and the Settings gear sit in one row that is always on screen, never behind a menu; choosing Info gives its search the keyboard. Stated in full under [From a complaint](#from-a-complaint). | mobile's `tests/tool-navigation.test.js` |
 
 ## Ratcheting
 
@@ -780,3 +782,25 @@ six nested tool launchers; its record editors have a single return path. Today
 absorbs Home and Needs attention. See [navigation](NAVIGATION.md) for the
 canonical mapping, retained URLs and record ownership. Review both menus and
 Info at 280px and on a phone whenever a capability is added.
+
+**UI-58 — the value you came for is the largest thing on its row.** *Enforced
+by `tests/info.test.js`.* “When I want the number for IHG it's very hard to get
+on the phone and even then it's quite small.” The number was 12px — smaller
+than the label naming it — and lived a screen beyond the search that found it.
+Where a host keeps numbers on the device (the phone), an Info result for a
+membership carries its number on the row, at `--saved-value-size` (20px),
+semibold, tabular and spaced, with Copy at the end of the line; the wallet sets
+its number the same way. The number is shown, never searched: it stays out of
+the search index and every web query. This supersedes the earlier choice to set
+a wallet number a step under its name — the row exists to be read for it. Look
+at an Info result and a wallet record on a phone at 320px whenever a record
+type with a value is added.
+
+**UI-59 — on the phone, every area is one tap.** *Enforced by mobile's
+`tests/tool-navigation.test.js`.* Same complaint: reaching Info meant opening a
+menu first. The phone draws the six areas and the Settings gear as one row that
+is always on screen, the current one in forest on sage; there is no dropdown to
+open. Tapping Info focuses its search, because tapping it is asking to find
+something. Review the row at 320px and 390px whenever an area is added — a
+seventh does not fit, which is the point of UI-57.
+

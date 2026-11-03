@@ -120,13 +120,13 @@ const moreRoot=document.getElementById('capability-more');moreRoot.replaceChildr
 for(const item of CAPABILITIES.filter(c=>['restaurants','rankings'].includes(c.id)))moreRoot.querySelector(`#navigate-${item.id}`).addEventListener('click',()=>navigation.show(item.id,{focus:true}));
 const workspace=AreaWorkspace({mobile:true,rootFor:id=>document.getElementById(`capability-${id==='documents'?'travel':id}`),onSelect:id=>navigation.show(id)});
 root.append(workspace);
-function showScreen(screen,{area='',view=''}={}){
+function showScreen(screen,{area='',view='',focus=false}={}){
   const settings=screen===SETTINGS_SCREEN;selectedTool=settings?null:screen;
   connectionRoot.hidden=!settings;workspace.hidden=settings;
   if(!settings)workspace.show(screen,{area});
   captureRoot.hidden=false;homeRoot.hidden=false;
   if(screen==='home'){home?.refresh();attentionTool.refresh();}
-  if(screen==='info')infoTool.refresh();
+  if(screen==='info'){infoTool.refresh();if(focus)infoTool.focus();}
   if(screen==='people')peopleTool.refresh();
   if(screen==='trips')tripTool.refresh();
   if(screen==='subscriptions')subscriptionTool.refresh();

@@ -40,6 +40,10 @@
   --unplaced: #c4c7bb;
   --grid: #ebebe3;
   --radius: 14px;
+  /* The value a record is found for — a membership number, a confirmation
+     code. It is the largest text in its row, so it can be read off the phone
+     at arm's length and typed into someone else's form. UI-58. */
+  --saved-value-size: 20px;
   /* The one system stack. Every sheet that needs a family in a `font`
      shorthand takes it from here rather than writing the list again — there
      were nineteen copies, and two of them had already lost "Segoe UI", so two
