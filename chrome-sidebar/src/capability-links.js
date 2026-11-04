@@ -102,7 +102,18 @@ export const openHealthTool=panelTool('health',(root,options)=>import('./health-
 
 const PANEL_TOOLS={people:openPeopleTool,trips:openTripsTool,attention:openAttentionTool,subscriptions:openSubscriptionsTool,travel:mountTravelTool,finance:openFinanceTool,taxes:openTaxesTool,
   gifts:openGiftsTool,sizes:openSizesTool,replacements:openReplacementsTool,reminders:openRemindersTool,cards:openCardsTool,advisor:openAdvisorTool,personal:openPersonalTool,health:openHealthTool};
-export const openPanelTool=id=>PANEL_TOOLS[id]?.()??null;
+// A tool opened again reads its records again, so no tool needs a Refresh
+// button to show what changed on another device (UI-64). The first opening is
+// the mount, which reads them already; an editor with unsaved work is left as
+// it is. Today's attention list is mounted with the home screen, not by it.
+const opened=new Set();
+export function openPanelTool(id){
+  if(id==='home'){attention?.then(tool=>tool?.refresh?.());return null;}
+  const tool=PANEL_TOOLS[id]?.()??null;
+  if(tool&&opened.has(id))Promise.resolve(tool).then(t=>{if(!t?.isDirty?.())t?.refresh?.({quiet:true});});
+  if(tool)opened.add(id);
+  return tool;
+}
 
 // Standalone settings/data pages use the same data registry in the shared formatted picker.
 const {CAPABILITIES,APP_AREAS}=await import('./capabilities.js');

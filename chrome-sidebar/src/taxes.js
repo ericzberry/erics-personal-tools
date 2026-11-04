@@ -371,10 +371,9 @@ export function mountTaxes(root,{credentials,remote,upload,download=null,handOff
     $('drive-contents').hidden=!drive.connected;
     $('drop').disabled=busy;
     renderActions();
-    // Beside the title, only what applies: a connected Drive can be refreshed,
-    // and a device with no cloud connection needs Settings rather than a dead
-    // Refresh.
-    $('actions').replaceChildren(activeToken?action('Refresh',()=>refreshStatus()):action('Connection settings',onSettings));
+    // Beside the title, only what applies: a device with no cloud connection
+    // needs Settings. Drive is read again whenever the tool is opened (UI-64).
+    $('actions').replaceChildren(...(activeToken?[]:[action('Connection settings',onSettings)]));
   }
 
   async function connectionList(){

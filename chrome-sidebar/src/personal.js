@@ -107,7 +107,7 @@ export function mountPersonal(root,{credentials,offline,onSettings=()=>{},onChan
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
     // Beside the title, only what applies: loaded records can be refreshed, and
     // records that never loaded need the connection instead.
-    $('actions').replaceChildren(loaded?action('Refresh',refresh):action('Connection settings',onSettings,'secondary',{enabled:true}));
+    $('actions').replaceChildren(...(loaded?[]:[action('Connection settings',onSettings,'secondary',{enabled:true})]));
   }
   async function run(operation){
     if(busy)return false;

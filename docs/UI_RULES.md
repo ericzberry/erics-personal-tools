@@ -78,6 +78,8 @@ here.
 | **UI-61** | One left edge. The header, the area bar, the tabs and every tool in an area start on the same line; a tool in an area adds no inset of its own. Stated in full under [From a complaint](#from-a-complaint). | By eye, at 320px and 390px |
 | **UI-62** | A screen is named once. Where a tab, or the area bar above a lone tool, names the screen, the tool's own page title is not printed again beneath it; a tool mounted inside another's screen keeps its heading. Stated in full under [From a complaint](#from-a-complaint). | By eye |
 | **UI-63** | A field is named once. A find field whose placeholder says what it finds, and a filter whose value says what it shows, carry no caption above them; the label stays for a screen reader. Stated in full under [From a complaint](#from-a-complaint). | By eye |
+| **UI-64** | A tool reads its records again whenever it is opened, so none offers Refresh. Connection settings appears only while there is no connection (UI-37), and a sync action that reaches outside the app — a Drive folder listing aside — is named for what it fetches. Stated in full under [From a complaint](#from-a-complaint). | `tests/attention-tools.test.js`, `tests/finance-sidebar.test.js` |
+| **UI-65** | The serif names a screen and sets a figure. Every heading inside a tool — a group, a hotel, a section of Today — is in the sans of its records, a step heavier. Stated in full under [From a complaint](#from-a-complaint). | By eye |
 
 ## Ratcheting
 
@@ -851,3 +853,27 @@ tucked up under the name instead of resting on the rule below (UI-12, UI-30).
 A plain disclosure draws the shared chevron at its right edge instead of the
 browser's triangle in front of its words (UI-22). And on a 355px phone frame,
 Quick add keeps Add beside the note instead of on a line of its own.
+
+**UI-64 — a tool reads itself again when it is opened.** *Enforced in part by
+`tests/attention-tools.test.js` and `tests/finance-sidebar.test.js`.* Same
+complaint, second pass: twelve tools carried a Refresh button beside their
+title, because in the sidebar a tool was read once when first built and never
+again, so the button was the only way to see what the phone had saved. Now
+the sidebar reads a tool again each time it is opened (skipping an editor with
+unsaved work), the phone does the same each time a screen is shown, and the
+button is gone. Connection settings still stands where a device has no
+connection, and Info still offers Refresh after a read that failed — the way out
+of a problem appears only while there is one (UI-37). A title with no verbs
+left draws no empty row, and an empty slot waiting for a status or coverage line
+takes no gap (UI-30).
+
+**UI-65 — the serif names a screen and sets a figure.** *By eye.* Same
+complaint: Travel set the trip, the result count and each hotel in Georgia at
+16px between sans records at 13px, and Money did the same for Allocation and
+Entities, so one scroll read in two typefaces at three sizes. Headings below a
+screen's title (`h2.title-text`, `h3.title-text`) are in `--sans` at 600, and a
+tool mounted inside another's screen (Needs attention on Today) has its title
+set the same way, at 17px. The serif stays for the page title where a host
+shows one, for the weather, and for the figures UI-49 makes readings of.
+Closed plain disclosures also sit evenly between their rules now: the stack's
+gap stands in for the padding under them.

@@ -1400,10 +1400,11 @@ export function mountFinance(root,{credentials,offline,remote,readPage=null,read
     // something narrower here — one investment's capital account, on a row that
     // says Position — so the one button on a quiet arrival read as an offer to
     // open a single holding.
-    // Export rides beside Refresh because it acts on the same thing: the whole
-    // ledger as it stands. Only once there is a figure to write.
+    // Export acts on the whole ledger as it stands, so it is there only once
+    // there is a figure to write. The ledger reads itself again whenever the
+    // tool is opened, so there is no Refresh beside it (UI-64).
     $('actions').replaceChildren(...(quiet?[toolAction('Show net worth',showPosition)]
-      :loaded?[...(figuresOn(records).length?[toolAction('Export to xlsx',exportLedger)]:[]),toolAction('Refresh',refresh)]
+      :loaded?(figuresOn(records).length?[toolAction('Export to xlsx',exportLedger)]:[])
       :[toolAction('Connection settings',onSettings)]));
     syncReadings();
   }

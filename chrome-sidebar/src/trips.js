@@ -23,8 +23,8 @@ export function mountTrips(root,{credentials,offline,onSettings=()=>{},clipboard
       catch{status('Copy failed. Select the trip request instead.','error');}
     },onResolve:choice=>run(token=>offline.resolve(token,current.id,choice))}):Note(loaded?'No trips saved. Add a trip to start.':''));
     const add=Button('New trip',{variant:'secondary',size:'compact',disabled:busy||!!researchAbort||!loaded});add.addEventListener('click',()=>edit());
-    const refresh=Button(loaded?'Refresh saved research':'Connection settings',{variant:'secondary',size:'compact',disabled:busy||!!researchAbort});refresh.addEventListener('click',loaded?load:onSettings);
-    $('actions').replaceChildren(...(loaded?[add,refresh]:[refresh]));
+    const settings=Button('Connection settings',{variant:'secondary',size:'compact',disabled:busy||!!researchAbort});settings.addEventListener('click',onSettings);
+    $('actions').replaceChildren(...(loaded?[add]:[settings]));
     for(const key of ['title','kind','request','save'])$(key).disabled=busy||!!researchAbort||!loaded;
     $('cancel').disabled=busy;
   }

@@ -243,7 +243,7 @@ export function mountHealth(root,{credentials,offline,drafts=null,onSettings=()=
     $('destination-line').hidden=!$('destination-where').textContent;
     $('relative-label').closest('.form-field').hidden=!(destination.mode==='explicit'&&!destination.relative&&$('destination').value==='new');
     $('undo').hidden=!undo;
-    $('actions').replaceChildren(loaded?action('Refresh',refresh):action('Connection settings',onSettings,'secondary',{enabled:true}));
+    $('actions').replaceChildren(...(loaded?[]:[action('Connection settings',onSettings,'secondary',{enabled:true})]));
   }
   function fillDestinationOptions(){
     const select=$('destination');

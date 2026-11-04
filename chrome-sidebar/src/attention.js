@@ -3,19 +3,19 @@ import {Button,RecordRow,RowAction,OPEN_GLYPH,Note,setStatus} from './components
 import {attentionItems,ATTENTION_SOURCES} from './attention-data.js';
 import {mountVaultGate} from './vault-gate.js';
 export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings=()=>{},vault,automatic=true}={}){
-  const refreshButton=Button('Refresh',{variant:'secondary',size:'compact'});refreshButton.addEventListener('click',refresh);
   const settings=Button('Connection settings',{variant:'secondary',size:'compact'});settings.addEventListener('click',onSettings);
   const gate=mountVaultGate(root,{id:'attention-vault',automatic,title:'Needs attention',lockedDetail:'Unlock to review attention items from your private records.',...(vault?{vault}:{}),onChange:open=>open?refresh():clear()});
   gate.content.replaceChildren(AttentionView());
   const $=id=>gate.content.querySelector(`#attention-${id}`);
   let generation=0,busy=false,unreachable=false;
-  // Connection settings is the way out of a problem, so it replaces Refresh only
-  // while this device has no token or not one source answered (UI-37).
-  function renderActions(){$('actions').replaceChildren(unreachable?settings:refreshButton);}
+  // Connection settings is the way out of a problem, so it is there only while
+  // this device has no token or not one source answered (UI-37). Otherwise the
+  // list is read again each time Today is opened, and offers no Refresh (UI-64).
+  function renderActions(){$('actions').replaceChildren(...(unreachable?[settings]:[]));}
   function clear(){generation++;busy=false;unreachable=false;renderActions();$('records').replaceChildren();$('coverage').replaceChildren();setStatus($('status'),'');}
   async function refresh(){
     if(busy||!gate.unlocked())return;
-    busy=true;const current=++generation;setStatus($('status'),'Checking saved records…','progress');refreshButton.disabled=true;
+    busy=true;const current=++generation;setStatus($('status'),'Checking saved records…','progress');
     try{
       const token=await credentials.get();if(!token){unreachable=true;throw Error('Open Settings to connect this device.');}
       if(current!==generation||!gate.unlocked())return;
@@ -34,7 +34,7 @@ export function mountAttention(root,{credentials,stores,onOpen=()=>{},onSettings
       // act on; a clean, complete check is the only success here.
       setStatus($('status'),failures?'Some saved information could not be checked.':'',failures?'alert':'');
     }catch(error){if(current===generation)setStatus($('status'),error.message,'error');}
-    finally{if(current===generation){busy=false;refreshButton.disabled=false;renderActions();}}
+    finally{if(current===generation){busy=false;renderActions();}}
   }
   renderActions();
   if(gate.unlocked())refresh();

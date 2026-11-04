@@ -16,6 +16,11 @@
 .travel-wallet,.travel-wallet *{box-sizing:border-box}
 .travel-wallet h1{font-size:22px;line-height:1.2;margin:0}
 .travel-wallet h2,.travel-wallet h3{font-size:16px;margin:0}
+/* The serif names a screen and sets a figure; a heading inside a tool is in
+   the sans its records are, a step heavier. Inner headings had borrowed the
+   page title's serif, so Travel and Money read in two typefaces at three sizes
+   down one scroll (UI-65). */
+.travel-wallet :is(h2,h3).title-text{font-family:var(--sans);font-weight:600;letter-spacing:0}
 .travel-wallet p{margin:0;line-height:1.5}
 .travel-wallet .footnote{color:var(--wallet-muted);font-size:12px}
 .travel-wallet>.footnote:empty{display:none}
@@ -144,6 +149,11 @@
 .account-pages-row{display:flex;flex-wrap:wrap;gap:4px 12px}
 .account-pages-link{min-height:32px;display:inline-flex;align-items:center;color:var(--wallet-forest)}
 .tool-title>.action-group{margin:0;flex:none}
+/* With Refresh gone most titles have no verb at all, and an empty group still
+   wrapped to a line of its own under the name; an empty slot waiting for a
+   tool's coverage or status still took a gap in its stack. Neither is drawn
+   until there is something in it (UI-30). */
+.travel-wallet .tool-title>.action-group:empty,.travel-wallet div:empty:not([class]){display:none}
 .tool-title-block .notice:empty{display:none}
 .finance-ledger .notice:empty,.finance-ledger .footnote:empty,.personal-records .notice:empty,.personal-records .footnote:empty{display:none}
 .travel-wallet .record-group{display:grid;gap:0}
@@ -253,6 +263,10 @@
    Disclosures that draw a head of their own carry a class and keep it. */
 .travel-wallet :is(details:not([class]),.health-details,.tax-section)>summary{display:flex;align-items:center;gap:8px;min-height:32px;list-style:none}
 .travel-wallet :is(details:not([class]),.health-details,.tax-section)>summary::-webkit-details-marker{display:none}
+/* Closed, it sits evenly between its rule and the next: the summary is a
+   touch-high line already, and the stack's own gap stands in for the padding
+   underneath, so the label is as far from the rule below as from its own. */
+.travel-wallet :is(details:not([class]),.health-details,.tax-section):not([open]){padding:12px 0 0}
 .travel-wallet :is(details:not([class]),.health-details,.tax-section)>summary::after{content:'';flex:none;margin:0 4px 0 auto;width:5px;height:5px;border-right:1.5px solid var(--wallet-control-line);border-bottom:1.5px solid var(--wallet-control-line);transform:rotate(-45deg);transition:transform .15s ease}
 .travel-wallet :is(details:not([class]),.health-details,.tax-section)[open]>summary::after{transform:rotate(45deg)}
 .unlocked-tools .travel-wallet :is(details:not([class]),.health-details,.tax-section)>summary{min-height:44px}

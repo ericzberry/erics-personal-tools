@@ -58,7 +58,7 @@ export function mountSizes(root,{credentials,offline,onSettings=()=>{},onChanged
       :[Note(!loaded?'':records.length?'No size matches that.':'No sizes yet. Say one above, or add it below.')]));
     for(const key of fields)$(key).disabled=busy||!loaded;
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
-    $('actions').replaceChildren(loaded?action('Refresh',refresh):action('Connection settings',onSettings,'secondary',{enabled:true}));
+    $('actions').replaceChildren(...(loaded?[]:[action('Connection settings',onSettings,'secondary',{enabled:true})]));
   }
   async function run(operation){
     if(busy)return false;

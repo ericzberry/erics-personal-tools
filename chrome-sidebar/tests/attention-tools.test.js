@@ -52,7 +52,7 @@ test('attention offers Connection settings only when nothing could be reached',a
   const labels=root=>[...root.querySelectorAll('#attention-actions button')].map(b=>b.textContent);
   let {root}=setup();mountAttention(root,{vault,credentials,stores:{reminders:{request:async()=>({records:[]})}}});
   await settle(()=>root.textContent.includes('Nothing needs attention'));
-  assert.deepEqual(labels(root),['Refresh']);
+  assert.deepEqual(labels(root),[],'a list read again on every visit offers no Refresh');
   ({root}=setup());mountAttention(root,{vault,credentials,stores:{reminders:{request:async()=>{throw Error('Unauthorized');}}}});
   await settle(()=>root.textContent.includes('Other sources are unavailable'));
   assert.deepEqual(labels(root),['Connection settings']);

@@ -160,7 +160,7 @@ test('a section the sidebar opened on its own raises no passkey sheet until it i
   // This ledger holds nothing, so there is still no second view to switch to.
   // What changed is that it is no longer being withheld, and the title says so.
   assert.equal(ledgerTab().hidden,true);
-  assert.equal(h.document.getElementById('finance-actions').textContent,'Refresh');
+  assert.equal(h.document.getElementById('finance-actions').textContent,'');
   assert.equal(prompts,1,'one passkey, given once, for the whole sitting');
   tool.stop();h.restore();
 });

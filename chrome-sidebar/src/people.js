@@ -9,8 +9,8 @@ export function mountPeople(root,{credentials,offline,onSettings=()=>{}}){
   function render(){
     $('list').replaceChildren(...(records.length?records.map(p=>PersonRow(p,{busy,onEdit:()=>edit(p),onDelete:()=>run(token=>offline.request(token,`/v1/people/${p.id}`,{method:'DELETE',value:p})),onResolve:choice=>run(token=>offline.resolve(token,p.id,choice))})):[Note(loaded?'No people saved.':'')]));
     const add=Button('Add person',{variant:'secondary',size:'compact',disabled:busy||!loaded});add.addEventListener('click',()=>edit());
-    const refresh=Button(loaded?'Refresh':'Connection settings',{variant:'secondary',size:'compact',disabled:busy});refresh.addEventListener('click',loaded?load:onSettings);
-    $('actions').replaceChildren(...(loaded?[add,refresh]:[refresh]));
+    const settings=Button('Connection settings',{variant:'secondary',size:'compact',disabled:busy});settings.addEventListener('click',onSettings);
+    $('actions').replaceChildren(...(loaded?[add]:[settings]));
     for(const key of [...fields,'save'])$(key).disabled=busy||!loaded;$('cancel').disabled=busy;
   }
   function clear(){generation++;records=[];editing=null;loaded=false;busy=false;activeToken='';$('editor').open=false;for(const key of fields)$(key).value='';setStatus($('status'),'');render();}

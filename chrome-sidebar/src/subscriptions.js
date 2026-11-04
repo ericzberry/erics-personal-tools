@@ -71,7 +71,7 @@ export function mountSubscriptions(root,{credentials,offline,remote,onSettings=(
     // starts open — once, so a drawer the owner closed stays closed. UI-35.
     if(loaded&&!opened){opened=true;if(!records.length)$('intake').open=true;}
     const settings=Button('Connection settings',{variant:'secondary',size:'compact',disabled:busy});settings.addEventListener('click',onSettings);
-    $('actions').replaceChildren(loaded?action('Refresh',refresh):settings);
+    $('actions').replaceChildren(...(loaded?[]:[settings]));
   }
   // `target` is a status line's id, or a function that says it somewhere else.
   async function run(operation,target='status'){

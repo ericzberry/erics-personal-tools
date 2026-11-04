@@ -129,7 +129,7 @@ test('a quiet arrival shows what can be put in, and none of what is already ther
   assert.equal(tab(document,'ledger').getAttribute('aria-selected'),'true','the press was the asking, so the ledger is what opens');
   assert.match(document.getElementById('finance-totals').textContent,/\$100,000/);
 
-  assert.equal(document.getElementById('finance-actions').textContent,'Export to xlsxRefresh','a ledger with figures can leave as a spreadsheet');
+  assert.equal(document.getElementById('finance-actions').textContent,'Export to xlsx','a ledger with figures can leave as a spreadsheet');
 
   // Asked once, answered for the sitting: the next bank page does not cover it
   // up again and ask a second time.

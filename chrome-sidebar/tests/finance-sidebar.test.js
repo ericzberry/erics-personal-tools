@@ -110,7 +110,7 @@ test('reading the open page is offered only where there is a page beside the too
   assert.equal(document.getElementById('finance-tabs-ledger-tab').hidden,true,'nothing saved is not a view to switch to');
   assert.equal(document.getElementById('finance-tabs-add-tab').getAttribute('aria-selected'),'true');
   assert.equal(document.querySelector('#finance-tabs .tabs-list').hidden,true,'one tab draws no row');
-  assert.equal(document.getElementById('finance-actions').textContent,'Refresh');
+  assert.equal(document.getElementById('finance-actions').textContent,'','a ledger read again on every visit offers no Refresh');
   plain.stop();
 
   document.querySelector('main').replaceChildren();

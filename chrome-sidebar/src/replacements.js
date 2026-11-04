@@ -61,7 +61,7 @@ export function mountReplacements(root,{credentials,offline,onSettings=()=>{},on
       :[Note(!loaded?'':records.length?'Nothing matches that.':'Nothing saved yet. Say one above, or add it below.')]));
     for(const key of fields)$(key).disabled=busy||!loaded;
     $('save').disabled=busy||!loaded;$('cancel').disabled=busy;
-    $('actions').replaceChildren(loaded?action('Refresh',refresh):action('Connection settings',onSettings,'secondary',{enabled:true}));
+    $('actions').replaceChildren(...(loaded?[]:[action('Connection settings',onSettings,'secondary',{enabled:true})]));
   }
   async function run(operation){
     if(busy)return false;

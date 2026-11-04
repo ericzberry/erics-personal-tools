@@ -101,6 +101,7 @@ const attentionTool=mountAttention(document.getElementById('capability-attention
 const rankings=mountLibrary(document.getElementById('capability-rankings'),{kind:'rankings',load:async()=>({value:await (await fetch('/app/data/rankings-2026.json')).json()})});
 await rankings.refresh();
 let selectedTool;
+const shown=new Set();
 const restaurants=mountRestaurants(document.getElementById('capability-restaurants'),{credentials,request:cloudRequest,history:stores.restaurants,loadConnections:async()=>{
   const result=await ai.request(await credentials.get(),'/v1/ai-connections');return result.records;
 }});
@@ -132,6 +133,11 @@ function showScreen(screen,{area='',view='',focus=false}={}){
   if(screen==='subscriptions')subscriptionTool.refresh();
   if(screen==='restaurants')restaurants.open();
   if(screen==='travel'||screen==='documents')travelTool.setScope(screen==='documents'?'documents':'memberships');
+  // A tool shown again reads its records again, so none needs a Refresh button
+  // (UI-64); the first showing follows its mount, which read them already.
+  const reread={reminders:reminderTool,finance:financeTool,personal:personalTool,health:healthTool,gifts:giftTool,sizes:sizeTool,replacements:replacementTool,taxes:taxTool}[screen];
+  if(reread&&shown.has(screen))reread.refresh();
+  shown.add(screen);
   if(screen==='rewards'){rewardTool.scope(area==='info'?'memberships':'cards');rewardTool.refresh({quiet:true});if(view)rewardTool.view(view);}
   parent.postMessage({type:'mobile-screen',screen:settings?SETTINGS_SCREEN:screen==='home'?'home':screen},location.origin);
 }
