@@ -499,7 +499,9 @@ export const FormField=({className='',...options})=>Stack(Field(options),{classN
 // by one rule in select.css, and at the touch size under a finger. Every tool
 // draws its find field through this: the rest had drawn it at the size of the
 // fields it filters while Travel and Taxes kept a copy of their own (UI-55).
-export const FindField=({className='',...options})=>FormField({...options,kind:'search',className:`find-field ${className}`.trim()});
+// A find field that says what it finds in its placeholder carries no caption
+// above it as well: the label stays for a screen reader (UI-63).
+export const FindField=({className='',...options})=>FormField({hiddenLabel:!!options.placeholder,...options,kind:'search',className:`find-field ${className}`.trim()});
 
 // Reusable layouts for searchable workspaces and evidence-backed results.
 export const Workspace=children=>Stack(children,{className:'workspace-shell'});

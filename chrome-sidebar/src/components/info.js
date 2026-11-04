@@ -4,12 +4,12 @@ export function InfoView(){return Stack([
   ToolTitle('Info',{actionsId:'info-actions',statusId:'info-status'}),
   Stack([Stack([],{id:'info-capture'}),FormField({id:'info-manual-kind',label:'Or add by hand',kind:'select',options:[{value:'personal',text:'Personal information'},{value:'travel',text:'Membership'},{value:'people',text:'Person or place'},{value:'sizes',text:'Size'},{value:'gifts',text:'Gift idea'},{value:'replacements',text:'Buy again'}]}),Button('Open form',{id:'info-manual',variant:'secondary',size:'compact'})],{id:'info-add',hidden:true}),
   FindField({id:'info-search',label:'Find saved information',placeholder:'Name, brand, program, size…'}),
-  FormField({id:'info-filter',label:'Show',kind:'select',options:INFO_FILTERS.map(([value,text])=>({value,text}))}),
+  FormField({id:'info-filter',label:'Show',hiddenLabel:true,kind:'select',options:INFO_FILTERS.map(([value,text])=>({value,text}))}),
   Stack([],{id:'info-coverage'}),Stack([],{id:'info-records'})
 ],{className:'info-collection'});}
 // A row that carries the value the owner came for shows it as the largest thing
 // in the row, with Copy beside it, so finding the program is the whole trip.
-// UI-63.
+// UI-58.
 export function SavedValue(value,label,onCopy){
   return Stack([Strong(value,{className:'saved-value'}),RowAction(COPY_GLYPH,`Copy ${label}`,onCopy)],{className:'saved-value-line'});
 }

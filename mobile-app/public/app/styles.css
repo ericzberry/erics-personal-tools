@@ -20,6 +20,10 @@ button:focus-visible,.mobile-lock input:focus-visible,.mobile-lock summary:focus
 /* The update notice leads the page, so its spacing separates it from what follows. */
 #update{margin:12px 0 0;}
 .device{margin-top:16px;}
-.unlocked-tools .travel-wallet,.unlocked-tools .data-library{padding:8px 0;}
-.mobile-tools-frame{margin-top:12px;}
+/* One left edge: the header, the area bar, the tabs and every tool start on the
+   same line. The frame reaches 4px past the shell on each side so the tools'
+   own 4px of slack for a focus ring cancels out, and a tool in an area adds no
+   inset of its own. UI-61. */
+.unlocked-tools .travel-wallet,.unlocked-tools .data-library,.unlocked-tools .area-workspace .travel-wallet{padding:8px 0;}
+.mobile-tools-frame{margin:12px -4px 0;width:calc(100% + 8px);}
 @media(max-width:340px){.shell{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right));}}

@@ -16,6 +16,6 @@ export function CapabilitiesView(){
   ]);
 }
 export function DataLibrary({title,id,level=1}){
-  return Stack([Heading(title,level),FindField({id:`${id}-search`,label:'Search saved data'}),Note('',{id:`${id}-status`,role:'status'}),Stack([],{id:`${id}-rows`,className:'data-records'})],{className:'data-library'});
+  return Stack([Heading(title,level),FindField({id:`${id}-search`,label:'Search saved data',placeholder:'Search saved data'}),Note('',{id:`${id}-status`,role:'status'}),Stack([],{id:`${id}-rows`,className:'data-records'})],{className:'data-library'});
 }
 export function DataRows(rows){return rows.map(row=>Section([Heading(row.title,2),...row.lines.map(line=>Note(line))],{className:'data-record'}));}

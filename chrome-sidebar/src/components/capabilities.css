@@ -54,4 +54,12 @@
 .info-collection{display:grid;gap:10px;}
 
 .area-workspace .travel-wallet{padding:var(--section-gap) var(--page-inset);}
+/* The tab, or the area bar above a lone tool, already names the screen, so the
+   tool's own page title is not printed a second time beneath it. It stays in
+   the document for a screen reader, and the title's verbs keep the right edge
+   they had beside it. A tool mounted inside another tool's screen — Needs
+   attention on Today — is a section of that screen, not its name, and keeps
+   its heading. UI-62. */
+.area-workspace>.tabs>* h1.title-text:not(.area-workspace>.tabs>* [id^="capability-"] h1){position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.area-workspace>.tabs>* .tool-title:has(>h1.title-text):not(.area-workspace>.tabs>* [id^="capability-"] .tool-title){justify-content:flex-end;}
 .info-collection>div:empty{display:none;}

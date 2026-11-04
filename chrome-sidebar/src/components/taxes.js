@@ -58,7 +58,7 @@ export function TaxesView({today=new Date()}={}){
     // chosen above.
     Stack([Part('Already filed',[
       Stack([
-        FindField({id:'taxes-search',label:'Find a document'}),
+        FindField({id:'taxes-search',label:'Find a document',placeholder:'Find a document'}),
         Notice('',{id:'taxes-filed-status',role:'status'}),
         Stack([],{id:'taxes-filed',className:'tax-filed'})
       ],{className:'record-search'}),

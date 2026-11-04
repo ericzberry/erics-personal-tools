@@ -4,7 +4,10 @@
 .capture-field .action-group{padding-bottom:1px}
 .capture-field .notice{grid-column:1/-1;margin:0}
 .capture-field .notice:empty{display:none}
-@media(max-width:360px){.capture-field{grid-template-columns:minmax(0,1fr)}.capture-field .action-group{justify-content:flex-end}}
+/* Only a frame too narrow for a word-wide button beside a usable note stacks
+   them. The phone's tools are 355px wide on a 375px screen, which the old
+   360px break caught, so Add stood alone on a line under the note. */
+@media(max-width:300px){.capture-field{grid-template-columns:minmax(0,1fr)}.capture-field .action-group{justify-content:flex-end}}
 /* Level with the note on touch and throughout the phone, where the note is
    44px whatever the pointer reports and the 1px lift that sets a 36px button
    against a 36.84px box would leave Add standing high. It out-specifies the

@@ -75,6 +75,9 @@ here.
 | **UI-56** | Disabled is half, wherever it shows. Every disabled control in either host is dimmed to half with the ordinary cursor, a row's verb paused while its tool saves included — under the pointer, to a finger, on an opened record's line. It is dimmed, not hidden, because it applies again the moment the save lands; only a verb still waiting unseen for the pointer stays at 0. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/ui-rules.test.js` |
 | **UI-58** | The value you came for is the largest thing on its row. A saved number found by searching for its program — a membership, a confirmation code — shows on the result itself at `--saved-value-size`, with Copy at the end of its line, so finding the program is the whole trip. Stated in full under [From a complaint](#from-a-complaint). | `chrome-sidebar/tests/info.test.js` |
 | **UI-59** | On the phone, every area is one tap. The six areas and the Settings gear sit in one row that is always on screen, never behind a menu; choosing Info gives its search the keyboard. Stated in full under [From a complaint](#from-a-complaint). | mobile's `tests/tool-navigation.test.js` |
+| **UI-61** | One left edge. The header, the area bar, the tabs and every tool in an area start on the same line; a tool in an area adds no inset of its own. Stated in full under [From a complaint](#from-a-complaint). | By eye, at 320px and 390px |
+| **UI-62** | A screen is named once. Where a tab, or the area bar above a lone tool, names the screen, the tool's own page title is not printed again beneath it; a tool mounted inside another's screen keeps its heading. Stated in full under [From a complaint](#from-a-complaint). | By eye |
+| **UI-63** | A field is named once. A find field whose placeholder says what it finds, and a filter whose value says what it shows, carry no caption above them; the label stays for a screen reader. Stated in full under [From a complaint](#from-a-complaint). | By eye |
 
 ## Ratcheting
 
@@ -817,3 +820,34 @@ open. Tapping Info focuses its search, because tapping it is asking to find
 something. Review the row at 320px and 390px whenever an area is added — a
 seventh does not fit, which is the point of UI-57.
 
+**UI-61 — one left edge.** *By eye.* “Let's dramatically update the UX. It's
+ugly and a bit hard to use.” On the phone the header started at 14px, the area
+bar and tabs at 18px and every tool at 32px: three edges in one screen, and the
+content, the thing being read, pushed furthest in. The tools' frame now reaches
+4px past the shell on each side, which cancels the 4px the frame keeps for a
+focus ring, and a tool in an area takes no side padding of its own, so all of
+it starts on the header's line. Check a new tool's first line against the
+monogram at 320px.
+
+**UI-62 — a screen is named once.** *By eye.* Same complaint: under the tab
+“Net worth” the tool printed “Net worth” again in 22px serif, under Info's area
+tab a heading said “Info”, and under “Plans” one said “Travel planning” — a
+heading's worth of height on every screen that told him where he already was.
+Inside an area, a tool's page title (`h1.title-text`) is kept for a screen
+reader and not drawn, and the verbs beside it keep the right edge. A tool
+mounted inside another tool's screen — Needs attention on Today — is a section
+of that screen and keeps its heading.
+
+**UI-63 — a field is named once.** *By eye.* Same complaint: Info opened on
+“Find saved information” above a box reading “Name, brand, program, size…”,
+then “Show” above a box reading “All info” — four lines to say two things.
+`FindField` hides its caption whenever it has a placeholder, every find field
+has one, and a filter dropdown whose options say what they show hides its
+caption too. The label is still the field's accessible name.
+
+The same pass also brought existing rules back into force where screens had
+drifted. A record row sits evenly between its rules, with its qualifying line
+tucked up under the name instead of resting on the rule below (UI-12, UI-30).
+A plain disclosure draws the shared chevron at its right edge instead of the
+browser's triangle in front of its words (UI-22). And on a 355px phone frame,
+Quick add keeps Add beside the note instead of on a line of its own.
