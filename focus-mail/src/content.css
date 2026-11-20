@@ -1,0 +1,9 @@
+/* Rows that arrived after the last delivery. */
+tr.zA[data-focusmail-held] {
+  display: none !important;
+}
+
+/* Unread counts beside Inbox and labels would announce held mail. */
+html[data-focusmail-hold="on"] .bsU {
+  display: none !important;
+}

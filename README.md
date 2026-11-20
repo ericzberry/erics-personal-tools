@@ -12,6 +12,7 @@ backs them both.
 | [`tools-api/`](./tools-api) | Cloudflare Worker and D1 database — encrypted record storage, AI provider routing, release metadata. Also serves the mobile app. |
 | [`site/`](./site) | Cloudflare Worker for `ezberry.net` — the public home page, privacy policy, and terms that Google's OAuth consent screen links to. Nothing private is served here. |
 | [`mac-customization/`](./mac-customization) | This Mac's desktop setup — Hammerspoon config (space labels, app layouts, `Ctrl+/` cheat sheet) and `setup.sh`, which sets up a new Mac in one command. |
+| [`focus-mail/`](./focus-mail) | Standalone Chrome extension that holds new Gmail back and delivers it in batches at set times. Loaded unpacked in each Chrome profile; no build, no backend. |
 | [`docs/`](./docs) | Repository blueprint, design system, UI component catalogue, visual QA process, and the Cloudflare runbook. |
 
 Agents working in this repository start at [AGENTS.md](./AGENTS.md). For a map of

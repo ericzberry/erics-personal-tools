@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Focus Mail</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>Focus Mail</h1>
+    <label class="switch"><input type="checkbox" id="enabled"> Hold new mail</label>
+  </header>
+
+  <p id="status" role="status"></p>
+  <button type="button" id="deliver" class="primary">Deliver now</button>
+
+  <section aria-labelledby="times-heading">
+    <h2 id="times-heading">Delivery times</h2>
+    <ul id="times"></ul>
+    <button type="button" id="add">Add time</button>
+  </section>
+
+  <script src="schedule.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
