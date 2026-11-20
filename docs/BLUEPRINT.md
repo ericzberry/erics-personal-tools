@@ -550,6 +550,17 @@ Not an app: this Mac's desktop setup. `init.lua` is the Hammerspoon config
 launch at login, `Ctrl+1/2/3` desktop switching, and Finder defaults. Window
 layouts are per-machine and stay in `~/.hammerspoon/layouts/`, outside the repo.
 
+## focus-mail/
+
+A separate, standalone Chrome extension (Manifest V3, no build step, no backend)
+that holds new Gmail back and releases it at scheduled delivery times. Loaded
+unpacked from this folder in each Chrome profile. `src/schedule.js` is the schedule
+maths; `src/content.js` + `content.css` hide inbox rows newer than the cutoff;
+`src/page.js` (MAIN world) silences Gmail's pop-ups; `src/background.js` posts one
+notification per delivery; `src/popup.*` is the toolbar popup. Tests:
+`node --test focus-mail/tests/*.test.js`. It shares no code with the sidebar and is
+not part of the sidebar/mobile release process. See [its README](../focus-mail/README.md).
+
 ## Attention and subscription modules
 
 `src/attention-data.js` is the shared attention projection; `attention.js` and

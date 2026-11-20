@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Focus Mail",
+  "version": "0.1.0",
+  "description": "Holds new Gmail back and delivers it in batches at the times you choose.",
+  "icons": { "128": "icon.png" },
+  "permissions":["storage", "notifications"],
+  "host_permissions": ["https://mail.google.com/*"],
+  "background": { "service_worker": "src/background.js" },
+  "action": { "default_title": "Focus Mail", "default_popup": "src/popup.html" },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["src/page.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["src/schedule.js", "src/content.js"],
+      "css": ["src/content.css"],
+      "run_at": "document_start"
+    }
+  ]
+}
