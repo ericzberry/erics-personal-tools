@@ -1,6 +1,9 @@
 // Runs in Gmail's own page (MAIN world) so it can stop Gmail's desktop pop-ups while mail is being held.
 // The isolated content script sets <html data-focusmail-hold="on"> when holding is switched on.
 (() => {
+  // The background worker re-injects this into open tabs after a reload; wrap Gmail's functions once.
+  if (window.__focusMailPage) return;
+  window.__focusMailPage = true;
   const holding = () => document.documentElement.dataset.focusmailHold === 'on';
 
   const Native = window.Notification;

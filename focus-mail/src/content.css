@@ -3,7 +3,14 @@ tr.zA[data-focusmail-held] {
   display: none !important;
 }
 
-/* Unread counts beside Inbox and labels would announce held mail. */
-html[data-focusmail-hold="on"] .bsU {
+/* Unread counts beside Inbox and labels, and the red badge on the Mail icon in the far-left rail,
+   would announce held mail. */
+html[data-focusmail-hold="on"] .bsU,
+html[data-focusmail-hold="on"] [role="link"][aria-label^="Mail"] .XU {
+  display: none !important;
+}
+
+/* AI Inbox summarizes new mail with nothing to filter by date; content.js closes the view too. */
+html[data-focusmail-hold="on"] div:has(> a[href$="#aiinbox"]) {
   display: none !important;
 }

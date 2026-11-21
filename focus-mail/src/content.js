@@ -12,6 +12,12 @@
     return /^category\/[^/]+(\/p\d+)?$/.test(h);
   }
 
+  // Gmail's AI Inbox summarizes new mail as to-dos and topics with no per-email date to filter on,
+  // so while mail is held it is closed entirely: the menu entry is hidden and the view sends you to the inbox.
+  function isClosedView(hash) {
+    return /^aiinbox(\/p\d+)?$/.test(String(hash || '').replace(/^#/, ''));
+  }
+
   function rowArrival(row) {
     const span = row.querySelector('td.xW span[title]');
     return span ? S.parseGmailDate(span.getAttribute('title')) : null;
@@ -57,19 +63,42 @@
     let manualCutoff = 0;
     let lastCut = null;
     let queued = false;
+    let observer = null;
+    let timer = null;
+    // The background worker injects a fresh copy into open Gmail tabs whenever the extension is
+    // installed or reloaded. The newest copy owns the page; an older one, or one whose extension
+    // was reloaded under it, stands down instead of fighting it.
+    const token = String(Math.random());
+    document.documentElement.dataset.focusmailRun = token;
+    const superseded = () =>
+      document.documentElement.dataset.focusmailRun !== token || !(chrome.runtime && chrome.runtime.id);
+    const stop = () => {
+      if (observer) observer.disconnect();
+      clearInterval(timer);
+      removeEventListener('hashchange', apply);
+    };
 
     const apply = () => {
       queued = false;
+      if (superseded()) return stop();
       const doc = document;
       const cut = S.cutoff(Date.now(), settings, manualCutoff);
       doc.documentElement.dataset.focusmailHold = settings.enabled ? 'on' : 'off';
+      if (settings.enabled && isClosedView(location.hash)) {
+        location.replace(location.href.replace(/#.*$/, '#inbox'));
+        return;
+      }
 
       if (lastCut != null && Number.isFinite(lastCut) && cut > lastCut) {
         const count = countReleased(doc, lastCut, cut);
         if (count > 0) {
-          chrome.runtime
-            .sendMessage({ type: 'delivered', count, cutoff: cut, account: accountFromTitle(doc.title) })
-            .catch(() => {});
+          try {
+            chrome.runtime
+              .sendMessage({ type: 'delivered', count, cutoff: cut, account: accountFromTitle(doc.title) })
+              .catch(() => {});
+          } catch {
+            // The extension was reloaded mid-delivery; the new copy takes over.
+          }
         }
       }
       lastCut = cut;
@@ -83,29 +112,37 @@
       setTimeout(apply, 50);
     };
 
-    chrome.storage.sync.get('settings').then(({ settings: s }) => {
-      settings = { ...S.DEFAULT_SETTINGS, ...(s || {}) };
-      schedule();
-    });
-    chrome.storage.local.get('manualCutoff').then(({ manualCutoff: m }) => {
-      manualCutoff = Number(m) || 0;
-      schedule();
-    });
     chrome.storage.onChanged.addListener((changes) => {
       if (changes.settings) settings = { ...S.DEFAULT_SETTINGS, ...(changes.settings.newValue || {}) };
       if (changes.manualCutoff) manualCutoff = Number(changes.manualCutoff.newValue) || 0;
       schedule();
     });
 
-    // Gmail re-renders the list and retitles the tab constantly; re-apply after each burst.
-    new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-    addEventListener('hashchange', schedule);
-    // Deliveries happen on the clock even when the page is idle.
-    setInterval(schedule, 20 * 1000);
-    schedule();
+    // Start only once both stored values are in, so a switched-off profile is never held by the
+    // defaults and a later Deliver now isn't mistaken for a delivery.
+    Promise.all([chrome.storage.sync.get('settings'), chrome.storage.local.get('manualCutoff')]).then(([sync, local]) => {
+      settings = { ...S.DEFAULT_SETTINGS, ...(sync.settings || {}) };
+      manualCutoff = Number(local.manualCutoff) || 0;
+      if (superseded()) return;
+      // Gmail re-renders the list and retitles the tab constantly, and reuses a row for a thread that
+      // gets a new message by rewriting its date's title. Re-apply inside the observer, which runs
+      // before the next paint, so a new row is hidden before it is ever drawn.
+      observer = new MutationObserver(apply);
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['title'],
+      });
+      addEventListener('hashchange', apply);
+      // Deliveries happen on the clock even when the page is idle.
+      timer = setInterval(schedule, 20 * 1000);
+      apply();
+    });
   }
 
-  const api = { isHeldView, applyToRows, countReleased, stripCount, accountFromTitle };
+  const api = { isHeldView, isClosedView, applyToRows, countReleased, stripCount, accountFromTitle };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else if (typeof chrome !== 'undefined' && chrome.storage) start();
 })(typeof globalThis !== 'undefined' ? globalThis : self);

@@ -2,9 +2,13 @@
 
 A Chrome extension that holds new Gmail back and delivers it in batches, like an
 inbox pause. Between deliveries the inbox looks exactly as it did at the last
-delivery: new mail doesn't appear, the unread counts in the tab title and left menu
-are gone, and Gmail's desktop pop-ups are silenced. At each delivery time the held
-mail appears all at once, with one notification per account ("5 new emails").
+delivery: new mail doesn't appear, the unread counts in the tab title, the left
+menu and the red badge on the Mail icon are gone, and Gmail's desktop pop-ups are
+silenced. At each delivery time the held mail appears all at once, with one
+notification per account ("5 new emails").
+
+Gmail's AI Inbox is closed while mail is held: its menu entry is hidden and opening
+it lands on the inbox, because it summarizes new mail in a way that can't be filtered.
 
 Searching, Sent, Drafts, labels and open threads are never filtered. To reply to a
 particular email, search for it and answer it as usual.
@@ -20,7 +24,7 @@ sidebar.
    `/Users/ericberry/erics-personal-tools/focus-mail`.
 3. Pin it from the puzzle-piece menu, and allow notifications for Chrome in macOS
    System Settings → Notifications if you want delivery alerts.
-4. Reload any open Gmail tabs.
+Open Gmail tabs pick it up straight away; there's no need to reload them.
 
 Both profiles load the same folder, so after a code change click **Reload** on the
 extension in each profile.
@@ -36,12 +40,17 @@ Defaults are 8:00, 11:00, 14:00 and 17:00 every day. Settings are per profile.
 - `src/content.js` reads each inbox row's arrival time from Gmail's date cell
   (`td.xW span[title]`) and hides rows newer than the cutoff: the latest scheduled
   time, or **Deliver now** if that was later. It also strips the `(n)` count from
-  the tab title. Only `#inbox`, its pages and the category tabs are filtered.
+  the tab title. Only `#inbox`, its pages and the category tabs are filtered, and
+  `#aiinbox` is sent to `#inbox` while holding. It re-applies inside a
+  MutationObserver, before the next paint, so new rows never flash in.
 - `src/content.css` hides held rows and the menu's unread counts.
 - `src/page.js` runs in Gmail's own page and swallows its `Notification` and
   `showNotification` calls while holding is on.
 - `src/background.js` shows one notification per delivery per account, and focuses
-  the Gmail tab when it's clicked.
+  the Gmail tab when it's clicked. On install or reload it injects the scripts and
+  stylesheet into Gmail tabs that are already open: Chrome only injects into pages
+  loaded afterwards, and a reload strips the old copy's stylesheet, so those tabs
+  would otherwise show everything. The newest copy in a tab owns it; older ones stop.
 - `src/schedule.js` holds the schedule maths and is shared by the content script,
   popup and tests.
 

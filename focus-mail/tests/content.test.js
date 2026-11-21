@@ -52,3 +52,8 @@ test('strips the unread count from the tab title and finds the account', () => {
   assert.equal(C.stripCount('Inbox - me@example.com - Gmail'), 'Inbox - me@example.com - Gmail');
   assert.equal(C.accountFromTitle('Inbox (3) - me.x@example.co.uk - Gmail'), 'me.x@example.co.uk');
 });
+
+test('closes the AI Inbox while mail is held', () => {
+  for (const h of ['#aiinbox', 'aiinbox', '#aiinbox/p2']) assert.ok(C.isClosedView(h), h);
+  for (const h of ['#inbox', '#aiinbox/FMfcgzQ123', '#search/aiinbox']) assert.ok(!C.isClosedView(h), h);
+});
