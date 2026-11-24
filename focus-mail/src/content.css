@@ -1,5 +1,5 @@
 /* Rows that arrived after the last delivery. */
-tr.zA[data-focusmail-held] {
+tr.zA[data-focusmail-wait] {
   display: none !important;
 }
 

@@ -21,7 +21,7 @@ function inbox() {
     <tr class="zA"><td class="xW xY"><span>no title</span></td></tr>
   </table></body></html>`).document;
 }
-const heldFlags = (doc) => [...doc.querySelectorAll('tr.zA')].map((r) => r.hasAttribute('data-focusmail-held'));
+const heldFlags = (doc) => [...doc.querySelectorAll('tr.zA')].map((r) => r.hasAttribute(C.HELD));
 
 test('holds only rows after the cutoff, and only in the inbox views', () => {
   const doc = inbox();
@@ -33,6 +33,22 @@ test('holds only rows after the cutoff, and only in the inbox views', () => {
 
   assert.equal(C.applyToRows(doc, at(12, 7), '#category/promotions'), 1);
   assert.equal(C.applyToRows(doc, Infinity, '#inbox'), 0);
+});
+
+// A copy from before 0.1.3 can outlive an extension reload in a tab that was never reloaded, and
+// keeps marking rows `data-focusmail-held` from the cutoff it froze with. After Deliver now it and
+// the current copy disagreed, and the rows flickered. Its mark must hide nothing and be left alone.
+test('a stale older copy\'s row mark hides nothing', () => {
+  const fs = require('node:fs');
+  const css = fs.readFileSync(path.join(__dirname, '../src/content.css'), 'utf8');
+  assert.notEqual(C.HELD, 'data-focusmail-held');
+  assert.ok(css.includes(`tr.zA[${C.HELD}]`));
+  assert.ok(!css.includes('data-focusmail-held'));
+
+  const doc = inbox();
+  for (const r of doc.querySelectorAll('tr.zA')) r.setAttribute('data-focusmail-held', '');
+  assert.equal(C.applyToRows(doc, at(12, 7), '#inbox'), 1);
+  assert.deepEqual(heldFlags(doc), [false, false, false, true, false]);
 });
 
 test('recognizes held views', () => {

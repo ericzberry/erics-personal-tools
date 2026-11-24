@@ -51,6 +51,8 @@ Defaults are 8:00, 11:00, 14:00 and 17:00 every day. Settings are per profile.
   stylesheet into Gmail tabs that are already open: Chrome only injects into pages
   loaded afterwards, and a reload strips the old copy's stylesheet, so those tabs
   would otherwise show everything. The newest copy in a tab owns it; older ones stop.
+  Copies from before 0.1.3 can't stop, so the row marker was renamed in 0.1.4 and theirs
+  no longer hides anything.
 - `src/schedule.js` holds the schedule maths and is shared by the content script,
   popup and tests.
 

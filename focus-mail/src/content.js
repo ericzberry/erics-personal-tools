@@ -2,7 +2,10 @@
 // count from the tab title, and tells the background worker how much mail each delivery released.
 (function (root) {
   const S = root.FocusMailSchedule || (typeof require === 'function' ? require('./schedule.js') : null);
-  const HELD = 'data-focusmail-held';
+  // Not `data-focusmail-held`: copies from before 0.1.3 never stand down, so one left in a tab that
+  // has been open since then keeps re-marking rows with that name from its own stale cutoff. The
+  // stylesheet no longer hides that name, which makes those copies harmless.
+  const HELD = 'data-focusmail-wait';
 
   // Only the inbox list and its category tabs are held. Search, labels, Sent, Drafts and open
   // threads stay complete so you can always find the one email you mean to answer.
@@ -142,7 +145,7 @@
     });
   }
 
-  const api = { isHeldView, isClosedView, applyToRows, countReleased, stripCount, accountFromTitle };
+  const api = { HELD, isHeldView, isClosedView, applyToRows, countReleased, stripCount, accountFromTitle };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else if (typeof chrome !== 'undefined' && chrome.storage) start();
 })(typeof globalThis !== 'undefined' ? globalThis : self);
