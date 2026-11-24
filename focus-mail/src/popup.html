@@ -7,17 +7,20 @@
 </head>
 <body>
   <header>
+    <img src="../icons/icon-32.png" alt="" width="22" height="22">
     <h1>Focus Mail</h1>
-    <label class="switch"><input type="checkbox" id="enabled"> Hold new mail</label>
+    <input type="checkbox" role="switch" class="switch" id="enabled" aria-label="Hold new mail">
   </header>
 
-  <p id="status" role="status"></p>
-  <button type="button" id="deliver" class="primary">Deliver now</button>
+  <section class="next" aria-live="polite">
+    <p class="eyebrow" id="next-label"></p>
+    <p class="when"><span id="next-time"></span> <span id="next-in"></span></p>
+    <button type="button" id="deliver" class="primary">Deliver now</button>
+  </section>
 
   <section aria-labelledby="times-heading">
     <h2 id="times-heading">Delivery times</h2>
-    <ul id="times"></ul>
-    <button type="button" id="add">Add time</button>
+    <ul id="times" class="chips"></ul>
   </section>
 
   <script src="schedule.js"></script>

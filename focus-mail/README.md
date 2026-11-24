@@ -31,8 +31,9 @@ extension in each profile.
 
 ## Using it
 
-The toolbar button shows the next delivery time, an on/off switch, **Deliver now**
-(shows everything up to this moment, then holds again), and the delivery times.
+The toolbar button shows an on/off switch, the next delivery time with **Deliver now**
+(shows everything up to this moment, then holds again), and the delivery times as
+chips: click one to change it, × to remove it, + to add one.
 Defaults are 8:00, 11:00, 14:00 and 17:00 every day. Settings are per profile.
 
 ## How it works
@@ -40,7 +41,9 @@ Defaults are 8:00, 11:00, 14:00 and 17:00 every day. Settings are per profile.
 - `src/content.js` reads each inbox row's arrival time from Gmail's date cell
   (`td.xW span[title]`) and hides rows newer than the cutoff: the latest scheduled
   time, or **Deliver now** if that was later. It also strips the `(n)` count from
-  the tab title. Only `#inbox`, its pages and the category tabs are filtered, and
+  the tab title. Only the inbox list, its pages and the category tabs are filtered,
+  including while a compose window or a reading-pane thread is open beside the list
+  (`#inbox?compose=new`, `#inbox/<thread>`; before 0.1.5 those showed all held mail), and
   `#aiinbox` is sent to `#inbox` while holding. It re-applies inside a
   MutationObserver, before the next paint, so new rows never flash in.
 - `src/content.css` hides held rows and the menu's unread counts.
@@ -53,6 +56,7 @@ Defaults are 8:00, 11:00, 14:00 and 17:00 every day. Settings are per profile.
   would otherwise show everything. The newest copy in a tab owns it; older ones stop.
   Copies from before 0.1.3 can't stop, so the row marker was renamed in 0.1.4 and theirs
   no longer hides anything.
+- `icons/icon.svg` is the icon's source; the PNGs beside it are rendered from it.
 - `src/schedule.js` holds the schedule maths and is shared by the content script,
   popup and tests.
 

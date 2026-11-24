@@ -9,10 +9,12 @@
 
   // Only the inbox list and its category tabs are held. Search, labels, Sent, Drafts and open
   // threads stay complete so you can always find the one email you mean to answer.
+  // The inbox list stays on screen with a query on the hash (an open compose window,
+  // `#inbox?compose=new`) and beside a thread open in the reading pane (`#inbox/<thread>`), so
+  // those are held too. The open thread itself is not an inbox row and is never hidden.
   function isHeldView(hash) {
-    const h = String(hash || '').replace(/^#/, '');
-    if (h === '' || h === 'inbox' || /^inbox\/p\d+$/.test(h)) return true;
-    return /^category\/[^/]+(\/p\d+)?$/.test(h);
+    const h = String(hash || '').replace(/^#/, '').replace(/\?.*$/, '');
+    return h === '' || /^inbox(\/.*)?$/.test(h) || /^category\/[^/]+(\/.*)?$/.test(h);
   }
 
   // Gmail's AI Inbox summarizes new mail as to-dos and topics with no per-email date to filter on,

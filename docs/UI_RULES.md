@@ -80,6 +80,7 @@ here.
 | **UI-63** | A field is named once. A find field whose placeholder says what it finds, and a filter whose value says what it shows, carry no caption above them; the label stays for a screen reader. Stated in full under [From a complaint](#from-a-complaint). | By eye |
 | **UI-64** | A tool reads its records again whenever it is opened, so none offers Refresh. Connection settings appears only while there is no connection (UI-37), and a sync action that reaches outside the app — a Drive folder listing aside — is named for what it fetches. Stated in full under [From a complaint](#from-a-complaint). | `tests/attention-tools.test.js`, `tests/finance-sidebar.test.js` |
 | **UI-65** | The serif names a screen and sets a figure. Every heading inside a tool — a group, a hotel, a section of Today — is in the sans of its records, a step heavier. Stated in full under [From a complaint](#from-a-complaint). | By eye |
+| **UI-66** | A standalone extension is still drawn, not left to the browser. Its pages ship no bare checkbox — on/off is a `role="switch"` — and no visible native time or date field; a set of values is a row of chips with their own remove glyph, and an action that does not apply is hidden. Stated in full under [From a complaint](#from-a-complaint). | `focus-mail/tests/popup.test.js` |
 
 ## Ratcheting
 
@@ -877,3 +878,17 @@ set the same way, at 17px. The serif stays for the page title where a host
 shows one, for the weather, and for the figures UI-49 makes readings of.
 Closed plain disclosures also sit evenly between their rules now: the stack's
 gap stands in for the padding under them.
+
+**UI-66 — a standalone extension is still drawn.** *Enforced for Focus Mail.*
+Focus Mail lives outside the sidebar's design system, so its popup shipped the
+browser's own controls: a square checkbox for the on/off switch, four native
+time fields stacked one per row with a leading zero, a clock glyph and a bare
+× beside each, and Deliver now drawn disabled while holding was off. *He sent
+the popup and said "this looks ugly. Make it look significantly prettier,
+including the icon for the extension".* The popup now has a real switch, the
+next delivery as a figure with Deliver now under it (hidden when off), and the
+times as chips — the next one in the accent, past ones muted — that open the
+native picker only when clicked. The icon is drawn from `focus-mail/icons/icon.svg`.
+`focus-mail/tests/popup.test.js` holds that the popup has no bare checkbox and
+no visible time field. A new standalone extension is the next case: give it the
+same check.

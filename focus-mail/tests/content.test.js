@@ -52,8 +52,15 @@ test('a stale older copy\'s row mark hides nothing', () => {
 });
 
 test('recognizes held views', () => {
-  for (const h of ['', '#inbox', '#inbox/p2', '#category/social', '#category/updates/p3']) assert.ok(C.isHeldView(h), h);
-  for (const h of ['#sent', '#drafts', '#search/x', '#label/Work', '#inbox/FMfcgzQ123', '#all']) assert.ok(!C.isHeldView(h), h);
+  for (const h of [
+    '', '#inbox', '#inbox/p2', '#category/social', '#category/updates/p3',
+    // Compose open over the inbox, and a thread open in the reading pane beside the list.
+    '#inbox?compose=new', '#inbox/p2?compose=abc', '#category/social?compose=new', '#inbox/FMfcgzQ123',
+    '?compose=new',
+  ]) assert.ok(C.isHeldView(h), h);
+  for (const h of ['#sent', '#drafts', '#search/x', '#search/x?compose=new', '#label/Work', '#all', '#inboxy']) {
+    assert.ok(!C.isHeldView(h), h);
+  }
 });
 
 test('counts the unread mail a delivery releases', () => {
