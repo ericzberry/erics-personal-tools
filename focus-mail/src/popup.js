@@ -2,6 +2,7 @@ const S = globalThis.FocusMailSchedule;
 const $ = (id) => document.getElementById(id);
 
 let settings = { ...S.DEFAULT_SETTINGS };
+let manualCutoff = 0;
 
 const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 const minutesLabel = (m) => clock(new Date(2000, 0, 1, Math.floor(m / 60), m % 60));
@@ -16,18 +17,33 @@ function untilLabel(ms) {
 const ICON_X = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 const ICON_PLUS = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5v9M1.5 6h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 
+// "5:00" and "PM" apart, so the figure can be set large and its period small.
+function clockParts(t) {
+  const parts = new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' }).formatToParts(new Date(t));
+  const period = parts.find((p) => p.type === 'dayPeriod');
+  const time = parts.filter((p) => p.type !== 'dayPeriod').map((p) => p.value).join('').trim();
+  return { time, period: period ? period.value : '' };
+}
+
 function renderNext() {
   const now = Date.now();
   const next = S.nextScheduled(now, settings.times);
+  const on = settings.enabled;
   const box = document.querySelector('.next');
-  box.classList.toggle('off', !settings.enabled);
-  $('next-label').textContent = settings.enabled ? 'Next delivery' : 'Holding is off';
-  $('next-time').textContent = !settings.enabled
-    ? 'Mail arrives as it comes'
-    : next ? clock(next) : 'Only when you deliver';
-  $('next-in').textContent = settings.enabled && next ? untilLabel(next - now) : '';
+  box.classList.toggle('off', !on);
+  box.classList.toggle('manual', on && !next);
+  $('next-label').textContent = on ? 'Next delivery' : 'Holding is off';
+  const { time, period } = on && next ? clockParts(next) : { time: '', period: '' };
+  $('next-time').textContent = !on ? 'Mail arrives as it comes' : next ? time : 'Only when you deliver';
+  $('next-period').textContent = period;
+  $('next-in').textContent = on && next ? untilLabel(next - now) : '';
+  // How far through the wait: from the last delivery (scheduled or Deliver now) to the next.
+  const from = S.cutoff(now, settings, manualCutoff);
+  const track = $('track');
+  track.hidden = !(on && next && Number.isFinite(from) && from > 0 && next > from);
+  if (!track.hidden) track.style.setProperty('--p', Math.min(1, Math.max(0, (now - from) / (next - from))).toFixed(4));
   // UI-16: an action that does not apply is hidden, not disabled.
-  $('deliver').hidden = !settings.enabled;
+  $('deliver').hidden = !on;
 }
 
 function renderTimes() {
@@ -114,14 +130,21 @@ $('enabled').addEventListener('change', (e) => {
 });
 
 $('deliver').addEventListener('click', () => {
-  chrome.storage.local.set({ manualCutoff: Date.now() });
+  manualCutoff = Date.now();
+  chrome.storage.local.set({ manualCutoff });
+  renderNext();
   const btn = $('deliver');
   btn.textContent = 'Delivered';
   btn.classList.add('done');
   setTimeout(() => { btn.textContent = 'Deliver now'; btn.classList.remove('done'); }, 1800);
 });
 
-chrome.storage.sync.get('settings').then(({ settings: s }) => {
-  settings = { ...S.DEFAULT_SETTINGS, ...(s || {}) };
+Promise.all([chrome.storage.sync.get('settings'), chrome.storage.local.get('manualCutoff')]).then(([sync, local]) => {
+  settings = { ...S.DEFAULT_SETTINGS, ...((sync && sync.settings) || {}) };
+  manualCutoff = Number(local && local.manualCutoff) || 0;
   render();
+  document.body.classList.add('ready');
+  // Keep the countdown and the track true while the popup stays open. The chips are left alone:
+  // redrawing them would close a time picker that is open.
+  setInterval(renderNext, 20 * 1000);
 });

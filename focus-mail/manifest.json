@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Focus Mail",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Holds new Gmail back and delivers it in batches at the times you choose.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -34,6 +34,7 @@
         "https://mail.google.com/*"
       ],
       "js": [
+        "src/urgent.js",
         "src/page.js"
       ],
       "run_at": "document_start",
@@ -45,6 +46,7 @@
       ],
       "js": [
         "src/schedule.js",
+        "src/urgent.js",
         "src/content.js"
       ],
       "css": [

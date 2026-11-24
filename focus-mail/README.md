@@ -10,6 +10,10 @@ notification per account ("5 new emails").
 Gmail's AI Inbox is closed while mail is held: its menu entry is hidden and opening
 it lands on the inbox, because it summarizes new mail in a way that can't be filtered.
 
+Verification codes, 2FA prompts, sign-in links and password resets are never held:
+their rows show as they arrive and their Gmail pop-ups come through. There is no
+setting for this.
+
 Searching, Sent, Drafts, labels and open threads are never filtered. To reply to a
 particular email, search for it and answer it as usual.
 
@@ -31,8 +35,9 @@ extension in each profile.
 
 ## Using it
 
-The toolbar button shows an on/off switch, the next delivery time with **Deliver now**
-(shows everything up to this moment, then holds again), and the delivery times as
+The toolbar button shows an on/off switch, the next delivery time with a bar for how
+far through the wait you are and **Deliver now** (shows everything up to this
+moment, then holds again), and the delivery times as
 chips: click one to change it, × to remove it, + to add one.
 Defaults are 8:00, 11:00, 14:00 and 17:00 every day. Settings are per profile.
 
@@ -56,6 +61,10 @@ Defaults are 8:00, 11:00, 14:00 and 17:00 every day. Settings are per profile.
   would otherwise show everything. The newest copy in a tab owns it; older ones stop.
   Copies from before 0.1.3 can't stop, so the row marker was renamed in 0.1.4 and theirs
   no longer hides anything.
+- `src/urgent.js` decides what cannot wait (codes, 2FA, sign-in and reset mail) from a
+  row's sender, subject and snippet, or a pop-up's text. It loads in both the content
+  script and Gmail's own page. A Gmail tab open since before 0.1.6 lets the rows
+  through at once but needs one reload before the pop-ups come through.
 - `icons/icon.svg` is the icon's source; the PNGs beside it are rendered from it.
 - `src/schedule.js` holds the schedule maths and is shared by the content script,
   popup and tests.

@@ -7,7 +7,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     chrome.storage.session.set({ [key]: sender.tab ? sender.tab.id : true });
     chrome.notifications.create(key, {
       type: 'basic',
-      iconUrl: chrome.runtime.getURL('icon.png'),
+      iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
       title: `${msg.count} new email${msg.count === 1 ? '' : 's'}`,
       message: msg.account,
       priority: 0,
@@ -34,8 +34,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     const target = { tabId: tab.id };
     try {
       await chrome.scripting.insertCSS({ target, files: ['src/content.css'] });
-      await chrome.scripting.executeScript({ target, files: ['src/page.js'], world: 'MAIN' });
-      await chrome.scripting.executeScript({ target, files: ['src/schedule.js', 'src/content.js'] });
+      await chrome.scripting.executeScript({ target, files: ['src/urgent.js', 'src/page.js'], world: 'MAIN' });
+      await chrome.scripting.executeScript({ target, files: ['src/schedule.js', 'src/urgent.js', 'src/content.js'] });
     } catch {
       // A discarded or still-loading tab gets the manifest's scripts when it loads.
     }

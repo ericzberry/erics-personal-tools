@@ -2,6 +2,7 @@
 // count from the tab title, and tells the background worker how much mail each delivery released.
 (function (root) {
   const S = root.FocusMailSchedule || (typeof require === 'function' ? require('./schedule.js') : null);
+  const U = root.FocusMailUrgent || (typeof require === 'function' ? require('./urgent.js') : null);
   // Not `data-focusmail-held`: copies from before 0.1.3 never stand down, so one left in a tab that
   // has been open since then keeps re-marking rows with that name from its own stale cutoff. The
   // stylesheet no longer hides that name, which makes those copies harmless.
@@ -28,12 +29,20 @@
     return span ? S.parseGmailDate(span.getAttribute('title')) : null;
   }
 
+  // A verification code or sign-in prompt is never held: it is useless by the next delivery.
+  // Read from the sender, subject and snippet cells, or the whole row if Gmail renames them.
+  function rowIsUrgent(row) {
+    const cells = row.querySelectorAll('.yX, .bog, .y2');
+    const text = cells.length ? [...cells].map((c) => c.textContent).join(' ') : row.textContent;
+    return U.isUrgent(text);
+  }
+
   // Marks held rows; returns how many are held. Leaves every row visible outside the held views.
   function applyToRows(doc, cut, hash) {
     const active = isHeldView(hash);
     let held = 0;
     for (const row of doc.querySelectorAll('tr.zA')) {
-      const hide = active && S.isHeld(rowArrival(row), cut);
+      const hide = active && S.isHeld(rowArrival(row), cut) && !rowIsUrgent(row);
       if (hide) held += 1;
       if (hide !== row.hasAttribute(HELD)) {
         if (hide) row.setAttribute(HELD, '');
@@ -48,7 +57,7 @@
     let n = 0;
     for (const row of doc.querySelectorAll('tr.zA.zE')) {
       const t = rowArrival(row);
-      if (t != null && S.isHeld(t, previousCut) && !S.isHeld(t, cut)) n += 1;
+      if (t != null && S.isHeld(t, previousCut) && !S.isHeld(t, cut) && !rowIsUrgent(row)) n += 1;
     }
     return n;
   }
@@ -147,7 +156,7 @@
     });
   }
 
-  const api = { HELD, isHeldView, isClosedView, applyToRows, countReleased, stripCount, accountFromTitle };
+  const api = { HELD, rowIsUrgent, isHeldView, isClosedView, applyToRows, countReleased, stripCount, accountFromTitle };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else if (typeof chrome !== 'undefined' && chrome.storage) start();
 })(typeof globalThis !== 'undefined' ? globalThis : self);
